@@ -398,7 +398,11 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Feature = table.Column<string>(type: "text", nullable: false),
+                    ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelName = table.Column<string>(type: "text", nullable: false),
                     ImageCount = table.Column<int>(type: "integer", nullable: false),
+                    Resolution = table.Column<string>(type: "text", nullable: false),
                     Cost = table.Column<decimal>(type: "numeric", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -842,6 +846,16 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "IX_image_usage_records_CreatedAt",
                 table: "image_usage_records",
                 column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_image_usage_records_Feature",
+                table: "image_usage_records",
+                column: "Feature");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_image_usage_records_ProviderId",
+                table: "image_usage_records",
+                column: "ProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_image_usage_records_UserId",

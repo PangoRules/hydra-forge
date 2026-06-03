@@ -65,6 +65,24 @@ public class HydraForgeDbContextModelTests
     }
 
     [Fact]
+    public void FindEntityType_ImageUsageRecord_HasRequiredProperties()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(ImageUsageRecord));
+        Assert.NotNull(entity);
+
+        var requiredProps = new[] { "UserId", "Feature", "ProviderId", "ModelName", "ImageCount", "Resolution", "Cost" };
+        foreach (var propName in requiredProps)
+        {
+            Assert.True(
+                entity.GetProperties().Any(p => p.Name == propName),
+                $"ImageUsageRecord missing property: {propName}");
+        }
+    }
+
+    [Fact]
     public void GetIndexes_UsernameNormalized_IsUnique()
     {
         using var context = new HydraForgeDbContext(CreateOptions());

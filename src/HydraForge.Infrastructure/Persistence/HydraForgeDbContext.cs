@@ -191,6 +191,8 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<ImageUsageRecord>(modelBuilder, "image_usage_records", b =>
         {
             b.HasIndex(e => e.UserId);
+            b.HasIndex(e => e.ProviderId);
+            b.HasIndex(e => e.Feature);
             b.HasIndex(e => e.CreatedAt);
         });
 

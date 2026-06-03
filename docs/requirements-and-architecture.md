@@ -887,8 +887,11 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | ModelName | string | Exact model name (e.g. `dall-e-3`, `flux-pro`) |
 | ImageCount | int | Number of images generated |
 | Resolution | string | e.g. `1024x1024`, `1920x1080` |
+| Cost | decimal | Recorded estimated/provider-reported generation cost |
 | ProjectId | Guid? | Set if triggered in project context |
-| Timestamp | DateTime | |
+| CreatedAt | DateTime | |
+
+> One row per image generation request, not per generated image. Used for admin usage dashboards, per-feature cost attribution, and provider billing reconciliation.
 
 #### Notification
 

@@ -83,11 +83,26 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Feature")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("ImageCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resolution")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -95,6 +110,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Feature");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId");
 
