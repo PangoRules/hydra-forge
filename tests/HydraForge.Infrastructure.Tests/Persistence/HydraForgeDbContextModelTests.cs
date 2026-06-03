@@ -5,6 +5,7 @@ using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Pgvector.EntityFrameworkCore;
 using System.Linq;
@@ -80,6 +81,20 @@ public class HydraForgeDbContextModelTests
                 entity.GetProperties().Any(p => p.Name == propName),
                 $"ImageUsageRecord missing property: {propName}");
         }
+    }
+
+    [Fact]
+    public void FindEntityType_ImageUsageRecord_FeatureUsesSharedAiFeatureEnum()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(ImageUsageRecord));
+        Assert.NotNull(entity);
+
+        var feature = entity.FindProperty(nameof(ImageUsageRecord.Feature));
+        Assert.NotNull(feature);
+        Assert.Equal(typeof(AiFeature), feature.ClrType);
     }
 
     [Fact]

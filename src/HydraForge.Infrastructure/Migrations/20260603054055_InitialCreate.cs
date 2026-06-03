@@ -398,7 +398,7 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Feature = table.Column<string>(type: "text", nullable: false),
+                    Feature = table.Column<int>(type: "integer", nullable: false),
                     ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
                     ModelName = table.Column<string>(type: "text", nullable: false),
                     ImageCount = table.Column<int>(type: "integer", nullable: false),

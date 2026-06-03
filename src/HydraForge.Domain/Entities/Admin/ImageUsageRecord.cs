@@ -1,3 +1,5 @@
+using HydraForge.Domain.Enums;
+
 namespace HydraForge.Domain.Entities.Admin;
 
 public class ImageUsageRecord
@@ -5,7 +7,7 @@ public class ImageUsageRecord
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public Guid? ProjectId { get; set; }
-    public string Feature { get; set; } = string.Empty;
+    public AiFeature Feature { get; set; }
     public Guid ProviderId { get; set; }
     public string ModelName { get; set; } = string.Empty;
     public int ImageCount { get; set; }
