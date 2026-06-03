@@ -14,7 +14,7 @@ public static class PersistenceServiceCollectionExtensions
             ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
         services.AddDbContext<HydraForgeDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString, o => o.UseVector()));
 
         return services;
     }
