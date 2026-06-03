@@ -55,6 +55,7 @@ public class HydraForgeDbContext : DbContext
     public DbSet<AlbumImage> AlbumImages => Set<AlbumImage>();
     public DbSet<ImageTag> ImageTags => Set<ImageTag>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -169,11 +170,6 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => e.ProjectId);
         });
 
-        ConfigureEntity<ChatMessage>(modelBuilder, "chat_messages", b =>
-        {
-            b.HasIndex(e => e.SessionId);
-        });
-
         ConfigureEntity<CardChatLink>(modelBuilder, "card_chat_links", b =>
         {
             b.HasIndex(e => new { e.CardId, e.ChatSessionId }).IsUnique();
@@ -237,17 +233,6 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => e.UserId);
         });
 
-        ConfigureEntity<NoteReminder>(modelBuilder, "note_reminders", b =>
-        {
-            b.HasIndex(e => e.NoteId);
-            b.HasIndex(e => new { e.IsSent, e.TriggerAt });
-        });
-
-        ConfigureEntity<NoteImageAttachment>(modelBuilder, "note_image_attachments", b =>
-        {
-            b.HasIndex(e => e.NoteId);
-        });
-
         ConfigureEntity<PersonalTask>(modelBuilder, "personal_tasks", b =>
         {
             b.HasIndex(e => e.UserId);
@@ -269,18 +254,6 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<Document>(modelBuilder, "documents", b =>
         {
             b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<DocumentVersion>(modelBuilder, "document_versions", b =>
-        {
-            b.HasIndex(e => e.DocumentId);
-        });
-
-        ConfigureEntity<DocumentChunk>(modelBuilder, "document_chunks", b =>
-        {
-            b.HasIndex(e => e.DocumentId);
-            b.HasIndex(e => new { e.SourceType, e.SourceId });
-            b.Property(e => e.Embedding).HasColumnType("vector(1536)");
         });
 
         ConfigureEntity<GalleryImage>(modelBuilder, "gallery_images", b =>
@@ -309,7 +282,66 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => e.UserId);
             b.HasIndex(e => new { e.IsRead, e.CreatedAt });
         });
+
+        ConfigureEntity<SystemSettings>(modelBuilder, "system_settings", b =>
+        {
+            b.HasData(new SystemSettings
+            {
+                Id = SystemSettingsSingletonId,
+                ArchivedItemRetentionDays = 730,
+                AuditLogRetentionDays = 90,
+                NotificationRetentionDays = 30,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+        });
+
+        ConfigureEntity<DocumentVersion>(modelBuilder, "document_versions", b =>
+        {
+            b.HasIndex(e => e.DocumentId);
+            b.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        ConfigureEntity<DocumentChunk>(modelBuilder, "document_chunks", b =>
+        {
+            b.HasIndex(e => e.DocumentId);
+            b.HasIndex(e => new { e.SourceType, e.SourceId });
+            b.Property(e => e.Embedding).HasColumnType("vector(1536)");
+        });
+
+        ConfigureEntity<NoteReminder>(modelBuilder, "note_reminders", b =>
+        {
+            b.HasIndex(e => e.NoteId);
+            b.HasIndex(e => new { e.IsSent, e.TriggerAt });
+            b.HasOne<Note>()
+                .WithMany()
+                .HasForeignKey(e => e.NoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        ConfigureEntity<NoteImageAttachment>(modelBuilder, "note_image_attachments", b =>
+        {
+            b.HasIndex(e => e.NoteId);
+            b.HasOne<Note>()
+                .WithMany()
+                .HasForeignKey(e => e.NoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        ConfigureEntity<ChatMessage>(modelBuilder, "chat_messages", b =>
+        {
+            b.HasIndex(e => e.SessionId);
+            b.HasOne<ChatSession>()
+                .WithMany()
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
+
+    public static readonly Guid SystemSettingsSingletonId = new("00000000-0000-0000-0000-000000000001");
 
     private static void ConfigureEntity<T>(ModelBuilder modelBuilder, string tableName, Action<Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T>>? configure = null)
         where T : class

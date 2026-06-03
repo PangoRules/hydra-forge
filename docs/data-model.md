@@ -122,6 +122,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 | MovedAt | DateTime | When it last changed column |
+| ArchivedAt | DateTime? | Soft-delete marker; archived cards remain visible to project members, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### CardAssignee
 
@@ -353,6 +354,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | OwnerId | Guid | FK to User (chat owner) |
 | Summary | string | Auto-generated summary of what was discussed |
 | CreatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived links remain visible (so archived cards still show "discussed in chat X"), hard-deleted by housekeeping job after admin-configured retention period |
 
 ### AgentPersonality
 
@@ -484,6 +486,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Source | string? | e.g. "auto-extracted", "manual", session ID |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived memories remain visible to the user, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### Note
 
@@ -493,10 +496,10 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | UserId | Guid | FK to User |
 | Content | string | Markdown (checklist items inline as `- [ ]`) |
 | IsPinned | bool | |
-| IsArchived | bool | |
 | SortOrder | int | Drag-reorder position |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived notes remain visible to the user, hard-deleted by housekeeping job after admin-configured retention period. Replaces the old `IsArchived: bool` field; the timestamp is needed for retention policy. |
 
 ### NoteReminder
 
@@ -530,6 +533,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | CronExpression | string? | Recurring schedule (null = one-time) |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived tasks remain visible to the user, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### CalendarSource
 
@@ -543,6 +547,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | CalDavUsername | string? | |
 | CalDavPasswordEncrypted | string? | |
 | LastSyncAt | DateTime? | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived sources stop syncing but their events remain visible, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### CalendarEvent
 
@@ -560,6 +565,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | RecurrenceRule | string? | iCal RRULE string |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived events remain visible to the user (e.g. cancelled), hard-deleted by housekeeping job after admin-configured retention period |
 
 ### Document
 
@@ -573,9 +579,9 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Content | string? | Text content for editable documents |
 | Language | string? | Programming language for code documents |
 | Version | int | Increments on each edit |
-| IsArchived | bool | |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived documents remain visible to the user, hard-deleted by housekeeping job after admin-configured retention period. Replaces the old `IsArchived: bool` field; the timestamp is needed for retention policy. |
 
 ### DocumentVersion
 
@@ -657,6 +663,19 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ImageId | Guid | FK to GalleryImage |
 | Tag | string | |
 | Source | TagSource | `User` / `AI` |
+
+### SystemSettings
+
+Singleton row (Id = `00000000-0000-0000-0000-000000000001`) holding admin-configurable retention knobs consumed by the housekeeping background service. Future system-wide settings can be added as columns without schema change elsewhere.
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | Singleton id (fixed) |
+| ArchivedItemRetentionDays | int | Days an item stays in the `ArchivedAt` state before housekeeping hard-deletes it. Default `730` (2 years). |
+| AuditLogRetentionDays | int | Days audit log and LLM/image usage records are kept. Default `90` (satisfies NFR-7). |
+| NotificationRetentionDays | int | Days a read notification is kept before housekeeping purges it. Default `30`. |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
 
 ---
 

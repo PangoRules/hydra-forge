@@ -170,7 +170,7 @@ public class HydraForgeDbContextModelTests
 
         var card = model.FindEntityType(typeof(Card));
         Assert.NotNull(card);
-        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "MovedAt");
+        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "MovedAt", "ArchivedAt");
         Assert.Equal(typeof(int), card.FindProperty("CardNumber")?.ClrType);
         Assert.Equal(typeof(CardType), card.FindProperty("Type")?.ClrType);
 
@@ -240,7 +240,7 @@ public class HydraForgeDbContextModelTests
 
         var cardChatLink = model.FindEntityType(typeof(CardChatLink));
         Assert.NotNull(cardChatLink);
-        AssertProperties(cardChatLink, "OwnerId", "Summary");
+        AssertProperties(cardChatLink, "OwnerId", "Summary", "ArchivedAt");
     }
 
     [Fact]
@@ -259,11 +259,11 @@ public class HydraForgeDbContextModelTests
 
         var memoryEntry = model.FindEntityType(typeof(MemoryEntry));
         Assert.NotNull(memoryEntry);
-        AssertProperties(memoryEntry, "IsPinned", "Source");
+        AssertProperties(memoryEntry, "IsPinned", "Source", "ArchivedAt");
 
         var note = model.FindEntityType(typeof(Note));
         Assert.NotNull(note);
-        AssertProperties(note, "IsPinned", "IsArchived", "SortOrder");
+        AssertProperties(note, "IsPinned", "ArchivedAt", "SortOrder");
 
         var reminder = model.FindEntityType(typeof(NoteReminder));
         Assert.NotNull(reminder);
@@ -271,7 +271,15 @@ public class HydraForgeDbContextModelTests
 
         var task = model.FindEntityType(typeof(PersonalTask));
         Assert.NotNull(task);
-        AssertProperties(task, "CronExpression");
+        AssertProperties(task, "CronExpression", "ArchivedAt");
+
+        var calendarSource = model.FindEntityType(typeof(CalendarSource));
+        Assert.NotNull(calendarSource);
+        AssertProperties(calendarSource, "CalDavUrl", "ArchivedAt");
+
+        var calendarEvent = model.FindEntityType(typeof(CalendarEvent));
+        Assert.NotNull(calendarEvent);
+        AssertProperties(calendarEvent, "RecurrenceRule", "ArchivedAt");
     }
 
     [Fact]
@@ -282,7 +290,7 @@ public class HydraForgeDbContextModelTests
 
         var document = model.FindEntityType(typeof(Document));
         Assert.NotNull(document);
-        AssertProperties(document, "Content", "ContentType", "FilePath", "Language", "Version", "IsArchived");
+        AssertProperties(document, "Content", "ContentType", "FilePath", "Language", "Version", "ArchivedAt");
 
         var version = model.FindEntityType(typeof(DocumentVersion));
         Assert.NotNull(version);
@@ -303,6 +311,51 @@ public class HydraForgeDbContextModelTests
         var albumImage = model.FindEntityType(typeof(AlbumImage));
         Assert.NotNull(albumImage);
         AssertProperties(albumImage, "Position", "CreatedAt", "ArchivedAt");
+    }
+
+    [Fact]
+    public void FindEntityTypes_ArchiveAndHousekeepingSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var card = model.FindEntityType(typeof(Card));
+        Assert.NotNull(card);
+        AssertProperties(card, "ArchivedAt");
+
+        var document = model.FindEntityType(typeof(Document));
+        Assert.NotNull(document);
+        AssertProperties(document, "ArchivedAt");
+        Assert.Null(document.FindProperty("IsArchived"));
+
+        var note = model.FindEntityType(typeof(Note));
+        Assert.NotNull(note);
+        AssertProperties(note, "ArchivedAt");
+        Assert.Null(note.FindProperty("IsArchived"));
+
+        var memoryEntry = model.FindEntityType(typeof(MemoryEntry));
+        Assert.NotNull(memoryEntry);
+        AssertProperties(memoryEntry, "ArchivedAt");
+
+        var calendarEvent = model.FindEntityType(typeof(CalendarEvent));
+        Assert.NotNull(calendarEvent);
+        AssertProperties(calendarEvent, "ArchivedAt");
+
+        var calendarSource = model.FindEntityType(typeof(CalendarSource));
+        Assert.NotNull(calendarSource);
+        AssertProperties(calendarSource, "ArchivedAt");
+
+        var personalTask = model.FindEntityType(typeof(PersonalTask));
+        Assert.NotNull(personalTask);
+        AssertProperties(personalTask, "ArchivedAt");
+
+        var cardChatLink = model.FindEntityType(typeof(CardChatLink));
+        Assert.NotNull(cardChatLink);
+        AssertProperties(cardChatLink, "ArchivedAt");
+
+        var systemSettings = model.FindEntityType(typeof(SystemSettings));
+        Assert.NotNull(systemSettings);
+        AssertProperties(systemSettings, "ArchivedItemRetentionDays", "AuditLogRetentionDays", "NotificationRetentionDays");
     }
 
     [Fact]

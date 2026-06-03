@@ -12,8 +12,8 @@ public class Document
     public string ContentType { get; set; } = string.Empty;
     public string? FilePath { get; set; }
     public string? Language { get; set; }
-    public bool IsArchived { get; set; }
     public int Version { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ArchivedAt { get; set; }
 }
