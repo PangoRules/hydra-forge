@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using HydraForge.Application.Auth;
+using HydraForge.Application.Auth.Ports;
 using HydraForge.Domain.Entities.Auth;
 using Microsoft.IdentityModel.Tokens;
 

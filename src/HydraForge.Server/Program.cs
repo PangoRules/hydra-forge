@@ -1,5 +1,6 @@
 using System.Text;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Auth.Ports;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

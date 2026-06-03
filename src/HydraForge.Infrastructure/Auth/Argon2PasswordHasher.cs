@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using HydraForge.Application.Auth;
+using HydraForge.Application.Auth.Ports;
 using Konscious.Security.Cryptography;
 
 namespace HydraForge.Infrastructure.Auth;
