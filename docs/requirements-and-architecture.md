@@ -535,8 +535,9 @@ Note (1) ──┬── (N) NoteReminder
 
 AuditLogEntry (N) ── (1) Project
 Notification (N) ── (1) User
-LlmProvider — global, admin-managed
-FeatureModelConfig — global, admin-managed (one row per feature)
+LlmProvider — global, admin-managed provider connection
+ProviderModelConfig — global, admin-managed model catalog row for one provider/model pairing
+FeatureRoutingConfig — future routing policy row per feature, derived from default tier assignment requirements
 ```
 
 ### Detailed Entity Definitions
@@ -824,13 +825,32 @@ FeatureModelConfig — global, admin-managed (one row per feature)
 #### ModelTier (enum)
 `Economy`, `Standard`, `Premium`
 
-#### FeatureModelConfig
+#### ProviderModelConfig
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | Primary key |
+| ProviderId | Guid | FK to `LlmProvider`; identifies which provider offers this model |
+| ModelId | string | Provider/API-facing model identifier, e.g. `gpt-4.1`, `claude-sonnet-4`, `llama3.3` |
+| Name | string | Human-friendly display name shown to admins and users |
+| Tier | ModelTier | Admin-assigned tier: `Economy`, `Standard`, or `Premium` |
+| PricePerToken | decimal? | Optional pricing metadata for cost estimation and usage reporting |
+| MaxTokens | int? | Optional model token limit used by context-window guard and routing decisions |
+| IsEnabled | bool | Admin toggle; disabled models remain configured but are not available for routing |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+
+> `ProviderModelConfig` is the configured model catalog. It is distinct from per-feature routing policy: one provider can expose many models, and each model can have its own tier, limit, pricing, and enablement state.
+
+#### FeatureRoutingConfig (future schema)
 
 | Field | Type | Description |
 |---|---|---|
 | Feature | string | e.g. `personal_chat`, `project_chat`, `deep_research`, `agent_pipeline`, `memory_extract` |
-| DefaultTier | ModelTier | Install default |
+| DefaultTier | ModelTier | Install default tier for the feature |
 | MaxUserTier | ModelTier? | Ceiling for user overrides — null means locked to default |
+
+> The Phase 1 foundation migration creates `ProviderModelConfig`. `FeatureRoutingConfig` remains planned for the model-routing work that implements FR-172 and FR-173.
 
 #### UserTokenBudget
 

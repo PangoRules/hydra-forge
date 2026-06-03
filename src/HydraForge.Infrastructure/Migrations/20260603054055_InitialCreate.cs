@@ -342,7 +342,7 @@ namespace HydraForge.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "feature_model_configs",
+                name: "provider_model_configs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -358,7 +358,7 @@ namespace HydraForge.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_feature_model_configs", x => x.Id);
+                    table.PrimaryKey("PK_provider_model_configs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -814,13 +814,13 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_feature_model_configs_ModelId",
-                table: "feature_model_configs",
+                name: "IX_provider_model_configs_ModelId",
+                table: "provider_model_configs",
                 column: "ModelId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_feature_model_configs_ProviderId",
-                table: "feature_model_configs",
+                name: "IX_provider_model_configs_ProviderId",
+                table: "provider_model_configs",
                 column: "ProviderId");
 
             migrationBuilder.CreateIndex(
@@ -1031,7 +1031,7 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "documents");
 
             migrationBuilder.DropTable(
-                name: "feature_model_configs");
+                name: "provider_model_configs");
 
             migrationBuilder.DropTable(
                 name: "gallery_images");

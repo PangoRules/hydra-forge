@@ -34,7 +34,7 @@ public class HydraForgeDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<CardChatLink> CardChatLinks => Set<CardChatLink>();
     public DbSet<LlmProvider> LlmProviders => Set<LlmProvider>();
-    public DbSet<FeatureModelConfig> FeatureModelConfigs => Set<FeatureModelConfig>();
+    public DbSet<ProviderModelConfig> ProviderModelConfigs => Set<ProviderModelConfig>();
     public DbSet<UserTokenBudget> UserTokenBudgets => Set<UserTokenBudget>();
     public DbSet<TokenUsageRecord> TokenUsageRecords => Set<TokenUsageRecord>();
     public DbSet<ImageUsageRecord> ImageUsageRecords => Set<ImageUsageRecord>();
@@ -171,7 +171,7 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => e.Name);
         });
 
-        ConfigureEntity<FeatureModelConfig>(modelBuilder, "feature_model_configs", b =>
+        ConfigureEntity<ProviderModelConfig>(modelBuilder, "provider_model_configs", b =>
         {
             b.HasIndex(e => e.ProviderId);
             b.HasIndex(e => e.ModelId);

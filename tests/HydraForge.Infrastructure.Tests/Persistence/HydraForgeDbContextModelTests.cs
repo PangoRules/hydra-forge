@@ -1,6 +1,7 @@
 namespace HydraForge.Infrastructure.Tests.Persistence;
 
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.PersonalSpace;
@@ -51,6 +52,16 @@ public class HydraForgeDbContextModelTests
         var model = context.Model;
 
         Assert.Contains(model.GetEntityTypes(), entity => entity.GetTableName() == "cards");
+    }
+
+    [Fact]
+    public void GetEntityTypes_ProviderModelConfigsTable_Exists()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        Assert.NotNull(model.FindEntityType(typeof(ProviderModelConfig)));
+        Assert.Contains(model.GetEntityTypes(), entity => entity.GetTableName() == "provider_model_configs");
     }
 
     [Fact]

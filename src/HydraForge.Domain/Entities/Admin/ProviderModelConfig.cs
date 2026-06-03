@@ -2,7 +2,7 @@ using HydraForge.Domain.Enums;
 
 namespace HydraForge.Domain.Entities.Admin;
 
-public class FeatureModelConfig
+public class ProviderModelConfig
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProviderId { get; set; }

@@ -24,7 +24,7 @@ namespace HydraForge.Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("HydraForge.Domain.Entities.Admin.FeatureModelConfig", b =>
+            modelBuilder.Entity("HydraForge.Domain.Entities.Admin.ProviderModelConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -65,7 +65,7 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasIndex("ProviderId");
 
-                    b.ToTable("feature_model_configs", (string)null);
+                    b.ToTable("provider_model_configs", (string)null);
                 });
 
             modelBuilder.Entity("HydraForge.Domain.Entities.Admin.ImageUsageRecord", b =>
