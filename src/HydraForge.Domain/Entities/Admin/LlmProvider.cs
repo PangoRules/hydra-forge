@@ -8,7 +8,6 @@ public class LlmProvider
     public string Name { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = string.Empty;
     public string ApiKeyEncrypted { get; set; } = string.Empty;
-    public string[] Models { get; set; } = [];
     public AdapterType AdapterType { get; set; }
     public ProviderType ProviderType { get; set; }
     public ModelTier Tier { get; set; } = ModelTier.Standard;

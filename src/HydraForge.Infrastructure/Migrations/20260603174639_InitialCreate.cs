@@ -448,7 +448,6 @@ namespace HydraForge.Infrastructure.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     BaseUrl = table.Column<string>(type: "text", nullable: false),
                     ApiKeyEncrypted = table.Column<string>(type: "text", nullable: false),
-                    Models = table.Column<string[]>(type: "text[]", nullable: false),
                     AdapterType = table.Column<int>(type: "integer", nullable: false),
                     ProviderType = table.Column<int>(type: "integer", nullable: false),
                     Tier = table.Column<int>(type: "integer", nullable: false),

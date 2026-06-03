@@ -812,7 +812,6 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | Name | string | Display name, e.g. "Company OpenAI" |
 | BaseUrl | string | e.g. `https://api.openai.com/v1` |
 | ApiKeyEncrypted | string | Encrypted at rest |
-| Models | string[] | Cached provider probe output; configured model rows live in `ProviderModelConfig` |
 | IsEnabled | bool | Admin toggle |
 | AdapterType | AdapterType | `OpenAiCompatible` / `Anthropic` / `Ollama` / `Diffusers` / `ComfyUi` |
 | ProviderType | ProviderType | `Text` / `Image` / `Both` |
@@ -821,7 +820,7 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 
-> `LlmProvider.Models` is non-authoritative probe metadata. `ProviderModelConfig` is the atomic configured model catalog used by routing, pricing, enablement, and context-window limits.
+> Provider model lists are not persisted on `LlmProvider`. Provider probes can be fetched live for admin selection; `ProviderModelConfig` is the atomic configured model catalog used by routing, pricing, enablement, and context-window limits.
 
 #### AdapterType (enum)
 `OpenAiCompatible`, `Anthropic`, `Ollama`, `Diffusers`, `ComfyUi`

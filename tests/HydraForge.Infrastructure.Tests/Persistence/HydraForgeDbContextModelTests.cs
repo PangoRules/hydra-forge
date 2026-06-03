@@ -117,7 +117,7 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(LlmProvider));
         Assert.NotNull(entity);
 
-        var requiredProps = new[] { "ApiKeyEncrypted", "Models", "AdapterType", "ProviderType", "Tier", "FallbackProviderId" };
+        var requiredProps = new[] { "ApiKeyEncrypted", "AdapterType", "ProviderType", "Tier", "FallbackProviderId" };
         foreach (var propName in requiredProps)
         {
             Assert.True(
@@ -128,6 +128,7 @@ public class HydraForgeDbContextModelTests
         Assert.Equal(typeof(AdapterType), entity.FindProperty(nameof(LlmProvider.AdapterType))?.ClrType);
         Assert.Equal(typeof(ProviderType), entity.FindProperty(nameof(LlmProvider.ProviderType))?.ClrType);
         Assert.Equal(typeof(ModelTier), entity.FindProperty(nameof(LlmProvider.Tier))?.ClrType);
+        Assert.Null(entity.FindProperty("Models"));
     }
 
     [Fact]

@@ -13,7 +13,7 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    [Migration("20260603172825_InitialCreate")]
+    [Migration("20260603174639_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -100,10 +100,6 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
-
-                    b.PrimitiveCollection<string[]>("Models")
-                        .IsRequired()
-                        .HasColumnType("text[]");
 
                     b.Property<string>("Name")
                         .IsRequired()
