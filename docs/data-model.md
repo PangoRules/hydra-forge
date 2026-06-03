@@ -103,6 +103,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Position | int | Ordering (0-based) |
 | WipLimit | int? | Optional WIP limit (future) |
 | Color | string? | Hex color for visual distinction |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
 
 ### Card
 
@@ -119,6 +121,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Description | string | Markdown content |
 | Type | CardType | Task / Bug / Epic / Spec / Idea |
 | Position | int | Order within column |
+| DueDate | DateTime? | Optional due date (TODO: rename to `DueAt` for consistency with `PersonalTask.DueAt` / `CalendarEvent.StartAt`) |
+| Version | int | Optimistic concurrency / increment per edit |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 | MovedAt | DateTime | When it last changed column |
@@ -159,6 +163,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Content | string | Markdown |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker set by the author when they want to hide the comment; archived comments remain visible (with an "archived" badge) and can be restored by the author, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### ChecklistItem
 
@@ -170,6 +175,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | IsCompleted | bool | |
 | Position | int | |
 | AssignedTo | Guid? | FK to User (optional per-item assignee) |
+| CreatedAt | DateTime | |
 
 ### Attachment
 
@@ -244,7 +250,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | EntityId | Guid | |
 | OldValue | string? | JSON snapshot before |
 | NewValue | string? | JSON snapshot after |
-| Timestamp | DateTime | |
+| Timestamp | DateTime | When the event occurred (semantic) |
+| CreatedAt | DateTime | When the row was persisted (typically == `Timestamp`; both kept for clarity) |
 
 ### ProjectMember
 
@@ -280,9 +287,12 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | UserId | Guid | Recipient |
-| Message | string | Human-readable text |
+| Title | string | Short title (e.g. "Card moved", "Comment added") |
+| Body | string? | Optional longer detail line shown in the bell-dropdown |
+| Message | string | Human-readable text — historical field kept for parity with older notifications; new code prefers `Title` + `Body` |
 | CardId | Guid? | |
 | ProjectId | Guid? | |
+| ActionUrl | string? | Optional deep-link target (e.g. `/projects/.../cards/42`); clients use this for the notification click handler |
 | IsRead | bool | |
 | CreatedAt | DateTime | |
 
@@ -510,6 +520,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | TriggerAt | DateTime | Next trigger time |
 | RepeatPattern | string? | Cron expression or `daily`/`weekly`/`monthly` (null = one-time) |
 | LastTriggeredAt | DateTime? | |
+| IsSent | bool | `true` once the trigger has fired (or once a recurring reminder is disabled by `NoteArchiveService`); housekeeping hard-deletes one-shot reminders 30 days after this flips true |
+| CreatedAt | DateTime | |
 
 ### NoteImageAttachment
 
@@ -546,7 +558,11 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | CalDavUrl | string? | CalDAV endpoint (null = local-only calendar) |
 | CalDavUsername | string? | |
 | CalDavPasswordEncrypted | string? | |
-| LastSyncAt | DateTime? | |
+| ExternalUrl | string? | Optional public URL to view the source externally |
+| WebhookSecret | string? | Secret for validating incoming webhook callbacks (e.g. provider push notifications); null if the source does not support webhooks |
+| LastSyncAt | DateTime? | Last successful CalDAV pull/sync timestamp (data freshness) |
+| CreatedAt | DateTime | Row creation time |
+| UpdatedAt | DateTime | Last metadata change (rename, color, credentials, etc.); distinct from `LastSyncAt` |
 | ArchivedAt | DateTime? | Soft-delete marker; archived sources stop syncing but their events remain visible, hard-deleted by housekeeping job after admin-configured retention period |
 
 ### CalendarEvent
@@ -600,8 +616,9 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | UserId | Guid | FK to User (for security scoping) |
+| DocumentId | Guid | FK to `Document` when `SourceType = "document"`; denormalized for indexed lookup. Polymorphic `SourceType` + `SourceId` is the authoritative pairing. |
 | SourceType | string | `document` / `note` / `memory` |
-| SourceId | Guid | FK to source entity |
+| SourceId | Guid | FK to source entity (resolves to `Document`, `Note`, or `MemoryEntry` per `SourceType`) |
 | ChunkIndex | int | Order within source document |
 | Content | string | ~500-token text chunk |
 | Embedding | vector(1536) | pgvector — for RAG similarity search |
@@ -663,6 +680,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ImageId | Guid | FK to GalleryImage |
 | Tag | string | |
 | Source | TagSource | `User` / `AI` |
+| CreatedAt | DateTime | |
 
 ### SystemSettings
 

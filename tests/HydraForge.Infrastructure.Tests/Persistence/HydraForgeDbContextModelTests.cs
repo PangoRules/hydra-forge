@@ -353,6 +353,10 @@ public class HydraForgeDbContextModelTests
         Assert.NotNull(cardChatLink);
         AssertProperties(cardChatLink, "ArchivedAt");
 
+        var comment = model.FindEntityType(typeof(Comment));
+        Assert.NotNull(comment);
+        AssertProperties(comment, "ArchivedAt");
+
         var systemSettings = model.FindEntityType(typeof(SystemSettings));
         Assert.NotNull(systemSettings);
         AssertProperties(systemSettings, "ArchivedItemRetentionDays", "AuditLogRetentionDays", "NotificationRetentionDays");
