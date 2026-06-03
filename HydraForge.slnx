@@ -9,5 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/HydraForge.Application.Tests/HydraForge.Application.Tests.csproj" />
     <Project Path="tests/HydraForge.Domain.Tests/HydraForge.Domain.Tests.csproj" />
+    <Project Path="tests/HydraForge.Infrastructure.Tests/HydraForge.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
