@@ -23,7 +23,7 @@
 
 ## Steps
 
-- [ ] **Step 1: Replace placeholder Domain test with failing result tests**
+- [x] **Step 1: Replace placeholder Domain test with failing result tests**
 
 Create `tests/HydraForge.Domain.Tests/Common/ResultTests.cs` and remove `UnitTest1.cs` after tests pass.
 
@@ -41,15 +41,11 @@ Assert.Throws<InvalidOperationException>(() => failure.Value);
 
 Also cover success value, `Result.Success()`, `Result.Failure(error)`, and preventing `Error.Code` from blank value.
 
-- [ ] **Step 2: Run failing Domain tests**
-
-```bash
-dotnet test tests/HydraForge.Domain.Tests/HydraForge.Domain.Tests.csproj
-```
+- [x] **Step 2: Run failing Domain tests**
 
 Expected: compile fails because `Error`, `Result`, and `DomainErrorCodes` do not exist.
 
-- [ ] **Step 3: Implement `Error` value object**
+- [x] **Step 3: Implement `Error` value object**
 
 Use immutable sealed class with constructor validation.
 
@@ -72,11 +68,11 @@ public sealed class Error
 }
 ```
 
-- [ ] **Step 4: Implement `Result<T>` and non-generic `Result`**
+- [x] **Step 4: Implement `Result<T>` and non-generic `Result`**
 
 Behavior: success has value, failure has error, accessing wrong side throws `InvalidOperationException`.
 
-- [ ] **Step 5: Add named error code constants**
+- [x] **Step 5: Add named error code constants**
 
 Create nested static classes in `DomainErrorCodes`:
 
@@ -99,26 +95,14 @@ public static class DomainErrorCodes
 }
 ```
 
-- [ ] **Step 6: Run and pass Domain tests**
-
-```bash
-dotnet test tests/HydraForge.Domain.Tests/HydraForge.Domain.Tests.csproj
-```
+- [x] **Step 6: Run and pass Domain tests**
 
 Expected: all Domain tests pass.
 
-- [ ] **Step 7: Run solution build**
-
-```bash
-dotnet build
-```
+- [x] **Step 7: Run solution build**
 
 Expected: build succeeds.
 
-- [ ] **Step 8: Commit task branch**
+- [x] **Step 8: Commit task branch**
 
-```bash
-git add src/HydraForge.Domain tests/HydraForge.Domain.Tests
-git commit -m "feat: add domain result errors"
-git push
-```
+PR: https://github.com/PangoRules/hydra-forge/pull/2**
