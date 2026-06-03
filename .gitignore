@@ -23,6 +23,7 @@ out/
 # ─── ASP.NET Core ────────────────────────────────────────────────────────────
 appsettings.Production.json
 appsettings.Local.json
+appsettings.Development.json
 
 # ─── Nuxt / Vue / Node ───────────────────────────────────────────────────────
 node_modules/

@@ -187,7 +187,7 @@ PostgreSQL + pgvector (hydraforge db)
 │
 ├── Admin / system (global)
 │   ├── Users, Notifications
-│   ├── LlmProviders, FeatureModelConfigs
+│   ├── LlmProviders, ProviderModelConfigs, FeatureRoutingConfigs
 │   ├── UserTokenBudgets, TokenUsageRecords, ImageUsageRecords
 │   └── FeatureFlags
 │

@@ -106,7 +106,7 @@ Use `modelBuilder.HasPostgresExtension("vector")` and pgvector mapping for:
 
 - [ ] **Step 7: Add Infrastructure DI extension**
 
-Create `AddHydraForgePersistence(this IServiceCollection services, IConfiguration configuration)` in Infrastructure. It reads `ConnectionStrings:Default` and registers DbContext with Npgsql.
+Create `AddPersistence(this IServiceCollection services, IConfiguration configuration)` in Infrastructure (`PersistenceServiceCollectionExtensions`). It reads `ConnectionStrings:Default` and registers DbContext with Npgsql.
 
 - [ ] **Step 8: Wire Server composition root**
 
