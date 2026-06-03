@@ -2,14 +2,29 @@ using System.Security.Cryptography;
 using System.Text;
 using HydraForge.Application.Auth.Ports;
 using Konscious.Security.Cryptography;
+using Microsoft.Extensions.Options;
 
 namespace HydraForge.Infrastructure.Auth;
 
+public class Argon2Options
+{
+    public int MemorySizeKiB { get; set; } = 65536;
+    public int Iterations { get; set; } = 3;
+    public int Parallelism { get; set; } = 4;
+}
+
 public class Argon2PasswordHasher : IPasswordHasher
 {
-    private const int MemorySize = 65536;
-    private const int Iterations = 3;
-    private const int Parallelism = 4;
+    private readonly int _memorySizeKiB;
+    private readonly int _iterations;
+    private readonly int _parallelism;
+
+    public Argon2PasswordHasher(IOptions<Argon2Options> options)
+    {
+        _memorySizeKiB = options.Value.MemorySizeKiB;
+        _iterations = options.Value.Iterations;
+        _parallelism = options.Value.Parallelism;
+    }
 
     public string HashPassword(string password)
     {
@@ -19,9 +34,9 @@ public class Argon2PasswordHasher : IPasswordHasher
         var hash = new Argon2id(Encoding.UTF8.GetBytes(password))
         {
             Salt = salt,
-            MemorySize = MemorySize,
-            Iterations = Iterations,
-            DegreeOfParallelism = Parallelism
+            MemorySize = _memorySizeKiB,
+            Iterations = _iterations,
+            DegreeOfParallelism = _parallelism
         }.GetBytes(32);
 
         return Convert.ToBase64String(salt) + "$" + Convert.ToBase64String(hash);
@@ -40,9 +55,9 @@ public class Argon2PasswordHasher : IPasswordHasher
             var hash = new Argon2id(Encoding.UTF8.GetBytes(password))
             {
                 Salt = salt,
-                MemorySize = MemorySize,
-                Iterations = Iterations,
-                DegreeOfParallelism = Parallelism
+                MemorySize = _memorySizeKiB,
+                Iterations = _iterations,
+                DegreeOfParallelism = _parallelism
             }.GetBytes(32);
 
             return CryptographicOperations.FixedTimeEquals(hash, storedHash);

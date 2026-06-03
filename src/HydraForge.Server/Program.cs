@@ -17,6 +17,8 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is required");
 var accessTokenMinutes = builder.Configuration.GetValue<int>("Jwt:AccessTokenMinutes", 60);
 
+builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

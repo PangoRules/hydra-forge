@@ -16,19 +16,18 @@ public class EfUserRepository : IUserRepository
 
     public async Task<User?> FindByUsernameAsync(string username)
     {
+        var normalized = username.ToLowerInvariant();
         return await _context.Users
-            .FirstOrDefaultAsync(u => u.UsernameNormalized == username.ToUpperInvariant());
+            .FirstOrDefaultAsync(u => u.UsernameNormalized == normalized);
     }
 
     public async Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
     {
         var user = await _context.Users.FindAsync(userId);
-        if (user != null)
-        {
-            user.LastLoginAt = loginAt;
-            user.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-        }
+        if (user == null) return;
+        user.LastLoginAt = loginAt;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> AnyAdminExistsAsync()
@@ -38,8 +37,8 @@ public class EfUserRepository : IUserRepository
 
     public async Task CreateAsync(User user)
     {
-        user.UsernameNormalized = user.Username.ToUpperInvariant();
-        user.EmailNormalized = user.Email.ToUpperInvariant();
+        user.UsernameNormalized = user.Username.ToLowerInvariant();
+        user.EmailNormalized = user.Email.ToLowerInvariant();
         user.CreatedAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
 
