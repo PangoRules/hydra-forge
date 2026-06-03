@@ -123,8 +123,12 @@ namespace HydraForge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ApiKey")
+                    b.Property<string>("ApiKeyEncrypted")
+                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<AdapterType>("AdapterType")
+                        .HasColumnType("integer");
 
                     b.Property<string>("BaseUrl")
                         .IsRequired()
@@ -133,6 +137,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("FallbackProviderId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
 
@@ -140,7 +147,14 @@ namespace HydraForge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string[]>("Models")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
                     b.Property<int>("ProviderType")
+                        .HasColumnType("integer");
+
+                    b.Property<ModelTier>("Tier")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -148,7 +162,15 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AdapterType");
+
+                    b.HasIndex("FallbackProviderId");
+
                     b.HasIndex("Name");
+
+                    b.HasIndex("ProviderType");
+
+                    b.HasIndex("Tier");
 
                     b.ToTable("llm_providers", (string)null);
                 });
@@ -165,14 +187,30 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("ModelConfigId")
+                    b.Property<int>("CachedTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<AiFeature>("Feature")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PipelineRunId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("TokenCount")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -180,6 +218,12 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Feature");
+
+                    b.HasIndex("PipelineRunId");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId");
 

@@ -417,9 +417,13 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    ProviderType = table.Column<int>(type: "integer", nullable: false),
                     BaseUrl = table.Column<string>(type: "text", nullable: false),
-                    ApiKey = table.Column<string>(type: "text", nullable: true),
+                    ApiKeyEncrypted = table.Column<string>(type: "text", nullable: false),
+                    Models = table.Column<string[]>(type: "text[]", nullable: false),
+                    AdapterType = table.Column<int>(type: "integer", nullable: false),
+                    ProviderType = table.Column<int>(type: "integer", nullable: false),
+                    Tier = table.Column<int>(type: "integer", nullable: false),
+                    FallbackProviderId = table.Column<Guid>(type: "uuid", nullable: true),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -641,8 +645,13 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
-                    ModelConfigId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TokenCount = table.Column<int>(type: "integer", nullable: false),
+                    Feature = table.Column<int>(type: "integer", nullable: false),
+                    ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelName = table.Column<string>(type: "text", nullable: false),
+                    InputTokens = table.Column<int>(type: "integer", nullable: false),
+                    OutputTokens = table.Column<int>(type: "integer", nullable: false),
+                    CachedTokens = table.Column<int>(type: "integer", nullable: false),
+                    PipelineRunId = table.Column<Guid>(type: "uuid", nullable: true),
                     Cost = table.Column<decimal>(type: "numeric", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -863,9 +872,29 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_llm_providers_AdapterType",
+                table: "llm_providers",
+                column: "AdapterType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_llm_providers_FallbackProviderId",
+                table: "llm_providers",
+                column: "FallbackProviderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_llm_providers_Name",
                 table: "llm_providers",
                 column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_llm_providers_ProviderType",
+                table: "llm_providers",
+                column: "ProviderType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_llm_providers_Tier",
+                table: "llm_providers",
+                column: "Tier");
 
             migrationBuilder.CreateIndex(
                 name: "IX_memory_entries_Category",
@@ -958,6 +987,21 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "IX_token_usage_records_CreatedAt",
                 table: "token_usage_records",
                 column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_token_usage_records_Feature",
+                table: "token_usage_records",
+                column: "Feature");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_token_usage_records_PipelineRunId",
+                table: "token_usage_records",
+                column: "PipelineRunId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_token_usage_records_ProviderId",
+                table: "token_usage_records",
+                column: "ProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_token_usage_records_UserId",

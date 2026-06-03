@@ -98,6 +98,48 @@ public class HydraForgeDbContextModelTests
     }
 
     [Fact]
+    public void FindEntityType_LlmProvider_HasRoutingAndAdapterProperties()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(LlmProvider));
+        Assert.NotNull(entity);
+
+        var requiredProps = new[] { "ApiKeyEncrypted", "Models", "AdapterType", "ProviderType", "Tier", "FallbackProviderId" };
+        foreach (var propName in requiredProps)
+        {
+            Assert.True(
+                entity.GetProperties().Any(p => p.Name == propName),
+                $"LlmProvider missing property: {propName}");
+        }
+
+        Assert.Equal(typeof(AdapterType), entity.FindProperty(nameof(LlmProvider.AdapterType))?.ClrType);
+        Assert.Equal(typeof(ProviderType), entity.FindProperty(nameof(LlmProvider.ProviderType))?.ClrType);
+        Assert.Equal(typeof(ModelTier), entity.FindProperty(nameof(LlmProvider.Tier))?.ClrType);
+    }
+
+    [Fact]
+    public void FindEntityType_TokenUsageRecord_HasUsageBreakdownProperties()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(TokenUsageRecord));
+        Assert.NotNull(entity);
+
+        var requiredProps = new[] { "Feature", "ProviderId", "ModelName", "InputTokens", "OutputTokens", "CachedTokens", "PipelineRunId", "Cost", "CreatedAt" };
+        foreach (var propName in requiredProps)
+        {
+            Assert.True(
+                entity.GetProperties().Any(p => p.Name == propName),
+                $"TokenUsageRecord missing property: {propName}");
+        }
+
+        Assert.Equal(typeof(AiFeature), entity.FindProperty(nameof(TokenUsageRecord.Feature))?.ClrType);
+    }
+
+    [Fact]
     public void GetIndexes_UsernameNormalized_IsUnique()
     {
         using var context = new HydraForgeDbContext(CreateOptions());

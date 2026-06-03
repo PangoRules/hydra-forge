@@ -812,12 +812,19 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | Name | string | Display name, e.g. "Company OpenAI" |
 | BaseUrl | string | e.g. `https://api.openai.com/v1` |
 | ApiKeyEncrypted | string | Encrypted at rest |
-| Models | string[] | Cached from probe |
+| Models | string[] | Cached provider probe output; configured model rows live in `ProviderModelConfig` |
 | IsEnabled | bool | Admin toggle |
-| AdapterType | string | `openai-compat` / `anthropic` / `ollama` / `diffusers` / `comfyui` |
+| AdapterType | AdapterType | `OpenAiCompatible` / `Anthropic` / `Ollama` / `Diffusers` / `ComfyUi` |
 | ProviderType | ProviderType | `Text` / `Image` / `Both` |
 | Tier | ModelTier | `Economy` / `Standard` / `Premium` |
 | FallbackProviderId | Guid? | Used if this provider is rate-limited or unavailable |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+
+> `LlmProvider.Models` is non-authoritative probe metadata. `ProviderModelConfig` is the atomic configured model catalog used by routing, pricing, enablement, and context-window limits.
+
+#### AdapterType (enum)
+`OpenAiCompatible`, `Anthropic`, `Ollama`, `Diffusers`, `ComfyUi`
 
 #### ProviderType (enum)
 `Text`, `Image`, `Both`
@@ -878,9 +885,12 @@ Initial values: `PersonalChat`, `ProjectChat`, `DeepResearch`, `AgentPipeline`, 
 | InputTokens | int | |
 | OutputTokens | int | |
 | CachedTokens | int | Prompt cache hits (reduces effective cost) |
+| Cost | decimal | Recorded estimated/provider-reported call cost |
 | ProjectId | Guid? | Set if call was in project context |
 | PipelineRunId | Guid? | Groups multi-turn agent pipeline calls |
-| Timestamp | DateTime | |
+| CreatedAt | DateTime | |
+
+> `ProviderId` + `ModelName` are intentionally denormalized on usage records. They preserve the exact historical provider/model used even if a `ProviderModelConfig` row is renamed, disabled, repriced, or removed later.
 
 #### ImageUsageRecord
 

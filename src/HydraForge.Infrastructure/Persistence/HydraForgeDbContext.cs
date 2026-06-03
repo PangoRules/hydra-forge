@@ -169,6 +169,10 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<LlmProvider>(modelBuilder, "llm_providers", b =>
         {
             b.HasIndex(e => e.Name);
+            b.HasIndex(e => e.AdapterType);
+            b.HasIndex(e => e.ProviderType);
+            b.HasIndex(e => e.Tier);
+            b.HasIndex(e => e.FallbackProviderId);
         });
 
         ConfigureEntity<ProviderModelConfig>(modelBuilder, "provider_model_configs", b =>
@@ -185,6 +189,9 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<TokenUsageRecord>(modelBuilder, "token_usage_records", b =>
         {
             b.HasIndex(e => e.UserId);
+            b.HasIndex(e => e.ProviderId);
+            b.HasIndex(e => e.Feature);
+            b.HasIndex(e => e.PipelineRunId);
             b.HasIndex(e => e.CreatedAt);
         });
 
