@@ -15,7 +15,7 @@ public class Card
     public string Description { get; set; } = string.Empty;
     public CardType Type { get; set; } = CardType.Task;
     public int Position { get; set; }
-    public DateTime? DueDate { get; set; }
+    public DateTime? DueAt { get; set; }
     public int Version { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -170,7 +170,7 @@ public class HydraForgeDbContextModelTests
 
         var card = model.FindEntityType(typeof(Card));
         Assert.NotNull(card);
-        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "MovedAt", "ArchivedAt");
+        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "DueAt", "MovedAt", "ArchivedAt");
         Assert.Equal(typeof(int), card.FindProperty("CardNumber")?.ClrType);
         Assert.Equal(typeof(CardType), card.FindProperty("Type")?.ClrType);
 

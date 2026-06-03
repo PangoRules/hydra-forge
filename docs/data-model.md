@@ -121,7 +121,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Description | string | Markdown content |
 | Type | CardType | Task / Bug / Epic / Spec / Idea |
 | Position | int | Order within column |
-| DueDate | DateTime? | Optional due date (TODO: rename to `DueAt` for consistency with `PersonalTask.DueAt` / `CalendarEvent.StartAt`) |
+| DueAt | DateTime? | Optional due date/time. Aligned with `PersonalTask.DueAt`, `CalendarEvent.StartAt`, `NoteReminder.TriggerAt`. |
 | Version | int | Optimistic concurrency / increment per edit |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
