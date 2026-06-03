@@ -745,6 +745,7 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | ProjectId | Guid? | FK to Project when session is in a project folder |
 | IsShared | bool | True for project-folder chats (visible to all members read-only) |
 | CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
 | ArchivedAt | DateTime? | |
 
 #### ChatMessage
@@ -801,8 +802,12 @@ FeatureRoutingConfig — future routing policy row per feature, derived from def
 | Id | Guid | |
 | UserId | Guid | FK to User |
 | Name | string | e.g. "Senior Dev Mode", "Concise" |
+| Description | string? | User-facing summary of when to use this personality |
 | SystemPrompt | string | Injected at chat start after project context |
 | IsDefault | bool | One per user |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; null while active |
 
 #### LlmProvider
 

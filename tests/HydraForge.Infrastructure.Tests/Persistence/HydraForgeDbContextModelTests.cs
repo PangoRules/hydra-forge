@@ -232,7 +232,7 @@ public class HydraForgeDbContextModelTests
 
         var session = model.FindEntityType(typeof(ChatSession));
         Assert.NotNull(session);
-        AssertProperties(session, "ProjectId", "IsShared", "ArchivedAt");
+        AssertProperties(session, "ProjectId", "IsShared", "UpdatedAt", "ArchivedAt");
 
         var message = model.FindEntityType(typeof(ChatMessage));
         Assert.NotNull(message);
@@ -251,7 +251,7 @@ public class HydraForgeDbContextModelTests
 
         var agentPersonality = model.FindEntityType(typeof(AgentPersonality));
         Assert.NotNull(agentPersonality);
-        AssertProperties(agentPersonality, "SystemPrompt", "IsDefault");
+        AssertProperties(agentPersonality, "Description", "SystemPrompt", "IsDefault", "CreatedAt", "UpdatedAt", "ArchivedAt");
 
         var notification = model.FindEntityType(typeof(Notification));
         Assert.NotNull(notification);
