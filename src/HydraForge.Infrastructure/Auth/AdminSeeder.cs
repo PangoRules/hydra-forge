@@ -6,17 +6,25 @@ using Microsoft.Extensions.Logging;
 
 namespace HydraForge.Infrastructure.Auth;
 
+public class AdminSeederOptions
+{
+    public string? Username { get; set; }
+    public string? Password { get; set; }
+}
+
 public class AdminSeeder
 {
     private readonly EfUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<AdminSeeder> _logger;
+    private readonly AdminSeederOptions _options;
 
-    public AdminSeeder(EfUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<AdminSeeder> logger)
+    public AdminSeeder(EfUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<AdminSeeder> logger, AdminSeederOptions options)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _options = options;
     }
 
     public async Task<Result> SeedIfNeededAsync()
@@ -28,16 +36,16 @@ public class AdminSeeder
             return Result.Success();
         }
 
-        var username = Environment.GetEnvironmentVariable("HYDRA_ADMIN_USERNAME");
-        var password = Environment.GetEnvironmentVariable("HYDRA_ADMIN_PASSWORD");
+        var username = _options.Username;
+        var password = _options.Password;
 
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            _logger.LogWarning("Admin seed not configured: HYDRA_ADMIN_USERNAME and HYDRA_ADMIN_PASSWORD env vars required");
-            return Result.Failure(new Error(DomainErrorCodes.Auth.AdminSeedNotConfigured, "Admin seed not configured. Set HYDRA_ADMIN_USERNAME and HYDRA_ADMIN_PASSWORD environment variables."));
+            _logger.LogWarning("Admin seed not configured: AdminSeed:Username and AdminSeed:Password env vars or config required");
+            return Result.Failure(new Error(DomainErrorCodes.Auth.AdminSeedNotConfigured, "Admin seed not configured. Set AdminSeed:Username and AdminSeed:Password environment variables or configuration."));
         }
 
-        var normalizedUsername = username.ToUpperInvariant();
+        var normalizedUsername = username.ToLowerInvariant();
         var existingUser = await _userRepository.FindByUsernameAsync(normalizedUsername);
         if (existingUser != null)
         {
@@ -52,7 +60,7 @@ public class AdminSeeder
             Username = username,
             UsernameNormalized = normalizedUsername,
             Email = "admin@localhost",
-            EmailNormalized = "ADMIN@LOCALHOST",
+            EmailNormalized = "admin@localhost",
             PasswordHash = _passwordHasher.HashPassword(password),
             IsAdmin = true,
             IsDisabled = false

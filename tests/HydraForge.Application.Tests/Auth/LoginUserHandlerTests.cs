@@ -93,6 +93,12 @@ internal class InMemoryUserRepository : IUserRepository
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
         => Task.CompletedTask;
+
+    public Task<bool> AnyAdminExistsAsync()
+        => Task.FromResult(_user?.IsAdmin ?? false);
+
+    public Task CreateAsync(User user)
+        => Task.CompletedTask;
 }
 
 internal class StrictPasswordHasher : IPasswordHasher

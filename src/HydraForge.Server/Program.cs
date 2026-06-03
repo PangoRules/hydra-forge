@@ -18,6 +18,7 @@ var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new Invalid
 var accessTokenMinutes = builder.Configuration.GetValue<int>("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
+builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
