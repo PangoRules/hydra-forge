@@ -2,6 +2,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HydraForge.Infrastructure.Auth;
 
@@ -18,12 +19,12 @@ public class AdminSeeder
     private readonly ILogger<AdminSeeder> _logger;
     private readonly AdminSeederOptions _options;
 
-    public AdminSeeder(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<AdminSeeder> logger, AdminSeederOptions options)
+    public AdminSeeder(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<AdminSeeder> logger, IOptions<AdminSeederOptions> options)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
-        _options = options;
+        _options = options.Value;
     }
 
     public async Task<Result> SeedIfNeededAsync()
