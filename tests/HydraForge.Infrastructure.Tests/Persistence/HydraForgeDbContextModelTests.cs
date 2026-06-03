@@ -147,7 +147,7 @@ public class HydraForgeDbContextModelTests
 
         var user = model.FindEntityType(typeof(User));
         Assert.NotNull(user);
-        AssertProperties(user, "IsAdmin", "LastLoginAt");
+        AssertProperties(user, "Name", "LastName", "IsAdmin", "LastLoginAt");
 
         var budget = model.FindEntityType(typeof(UserTokenBudget));
         Assert.NotNull(budget);

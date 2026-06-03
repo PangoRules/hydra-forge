@@ -13,7 +13,7 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    [Migration("20260603175544_InitialCreate")]
+    [Migration("20260603180543_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -315,6 +315,14 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
