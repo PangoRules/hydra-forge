@@ -22,7 +22,7 @@
 
 ## Steps
 
-- [ ] **Step 1: Create server Dockerfile at repo root**
+- [x] **Step 1: Create server Dockerfile at repo root**
 
 Use .NET 10 SDK/runtime images, copy solution + source projects, restore `HydraForge.slnx`, publish `HydraForge.Server`, run as non-root if image supports it.
 
@@ -43,7 +43,7 @@ EXPOSE 8080
 ENTRYPOINT ["dotnet", "HydraForge.Server.dll"]
 ```
 
-- [ ] **Step 2: Fill `.env.example` with local-dev values**
+- [x] **Step 2: Fill `.env.example` with local-dev values**
 
 Use strong example names but mark secrets for replacement.
 
@@ -77,7 +77,7 @@ Logging__MinimumLevel=Information
 SearXng__BaseUrl=http://host.docker.internal:8080
 ```
 
-- [ ] **Step 3: Fill `docker-compose.yml`**
+- [x] **Step 3: Fill `docker-compose.yml`**
 
 Use pgvector-ready PostgreSQL image so Task 3 migrations can create vector extension.
 
@@ -132,7 +132,7 @@ volumes:
   postgres-data:
 ```
 
-- [ ] **Step 4: Verify Compose config parses**
+- [x] **Step 4: Verify Compose config parses**
 
 Run:
 
@@ -141,9 +141,9 @@ cp .env.example .env
 docker compose config
 ```
 
-Expected: expanded Compose config prints without parse errors.
+Expected: expanded Compose config prints without parse errors. ✅
 
-- [ ] **Step 5: Verify server image builds**
+- [x] **Step 5: Verify server image builds**
 
 Run:
 
@@ -151,12 +151,12 @@ Run:
 docker compose build server
 ```
 
-Expected: server image builds through `dotnet publish`.
+Expected: server image builds through `dotnet publish`. ✅
 
-- [ ] **Step 6: Commit task branch**
+- [x] **Step 6: Commit task branch**
 
-```bash
-git add Dockerfile docker-compose.yml .env.example
-git commit -m "feat: add local docker stack"
-git push
-```
+Done via PR workflow. Commits made:
+- `feat: add local docker stack` — Dockerfile, docker-compose.yml, .env.example
+- `chore: remove bin/obj from git tracking, fix .gitignore` — cleaned up build artifacts
+
+Branch pushed to `origin/task/phase-1-docker-env`.
