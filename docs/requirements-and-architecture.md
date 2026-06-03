@@ -476,7 +476,7 @@ This project is a **self-hosted, server-authoritative project management platfor
 | NFR-12 | Log volume | Errors and warnings only in production by default; debug level configurable |
 | NFR-13 | Error response time | Error responses must be as fast as success responses — no hanging on failure |
 | NFR-14 | Resilience | LLM/Git/ntfy failures must not crash or block core board functionality |
-| NFR-15 | Archived item retention | Archived Albums and AlbumImages remain visible to their owner; a scheduled housekeeping job hard-deletes them after an admin-configured retention period |
+| NFR-15 | Archived item retention | Archived GalleryImages, Albums, and AlbumImages remain visible to their owner (including inside archived albums); a scheduled housekeeping job hard-deletes them after an admin-configured retention period |
 
 ---
 
@@ -1101,6 +1101,8 @@ Initial values: `PersonalChat`, `ProjectChat`, `DeepResearch`, `AgentPipeline`, 
 | Longitude | double? | From EXIF GPS |
 | IsFavorite | bool | |
 | CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker; archived images remain visible to the user (including in archived albums), hard-deleted by housekeeping job after admin-configured retention period |
 
 #### Album
 
@@ -1576,7 +1578,7 @@ hydra-forge/
 
 - [ ] Documents/Library: upload (PDF/MD/code/CSV/HTML), living documents (AI-assisted editor), version history + restore + compare, PDF rendering + form-fill + annotation, search, archive, export ZIP, AI tidy
 - [ ] Gallery: upload, AI + user tags, EXIF extraction, albums + cover photos, favorites, deduplication by hash, bulk ops, ZIP download
-- [ ] Gallery archive: archived albums/images remain visible to owner; scheduled housekeeping job hard-deletes them after admin-configured retention period
+- [ ] Gallery archive: archived GalleryImages, Albums, and AlbumImages remain visible to owner (including in archived albums); scheduled housekeeping job hard-deletes them after admin-configured retention period
 - [ ] Gallery editor: layer-based, opacity/visibility, inpainting, AI upscaling, style transfer, rotation, editor drafts
 - [ ] Image generation: in-chat inline, document insert, gallery editor backend — admin-configured image providers, image tiers, `ImageUsageRecord`
 - [ ] Deep Research: multi-step web search → AI synthesis → visual report, streaming progress, library, archive, spinoff — uses bundled SearXNG

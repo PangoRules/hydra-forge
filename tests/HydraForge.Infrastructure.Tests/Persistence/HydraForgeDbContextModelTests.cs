@@ -294,7 +294,7 @@ public class HydraForgeDbContextModelTests
 
         var image = model.FindEntityType(typeof(GalleryImage));
         Assert.NotNull(image);
-        AssertProperties(image, "FilePath", "OriginalFilename", "ContentType", "Size", "Width", "Height", "Hash", "TakenAt", "CameraModel", "Latitude", "Longitude", "IsFavorite", "UpdatedAt");
+        AssertProperties(image, "FilePath", "OriginalFilename", "ContentType", "Size", "Width", "Height", "Hash", "TakenAt", "CameraModel", "Latitude", "Longitude", "IsFavorite", "UpdatedAt", "ArchivedAt");
 
         var album = model.FindEntityType(typeof(Album));
         Assert.NotNull(album);
