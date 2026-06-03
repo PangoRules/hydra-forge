@@ -1,0 +1,11 @@
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/bin/Debug/net10.0/HydraForge.Domain.deps.json
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/bin/Debug/net10.0/HydraForge.Domain.dll
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/bin/Debug/net10.0/HydraForge.Domain.pdb
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.AssemblyInfoInputs.cache
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.AssemblyInfo.cs
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.csproj.CoreCompileInputs.cache
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.dll
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/refint/HydraForge.Domain.dll
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/HydraForge.Domain.pdb
+/home/pango/Projects/hydra-forge/src/HydraForge.Domain/obj/Debug/net10.0/ref/HydraForge.Domain.dll

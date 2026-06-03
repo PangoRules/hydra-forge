@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HydraForge.Application/HydraForge.Application.csproj" />
+    <Project Path="src/HydraForge.Domain/HydraForge.Domain.csproj" />
+    <Project Path="src/HydraForge.Infrastructure/HydraForge.Infrastructure.csproj" />
+    <Project Path="src/HydraForge.Server/HydraForge.Server.csproj" />
+    <Project Path="src/HydraForge.Tui/HydraForge.Tui.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HydraForge.Application.Tests/HydraForge.Application.Tests.csproj" />
+    <Project Path="tests/HydraForge.Domain.Tests/HydraForge.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
