@@ -4,6 +4,8 @@ public class UserTokenBudget
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
+    public int? DailyLimit { get; set; }
+    public int? MonthlyLimit { get; set; }
     public int MonthlyTokenBudget { get; set; }
     public int MonthlyTokenUsed { get; set; }
     public int MonthlyImageBudget { get; set; }

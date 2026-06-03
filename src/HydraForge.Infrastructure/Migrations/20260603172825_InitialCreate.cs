@@ -23,7 +23,8 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
-                    Configuration = table.Column<string>(type: "text", nullable: false),
+                    SystemPrompt = table.Column<string>(type: "text", nullable: false),
+                    IsDefault = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -39,7 +40,7 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     AlbumId = table.Column<Guid>(type: "uuid", nullable: false),
                     ImageId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -55,6 +56,7 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    CoverImageId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -71,8 +73,9 @@ namespace HydraForge.Infrastructure.Migrations
                     CardId = table.Column<Guid>(type: "uuid", nullable: false),
                     FileName = table.Column<string>(type: "text", nullable: false),
                     ContentType = table.Column<string>(type: "text", nullable: false),
-                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
                     StoragePath = table.Column<string>(type: "text", nullable: false),
+                    UploadedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -85,13 +88,14 @@ namespace HydraForge.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     ActorId = table.Column<Guid>(type: "uuid", nullable: false),
                     EntityType = table.Column<string>(type: "text", nullable: false),
                     EntityId = table.Column<Guid>(type: "uuid", nullable: false),
                     Action = table.Column<string>(type: "text", nullable: false),
-                    OldValues = table.Column<string>(type: "text", nullable: true),
-                    NewValues = table.Column<string>(type: "text", nullable: true),
+                    OldValue = table.Column<string>(type: "text", nullable: true),
+                    NewValue = table.Column<string>(type: "text", nullable: true),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -104,13 +108,15 @@ namespace HydraForge.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    SourceId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ExternalId = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CalendarSourceId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ExternalUid = table.Column<string>(type: "text", nullable: true),
                     Title = table.Column<string>(type: "text", nullable: false),
-                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsAllDay = table.Column<bool>(type: "boolean", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    RecurrenceRule = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -126,6 +132,11 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
+                    CalDavUrl = table.Column<string>(type: "text", nullable: true),
+                    CalDavUsername = table.Column<string>(type: "text", nullable: true),
+                    CalDavPasswordEncrypted = table.Column<string>(type: "text", nullable: true),
+                    Color = table.Column<string>(type: "text", nullable: false),
+                    LastSyncAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ExternalUrl = table.Column<string>(type: "text", nullable: true),
                     WebhookSecret = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -143,7 +154,8 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     CardId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    AssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    AssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AssignedByUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -156,7 +168,9 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     CardId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ChatSessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Summary = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -171,12 +185,27 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     SourceCardId = table.Column<Guid>(type: "uuid", nullable: false),
                     TargetCardId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RelationshipType = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ArchivedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_card_relationships", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "card_watchers",
+                columns: table => new
+                {
+                    CardId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    AddedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_card_watchers", x => new { x.CardId, x.UserId });
                 });
 
             migrationBuilder.CreateTable(
@@ -186,15 +215,19 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     ColumnId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CardNumber = table.Column<string>(type: "text", nullable: false),
+                    ParentCardId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SpecId = table.Column<Guid>(type: "uuid", nullable: true),
+                    PlanId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CardNumber = table.Column<int>(type: "integer", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    CardType = table.Column<int>(type: "integer", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
                     DueDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Version = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MovedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -206,9 +239,12 @@ namespace HydraForge.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    ParentFolderId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ArchivedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -223,6 +259,10 @@ namespace HydraForge.Infrastructure.Migrations
                     SessionId = table.Column<Guid>(type: "uuid", nullable: false),
                     Role = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
+                    InputTokens = table.Column<int>(type: "integer", nullable: false),
+                    OutputTokens = table.Column<int>(type: "integer", nullable: false),
+                    CachedTokens = table.Column<int>(type: "integer", nullable: false),
+                    ModelName = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -236,10 +276,13 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FolderId = table.Column<Guid>(type: "uuid", nullable: true),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
                     Title = table.Column<string>(type: "text", nullable: false),
+                    IsShared = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ArchivedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -254,28 +297,13 @@ namespace HydraForge.Infrastructure.Migrations
                     CardId = table.Column<Guid>(type: "uuid", nullable: false),
                     Text = table.Column<string>(type: "text", nullable: false),
                     IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
+                    AssignedTo = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_checklist_items", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "columns",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_columns", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -299,10 +327,13 @@ namespace HydraForge.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     DocumentId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SourceType = table.Column<string>(type: "text", nullable: false),
+                    SourceId = table.Column<Guid>(type: "uuid", nullable: false),
                     ChunkIndex = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    Embedding = table.Column<Vector>(type: "vector(1536)", nullable: true),
+                    Embedding = table.Column<Vector>(type: "vector(1536)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -318,7 +349,8 @@ namespace HydraForge.Infrastructure.Migrations
                     DocumentId = table.Column<Guid>(type: "uuid", nullable: false),
                     Version = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -332,7 +364,12 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
-                    VersionCount = table.Column<int>(type: "integer", nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: true),
+                    ContentType = table.Column<string>(type: "text", nullable: false),
+                    FilePath = table.Column<string>(type: "text", nullable: true),
+                    Language = table.Column<string>(type: "text", nullable: true),
+                    IsArchived = table.Column<bool>(type: "boolean", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -342,34 +379,26 @@ namespace HydraForge.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "provider_model_configs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ModelId = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Tier = table.Column<int>(type: "integer", nullable: false),
-                    PricePerToken = table.Column<decimal>(type: "numeric", nullable: true),
-                    MaxTokens = table.Column<int>(type: "integer", nullable: true),
-                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_provider_model_configs", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "gallery_images",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ImagePath = table.Column<string>(type: "text", nullable: false),
+                    FilePath = table.Column<string>(type: "text", nullable: false),
+                    OriginalFilename = table.Column<string>(type: "text", nullable: false),
+                    ContentType = table.Column<string>(type: "text", nullable: true),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
                     ThumbnailPath = table.Column<string>(type: "text", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Width = table.Column<int>(type: "integer", nullable: false),
+                    Height = table.Column<int>(type: "integer", nullable: false),
+                    Hash = table.Column<string>(type: "text", nullable: false),
+                    TakenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CameraModel = table.Column<string>(type: "text", nullable: true),
+                    Latitude = table.Column<double>(type: "double precision", nullable: true),
+                    Longitude = table.Column<double>(type: "double precision", nullable: true),
+                    IsFavorite = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -441,7 +470,9 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Category = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    Embedding = table.Column<Vector>(type: "vector(1536)", nullable: true),
+                    Embedding = table.Column<Vector>(type: "vector(1536)", nullable: false),
+                    IsPinned = table.Column<bool>(type: "boolean", nullable: false),
+                    Source = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -456,7 +487,7 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     NoteId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ImagePath = table.Column<string>(type: "text", nullable: false),
+                    FilePath = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -470,7 +501,9 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     NoteId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RemindAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TriggerAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RepeatPattern = table.Column<string>(type: "text", nullable: true),
+                    LastTriggeredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsSent = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -487,6 +520,9 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
+                    IsPinned = table.Column<bool>(type: "boolean", nullable: false),
+                    IsArchived = table.Column<bool>(type: "boolean", nullable: false),
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -503,6 +539,9 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Body = table.Column<string>(type: "text", nullable: true),
+                    Message = table.Column<string>(type: "text", nullable: false),
+                    CardId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
                     ActionUrl = table.Column<string>(type: "text", nullable: true),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -521,7 +560,8 @@ namespace HydraForge.Infrastructure.Migrations
                     Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
                     IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DueDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DueAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CronExpression = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -538,7 +578,8 @@ namespace HydraForge.Infrastructure.Migrations
                     PlanId = table.Column<Guid>(type: "uuid", nullable: false),
                     Version = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -551,9 +592,11 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
-                    VersionCount = table.Column<int>(type: "integer", nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -569,6 +612,9 @@ namespace HydraForge.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     TemplateContent = table.Column<string>(type: "text", nullable: false),
+                    AiNarrative = table.Column<string>(type: "text", nullable: true),
+                    TemplateGeneratedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AiNarrativeGeneratedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -584,7 +630,7 @@ namespace HydraForge.Infrastructure.Migrations
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Role = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    JoinedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -597,13 +643,35 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    GitRemoteUrl = table.Column<string>(type: "text", nullable: true),
+                    GitProvider = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_projects", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "provider_model_configs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelId = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Tier = table.Column<int>(type: "integer", nullable: false),
+                    PricePerToken = table.Column<decimal>(type: "numeric", nullable: true),
+                    MaxTokens = table.Column<int>(type: "integer", nullable: true),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_provider_model_configs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -614,7 +682,8 @@ namespace HydraForge.Infrastructure.Migrations
                     SpecId = table.Column<Guid>(type: "uuid", nullable: false),
                     Version = table.Column<int>(type: "integer", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -627,9 +696,11 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
-                    VersionCount = table.Column<int>(type: "integer", nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -666,6 +737,8 @@ namespace HydraForge.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DailyLimit = table.Column<int>(type: "integer", nullable: true),
+                    MonthlyLimit = table.Column<int>(type: "integer", nullable: true),
                     MonthlyTokenBudget = table.Column<int>(type: "integer", nullable: false),
                     MonthlyTokenUsed = table.Column<int>(type: "integer", nullable: false),
                     MonthlyImageBudget = table.Column<int>(type: "integer", nullable: false),
@@ -688,13 +761,39 @@ namespace HydraForge.Infrastructure.Migrations
                     Email = table.Column<string>(type: "text", nullable: false),
                     EmailNormalized = table.Column<string>(type: "text", nullable: false),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    IsAdmin = table.Column<bool>(type: "boolean", nullable: false),
                     IsDisabled = table.Column<bool>(type: "boolean", nullable: false),
+                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "columns",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
+                    WipLimit = table.Column<int>(type: "integer", nullable: true),
+                    Color = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_columns", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_columns_projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -733,14 +832,19 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_calendar_events_ExternalId",
+                name: "IX_calendar_events_CalendarSourceId",
                 table: "calendar_events",
-                column: "ExternalId");
+                column: "CalendarSourceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_calendar_events_SourceId",
+                name: "IX_calendar_events_ExternalUid",
                 table: "calendar_events",
-                column: "SourceId");
+                column: "ExternalUid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_calendar_events_UserId",
+                table: "calendar_events",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_calendar_sources_UserId",
@@ -754,9 +858,9 @@ namespace HydraForge.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_card_chat_links_CardId_SessionId",
+                name: "IX_card_chat_links_CardId_ChatSessionId",
                 table: "card_chat_links",
-                columns: new[] { "CardId", "SessionId" },
+                columns: new[] { "CardId", "ChatSessionId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -766,9 +870,24 @@ namespace HydraForge.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_card_watchers_UserId",
+                table: "card_watchers",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_cards_ColumnId",
                 table: "cards",
                 column: "ColumnId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_cards_ParentCardId",
+                table: "cards",
+                column: "ParentCardId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_cards_PlanId",
+                table: "cards",
+                column: "PlanId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_cards_ProjectId_CardNumber",
@@ -777,9 +896,24 @@ namespace HydraForge.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_chat_folders_UserId",
+                name: "IX_cards_SpecId",
+                table: "cards",
+                column: "SpecId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chat_folders_OwnerId",
                 table: "chat_folders",
-                column: "UserId");
+                column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chat_folders_ParentFolderId",
+                table: "chat_folders",
+                column: "ParentFolderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chat_folders_ProjectId",
+                table: "chat_folders",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_chat_messages_SessionId",
@@ -792,9 +926,14 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "FolderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_chat_sessions_UserId",
+                name: "IX_chat_sessions_OwnerId",
                 table: "chat_sessions",
-                column: "UserId");
+                column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chat_sessions_ProjectId",
+                table: "chat_sessions",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_checklist_items_CardId",
@@ -802,9 +941,9 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "CardId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_columns_ProjectId_SortOrder",
+                name: "IX_columns_ProjectId_Position",
                 table: "columns",
-                columns: new[] { "ProjectId", "SortOrder" });
+                columns: new[] { "ProjectId", "Position" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_comments_CardId",
@@ -817,6 +956,11 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "DocumentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_document_chunks_SourceType_SourceId",
+                table: "document_chunks",
+                columns: new[] { "SourceType", "SourceId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_document_versions_DocumentId",
                 table: "document_versions",
                 column: "DocumentId");
@@ -825,16 +969,6 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "IX_documents_UserId",
                 table: "documents",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_provider_model_configs_ModelId",
-                table: "provider_model_configs",
-                column: "ModelId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_provider_model_configs_ProviderId",
-                table: "provider_model_configs",
-                column: "ProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_gallery_images_UserId",
@@ -912,9 +1046,9 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "NoteId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_note_reminders_IsSent_RemindAt",
+                name: "IX_note_reminders_IsSent_TriggerAt",
                 table: "note_reminders",
-                columns: new[] { "IsSent", "RemindAt" });
+                columns: new[] { "IsSent", "TriggerAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_note_reminders_NoteId",
@@ -937,9 +1071,9 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_personal_tasks_IsCompleted_DueDate",
+                name: "IX_personal_tasks_IsCompleted_DueAt",
                 table: "personal_tasks",
-                columns: new[] { "IsCompleted", "DueDate" });
+                columns: new[] { "IsCompleted", "DueAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_personal_tasks_UserId",
@@ -972,6 +1106,16 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "IX_projects_Name",
                 table: "projects",
                 column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_provider_model_configs_ModelId",
+                table: "provider_model_configs",
+                column: "ModelId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_provider_model_configs_ProviderId",
+                table: "provider_model_configs",
+                column: "ProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_spec_versions_SpecId",
@@ -1059,6 +1203,9 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "card_relationships");
 
             migrationBuilder.DropTable(
+                name: "card_watchers");
+
+            migrationBuilder.DropTable(
                 name: "cards");
 
             migrationBuilder.DropTable(
@@ -1087,9 +1234,6 @@ namespace HydraForge.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "documents");
-
-            migrationBuilder.DropTable(
-                name: "provider_model_configs");
 
             migrationBuilder.DropTable(
                 name: "gallery_images");
@@ -1134,7 +1278,7 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "project_members");
 
             migrationBuilder.DropTable(
-                name: "projects");
+                name: "provider_model_configs");
 
             migrationBuilder.DropTable(
                 name: "spec_versions");
@@ -1150,6 +1294,9 @@ namespace HydraForge.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "users");
+
+            migrationBuilder.DropTable(
+                name: "projects");
         }
     }
 }

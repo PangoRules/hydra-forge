@@ -6,6 +6,9 @@ public class Notification
     public Guid UserId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Body { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public Guid? CardId { get; set; }
+    public Guid? ProjectId { get; set; }
     public string? ActionUrl { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -6,7 +6,8 @@ public class Attachment
     public Guid CardId { get; set; }
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
-    public long FileSizeBytes { get; set; }
+    public long Size { get; set; }
     public string StoragePath { get; set; } = string.Empty;
+    public Guid UploadedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

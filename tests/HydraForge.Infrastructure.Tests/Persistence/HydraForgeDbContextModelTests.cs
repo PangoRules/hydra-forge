@@ -3,6 +3,7 @@ namespace HydraForge.Infrastructure.Tests.Persistence;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Domain.Enums;
@@ -12,6 +13,16 @@ using System.Linq;
 
 public class HydraForgeDbContextModelTests
 {
+    private static void AssertProperties(Microsoft.EntityFrameworkCore.Metadata.IEntityType entity, params string[] propertyNames)
+    {
+        foreach (var propName in propertyNames)
+        {
+            Assert.True(
+                entity.GetProperties().Any(p => p.Name == propName),
+                $"{entity.ClrType.Name} missing property: {propName}");
+        }
+    }
+
     private static DbContextOptions<HydraForgeDbContext> CreateOptions()
     {
         return new DbContextOptionsBuilder<HydraForgeDbContext>()
@@ -137,6 +148,172 @@ public class HydraForgeDbContextModelTests
         }
 
         Assert.Equal(typeof(AiFeature), entity.FindProperty(nameof(TokenUsageRecord.Feature))?.ClrType);
+    }
+
+    [Fact]
+    public void FindEntityTypes_UserAndBudgetSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var user = model.FindEntityType(typeof(User));
+        Assert.NotNull(user);
+        AssertProperties(user, "IsAdmin", "LastLoginAt");
+
+        var budget = model.FindEntityType(typeof(UserTokenBudget));
+        Assert.NotNull(budget);
+        AssertProperties(budget, "DailyLimit", "MonthlyLimit");
+    }
+
+    [Fact]
+    public void FindEntityTypes_ProjectBoardSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var project = model.FindEntityType(typeof(Project));
+        Assert.NotNull(project);
+        AssertProperties(project, "GitRemoteUrl", "GitProvider");
+
+        var column = model.FindEntityType(typeof(Column));
+        Assert.NotNull(column);
+        AssertProperties(column, "Position", "WipLimit", "Color");
+
+        var card = model.FindEntityType(typeof(Card));
+        Assert.NotNull(card);
+        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "MovedAt");
+        Assert.Equal(typeof(int), card.FindProperty("CardNumber")?.ClrType);
+        Assert.Equal(typeof(CardType), card.FindProperty("Type")?.ClrType);
+
+        var assignee = model.FindEntityType(typeof(CardAssignee));
+        Assert.NotNull(assignee);
+        AssertProperties(assignee, "AssignedByUserId");
+
+        var relationship = model.FindEntityType(typeof(CardRelationship));
+        Assert.NotNull(relationship);
+        AssertProperties(relationship, "Type", "CreatedByUserId", "ArchivedAt");
+
+        var checklistItem = model.FindEntityType(typeof(ChecklistItem));
+        Assert.NotNull(checklistItem);
+        AssertProperties(checklistItem, "Position", "AssignedTo");
+
+        var attachment = model.FindEntityType(typeof(Attachment));
+        Assert.NotNull(attachment);
+        AssertProperties(attachment, "Size", "UploadedByUserId");
+
+        Assert.NotNull(model.FindEntityType(typeof(CardWatcher)));
+    }
+
+    [Fact]
+    public void FindEntityTypes_ProjectDocsAndSnapshotSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var spec = model.FindEntityType(typeof(Spec));
+        Assert.NotNull(spec);
+        AssertProperties(spec, "Title", "Content", "Version", "CreatedByUserId");
+
+        var plan = model.FindEntityType(typeof(Plan));
+        Assert.NotNull(plan);
+        AssertProperties(plan, "Title", "Content", "Version", "CreatedByUserId");
+
+        var specVersion = model.FindEntityType(typeof(SpecVersion));
+        Assert.NotNull(specVersion);
+        AssertProperties(specVersion, "CreatedByUserId");
+
+        var planVersion = model.FindEntityType(typeof(PlanVersion));
+        Assert.NotNull(planVersion);
+        AssertProperties(planVersion, "CreatedByUserId");
+
+        var snapshot = model.FindEntityType(typeof(ProjectContextSnapshot));
+        Assert.NotNull(snapshot);
+        AssertProperties(snapshot, "AiNarrative", "TemplateGeneratedAt", "AiNarrativeGeneratedAt");
+    }
+
+    [Fact]
+    public void FindEntityTypes_ChatSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var folder = model.FindEntityType(typeof(ChatFolder));
+        Assert.NotNull(folder);
+        AssertProperties(folder, "ParentFolderId", "ProjectId", "ArchivedAt");
+
+        var session = model.FindEntityType(typeof(ChatSession));
+        Assert.NotNull(session);
+        AssertProperties(session, "ProjectId", "IsShared", "ArchivedAt");
+
+        var message = model.FindEntityType(typeof(ChatMessage));
+        Assert.NotNull(message);
+        AssertProperties(message, "InputTokens", "OutputTokens", "CachedTokens", "ModelName");
+
+        var cardChatLink = model.FindEntityType(typeof(CardChatLink));
+        Assert.NotNull(cardChatLink);
+        AssertProperties(cardChatLink, "OwnerId", "Summary");
+    }
+
+    [Fact]
+    public void FindEntityTypes_PersonalSchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var agentPersonality = model.FindEntityType(typeof(AgentPersonality));
+        Assert.NotNull(agentPersonality);
+        AssertProperties(agentPersonality, "SystemPrompt", "IsDefault");
+
+        var notification = model.FindEntityType(typeof(Notification));
+        Assert.NotNull(notification);
+        AssertProperties(notification, "Message", "CardId", "ProjectId");
+
+        var memoryEntry = model.FindEntityType(typeof(MemoryEntry));
+        Assert.NotNull(memoryEntry);
+        AssertProperties(memoryEntry, "IsPinned", "Source");
+
+        var note = model.FindEntityType(typeof(Note));
+        Assert.NotNull(note);
+        AssertProperties(note, "IsPinned", "IsArchived", "SortOrder");
+
+        var reminder = model.FindEntityType(typeof(NoteReminder));
+        Assert.NotNull(reminder);
+        AssertProperties(reminder, "TriggerAt", "RepeatPattern", "LastTriggeredAt");
+
+        var task = model.FindEntityType(typeof(PersonalTask));
+        Assert.NotNull(task);
+        AssertProperties(task, "CronExpression");
+    }
+
+    [Fact]
+    public void FindEntityTypes_DocumentAndGallerySchema_MatchesFoundationRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var document = model.FindEntityType(typeof(Document));
+        Assert.NotNull(document);
+        AssertProperties(document, "Content", "ContentType", "FilePath", "Language", "Version", "IsArchived");
+
+        var version = model.FindEntityType(typeof(DocumentVersion));
+        Assert.NotNull(version);
+        AssertProperties(version, "CreatedByUserId");
+
+        var chunk = model.FindEntityType(typeof(DocumentChunk));
+        Assert.NotNull(chunk);
+        AssertProperties(chunk, "UserId", "SourceType", "SourceId");
+
+        var image = model.FindEntityType(typeof(GalleryImage));
+        Assert.NotNull(image);
+        AssertProperties(image, "FilePath", "OriginalFilename", "ContentType", "Size", "Width", "Height", "Hash", "TakenAt", "CameraModel", "Latitude", "Longitude", "IsFavorite", "UpdatedAt");
+
+        var album = model.FindEntityType(typeof(Album));
+        Assert.NotNull(album);
+        AssertProperties(album, "CoverImageId");
+
+        var albumImage = model.FindEntityType(typeof(AlbumImage));
+        Assert.NotNull(albumImage);
+        AssertProperties(albumImage, "Position");
     }
 
     [Fact]

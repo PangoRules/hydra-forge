@@ -19,6 +19,7 @@ public class HydraForgeDbContext : DbContext
     public DbSet<Card> Cards => Set<Card>();
     public DbSet<CardAssignee> CardAssignees => Set<CardAssignee>();
     public DbSet<CardRelationship> CardRelationships => Set<CardRelationship>();
+    public DbSet<CardWatcher> CardWatchers => Set<CardWatcher>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
@@ -74,13 +75,16 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<Column>(modelBuilder, "columns", b =>
         {
-            b.HasIndex(e => new { e.ProjectId, e.SortOrder });
+            b.HasIndex(e => new { e.ProjectId, e.Position });
         });
 
         ConfigureEntity<Card>(modelBuilder, "cards", b =>
         {
             b.HasIndex(e => new { e.ProjectId, e.CardNumber }).IsUnique();
             b.HasIndex(e => e.ColumnId);
+            b.HasIndex(e => e.ParentCardId);
+            b.HasIndex(e => e.SpecId);
+            b.HasIndex(e => e.PlanId);
         });
 
         ConfigureEntity<CardAssignee>(modelBuilder, "card_assignees", b =>
@@ -91,6 +95,12 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<CardRelationship>(modelBuilder, "card_relationships", b =>
         {
             b.HasIndex(e => new { e.SourceCardId, e.TargetCardId }).IsUnique();
+        });
+
+        ConfigureEntity<CardWatcher>(modelBuilder, "card_watchers", b =>
+        {
+            b.HasKey(e => new { e.CardId, e.UserId });
+            b.HasIndex(e => e.UserId);
         });
 
         ConfigureEntity<Comment>(modelBuilder, "comments", b =>
@@ -147,13 +157,16 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<ChatFolder>(modelBuilder, "chat_folders", b =>
         {
-            b.HasIndex(e => e.UserId);
+            b.HasIndex(e => e.OwnerId);
+            b.HasIndex(e => e.ParentFolderId);
+            b.HasIndex(e => e.ProjectId);
         });
 
         ConfigureEntity<ChatSession>(modelBuilder, "chat_sessions", b =>
         {
-            b.HasIndex(e => e.UserId);
+            b.HasIndex(e => e.OwnerId);
             b.HasIndex(e => e.FolderId);
+            b.HasIndex(e => e.ProjectId);
         });
 
         ConfigureEntity<ChatMessage>(modelBuilder, "chat_messages", b =>
@@ -163,7 +176,7 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<CardChatLink>(modelBuilder, "card_chat_links", b =>
         {
-            b.HasIndex(e => new { e.CardId, e.SessionId }).IsUnique();
+            b.HasIndex(e => new { e.CardId, e.ChatSessionId }).IsUnique();
         });
 
         ConfigureEntity<LlmProvider>(modelBuilder, "llm_providers", b =>
@@ -223,7 +236,7 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<NoteReminder>(modelBuilder, "note_reminders", b =>
         {
             b.HasIndex(e => e.NoteId);
-            b.HasIndex(e => new { e.IsSent, e.RemindAt });
+            b.HasIndex(e => new { e.IsSent, e.TriggerAt });
         });
 
         ConfigureEntity<NoteImageAttachment>(modelBuilder, "note_image_attachments", b =>
@@ -234,7 +247,7 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<PersonalTask>(modelBuilder, "personal_tasks", b =>
         {
             b.HasIndex(e => e.UserId);
-            b.HasIndex(e => new { e.IsCompleted, e.DueDate });
+            b.HasIndex(e => new { e.IsCompleted, e.DueAt });
         });
 
         ConfigureEntity<CalendarSource>(modelBuilder, "calendar_sources", b =>
@@ -244,8 +257,9 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<CalendarEvent>(modelBuilder, "calendar_events", b =>
         {
-            b.HasIndex(e => e.SourceId);
-            b.HasIndex(e => e.ExternalId);
+            b.HasIndex(e => e.UserId);
+            b.HasIndex(e => e.CalendarSourceId);
+            b.HasIndex(e => e.ExternalUid);
         });
 
         ConfigureEntity<Document>(modelBuilder, "documents", b =>
@@ -261,6 +275,7 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<DocumentChunk>(modelBuilder, "document_chunks", b =>
         {
             b.HasIndex(e => e.DocumentId);
+            b.HasIndex(e => new { e.SourceType, e.SourceId });
             b.Property(e => e.Embedding).HasColumnType("vector(1536)");
         });
 

@@ -8,5 +8,9 @@ public class ChatMessage
     public Guid SessionId { get; set; }
     public MessageRole Role { get; set; }
     public string Content { get; set; } = string.Empty;
+    public int InputTokens { get; set; }
+    public int OutputTokens { get; set; }
+    public int CachedTokens { get; set; }
+    public string? ModelName { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
