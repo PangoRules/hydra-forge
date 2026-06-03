@@ -879,17 +879,21 @@ Initial values: `PersonalChat`, `ProjectChat`, `DeepResearch`, `AgentPipeline`, 
 | Id | Guid | |
 | UserId | Guid | Who triggered the call |
 | Feature | AiFeature | Which feature made the call |
+| ProviderModelConfigId | Guid | Configured provider/model row selected by routing |
 | ProviderId | Guid | Which LLM provider was used |
-| ModelName | string | Exact model name |
+| ModelId | string | Provider/API-facing model identifier copied from `ProviderModelConfig.ModelId` |
+| ModelName | string | Historical display name copied from `ProviderModelConfig.Name` |
 | InputTokens | int | |
 | OutputTokens | int | |
 | CachedTokens | int | Prompt cache hits (reduces effective cost) |
 | Cost | decimal | Recorded estimated/provider-reported call cost |
 | ProjectId | Guid? | Set if call was in project context |
-| PipelineRunId | Guid? | Groups multi-turn agent pipeline calls |
+| PipelineRunId | Guid? | Correlation id grouping multiple LLM calls that belong to one agent pipeline run |
 | CreatedAt | DateTime | |
 
-> `ProviderId` + `ModelName` are intentionally denormalized on usage records. They preserve the exact historical provider/model used even if a `ProviderModelConfig` row is renamed, disabled, repriced, or removed later.
+> `ProviderModelConfigId` links usage to the configured model row selected by routing. `ProviderId`, `ModelId`, and `ModelName` are intentionally denormalized on usage records. They preserve the exact historical provider/model used even if a `ProviderModelConfig` row is renamed, disabled, repriced, or removed later.
+
+> `PipelineRunId` is a nullable correlation id, not a foreign key yet. It groups multi-turn agent pipeline calls such as Planner → Developer → Reviewer so admin reporting can show one aggregate pipeline cost.
 
 #### ImageUsageRecord
 
@@ -898,8 +902,10 @@ Initial values: `PersonalChat`, `ProjectChat`, `DeepResearch`, `AgentPipeline`, 
 | Id | Guid | |
 | UserId | Guid | Who triggered the generation |
 | Feature | AiFeature | `ImageChat`, `ImageGalleryEditor`, or `ImageDocument` |
+| ProviderModelConfigId | Guid | Configured provider/model row selected by routing |
 | ProviderId | Guid | Which image provider was used |
-| ModelName | string | Exact model name (e.g. `dall-e-3`, `flux-pro`) |
+| ModelId | string | Provider/API-facing model identifier copied from `ProviderModelConfig.ModelId` |
+| ModelName | string | Historical display name copied from `ProviderModelConfig.Name` |
 | ImageCount | int | Number of images generated |
 | Resolution | string | e.g. `1024x1024`, `1920x1080` |
 | Cost | decimal | Recorded estimated/provider-reported generation cost |

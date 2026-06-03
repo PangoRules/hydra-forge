@@ -85,13 +85,7 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(ImageUsageRecord));
         Assert.NotNull(entity);
 
-        var requiredProps = new[] { "UserId", "Feature", "ProviderId", "ModelName", "ImageCount", "Resolution", "Cost" };
-        foreach (var propName in requiredProps)
-        {
-            Assert.True(
-                entity.GetProperties().Any(p => p.Name == propName),
-                $"ImageUsageRecord missing property: {propName}");
-        }
+        AssertProperties(entity, "UserId", "Feature", "ProviderModelConfigId", "ProviderId", "ModelId", "ModelName", "ImageCount", "Resolution", "Cost");
     }
 
     [Fact]
@@ -140,13 +134,7 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(TokenUsageRecord));
         Assert.NotNull(entity);
 
-        var requiredProps = new[] { "Feature", "ProviderId", "ModelName", "InputTokens", "OutputTokens", "CachedTokens", "PipelineRunId", "Cost", "CreatedAt" };
-        foreach (var propName in requiredProps)
-        {
-            Assert.True(
-                entity.GetProperties().Any(p => p.Name == propName),
-                $"TokenUsageRecord missing property: {propName}");
-        }
+        AssertProperties(entity, "Feature", "ProviderModelConfigId", "ProviderId", "ModelId", "ModelName", "InputTokens", "OutputTokens", "CachedTokens", "PipelineRunId", "Cost", "CreatedAt");
 
         Assert.Equal(typeof(AiFeature), entity.FindProperty(nameof(TokenUsageRecord.Feature))?.ClrType);
     }

@@ -13,7 +13,7 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    [Migration("20260603174639_InitialCreate")]
+    [Migration("20260603175544_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -45,6 +45,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<int>("ImageCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ModelName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -53,6 +57,9 @@ namespace HydraForge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProviderModelConfigId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Resolution")
@@ -68,7 +75,11 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasIndex("Feature");
 
+                    b.HasIndex("ModelId");
+
                     b.HasIndex("ProviderId");
+
+                    b.HasIndex("ProviderModelConfigId");
 
                     b.HasIndex("UserId");
 
@@ -194,6 +205,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<int>("InputTokens")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ModelName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -210,6 +225,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("ProviderId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ProviderModelConfigId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -219,9 +237,13 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasIndex("Feature");
 
+                    b.HasIndex("ModelId");
+
                     b.HasIndex("PipelineRunId");
 
                     b.HasIndex("ProviderId");
+
+                    b.HasIndex("ProviderModelConfigId");
 
                     b.HasIndex("UserId");
 

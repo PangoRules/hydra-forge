@@ -428,7 +428,9 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
                     Feature = table.Column<int>(type: "integer", nullable: false),
+                    ProviderModelConfigId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelId = table.Column<string>(type: "text", nullable: false),
                     ModelName = table.Column<string>(type: "text", nullable: false),
                     ImageCount = table.Column<int>(type: "integer", nullable: false),
                     Resolution = table.Column<string>(type: "text", nullable: false),
@@ -716,7 +718,9 @@ namespace HydraForge.Infrastructure.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
                     Feature = table.Column<int>(type: "integer", nullable: false),
+                    ProviderModelConfigId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelId = table.Column<string>(type: "text", nullable: false),
                     ModelName = table.Column<string>(type: "text", nullable: false),
                     InputTokens = table.Column<int>(type: "integer", nullable: false),
                     OutputTokens = table.Column<int>(type: "integer", nullable: false),
@@ -995,9 +999,19 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "Feature");
 
             migrationBuilder.CreateIndex(
+                name: "IX_image_usage_records_ModelId",
+                table: "image_usage_records",
+                column: "ModelId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_image_usage_records_ProviderId",
                 table: "image_usage_records",
                 column: "ProviderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_image_usage_records_ProviderModelConfigId",
+                table: "image_usage_records",
+                column: "ProviderModelConfigId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_image_usage_records_UserId",
@@ -1137,6 +1151,11 @@ namespace HydraForge.Infrastructure.Migrations
                 column: "Feature");
 
             migrationBuilder.CreateIndex(
+                name: "IX_token_usage_records_ModelId",
+                table: "token_usage_records",
+                column: "ModelId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_token_usage_records_PipelineRunId",
                 table: "token_usage_records",
                 column: "PipelineRunId");
@@ -1145,6 +1164,11 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "IX_token_usage_records_ProviderId",
                 table: "token_usage_records",
                 column: "ProviderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_token_usage_records_ProviderModelConfigId",
+                table: "token_usage_records",
+                column: "ProviderModelConfigId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_token_usage_records_UserId",
