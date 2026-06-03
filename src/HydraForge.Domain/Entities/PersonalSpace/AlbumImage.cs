@@ -7,4 +7,5 @@ public class AlbumImage
     public Guid ImageId { get; set; }
     public int Position { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ArchivedAt { get; set; }
 }

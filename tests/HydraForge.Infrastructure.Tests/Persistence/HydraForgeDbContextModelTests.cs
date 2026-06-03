@@ -298,11 +298,11 @@ public class HydraForgeDbContextModelTests
 
         var album = model.FindEntityType(typeof(Album));
         Assert.NotNull(album);
-        AssertProperties(album, "CoverImageId");
+        AssertProperties(album, "CoverImageId", "Description", "UpdatedAt", "ArchivedAt");
 
         var albumImage = model.FindEntityType(typeof(AlbumImage));
         Assert.NotNull(albumImage);
-        AssertProperties(albumImage, "Position");
+        AssertProperties(albumImage, "Position", "CreatedAt", "ArchivedAt");
     }
 
     [Fact]
