@@ -9,13 +9,14 @@ Finish HydraForge Phase 1 after monorepo scaffold. Phase 1 creates runnable foun
 ## Current State
 
 - Monorepo scaffold exists: `HydraForge.Domain`, `HydraForge.Application`, `HydraForge.Infrastructure`, `HydraForge.Server`, `HydraForge.Tui`, and `src/web-ui`.
-- `HydraForge.slnx` references source projects and Domain/Application tests.
-- Server still exposes default `/weatherforecast` endpoint.
-- TUI still prints `Hello, World!`.
-- Domain/Application/Infrastructure have no real source files yet.
-- `docker-compose.yml` and `.env.example` exist but are empty.
-- No EF Core, Npgsql, Serilog, auth, migrations, health checks, audit, or CI workflow exist yet.
-- `AGENTS.md` is modified in working tree; this spec does not depend on or change it.
+- `HydraForge.slnx` references source projects and all three test projects.
+- **Task 1 (Docker Compose + env template) — done.** `docker-compose.yml` runs `pgvector/pgvector:pg16` on host port 5433 (container 5432) with health checks, plus a server profile and optional `search` profile for SearXNG. `.env.example` ships with placeholders for Postgres creds, JWT settings, admin seed, and `SearXng__BaseUrl`. Full stack starts with `docker compose up`.
+- **Task 2 (Domain result/error foundation) — done.** `Result<T, Error>` and `Error` live in `src/HydraForge.Domain/Common/Result.cs`. Named error code constants are in place on entities that raise them.
+- **Task 3 (EF Core, Npgsql, entities, pgvector, initial migration) — done.** `HydraForgeDbContext` is wired in `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` with snake_case naming, FK cascade configuration for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message, and `HasPostgresExtension("vector")`. All 50+ Domain entities are mapped; `MemoryEntry.Embedding` and `DocumentChunk.Embedding` are `vector(1536)`. Six migrations are committed (latest `20260603210352_RenameCardDueDateToDueAt`); all applied successfully against the dev Postgres. The `HousekeepingBackgroundService` and cascading-archive services are deferred to later phases per the archive design spec. Archive + housekeeping schema foundation is in place: `ArchivedAt?` on nine entities, `SystemSettings` singleton.
+- Persistence DI is registered via `src/HydraForge.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs` (`AddPersistence`), which chains `o => o.UseVector()` on `UseNpgsql`. `DesignTimeHydraForgeDbContextFactory` does the same so `dotnet ef` works.
+- Server still exposes default `/weatherforecast` endpoint (Task 4 auth replaces it). TUI still prints `Hello, World!` (out of scope per design).
+- **Starting Task 4 next: Auth, password hashing, JWT, and admin seed.**
+- `AGENTS.md` and `CLAUDE.md` have been synced to the current state.
 
 ## Scope
 
@@ -190,14 +191,16 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 
 ## Tasks
 
-- [ ] Task 1: Docker Compose and environment template
-- [ ] Task 2: Domain result/error foundation
-- [ ] Task 3: EF Core, Npgsql, entities, pgvector, and initial migration
+> **Current task: 4** — Auth, password hashing, JWT, and admin seed.
+
+- [x] Task 1: Docker Compose and environment template
+- [x] Task 2: Domain result/error foundation
+- [x] Task 3: EF Core, Npgsql, entities, pgvector, and initial migration
 - [ ] Task 4: Auth, password hashing, JWT, and admin seed
 - [ ] Task 5: Global exception middleware and ProblemDetails mapping
 - [ ] Task 6: Structured logging and correlation ID pipeline
 - [ ] Task 7: Health endpoint and service probes
-- [ ] Task 8: Audit log infrastructure
+- [ ] Task 8: Audit log infrastructure (entity schema done; service abstraction pending)
 - [ ] Task 9: CI/CD pipeline
 - [ ] Task 10: Phase 1 verification and placeholder cleanup
 
