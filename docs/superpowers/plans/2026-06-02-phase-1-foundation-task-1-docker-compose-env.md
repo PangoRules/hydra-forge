@@ -51,9 +51,13 @@ Use strong example names but mark secrets for replacement.
 POSTGRES_DB=hydraforge
 POSTGRES_USER=hydraforge
 POSTGRES_PASSWORD=change-this-postgres-password
-POSTGRES_PORT=5432
+# Host-side port — mapped to container 5432. Using 5433 to avoid conflict with any
+# local PostgreSQL or Odysseus (which runs on the same machine).
+POSTGRES_PORT=5433
 
 ASPNETCORE_ENVIRONMENT=Development
+# Container-internal port — host mapping is 5000:8080 (see docker-compose.yml).
+# 8080 is taken by Odysseus SearXNG on the host.
 ASPNETCORE_URLS=http://+:8080
 ConnectionStrings__Default=Host=postgres;Port=5432;Database=hydraforge;Username=hydraforge;Password=change-this-postgres-password
 
@@ -66,7 +70,11 @@ AdminSeed__Username=admin
 AdminSeed__Password=change-this-admin-password
 
 Logging__MinimumLevel=Information
-SearXng__BaseUrl=http://searxng:8080
+# Reuse Odysseus's SearXNG running on the host (127.0.0.1:8080).
+# host.docker.internal resolves to the Docker host from inside a container.
+# If running without Docker (dotnet run), change to http://localhost:8080.
+# If running your own SearXNG via --profile search, change to http://searxng:8080.
+SearXng__BaseUrl=http://host.docker.internal:8080
 ```
 
 - [ ] **Step 3: Fill `docker-compose.yml`**
@@ -82,7 +90,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # 5433 on host → 5432 in container. Avoids conflict with local postgres or
+      # any other service using 5432 on the host (e.g. local dev postgres install).
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -101,13 +111,22 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8080"
+      # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
+      - "5000:8080"
+    extra_hosts:
+      # Allows the container to reach services on the Docker host, including
+      # Odysseus's SearXNG at http://host.docker.internal:8080.
+      - "host.docker.internal:host-gateway"
 
   searxng:
+    # Only needed if Odysseus (or another SearXNG instance) is NOT running.
+    # Default: reuse Odysseus's SearXNG at http://host.docker.internal:8080.
+    # To use this instead: docker compose --profile search up
+    # and set SearXng__BaseUrl=http://searxng:8080 in .env
     image: searxng/searxng:latest
     profiles: ["search"]
     ports:
-      - "8081:8080"
+      - "8082:8080"
 
 volumes:
   postgres-data:
