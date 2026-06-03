@@ -1,4 +1,4 @@
-using HydraForge.Application.Auth.Ports;
+using HydraForge.Application.Auth;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

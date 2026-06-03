@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using HydraForge.Application.Auth.Ports;
+using HydraForge.Application.Auth;
 using Konscious.Security.Cryptography;
 using Microsoft.Extensions.Options;
 

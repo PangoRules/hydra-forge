@@ -1,8 +1,36 @@
-using HydraForge.Application.Auth.Ports;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 
 namespace HydraForge.Application.Auth;
+
+// ── Ports / contracts ──────────────────────────────────────
+
+public interface IUserRepository
+{
+    Task<User?> FindByUsernameAsync(string username);
+    Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
+    Task<bool> AnyAdminExistsAsync();
+    Task CreateAsync(User user);
+}
+
+public interface IPasswordHasher
+{
+    string HashPassword(string password);
+    bool VerifyPassword(string password, string hash);
+}
+
+public interface IAccessTokenIssuer
+{
+    string IssueToken(User user);
+}
+
+// ── DTOs ───────────────────────────────────────────────────
+
+public record LoginRequest(string Username, string Password);
+
+public record LoginResponse(string AccessToken, DateTimeOffset ExpiresAt, Guid UserId, string Username, bool IsAdmin);
+
+// ── Handler / use-case ────────────────────────────────────
 
 public class LoginUserHandler
 {
