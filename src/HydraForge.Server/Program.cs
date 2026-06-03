@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddHydraForgePersistence(builder.Configuration);
+builder.Services.AddPersistence(builder.Configuration);
 
 var app = builder.Build();
 
