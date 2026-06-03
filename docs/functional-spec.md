@@ -440,6 +440,9 @@
 - [ ] Docker Compose: .NET server + PostgreSQL 16 + SearXNG (optional `--profile search`)
 - [ ] EF Core + Npgsql: DbContext, all entities, auto-run migrations on startup
 - [ ] PostgreSQL `pgvector` extension: enabled in migrations, `vector(1536)` columns on `MemoryEntry.Embedding` and `DocumentChunk.Embedding`
+- [ ] Archive/housekeeping schema: `ArchivedAt?` on ownable entities (Card, Document, Note, MemoryEntry, CalendarEvent, CalendarSource, PersonalTask, CardChatLink + ChatSession/ChatFolder/AgentPersonality/GalleryImage/Album/AlbumImage); `IsArchived: bool` replaced with `ArchivedAt?` on Note and Document; FK `OnDelete: Cascade` for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`
+- [ ] `SystemSettings` singleton entity (id `00000000-0000-0000-0000-000000000001`) with admin-configurable retention knobs: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90` (satisfies NFR-7), `NotificationRetentionDays=30`
+- [ ] `HousekeepingBackgroundService`: daily 03:00 UTC `BackgroundService` that hard-deletes rows past cutoff; batches of 1000; cascades for polymorphic `DocumentChunk`; writes `AuditLogEntry` per run; idempotent within a day. Uses the same `BackgroundService` decision as the Phase 6 nightly-job pre-phase decision.
 - [ ] Basic auth: user store, bcrypt/Argon2 hashing, JWT tokens, admin seeded on first run
 - [ ] Global exception middleware: catch all unhandled exceptions → ProblemDetails RFC 7807
 - [ ] `Result<T, Error>` pattern in Domain layer — typed error codes, no business logic exceptions
@@ -454,6 +457,7 @@
 > ⚠️ **Pre-phase decision needed:** File storage default — local FS or S3? Define `IFileStore` abstraction (`LocalFileStore` + `S3FileStore` implementations) and add storage config to app settings (`FILE_STORAGE_PROVIDER`, `FILE_STORAGE_PATH` / S3 credentials). Decide before implementing `Attachment` upload. Recommendation: default to local FS, S3 is opt-in via env var.
 
 - [ ] Project CRUD + ProjectMember management (Owner / Member roles)
+- [ ] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
 - [ ] Column CRUD + reordering + per-project default columns
 - [ ] Card CRUD + move between columns + position ordering
 - [ ] Card types: Task / Bug / Epic / Spec / Idea
@@ -518,6 +522,7 @@
 - [ ] Admin dashboard: users list, all projects overview, system health
 - [ ] Admin: create user, disable user, reset password, assign admin role
 - [ ] Admin: system settings (ntfy URL, SearXNG URL, platform branding)
+- [ ] Admin UI: edit `SystemSettings` retention knobs at runtime (`ArchivedItemRetentionDays`, `AuditLogRetentionDays`, `NotificationRetentionDays`) without redeploy; reflects on next housekeeping run (5-min settings cache TTL)
 - [ ] Admin: see and manage all projects regardless of membership
 - [ ] Audit log viewer: filter by project, user, entity type, date range
 
@@ -571,6 +576,7 @@
 - [ ] Shared project chats: visible to all members read-only
 - [ ] "Summarize → start my own" fork action
 - [ ] Project archive → chat folder archived (revivable)
+- [ ] `ChatArchiveService.ArchiveFolder(folderId)`: sets `ChatFolder.ArchivedAt` and cascades to every child `ChatSession.ArchivedAt`. Invoked by `ProjectArchiveService` and by explicit user "archive folder" action.
 - [ ] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects
 - [ ] TUI: chat mode for general chats + project chat panel
 
@@ -603,6 +609,7 @@
 
 - [ ] Brain/Memory: per-user store, categories (fact/preference/identity/event/contact/instruction), pgvector semantic search, auto-extract from chat (toggle), pin, inject into chat (toggle), import/export, tidy (AI dedup), usage stats
 - [ ] Notes: CRUD, pin, archive, checklists, reminders + custom repeat patterns, ntfy ping on trigger, AI classification, drag reorder, image attachments
+- [ ] `NoteArchiveService.Archive(noteId)`: sets `Note.ArchivedAt`; disables recurring `NoteReminder`s (sets `IsSent=true`, clears `RepeatPattern`); one-shot reminders keep their `IsSent` state and get hard-deleted by housekeeping 30 days later.
 - [ ] Personal Tasks: CRUD, cron-style scheduling, completion tracking, ntfy on due date
 - [ ] Calendar: event CRUD, CalDAV sync (Radicale/Nextcloud/Apple/Fastmail/generic), per-calendar color, .ics import/export, NLP quick-parse, timezone, agent-aware lookups
 - [ ] Theme: 20+ bundled themes, custom palette (chat bubbles/sidebar/input/buttons/code highlight), font selection, density modes, live preview, server-side persistence per user
@@ -614,7 +621,7 @@
 
 - [ ] Documents/Library: upload (PDF/MD/code/CSV/HTML), living documents (AI-assisted editor), version history + restore + compare, PDF rendering + form-fill + annotation, search, archive, export ZIP, AI tidy
 - [ ] Gallery: upload, AI + user tags, EXIF extraction, albums + cover photos, favorites, deduplication by hash, bulk ops, ZIP download
-- [ ] Gallery archive: archived GalleryImages, Albums, and AlbumImages remain visible to owner (including in archived albums); scheduled housekeeping job hard-deletes them after admin-configured retention period
+- [ ] Gallery archive UI: archive/restore for GalleryImage, Album, and AlbumImage; archived items remain visible to owner (including in archived albums); hard-deletion handled by the Phase 1 `HousekeepingBackgroundService` after the admin-configured `ArchivedItemRetentionDays` (default 730)
 - [ ] Gallery editor: layer-based, opacity/visibility, inpainting, AI upscaling, style transfer, rotation, editor drafts
 - [ ] Image generation: in-chat inline, document insert, gallery editor backend — admin-configured image providers, image tiers, `ImageUsageRecord`
 - [ ] Deep Research: multi-step web search → AI synthesis → visual report, streaming progress, library, archive, spinoff — uses bundled SearXNG
