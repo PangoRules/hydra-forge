@@ -200,7 +200,7 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 - [x] Task 5: Global exception middleware and ProblemDetails mapping
 - [X] Task 6: Structured logging and correlation ID pipeline
 - [X] Task 7: Health endpoint and service probes
-- [ ] Task 8: Audit log infrastructure (entity schema done; service abstraction pending)
+- [X] Task 8: Audit log infrastructure (entity schema done; service abstraction pending)
 - [ ] Task 9: CI/CD pipeline
 - [ ] Task 10: Phase 1 verification and placeholder cleanup
 
