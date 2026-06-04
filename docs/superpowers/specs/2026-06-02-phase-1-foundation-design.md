@@ -198,7 +198,7 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 - [x] Task 3: EF Core, Npgsql, entities, pgvector, and initial migration
 - [X] Task 4: Auth, password hashing, JWT, and admin seed
 - [x] Task 5: Global exception middleware and ProblemDetails mapping
-- [ ] Task 6: Structured logging and correlation ID pipeline
+- [X] Task 6: Structured logging and correlation ID pipeline
 - [ ] Task 7: Health endpoint and service probes
 - [ ] Task 8: Audit log infrastructure (entity schema done; service abstraction pending)
 - [ ] Task 9: CI/CD pipeline
