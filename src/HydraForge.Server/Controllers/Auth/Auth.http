@@ -1,0 +1,28 @@
+@host = http://localhost:5000
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "hailhydra"
+}
+
+### Login with wrong password
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "wrongpassword"
+}
+
+### Login with unknown user
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "nobody",
+  "password": "whatever"
+}
