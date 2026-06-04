@@ -15,7 +15,7 @@ Finish HydraForge Phase 1 after monorepo scaffold. Phase 1 creates runnable foun
 - **Task 3 (EF Core, Npgsql, entities, pgvector, initial migration) — done.** `HydraForgeDbContext` is wired in `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` with snake_case naming, FK cascade configuration for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message, and `HasPostgresExtension("vector")`. All 50+ Domain entities are mapped; `MemoryEntry.Embedding` and `DocumentChunk.Embedding` are `vector(1536)`. Six migrations are committed (latest `20260603210352_RenameCardDueDateToDueAt`); all applied successfully against the dev Postgres. The `HousekeepingBackgroundService` and cascading-archive services are deferred to later phases per the archive design spec. Archive + housekeeping schema foundation is in place: `ArchivedAt?` on nine entities, `SystemSettings` singleton.
 - Persistence DI is registered via `src/HydraForge.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs` (`AddPersistence`), which chains `o => o.UseVector()` on `UseNpgsql`. `DesignTimeHydraForgeDbContextFactory` does the same so `dotnet ef` works.
 - Server still exposes default `/weatherforecast` endpoint (Task 4 auth replaces it). TUI still prints `Hello, World!` (out of scope per design).
-- **Starting Task 4 next: Auth, password hashing, JWT, and admin seed.**
+- **Starting Task 4 Done: Auth, password hashing, JWT, and admin seed.**
 - `AGENTS.md` and `CLAUDE.md` have been synced to the current state.
 
 ## Scope
@@ -196,7 +196,7 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 - [x] Task 1: Docker Compose and environment template
 - [x] Task 2: Domain result/error foundation
 - [x] Task 3: EF Core, Npgsql, entities, pgvector, and initial migration
-- [ ] Task 4: Auth, password hashing, JWT, and admin seed
+- [X] Task 4: Auth, password hashing, JWT, and admin seed
 - [ ] Task 5: Global exception middleware and ProblemDetails mapping
 - [ ] Task 6: Structured logging and correlation ID pipeline
 - [ ] Task 7: Health endpoint and service probes
