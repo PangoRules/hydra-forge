@@ -243,7 +243,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | Field | Type | Description |
 |---|---|---|
 | Id | Guid | |
-| ProjectId | Guid | FK to Project |
+| Scope | AuditLogScope | `Project`, `System`, or `Personal` |
+| ProjectId | Guid? | Required when Scope = `Project`; null for `System` and `Personal` |
 | ActorId | Guid | Who performed the action |
 | Action | string | Human-readable, e.g. "Moved card 'Fix login' from Backlog to In Dev" |
 | EntityType | string | "Card", "Column", "Spec", "Plan" |

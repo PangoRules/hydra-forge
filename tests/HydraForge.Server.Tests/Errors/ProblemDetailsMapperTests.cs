@@ -105,4 +105,16 @@ public class ProblemDetailsMapperTests
 
         Assert.StartsWith("https://hydraforge.local/errors/", details.Type);
     }
+
+    [Fact]
+    public void FromError_ConvertsErrorCodeToReadableSlug()
+    {
+        var error = new HydraForge.Domain.Common.Error(
+            HydraForge.Domain.Common.DomainErrorCodes.Auth.InvalidCredentials,
+            "Invalid username or password.");
+
+        var details = ProblemDetailsMapper.FromError(error, "corr-8");
+
+        Assert.Equal("https://hydraforge.local/errors/auth-invalid-credentials", details.Type);
+    }
 }

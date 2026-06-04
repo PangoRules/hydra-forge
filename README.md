@@ -8,7 +8,7 @@ HydraForge is a team tool that combines a Trello-style project board with an AI 
 
 - **Project board** — Kanban pipeline with cards, specs, plans, dependencies, and an agent pipeline (Planner → Developer → Reviewer → Git Agent)
 - **AI workspace** — Per-user chat (with project context awareness), brain/memory, documents, gallery, deep research, calendar, notes
-- **Dual interface** — Full-featured TUI (Spectre.Console) for terminal power users + mobile-first Web UI (Nuxt 3)
+- **Dual interface** — Full-featured TUI (Spectre.Console) for terminal power users + mobile-first Web UI (Nuxt 4)
 - **Self-hosted** — Your data, your infrastructure, one `docker-compose up`
 
 ## Stack
@@ -17,7 +17,7 @@ HydraForge is a team tool that combines a Trello-style project board with an AI 
 |---|---|
 | Server | .NET 10 / C# (Clean Architecture) |
 | TUI | Spectre.Console |
-| Web UI | Nuxt 3 + Nuxt UI + Tailwind CSS |
+| Web UI | Nuxt 4 + Nuxt UI + Tailwind CSS |
 | Database | PostgreSQL 16 + pgvector |
 | Real-time | SignalR |
 
@@ -30,7 +30,7 @@ cp .env.example .env
 docker-compose up
 ```
 
-Server starts at `http://localhost:5000`. First boot creates an admin account — credentials printed to server logs.
+Server starts at `http://localhost:5000`. First boot creates the admin account from `AdminSeed__Username` and `AdminSeed__Password` in `.env`; credentials are not printed to logs.
 
 ## Development setup
 
@@ -65,14 +65,14 @@ src/
   HydraForge.Infrastructure/ EF Core, LLM clients, file storage
   HydraForge.Server/        ASP.NET Core API + SignalR
   HydraForge.Tui/           Terminal interface
-  web-ui/                   Nuxt 3 browser interface
+  web-ui/                   Nuxt 4 browser interface
 tests/                      xUnit test projects
 docs/                       Architecture & decision documents
 ```
 
 ## Docs
 
-- [`docs/requirements-and-architecture.md`](docs/requirements-and-architecture.md) — Full requirements, data model, 12-phase roadmap
+- [`docs/requirements-and-architecture.md`](docs/requirements-and-architecture.md) — Index for the split scope, architecture, data model, glossary, and roadmap docs
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — Every architectural decision with rationale (D-1–D-32)
 - [`docs/agent-platform-vision.md`](docs/agent-platform-vision.md) — Vision, agent pipeline, feature parity
 

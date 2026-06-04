@@ -73,7 +73,7 @@
 | Infrastructure | `HydraForge.Infrastructure` | EF Core DbContext, migrations, LLM clients, file storage, SignalR. Implements Domain interfaces. |
 | Server | `HydraForge.Server` | ASP.NET Core controllers, SignalR hubs, middleware, `Program.cs`. |
 | TUI | `HydraForge.Tui` | Spectre.Console views, commands, screen rendering. |
-| Web UI | `src/web-ui` | Nuxt 3 app (pages, components, composables). Talks only to Server via HTTP + SignalR. |
+| Web UI | `src/web-ui` | Nuxt 4 app under `app/` (pages, components, composables). Talks only to Server via HTTP + SignalR. |
 
 ---
 
@@ -304,7 +304,7 @@ Failures in these services must never bring down the core board:
 |---|---|---|
 | **Server** | .NET 10 / C# | Primary stack. Clean Architecture built-in. Great DI. Strong type system. |
 | **TUI** | .NET + Spectre.Console | Same language as server. Rich terminal UI. Full keyboard support. |
-| **Web UI** | Nuxt 3 + Vue 3 + Tailwind CSS + Nuxt UI | Familiar, fast DX. Mobile-first. SSR for fast first load. |
+| **Web UI** | Nuxt 4 + Vue 3 + Tailwind CSS + Nuxt UI | Familiar, fast DX. Mobile-first. SSR for fast first load. |
 | **Database** | PostgreSQL 16 + pgvector | MVCC handles concurrent multi-user writes. pgvector powers RAG and Brain/Memory semantic search. Native full-text search. EF Core Npgsql provider. |
 | **Real-time** | SignalR (WebSocket + SSE fallback) | Built into ASP.NET Core. Battle-tested. Auto-fallback. |
 | **Tests** | xUnit | Default .NET testing. No FluentAssertions (prone to deprecation). Plain `Assert.*` only. |
@@ -329,7 +329,7 @@ hydra-forge/
 ├── src/
 │   ├── HydraForge.Server/      # ASP.NET Core server
 │   │   ├── Controllers/
-│   │   ├── Hubs/             # SignalR hubs
+│   │   ├── Errors/           # ProblemDetails mapping
 │   │   ├── Middleware/
 │   │   └── Program.cs
 │   │
@@ -353,27 +353,25 @@ hydra-forge/
 │   │
 │   ├── HydraForge.Infrastructure/  # EF Core, PostgreSQL, LLM client, git
 │   │   ├── Persistence/
-│   │   ├── LlmClient/
-│   │   ├── GitService/
-│   │   └── SignalR/
+│   │   ├── Auth/
+│   │   ├── Audit/
+│   │   └── Health/
 │   │
 │   ├── HydraForge.Tui/         # Spectre.Console TUI
 │   │   ├── Commands/         # CLI commands (move, create, edit)
 │   │   ├── Views/            # Screen rendering
 │   │   └── Program.cs
 │   │
-│   └── web-ui/               # Nuxt 3 + Vue + Tailwind
-│       ├── pages/
-│       ├── components/
-│       ├── composables/
-│       ├── server/           # Nuxt server routes (proxy to .NET)
+│   └── web-ui/               # Nuxt 4 + Vue + Tailwind
+│       ├── app/
+│       ├── public/
 │       └── nuxt.config.ts
 │
 ├── tests/
 │   ├── HydraForge.Domain.Tests/
 │   ├── HydraForge.Application.Tests/
 │   ├── HydraForge.Infrastructure.Tests/
-│   └── HydraForge.Tui.Tests/
+│   └── HydraForge.Server.Tests/
 │
 └── docs/
     ├── scope.md              # Scope / Statement of Work

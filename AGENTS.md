@@ -4,12 +4,12 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 
 ## Current State
 
-- Phase 1 (EF Core + pgvector schema foundation) is in progress on `task/phase-1-ef-pgvector`. All 50+ Domain entities are implemented; `HydraForgeDbContext` is wired with `OnModelCreating`, snake_case naming, FK cascade configuration, and pgvector `vector(1536)` columns for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Six migrations are committed (latest `20260603210352_RenameCardDueDateToDueAt`).
-- Archive + housekeeping foundation is committed: nine entities carry `ArchivedAt?` (Card, Document, Note, MemoryEntry, CalendarEvent, CalendarSource, PersonalTask, CardChatLink, Comment). `Note.IsArchived` and `Document.IsArchived` (bool) were replaced with `ArchivedAt?` (DateTime). `SystemSettings` singleton (id `00000000-0000-0000-0000-000000000001`) holds `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`. Explicit `OnDelete: Cascade` is configured for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. The `HousekeepingBackgroundService` and per-entity archive services are deferred (distributed across phases 1, 2, 5, 7, 9 in `docs/functional-spec.md`); design spec is at `docs/superpowers/specs/2026-06-03-archive-and-housekeeping-design.md`.
+- Phase 1 foundation is closing on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
+- Archive + housekeeping schema foundation is committed: ownable/user-facing entities that currently carry `ArchivedAt?` include Card, CardRelationship, Comment, Document, Note, MemoryEntry, CalendarEvent, CalendarSource, PersonalTask, ChatSession, ChatFolder, CardChatLink, AgentPersonality, GalleryImage, Album, and AlbumImage. `Note.IsArchived` and `Document.IsArchived` were replaced with `ArchivedAt?`. `SystemSettings` singleton (id `00000000-0000-0000-0000-000000000001`) holds `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`. Explicit `OnDelete: Cascade` is configured for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. The `HousekeepingBackgroundService` and per-entity archive services are deferred; design spec is at `docs/superpowers/specs/2026-06-03-archive-and-housekeeping-design.md`.
 - Persistence DI lives at `src/HydraForge.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs` (method `AddPersistence`). It chains `o => o.UseVector()` on `UseNpgsql` so the runtime `Vector` CLR type resolves to a `vector(1536)` PostgreSQL column. `DesignTimeHydraForgeDbContextFactory` does the same for `dotnet ef`.
-- `docker-compose.yml` and `.env.example` are implemented (not empty as older AGENTS.md revisions claimed). Postgres is `pgvector/pgvector:pg16`, host port **5433** mapped to container 5432 (5433 was chosen to avoid colliding with any local Postgres install or Odysseus on the same host). `appsettings.Development.json` already has a `ConnectionStrings:Default` with the dev password — local devs override the host to `localhost` and port to `5433` when running against docker-compose.
+- `docker-compose.yml` and `.env.example` are implemented (not empty as older AGENTS.md revisions claimed). Postgres is `pgvector/pgvector:pg16`, host port **5433** mapped to container 5432 (5433 was chosen to avoid colliding with any local Postgres install or Odysseus on the same host). `appsettings.Development.json` is ignored for local overrides; when running `dotnet run` against Compose Postgres, use `Host=localhost;Port=5433`.
 - Web UI still ships the Nuxt UI starter under `src/web-ui/app/app.vue` and `src/web-ui/app/pages/index.vue`; do not assume HydraForge screens or composables exist.
-- 29 xUnit tests across 3 projects (9 Domain, 1 Application, 19 Infrastructure). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
+- 60+ xUnit tests across Domain, Application, Infrastructure, and Server test projects. Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
 
@@ -28,9 +28,9 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 
 - Solution file is `HydraForge.slnx`; projects target `net10.0` with nullable and implicit usings enabled.
 - Backend boundaries: `Domain` -> `Application` -> `Infrastructure` -> `Server`/`Tui`. Keep Domain free of EF Core, HTTP, SignalR, and infrastructure concerns.
-- `src/HydraForge.Server` is ASP.NET Core. `Program.cs` calls `builder.Services.AddPersistence(builder.Configuration)` (the only DI registration at the moment). Weather endpoint is still the default scaffold; no real controllers yet.
+- `src/HydraForge.Server` is ASP.NET Core. `Program.cs` calls `builder.Services.AddPersistence(builder.Configuration)` and wires auth, ProblemDetails/correlation middleware, health probes, admin seeding, and controllers. Starter weather endpoints are removed.
 - `src/HydraForge.Tui` is the terminal client; Spectre.Console is planned but not currently referenced.
-- `src/web-ui` is a separate pnpm package. Although `docs/` say Nuxt 3, `package.json` uses Nuxt `^4.4.6`, Nuxt UI `^4.8.1`, Tailwind `^4.3.0`, TypeScript `^6.0.3`, pnpm `^11.5.0`. Nuxt 4 source layout (`src/web-ui/app/`).
+- `src/web-ui` is a separate pnpm package using Nuxt `^4.4.6`, Nuxt UI `^4.8.1`, Tailwind `^4.3.0`, TypeScript `^6.0.3`, pnpm `^11.5.0`. Nuxt 4 source layout (`src/web-ui/app/`).
 
 ## Commands
 
@@ -57,7 +57,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 
 - Test projects are xUnit with plain `Assert.*`; do not add FluentAssertions.
 - Domain/Application tests are pure logic. Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, params string[])` — these run without a database because they inspect `context.Model`, not `context.Database`.
-- No PostgreSQL test infrastructure exists yet. The architecture requires real PostgreSQL for DB tests, not SQLite or mocked DB behavior.
+- Most tests run without PostgreSQL. Optional PostgreSQL-backed tests use `HYDRAFORGE_TEST_CONNECTION_STRING`; the architecture requires real PostgreSQL for DB behavior tests, not SQLite or mocked DB behavior.
 
 ## Architecture Constraints To Preserve
 

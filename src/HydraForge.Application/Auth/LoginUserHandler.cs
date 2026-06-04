@@ -21,12 +21,14 @@ public interface IPasswordHasher
 
 public interface IAccessTokenIssuer
 {
-    string IssueToken(User user);
+    AccessToken IssueToken(User user);
 }
 
 // ── DTOs ───────────────────────────────────────────────────
 
 public record LoginRequest(string Username, string Password);
+
+public record AccessToken(string Value, DateTimeOffset ExpiresAt);
 
 public record LoginResponse(
     string AccessToken,
@@ -73,8 +75,8 @@ public class LoginUserHandler(
 
         return Result<LoginResponse>.Success(
             new LoginResponse(
-                token,
-                DateTimeOffset.UtcNow.AddHours(1),
+                token.Value,
+                token.ExpiresAt,
                 user.Id,
                 user.Username,
                 user.IsAdmin

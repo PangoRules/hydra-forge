@@ -1,8 +1,8 @@
 # Archive & Housekeeping Policy — Design
 
 > **Date:** 2026-06-03
-> **Status:** Design approved, awaiting user spec review before implementation
-> **Scope:** Phase 1 Foundation — schema additions, replacement of `IsArchived: bool` with `ArchivedAt: DateTime?`, system settings table, housekeeping background service, cascading-archive application services
+> **Status:** Schema/settings foundation implemented; background service and cascading archive application services deferred
+> **Scope:** Archive policy design across phases. Phase 1 delivered schema additions, replacement of `IsArchived: bool` with `ArchivedAt?`, and the system settings table; the housekeeping background service and cascading-archive application services remain future work.
 
 ---
 
@@ -35,14 +35,16 @@
 | `AgentPersonality` | has `ArchivedAt?` | done |
 | `ChatSession` | has `ArchivedAt?` | done |
 | `ChatFolder` | has `ArchivedAt?` | done |
-| `Card` | none | **add `ArchivedAt?`** |
-| `Document` | has `IsArchived: bool` | **replace with `ArchivedAt?`** |
-| `Note` | has `IsArchived: bool` | **replace with `ArchivedAt?`** |
-| `MemoryEntry` | none | **add `ArchivedAt?`** |
-| `CalendarEvent` | none | **add `ArchivedAt?`** |
-| `CalendarSource` | none | **add `ArchivedAt?`** |
-| `PersonalTask` | none | **add `ArchivedAt?`** |
-| `CardChatLink` | none | **add `ArchivedAt?`** |
+| `Card` | has `ArchivedAt?` | done |
+| `CardRelationship` | has `ArchivedAt?` | done |
+| `Comment` | has `ArchivedAt?` | done |
+| `Document` | has `ArchivedAt?` | done |
+| `Note` | has `ArchivedAt?` | done |
+| `MemoryEntry` | has `ArchivedAt?` | done |
+| `CalendarEvent` | has `ArchivedAt?` | done |
+| `CalendarSource` | has `ArchivedAt?` | done |
+| `PersonalTask` | has `ArchivedAt?` | done |
+| `CardChatLink` | has `ArchivedAt?` | done |
 
 ### 3.2 Child / derived rows (no independent `ArchivedAt`; lifecycle follows parent)
 
@@ -127,7 +129,7 @@ Sets `Note.ArchivedAt`. Disables recurring `NoteReminder`s (`IsSent=true`, `Repe
 
 ### 6.1 Service
 
-`HousekeepingBackgroundService : BackgroundService`, registered in `Server` DI.
+Future `HousekeepingBackgroundService : BackgroundService`, registered in `Server` DI when archive services are implemented.
 
 ### 6.2 Schedule
 
@@ -139,7 +141,7 @@ Sets `Note.ArchivedAt`. Disables recurring `NoteReminder`s (`IsSent=true`, `Repe
 1. Read `SystemSettings` (cache refreshed every 5 min).
 2. Compute cutoff: `UtcNow - ArchivedItemRetentionDays`.
 3. For each entity in §3.1, batch-delete (size 1000) rows where `ArchivedAt < cutoff`.
-4. Cascade-deletes happen via `OnDelete: Cascade` FK configuration in `DbContext`: deleting a `Document` triggers cascade for `DocumentVersion` and `DocumentChunk` rows; deleting a `Note` cascades to `NoteReminder` and `NoteImageAttachment`; deleting a `ChatSession` cascades to `ChatMessage`. (The implementation plan will add the FK cascade configuration as part of housekeeping infra.)
+4. Cascade-deletes happen via `OnDelete: Cascade` FK configuration in `DbContext`: deleting a `Document` triggers cascade for `DocumentVersion`; deleting a `Note` cascades to `NoteReminder` and `NoteImageAttachment`; deleting a `ChatSession` cascades to `ChatMessage`. `DocumentChunk` is polymorphic (`SourceType` + `SourceId`) and must be deleted manually by the housekeeping job.
 5. Notification cleanup: delete `Notification` where `IsRead=true` AND `CreatedAt < UtcNow - NotificationRetentionDays`.
 6. Audit/usage cleanup: delete `AuditLogEntry`, `TokenUsageRecord`, `ImageUsageRecord` where created/timestamped < `UtcNow - AuditLogRetentionDays`.
 7. Write an `AuditLogEntry` (action=`"Housekeeping run"`) with JSON `NewValue` = per-entity counts.

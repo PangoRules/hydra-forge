@@ -195,6 +195,6 @@ File storage (local FS or S3)
 └── Card attachments, Gallery images, Document binaries (PDF, etc.)
 ```
 
-Runs as Docker Compose services: `.NET server` + `postgres:16-alpine` + `searxng` (optional `--profile search`). One-command setup. Backup via `pg_dump`.
+Runs as Docker Compose services: `.NET server` + `pgvector/pgvector:pg16` + `searxng` (optional `--profile search`). One-command setup. Backup via `pg_dump`.
 
 Git integration: projects optionally link to a git remote. The Git Agent commits and creates PRs via the configured remote. Code lives in git; project management lives in HydraForge.

@@ -436,20 +436,20 @@
 ### Phase 1: Foundation 🏗️
 > Goal: running skeleton, auth, error handling infrastructure. Nothing user-facing yet.
 
-- [ ] Scaffold monorepo: `HydraForge.Domain`, `HydraForge.Application`, `HydraForge.Infrastructure`, `HydraForge.Server`, `HydraForge.Tui`, `web-ui`
-- [ ] Docker Compose: .NET server + PostgreSQL 16 + SearXNG (optional `--profile search`)
-- [ ] EF Core + Npgsql: DbContext, all entities, auto-run migrations on startup
-- [ ] PostgreSQL `pgvector` extension: enabled in migrations, `vector(1536)` columns on `MemoryEntry.Embedding` and `DocumentChunk.Embedding`
-- [ ] Archive/housekeeping schema: `ArchivedAt?` on ownable entities (Card, Document, Note, MemoryEntry, CalendarEvent, CalendarSource, PersonalTask, CardChatLink + ChatSession/ChatFolder/AgentPersonality/GalleryImage/Album/AlbumImage); `IsArchived: bool` replaced with `ArchivedAt?` on Note and Document; FK `OnDelete: Cascade` for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`
-- [ ] `SystemSettings` singleton entity (id `00000000-0000-0000-0000-000000000001`) with admin-configurable retention knobs: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90` (satisfies NFR-7), `NotificationRetentionDays=30`
-- [ ] `HousekeepingBackgroundService`: daily 03:00 UTC `BackgroundService` that hard-deletes rows past cutoff; batches of 1000; cascades for polymorphic `DocumentChunk`; writes `AuditLogEntry` per run; idempotent within a day. Uses the same `BackgroundService` decision as the Phase 6 nightly-job pre-phase decision.
-- [ ] Basic auth: user store, bcrypt/Argon2 hashing, JWT tokens, admin seeded on first run
-- [ ] Global exception middleware: catch all unhandled exceptions → ProblemDetails RFC 7807
-- [ ] `Result<T, Error>` pattern in Domain layer — typed error codes, no business logic exceptions
-- [ ] Structured logging: `Microsoft.Extensions.Logging` + Serilog, severity-appropriate, correlationId on every request
-- [ ] `/health` endpoint: server + DB + LLM provider connectivity
-- [ ] Audit Log infrastructure: `AuditLogEntry` writes on every mutation
-- [ ] CI/CD pipeline
+- [x] Scaffold monorepo: `HydraForge.Domain`, `HydraForge.Application`, `HydraForge.Infrastructure`, `HydraForge.Server`, `HydraForge.Tui`, `web-ui`
+- [x] Docker Compose: .NET server + PostgreSQL 16 + pgvector + SearXNG (optional `--profile search`)
+- [x] EF Core + Npgsql: DbContext, all current entities, startup migration application behind config
+- [x] PostgreSQL `pgvector` extension: enabled in migrations, `vector(1536)` columns on `MemoryEntry.Embedding` and `DocumentChunk.Embedding`
+- [x] Archive/housekeeping schema foundation: `ArchivedAt?` on ownable entities; `IsArchived: bool` replaced with `ArchivedAt?` on Note and Document; FK `OnDelete: Cascade` for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`
+- [x] `SystemSettings` singleton entity (id `00000000-0000-0000-0000-000000000001`) with admin-configurable retention knobs: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90` (satisfies NFR-7), `NotificationRetentionDays=30`
+- [ ] `HousekeepingBackgroundService`: deferred implementation. Phase 1 provides schema/settings/cascade foundation; hard-delete scheduling, polymorphic `DocumentChunk` cleanup, file cleanup, and per-run audit entries are implemented in later archive/service phases.
+- [x] Basic auth: user store, Argon2 hashing, JWT tokens, admin seeded on first run
+- [x] Error handling: expected `Result<T, Error>` failures map to ProblemDetails where endpoints exist; unhandled exceptions map to ProblemDetails via global middleware
+- [x] `Result<T, Error>` pattern in Domain layer — typed error codes, no business logic exceptions
+- [x] Structured logging: `Microsoft.Extensions.Logging` + Serilog, severity-appropriate, correlationId on every request
+- [x] `/health` endpoint: server + DB + LLM provider connectivity status
+- [x] Audit Log infrastructure: `AuditLogEntry`, audit service abstraction, and EF writer available for future mutation handlers
+- [x] CI/CD pipeline
 
 ### Phase 2: Project Space — API & Domain 📋
 > Goal: all project/board business logic complete and tested via API. No UI yet.
@@ -621,7 +621,7 @@
 
 - [ ] Documents/Library: upload (PDF/MD/code/CSV/HTML), living documents (AI-assisted editor), version history + restore + compare, PDF rendering + form-fill + annotation, search, archive, export ZIP, AI tidy
 - [ ] Gallery: upload, AI + user tags, EXIF extraction, albums + cover photos, favorites, deduplication by hash, bulk ops, ZIP download
-- [ ] Gallery archive UI: archive/restore for GalleryImage, Album, and AlbumImage; archived items remain visible to owner (including in archived albums); hard-deletion handled by the Phase 1 `HousekeepingBackgroundService` after the admin-configured `ArchivedItemRetentionDays` (default 730)
+- [ ] Gallery archive UI: archive/restore for GalleryImage, Album, and AlbumImage; archived items remain visible to owner (including in archived albums); hard-deletion handled by the future `HousekeepingBackgroundService` after the admin-configured `ArchivedItemRetentionDays` (default 730)
 - [ ] Gallery editor: layer-based, opacity/visibility, inpainting, AI upscaling, style transfer, rotation, editor drafts
 - [ ] Image generation: in-chat inline, document insert, gallery editor backend — admin-configured image providers, image tiers, `ImageUsageRecord`
 - [ ] Deep Research: multi-step web search → AI synthesis → visual report, streaming progress, library, archive, spinoff — uses bundled SearXNG

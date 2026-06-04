@@ -15,7 +15,7 @@
 | **Plan** | A step-by-step numbered markdown execution plan. Linked to a spec or card. Versioned. |
 | **Audit Log** | Immutable record of all changes, with before/after JSON snapshots. |
 | **TUI** | Terminal User Interface — built with Spectre.Console. Full feature parity with Web UI. |
-| **Web UI** | Browser-based interface — Nuxt 3 + Vue 3 + Tailwind CSS + Nuxt UI. Mobile-first. |
+| **Web UI** | Browser-based interface — Nuxt 4 + Vue 3 + Tailwind CSS + Nuxt UI. Mobile-first. |
 | **SignalR** | ASP.NET Core library for real-time WebSocket communication (SSE fallback). |
 | **Clean Architecture** | Layered architecture: Domain → Application → Infrastructure → Presentation. Dependencies point inward. Domain has no external dependencies. |
 | **Server-Authoritative** | All state lives on the server (PostgreSQL). Both TUI and Web UI require an active server connection. TUI locks gracefully when unreachable. |

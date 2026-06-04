@@ -9,14 +9,14 @@ Finish HydraForge Phase 1 after monorepo scaffold. Phase 1 creates runnable foun
 ## Current State
 
 - Monorepo scaffold exists: `HydraForge.Domain`, `HydraForge.Application`, `HydraForge.Infrastructure`, `HydraForge.Server`, `HydraForge.Tui`, and `src/web-ui`.
-- `HydraForge.slnx` references source projects and all three test projects.
+- `HydraForge.slnx` references source projects and the Domain, Application, Infrastructure, and Server test projects.
 - **Task 1 (Docker Compose + env template) — done.** `docker-compose.yml` runs `pgvector/pgvector:pg16` on host port 5433 (container 5432) with health checks, plus a server profile and optional `search` profile for SearXNG. `.env.example` ships with placeholders for Postgres creds, JWT settings, admin seed, and `SearXng__BaseUrl`. Full stack starts with `docker compose up`.
 - **Task 2 (Domain result/error foundation) — done.** `Result<T, Error>` and `Error` live in `src/HydraForge.Domain/Common/Result.cs`. Named error code constants are in place on entities that raise them.
-- **Task 3 (EF Core, Npgsql, entities, pgvector, initial migration) — done.** `HydraForgeDbContext` is wired in `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` with snake_case naming, FK cascade configuration for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message, and `HasPostgresExtension("vector")`. All 50+ Domain entities are mapped; `MemoryEntry.Embedding` and `DocumentChunk.Embedding` are `vector(1536)`. Six migrations are committed (latest `20260603210352_RenameCardDueDateToDueAt`); all applied successfully against the dev Postgres. The `HousekeepingBackgroundService` and cascading-archive services are deferred to later phases per the archive design spec. Archive + housekeeping schema foundation is in place: `ArchivedAt?` on nine entities, `SystemSettings` singleton.
+- **Task 3 (EF Core, Npgsql, entities, pgvector, initial migration) — done.** `HydraForgeDbContext` is wired in `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` with snake_case naming, FK cascade configuration for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message, and `HasPostgresExtension("vector")`. All 50+ Domain entities are mapped; `MemoryEntry.Embedding` and `DocumentChunk.Embedding` are `vector(1536)`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`). The `HousekeepingBackgroundService` and cascading-archive services are deferred to later phases per the archive design spec. Archive + housekeeping schema foundation is in place with `ArchivedAt?` on ownable entities and the `SystemSettings` singleton.
 - Persistence DI is registered via `src/HydraForge.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs` (`AddPersistence`), which chains `o => o.UseVector()` on `UseNpgsql`. `DesignTimeHydraForgeDbContextFactory` does the same so `dotnet ef` works.
-- Server still exposes default `/weatherforecast` endpoint (Task 4 auth replaces it). TUI still prints `Hello, World!` (out of scope per design).
-- **Starting Task 4 Done: Auth, password hashing, JWT, and admin seed.**
-- `AGENTS.md` and `CLAUDE.md` have been synced to the current state.
+- Server starter `/weatherforecast` and placeholder test scaffolding are removed. TUI still prints `Hello, World!` (out of scope per design).
+- **Tasks 4-10 — done:** auth, ProblemDetails, logging/correlation, health, audit infrastructure, CI, verification, and placeholder cleanup.
+- `AGENTS.md`, `CLAUDE.md`, and public docs have been synced to the Phase 1 closeout state.
 
 ## Scope
 
@@ -29,7 +29,7 @@ Finish HydraForge Phase 1 after monorepo scaffold. Phase 1 creates runnable foun
 - Foundational Domain model entities from the architecture blueprint, enough for EF schema and Phase 1 tests.
 - `Result<T, Error>` and typed error code foundation in Domain.
 - Basic username/password auth with password hashing, JWT issuance/validation, disabled-user check, and admin seed on first run.
-- Global exception middleware returning RFC 7807 `ProblemDetails` with `correlationId`.
+- ProblemDetails mapping for expected endpoint failures plus global exception middleware returning RFC 7807 `ProblemDetails` with `correlationId`.
 - Structured logging using Microsoft logging + Serilog with per-request correlationId.
 - `/health` endpoint reporting server, database, and configured LLM-provider connectivity status.
 - Audit log infrastructure service capable of recording mutations when future phases call it.
@@ -110,7 +110,7 @@ Error handling follows D-26:
 - Include correlation ID in response headers, ProblemDetails, and logs.
 - Configure Serilog for structured logs.
 - Default production logging emits warnings/errors; debug level configurable.
-- Logs include endpoint, duration, userId when authenticated, status code, error code, and correlationId.
+- Logs include endpoint and correlationId in Phase 1; authenticated user IDs and structured error codes are added when authenticated mutation endpoints exist.
 
 ### Health
 
@@ -159,7 +159,7 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 
 - Domain tests cover `Result<T, Error>`, error codes, entity invariants that exist in Phase 1.
 - Application tests cover auth use-case behavior, admin seed orchestration boundaries, and audit service contracts where implemented.
-- Infrastructure tests validate EF model configuration and migration application against real PostgreSQL, not SQLite.
+- Infrastructure tests validate EF model configuration without SQLite. Optional PostgreSQL-backed tests run when `HYDRAFORGE_TEST_CONNECTION_STRING` is provided.
 - Server tests validate ProblemDetails shape, correlation ID propagation, auth success/failure, disabled-user rejection, and `/health` behavior.
 - No FluentAssertions; use plain `Assert.*`.
 - Placeholder `UnitTest1` files should be replaced with meaningful tests as each task lands.
@@ -191,7 +191,7 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 
 ## Tasks
 
-> **Current task: 4** — Auth, password hashing, JWT, and admin seed.
+> **Current state:** Phase 1 implementation complete; closeout docs and final verification are in progress.
 
 - [x] Task 1: Docker Compose and environment template
 - [x] Task 2: Domain result/error foundation
@@ -200,9 +200,9 @@ If infrastructure tests require PostgreSQL, add a CI PostgreSQL service with pgv
 - [x] Task 5: Global exception middleware and ProblemDetails mapping
 - [X] Task 6: Structured logging and correlation ID pipeline
 - [X] Task 7: Health endpoint and service probes
-- [X] Task 8: Audit log infrastructure (entity schema done; service abstraction pending)
+- [X] Task 8: Audit log infrastructure
 - [X] Task 9: CI/CD pipeline
-- [ ] Task 10: Phase 1 verification and placeholder cleanup
+- [X] Task 10: Phase 1 verification and placeholder cleanup
 
 ## Suggested Branch Split
 

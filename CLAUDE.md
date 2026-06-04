@@ -63,7 +63,7 @@ docker compose up -d postgres
 ### Local dev database
 
 - Docker compose exposes Postgres on host port **5433** (not 5432) to avoid collisions with local Postgres or other services on the host.
-- `appsettings.Development.json` ships with a development `ConnectionStrings:Default`. Override `Host` and `Port` if your local setup differs.
+- `appsettings.Development.json` is ignored for local overrides. Use `.env.example` for Docker, or create a local dev appsettings file with `Host=localhost;Port=5433` when running `dotnet run` against Compose Postgres.
 - `dotnet ef` operations warn "Unable to check if the migration has been applied" when the DB is unreachable; migrations still regenerate locally — this is expected, not a failure.
 
 ## Clean Architecture — what goes where
@@ -86,7 +86,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 **Error handling — non-negotiable:**
 - Business logic returns `Result<T, Error>` — never throw exceptions for expected failures
 - All errors have a typed error code (e.g. `CARD_NOT_FOUND`, `DEPENDENCY_CYCLE_DETECTED`)
-- Global exception middleware catches everything else → ProblemDetails RFC 7807 with `correlationId`
+- Controllers map expected `Result<T, Error>` failures to ProblemDetails RFC 7807 with `correlationId` and named `code`; global exception middleware catches everything else
 - Stack traces never reach clients
 - External service failures (LLM, Git, ntfy) must never crash the board
 
@@ -137,7 +137,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 
 ## Housekeeping & archive
 
-- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is the responsibility of the `HousekeepingBackgroundService` (deferred, distributed across phases 1, 2, 5, 7, 9 in `docs/functional-spec.md`).
+- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is the responsibility of the future `HousekeepingBackgroundService` (deferred across later phase work in `docs/functional-spec.md`).
 - Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`.
 - DB-level cascades cover `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. Polymorphic `DocumentChunk` (`SourceType`+`SourceId`) is cascaded manually in the housekeeping service.
 - Design spec: `docs/superpowers/specs/2026-06-03-archive-and-housekeeping-design.md`.
@@ -154,4 +154,4 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-32)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
 
-Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. The data-model is the source of truth for entity fields; treat code as conforming to `data-model.md`, not the other way around.
+Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

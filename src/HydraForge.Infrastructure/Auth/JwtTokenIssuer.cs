@@ -14,8 +14,9 @@ public class JwtTokenIssuer(
     int accessTokenMinutes
 ) : IAccessTokenIssuer
 {
-    public string IssueToken(User user)
+    public AccessToken IssueToken(User user)
     {
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(accessTokenMinutes);
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -30,11 +31,10 @@ public class JwtTokenIssuer(
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(accessTokenMinutes),
+            expires: expiresAt.UtcDateTime,
             signingCredentials: credentials
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new AccessToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
 }
-

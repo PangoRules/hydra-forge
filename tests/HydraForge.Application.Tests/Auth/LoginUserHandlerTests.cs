@@ -12,7 +12,8 @@ public class LoginUserHandlerTests
         var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = false };
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(true);
-        var issuer = new FixedTokenIssuer("jwt-token");
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
+        var issuer = new FixedTokenIssuer("jwt-token", expiresAt);
 
         var handler = new LoginUserHandler(repo, hasher, issuer);
         var request = new LoginRequest("admin", "password123");
@@ -24,6 +25,7 @@ public class LoginUserHandlerTests
         Assert.Equal(user.Id, result.Value.UserId);
         Assert.Equal("admin", result.Value.Username);
         Assert.True(result.Value.IsAdmin);
+        Assert.Equal(expiresAt, result.Value.ExpiresAt);
     }
 
     [Fact]
@@ -114,8 +116,19 @@ internal class StrictPasswordHasher : IPasswordHasher
 internal class FixedTokenIssuer : IAccessTokenIssuer
 {
     private readonly string _token;
+    private readonly DateTimeOffset _expiresAt;
 
-    public FixedTokenIssuer(string token) => _token = token;
+    public FixedTokenIssuer(string token)
+    {
+        _token = token;
+        _expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+    }
 
-    public string IssueToken(User user) => _token;
+    public FixedTokenIssuer(string token, DateTimeOffset expiresAt)
+    {
+        _token = token;
+        _expiresAt = expiresAt;
+    }
+
+    public AccessToken IssueToken(User user) => new(_token, _expiresAt);
 }
