@@ -10,13 +10,16 @@ public static class PersistenceServiceCollectionExtensions
 {
     public static IServiceCollection AddPersistence(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration
+    )
     {
-        var connectionString = configuration.GetConnectionString("Default")
+        var connectionString =
+            configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
         services.AddDbContext<HydraForgeDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector()));
+            options.UseNpgsql(connectionString, o => o.UseVector())
+        );
 
         services.AddScoped<IHealthProbe, ServerHealthProbe>();
         services.AddScoped<IHealthProbe, DatabaseHealthProbe>();

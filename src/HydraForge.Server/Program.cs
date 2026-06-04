@@ -69,37 +69,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Health check endpoint
-app.MapGet("/health", async (GetHealthHandler handler, CancellationToken ct) =>
-{
-    var result = await handler.HandleAsync(ct);
-
-    if (!result.IsSuccess)
-    {
-        return Results.Problem(
-            statusCode: 503,
-            title: "Service unavailable",
-            detail: "Health check failed"
-        );
-    }
-
-    var response = result.Value;
-    var httpStatus = response.OverallStatus == HealthStatus.Unhealthy
-        ? StatusCodes.Status503ServiceUnavailable
-        : StatusCodes.Status200OK;
-
-    return Results.Json(new
-    {
-        status = response.OverallStatus.ToString().ToLowerInvariant(),
-        components = new[]
-        {
-            new { name = "server", status = response.ServerStatus.ToString().ToLowerInvariant(), detail = "Server is running." },
-            new { name = "database", status = response.DatabaseStatus.ToString().ToLowerInvariant(), detail = response.DatabaseStatus == HealthStatus.Healthy ? "Database is connected." : "Database issue detected." },
-            new { name = "llmProviders", status = response.LlmStatus.ToString().ToLowerInvariant(), detail = response.LlmStatus == HealthStatus.NotConfigured ? "No LLM providers configured." : "LLM providers available." }
-        }
-    }, statusCode: httpStatus);
-});
-
 var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
     "Database:ApplyMigrationsOnStartup",
     true
