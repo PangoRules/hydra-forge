@@ -1,9 +1,9 @@
 using System.Net;
-using System.Text.Json;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace HydraForge.Server.Tests.Health;
@@ -43,34 +43,30 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("Environment", "Test");
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
-        builder.Configure(app =>
+        builder.ConfigureServices(services =>
         {
-            app.UseMiddleware<CorrelationIdMiddleware>();
-            app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapGet("/health", async context =>
-                {
-                    context.Response.ContentType = "application/json";
-                    var json = JsonSerializer.Serialize(new
-                    {
-                        status = "healthy",
-                        components = new[]
-                        {
-                            new { name = "server", status = "healthy", detail = "Server is running." },
-                            new { name = "database", status = "healthy", detail = "Database is connected." },
-                            new { name = "llmProviders", status = "notconfigured", detail = "No LLM providers configured." }
-                        }
-                    });
-                    await context.Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(json));
-                });
-            });
+            // Override health probes with fakes
+            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeServerHealthProbe>();
+            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeDbHealthProbe>();
+            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeLlmHealthProbe>();
         });
     }
+}
 
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        var host = base.CreateHost(builder);
-        return host;
-    }
+internal class FakeServerHealthProbe : HydraForge.Application.Health.IHealthProbe
+{
+    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
+        => Task.FromResult(HydraForge.Application.Health.HealthStatus.Healthy);
+}
+
+internal class FakeDbHealthProbe : HydraForge.Application.Health.IHealthProbe
+{
+    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
+        => Task.FromResult(HydraForge.Application.Health.HealthStatus.Healthy);
+}
+
+internal class FakeLlmHealthProbe : HydraForge.Application.Health.IHealthProbe
+{
+    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
+        => Task.FromResult(HydraForge.Application.Health.HealthStatus.NotConfigured);
 }
