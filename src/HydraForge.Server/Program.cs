@@ -67,10 +67,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-var applyMigrationsOnStartup = app.Environment.IsDevelopment()
-    && app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup", true)
-    && !app.Environment.IsEnvironment("Testing")
-    && app.Configuration.GetValue<bool>("Database:SkipMigrations", false) == false;
+var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
+    "Database:ApplyMigrationsOnStartup",
+    true
+);
 if (applyMigrationsOnStartup)
 {
     using var scope = app.Services.CreateScope();
@@ -88,37 +88,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast(
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithTags("Test");
-
-app.MapGet("/throw", () =>
-{
-    throw new InvalidOperationException("Test exception");
-})
-.WithName("Throw")
-.WithTags("Test");
-
 app.Run();
 
 public partial class Program { }
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
 
