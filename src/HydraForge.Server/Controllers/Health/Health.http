@@ -1,0 +1,7 @@
+###
+
+@host = http://localhost:5000
+
+### Health check
+
+GET {{host}}/health HTTP/1.1

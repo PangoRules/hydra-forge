@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HydraForge.Domain\HydraForge.Domain.csproj" />
     <ProjectReference Include="..\HydraForge.Application\HydraForge.Application.csproj" />
     <ProjectReference Include="..\HydraForge.Infrastructure\HydraForge.Infrastructure.csproj" />
   </ItemGroup>

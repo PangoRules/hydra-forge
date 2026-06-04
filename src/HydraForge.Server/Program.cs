@@ -1,5 +1,6 @@
 using System.Text;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Server.Middleware;
@@ -59,6 +60,8 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 ));
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<GetHealthHandler>(sp =>
+    new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
 var app = builder.Build();
 
