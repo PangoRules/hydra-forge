@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HydraForge.Server.Controllers.Auth;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/[controller]")]
 public class AuthController(LoginUserHandler loginUserHandler) : ControllerBase
 {
     [HttpPost("login")]
@@ -18,3 +18,4 @@ public class AuthController(LoginUserHandler loginUserHandler) : ControllerBase
         return Ok(result.Value);
     }
 }
+
