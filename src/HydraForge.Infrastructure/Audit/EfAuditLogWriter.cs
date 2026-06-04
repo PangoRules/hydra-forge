@@ -22,41 +22,45 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
     {
         try
         {
-            var entry = new AuditLogEntry
-            {
-                Id = Guid.NewGuid(),
-                ProjectId = request.ProjectId ?? Guid.Empty,
-                ActorId = request.ActorId,
-                EntityType = request.EntityType,
-                EntityId = request.EntityId,
-                Action = request.Action,
-                OldValue = request.OldValueJson,
-                NewValue = request.NewValueJson,
-                Timestamp = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-            };
+            var entry = AuditLogEntry.Create(
+                actorId: request.ActorId,
+                scope: request.Scope,
+                entityType: request.EntityType,
+                entityId: request.EntityId,
+                action: request.Action,
+                projectId: request.ProjectId,
+                oldValue: request.OldValueJson,
+                newValue: request.NewValueJson
+            );
 
             _dbContext.AuditLogEntries.Add(entry);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Audit log entry written: {EntityType}/{EntityId} {Action} by {ActorId}",
+                "Audit log entry written: {EntityType}/{EntityId} {Action} by {ActorId} ({Scope})",
                 entry.EntityType,
                 entry.EntityId,
                 entry.Action,
-                entry.ActorId
+                entry.ActorId,
+                entry.Scope
             );
 
             return Result.Success();
         }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid audit log request: {Message}", ex.Message);
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Infrastructure.AuditWriteFailed,
+                    ex.Message
+                )
+            );
+        }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(
-                ex,
-                "Failed to write audit log entry for {EntityType}/{EntityId}",
-                request.EntityType,
-                request.EntityId
-            );
+            _logger.LogError(ex, "Failed to write audit log entry for {EntityType}/{EntityId}",
+                request.EntityType, request.EntityId);
 
             return Result.Failure(
                 new Error(
@@ -67,4 +71,3 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
         }
     }
 }
-

@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Tests.Audit;
 
@@ -13,10 +14,11 @@ public class AuditServiceTests
         var service = new AuditService(mockWriter);
         var request = new AuditLogRequest(
             ActorId: Guid.NewGuid(),
-            ProjectId: Guid.NewGuid(),
+            Scope: AuditLogScope.Project,
             EntityType: "Card",
             EntityId: Guid.NewGuid(),
             Action: "Created",
+            ProjectId: Guid.NewGuid(),
             OldValueJson: null,
             NewValueJson: "{\"title\":\"Test Card\"}"
         );
@@ -29,76 +31,6 @@ public class AuditServiceTests
     }
 
     [Fact]
-    public async Task WriteAsync_MissingActorId_ReturnsFailure()
-    {
-        // Arrange
-        var mockWriter = new MockAuditLogWriter(success: true);
-        var service = new AuditService(mockWriter);
-        var request = new AuditLogRequest(
-            ActorId: Guid.Empty,
-            ProjectId: Guid.NewGuid(),
-            EntityType: "Card",
-            EntityId: Guid.NewGuid(),
-            Action: "Created",
-            OldValueJson: null,
-            NewValueJson: null
-        );
-
-        // Act
-        var result = await service.WriteAsync(request);
-
-        // Assert
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Infrastructure.AuditWriteFailed, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task WriteAsync_MissingEntityType_ReturnsFailure()
-    {
-        // Arrange
-        var mockWriter = new MockAuditLogWriter(success: true);
-        var service = new AuditService(mockWriter);
-        var request = new AuditLogRequest(
-            ActorId: Guid.NewGuid(),
-            ProjectId: Guid.NewGuid(),
-            EntityType: "",
-            EntityId: Guid.NewGuid(),
-            Action: "Created",
-            OldValueJson: null,
-            NewValueJson: null
-        );
-
-        // Act
-        var result = await service.WriteAsync(request);
-
-        // Assert
-        Assert.True(result.IsFailure);
-    }
-
-    [Fact]
-    public async Task WriteAsync_MissingAction_ReturnsFailure()
-    {
-        // Arrange
-        var mockWriter = new MockAuditLogWriter(success: true);
-        var service = new AuditService(mockWriter);
-        var request = new AuditLogRequest(
-            ActorId: Guid.NewGuid(),
-            ProjectId: Guid.NewGuid(),
-            EntityType: "Card",
-            EntityId: Guid.NewGuid(),
-            Action: "",
-            OldValueJson: null,
-            NewValueJson: null
-        );
-
-        // Act
-        var result = await service.WriteAsync(request);
-
-        // Assert
-        Assert.True(result.IsFailure);
-    }
-
-    [Fact]
     public async Task WriteAsync_WriterFails_ReturnsAuditWriteFailedError()
     {
         // Arrange
@@ -106,10 +38,11 @@ public class AuditServiceTests
         var service = new AuditService(mockWriter);
         var request = new AuditLogRequest(
             ActorId: Guid.NewGuid(),
-            ProjectId: Guid.NewGuid(),
+            Scope: AuditLogScope.Project,
             EntityType: "Card",
             EntityId: Guid.NewGuid(),
             Action: "Created",
+            ProjectId: Guid.NewGuid(),
             OldValueJson: null,
             NewValueJson: null
         );
@@ -123,19 +56,44 @@ public class AuditServiceTests
     }
 
     [Fact]
-    public async Task WriteAsync_EmptyProjectId_PassesValidation()
+    public async Task WriteAsync_SystemScope_PassesWithNoProjectId()
     {
         // Arrange
         var mockWriter = new MockAuditLogWriter(success: true);
         var service = new AuditService(mockWriter);
         var request = new AuditLogRequest(
             ActorId: Guid.NewGuid(),
-            ProjectId: null, // ProjectId is optional
-            EntityType: "Card",
+            Scope: AuditLogScope.System,
+            EntityType: "SystemSettings",
             EntityId: Guid.NewGuid(),
-            Action: "Created",
+            Action: "Updated",
+            ProjectId: null,
             OldValueJson: null,
             NewValueJson: null
+        );
+
+        // Act
+        var result = await service.WriteAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task WriteAsync_PersonalScope_PassesWithNoProjectId()
+    {
+        // Arrange
+        var mockWriter = new MockAuditLogWriter(success: true);
+        var service = new AuditService(mockWriter);
+        var request = new AuditLogRequest(
+            ActorId: Guid.NewGuid(),
+            Scope: AuditLogScope.Personal,
+            EntityType: "Note",
+            EntityId: Guid.NewGuid(),
+            Action: "Created",
+            ProjectId: null,
+            OldValueJson: null,
+            NewValueJson: "{\"title\":\"My Note\"}"
         );
 
         // Act

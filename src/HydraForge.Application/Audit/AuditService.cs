@@ -35,25 +35,7 @@ public class AuditService(IAuditLogWriter writer)
         CancellationToken cancellationToken = default
     )
     {
-        // Validate required fields
-        if (request.ActorId == Guid.Empty)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Infrastructure.AuditWriteFailed, "ActorId is required.")
-            );
-
-        if (string.IsNullOrWhiteSpace(request.EntityType))
-            return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Infrastructure.AuditWriteFailed,
-                    "EntityType is required."
-                )
-            );
-
-        if (string.IsNullOrWhiteSpace(request.Action))
-            return Result.Failure(
-                new Error(DomainErrorCodes.Infrastructure.AuditWriteFailed, "Action is required.")
-            );
-
+        // Validation is now handled by AuditLogEntry.Create in the domain layer
         return await _writer.WriteAsync(request, cancellationToken);
     }
 }
