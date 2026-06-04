@@ -45,7 +45,13 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
         builder.ConfigureServices(services =>
         {
-            // Override health probes with fakes
+            // Remove existing IHealthProbe registrations (singleton GetHealthHandler already constructed with them)
+            var removeDescriptors = services.Where(d =>
+                d.ServiceType == typeof(HydraForge.Application.Health.IHealthProbe)).ToList();
+            foreach (var d in removeDescriptors)
+                services.Remove(d);
+
+            // Add test fakes
             services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeServerHealthProbe>();
             services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeDbHealthProbe>();
             services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeLlmHealthProbe>();

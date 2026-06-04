@@ -2,17 +2,24 @@ using HydraForge.Domain.Common;
 
 namespace HydraForge.Application.Health;
 
-public class GetHealthHandler(
-    IHealthProbe serverProbe,
-    IHealthProbe databaseProbe,
-    IHealthProbe llmProbe
-)
+public interface IHealthProbe
 {
+    Task<HealthStatus> CheckAsync(CancellationToken ct = default);
+}
+
+public class GetHealthHandler(IEnumerable<IHealthProbe> probes)
+{
+    private readonly IHealthProbe[] _probes = [.. probes];
+
+    private IHealthProbe ServerProbe => _probes[0];
+    private IHealthProbe DatabaseProbe => _probes[1];
+    private IHealthProbe LlmProbe => _probes[2];
+
     public async Task<Result<GetHealthResponse>> HandleAsync(CancellationToken ct = default)
     {
-        var serverStatus = await serverProbe.CheckAsync(ct);
-        var databaseStatus = await databaseProbe.CheckAsync(ct);
-        var llmStatus = await llmProbe.CheckAsync(ct);
+        var serverStatus = await ServerProbe.CheckAsync(ct);
+        var databaseStatus = await DatabaseProbe.CheckAsync(ct);
+        var llmStatus = await LlmProbe.CheckAsync(ct);
 
         var overall = ComputeOverall(serverStatus, databaseStatus, llmStatus);
 
@@ -36,9 +43,11 @@ public class GetHealthHandler(
             return HealthStatus.Healthy;
 
         // Any other degraded component → degraded
-        if (server == HealthStatus.Degraded
+        if (
+            server == HealthStatus.Degraded
             || database == HealthStatus.Degraded
-            || llm == HealthStatus.Degraded)
+            || llm == HealthStatus.Degraded
+        )
             return HealthStatus.Degraded;
 
         return HealthStatus.Healthy;

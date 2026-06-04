@@ -21,6 +21,7 @@ public static class PersistenceServiceCollectionExtensions
             options.UseNpgsql(connectionString, o => o.UseVector())
         );
 
+        // Scoped so each GetHealthHandler request gets fresh probes with current DbContext
         services.AddScoped<IHealthProbe, ServerHealthProbe>();
         services.AddScoped<IHealthProbe, DatabaseHealthProbe>();
         services.AddScoped<IHealthProbe, LlmProviderHealthProbe>();

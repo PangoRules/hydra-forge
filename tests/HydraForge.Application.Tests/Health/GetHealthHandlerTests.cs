@@ -11,7 +11,7 @@ public class GetHealthHandlerTests
         var dbProbe = new FakeDbProbe(HealthStatus.Healthy);
         var llmProbe = new FakeLlmProbe(HealthStatus.NotConfigured);
 
-        var handler = new GetHealthHandler(serverProbe, dbProbe, llmProbe);
+        var handler = new GetHealthHandler(new IHealthProbe[] { serverProbe, dbProbe, llmProbe });
         var result = await handler.HandleAsync();
 
         Assert.True(result.IsSuccess);
@@ -28,7 +28,7 @@ public class GetHealthHandlerTests
         var dbProbe = new FakeDbProbe(HealthStatus.Unhealthy);
         var llmProbe = new FakeLlmProbe(HealthStatus.Healthy);
 
-        var handler = new GetHealthHandler(serverProbe, dbProbe, llmProbe);
+        var handler = new GetHealthHandler(new IHealthProbe[] { serverProbe, dbProbe, llmProbe });
         var result = await handler.HandleAsync();
 
         Assert.True(result.IsSuccess);
@@ -42,7 +42,7 @@ public class GetHealthHandlerTests
         var dbProbe = new FakeDbProbe(HealthStatus.Healthy);
         var llmProbe = new FakeLlmProbe(HealthStatus.NotConfigured);
 
-        var handler = new GetHealthHandler(serverProbe, dbProbe, llmProbe);
+        var handler = new GetHealthHandler(new IHealthProbe[] { serverProbe, dbProbe, llmProbe });
         var result = await handler.HandleAsync();
 
         Assert.True(result.IsSuccess);

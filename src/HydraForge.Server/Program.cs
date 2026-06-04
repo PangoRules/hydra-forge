@@ -60,7 +60,8 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 ));
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
-builder.Services.AddScoped<GetHealthHandler>();
+builder.Services.AddScoped<GetHealthHandler>(sp =>
+    new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
 var app = builder.Build();
 
