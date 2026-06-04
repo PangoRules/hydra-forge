@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <ASPNETCORE_ENVIRONMENT>Testing</ASPNETCORE_ENVIRONMENT>
   </PropertyGroup>
 
   <ItemGroup>
