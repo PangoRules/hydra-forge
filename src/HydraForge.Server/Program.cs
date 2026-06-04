@@ -2,6 +2,7 @@ using System.Text;
 using HydraForge.Application.Auth;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -72,6 +73,7 @@ if (applyMigrationsOnStartup)
     await adminSeeder.SeedIfNeededAsync();
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
