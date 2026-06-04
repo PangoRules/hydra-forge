@@ -6,8 +6,16 @@ using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithCorrelationId()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
@@ -59,10 +67,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
-    "Database:ApplyMigrationsOnStartup",
-    true
-);
+var applyMigrationsOnStartup = app.Environment.IsDevelopment()
+    && app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup", true)
+    && !app.Environment.IsEnvironment("Testing")
+    && app.Configuration.GetValue<bool>("Database:SkipMigrations", false) == false;
 if (applyMigrationsOnStartup)
 {
     using var scope = app.Services.CreateScope();
@@ -73,6 +81,7 @@ if (applyMigrationsOnStartup)
     await adminSeeder.SeedIfNeededAsync();
 }
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -80,4 +89,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
 
