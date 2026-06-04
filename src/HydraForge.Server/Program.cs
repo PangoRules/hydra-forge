@@ -13,13 +13,16 @@ builder.Services.AddPersistence(builder.Configuration);
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
-var jwtSigningKey = builder.Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+var jwtSigningKey =
+    builder.Configuration["Jwt:SigningKey"]
+    ?? throw new InvalidOperationException("Jwt:SigningKey is required");
 var accessTokenMinutes = builder.Configuration.GetValue<int>("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder
+    .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -30,7 +33,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
         };
     });
 
@@ -38,7 +41,12 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
-builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(jwtIssuer, jwtAudience, jwtSigningKey, accessTokenMinutes));
+builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
+    jwtIssuer,
+    jwtAudience,
+    jwtSigningKey,
+    accessTokenMinutes
+));
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
 
@@ -49,7 +57,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-var applyMigrationsOnStartup = app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup", true);
+var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
+    "Database:ApplyMigrationsOnStartup",
+    true
+);
 if (applyMigrationsOnStartup)
 {
     using var scope = app.Services.CreateScope();
@@ -63,14 +74,21 @@ if (applyMigrationsOnStartup)
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapPost("/api/auth/login", async (LoginRequest request, LoginUserHandler handler) =>
-{
-    var result = await handler.HandleAsync(request);
-    if (result.IsFailure)
+app.MapPost(
+    "/api/auth/login",
+    async (LoginRequest request, LoginUserHandler handler) =>
     {
-        return Results.Json(new { error = result.Error.Code, message = result.Error.Message }, statusCode: 401);
+        var result = await handler.HandleAsync(request);
+        if (result.IsFailure)
+        {
+            return Results.Json(
+                new { error = result.Error.Code, message = result.Error.Message },
+                statusCode: 401
+            );
+        }
+        return Results.Ok(result.Value);
     }
-    return Results.Ok(result.Value);
-});
+);
 
 app.Run();
+

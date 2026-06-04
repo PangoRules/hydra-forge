@@ -13,18 +13,11 @@ public class Argon2Options
     public int Parallelism { get; set; } = 4;
 }
 
-public class Argon2PasswordHasher : IPasswordHasher
+public class Argon2PasswordHasher(IOptions<Argon2Options> options) : IPasswordHasher
 {
-    private readonly int _memorySizeKiB;
-    private readonly int _iterations;
-    private readonly int _parallelism;
-
-    public Argon2PasswordHasher(IOptions<Argon2Options> options)
-    {
-        _memorySizeKiB = options.Value.MemorySizeKiB;
-        _iterations = options.Value.Iterations;
-        _parallelism = options.Value.Parallelism;
-    }
+    private readonly int _memorySizeKiB = options.Value.MemorySizeKiB;
+    private readonly int _iterations = options.Value.Iterations;
+    private readonly int _parallelism = options.Value.Parallelism;
 
     public string HashPassword(string password)
     {
@@ -36,7 +29,7 @@ public class Argon2PasswordHasher : IPasswordHasher
             Salt = salt,
             MemorySize = _memorySizeKiB,
             Iterations = _iterations,
-            DegreeOfParallelism = _parallelism
+            DegreeOfParallelism = _parallelism,
         }.GetBytes(32);
 
         return Convert.ToBase64String(salt) + "$" + Convert.ToBase64String(hash);
@@ -47,7 +40,8 @@ public class Argon2PasswordHasher : IPasswordHasher
         try
         {
             var parts = encodedHash.Split('$');
-            if (parts.Length != 2) return false;
+            if (parts.Length != 2)
+                return false;
 
             var salt = Convert.FromBase64String(parts[0]);
             var storedHash = Convert.FromBase64String(parts[1]);
@@ -57,7 +51,7 @@ public class Argon2PasswordHasher : IPasswordHasher
                 Salt = salt,
                 MemorySize = _memorySizeKiB,
                 Iterations = _iterations,
-                DegreeOfParallelism = _parallelism
+                DegreeOfParallelism = _parallelism,
             }.GetBytes(32);
 
             return CryptographicOperations.FixedTimeEquals(hash, storedHash);
@@ -68,3 +62,4 @@ public class Argon2PasswordHasher : IPasswordHasher
         }
     }
 }
+

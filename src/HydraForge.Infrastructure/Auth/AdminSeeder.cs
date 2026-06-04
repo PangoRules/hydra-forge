@@ -10,29 +10,26 @@ public class AdminSeederOptions
 {
     public string? Username { get; set; }
     public string? Password { get; set; }
+    public string? Name { get; set; }
+    public string? LastName { get; set; }
+    public string? Email { get; set; }
 }
 
-public class AdminSeeder
+public class AdminSeeder(
+    IUserRepository userRepository,
+    IPasswordHasher passwordHasher,
+    ILogger<AdminSeeder> logger,
+    IOptions<AdminSeederOptions> options
+)
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly ILogger<AdminSeeder> _logger;
-    private readonly AdminSeederOptions _options;
-
-    public AdminSeeder(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<AdminSeeder> logger, IOptions<AdminSeederOptions> options)
-    {
-        _userRepository = userRepository;
-        _passwordHasher = passwordHasher;
-        _logger = logger;
-        _options = options.Value;
-    }
+    private readonly AdminSeederOptions _options = options.Value;
 
     public async Task<Result> SeedIfNeededAsync()
     {
-        var anyAdminExists = await _userRepository.AnyAdminExistsAsync();
+        var anyAdminExists = await userRepository.AnyAdminExistsAsync();
         if (anyAdminExists)
         {
-            _logger.LogInformation("Admin already exists, skipping seed");
+            logger.LogInformation("Admin already exists, skipping seed");
             return Result.Success();
         }
 
@@ -41,33 +38,40 @@ public class AdminSeeder
 
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            _logger.LogWarning("Admin seed not configured: AdminSeed:Username and AdminSeed:Password env vars or config required");
-            return Result.Failure(new Error(DomainErrorCodes.Auth.AdminSeedNotConfigured, "Admin seed not configured. Set AdminSeed:Username and AdminSeed:Password environment variables or configuration."));
+            logger.LogWarning(
+                "Admin seed not configured: AdminSeed:Username and AdminSeed:Password env vars or config required"
+            );
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Auth.AdminSeedNotConfigured,
+                    "Admin seed not configured. Set AdminSeed:Username and AdminSeed:Password environment variables or configuration."
+                )
+            );
         }
 
         var normalizedUsername = username.ToLowerInvariant();
-        var existingUser = await _userRepository.FindByUsernameAsync(normalizedUsername);
+        var existingUser = await userRepository.FindByUsernameAsync(normalizedUsername);
         if (existingUser != null)
         {
-            _logger.LogInformation("Admin user already exists, skipping seed");
+            logger.LogInformation("Admin user already exists, skipping seed");
             return Result.Success();
         }
 
         var user = new User
         {
-            Name = "Admin",
-            LastName = "",
+            Name = _options.Name ?? "Admin",
+            LastName = _options.LastName ?? "Admin",
             Username = username,
             UsernameNormalized = normalizedUsername,
-            Email = "admin@localhost",
-            EmailNormalized = "admin@localhost",
-            PasswordHash = _passwordHasher.HashPassword(password),
+            Email = _options.Email ?? "admin@localhost",
+            EmailNormalized = _options.Email != null ? _options.Email.ToLower() : "admin@localhost",
+            PasswordHash = passwordHasher.HashPassword(password),
             IsAdmin = true,
-            IsDisabled = false
+            IsDisabled = false,
         };
 
-        await _userRepository.CreateAsync(user);
-        _logger.LogInformation("Admin user created successfully");
+        await userRepository.CreateAsync(user);
+        logger.LogInformation("Admin user created successfully");
         return Result.Success();
     }
 }
