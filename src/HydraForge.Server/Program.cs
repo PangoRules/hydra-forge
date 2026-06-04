@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
 builder.Services.AddPersistence(builder.Configuration);
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
@@ -74,21 +75,7 @@ if (applyMigrationsOnStartup)
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapPost(
-    "/api/auth/login",
-    async (LoginRequest request, LoginUserHandler handler) =>
-    {
-        var result = await handler.HandleAsync(request);
-        if (result.IsFailure)
-        {
-            return Results.Json(
-                new { error = result.Error.Code, message = result.Error.Message },
-                statusCode: 401
-            );
-        }
-        return Results.Ok(result.Value);
-    }
-);
+app.MapControllers();
 
 app.Run();
 
