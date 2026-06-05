@@ -23,15 +23,9 @@ public record UpdateProjectCommand(
     string? GitProvider
 );
 
-public record ArchiveProjectCommand(
-    Guid ProjectId,
-    Guid ActorId
-);
+public record ArchiveProjectCommand(Guid ProjectId, Guid ActorId);
 
-public record DeleteProjectCommand(
-    Guid ProjectId,
-    Guid ActorId
-);
+public record DeleteProjectCommand(Guid ProjectId, Guid ActorId);
 
 public record AddProjectMemberCommand(
     Guid ProjectId,
@@ -47,11 +41,7 @@ public record UpdateProjectMemberCommand(
     Guid ChangedByUserId
 );
 
-public record RemoveProjectMemberCommand(
-    Guid ProjectId,
-    Guid UserId,
-    Guid RemovedByUserId
-);
+public record RemoveProjectMemberCommand(Guid ProjectId, Guid UserId, Guid RemovedByUserId);
 
 // DTOs remain here for internal use within Application layer
 
@@ -68,20 +58,9 @@ public record ProjectDto(
     IReadOnlyList<ProjectMemberDto> Members
 );
 
-public record ColumnDto(
-    Guid Id,
-    string Name,
-    int Position,
-    int? WipLimit,
-    string? Color
-);
+public record ColumnDto(Guid Id, string Name, int Position, int? WipLimit, string? Color);
 
-public record ProjectMemberDto(
-    Guid Id,
-    Guid UserId,
-    MemberRole Role,
-    DateTime JoinedAt
-);
+public record ProjectMemberDto(Guid Id, Guid UserId, MemberRole Role, DateTime JoinedAt);
 
 public record ProjectListDto(
     Guid Id,
@@ -94,32 +73,34 @@ public record ProjectListDto(
 
 // Use Cases
 
-public class ProjectService
+public class ProjectService(
+    IProjectRepository projectRepo,
+    IColumnRepository columnRepo,
+    IProjectMemberRepository memberRepo,
+    IProjectContextSnapshotRepository snapshotRepo,
+    IChatArchiveService chatArchiveService
+)
 {
-    private readonly IProjectRepository _projectRepo;
-    private readonly IColumnRepository _columnRepo;
-    private readonly IProjectMemberRepository _memberRepo;
-    private readonly IProjectContextSnapshotRepository _snapshotRepo;
-    private readonly IChatArchiveService _chatArchiveService;
+    private readonly IProjectRepository _projectRepo = projectRepo;
+    private readonly IColumnRepository _columnRepo = columnRepo;
+    private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IProjectContextSnapshotRepository _snapshotRepo = snapshotRepo;
+    private readonly IChatArchiveService _chatArchiveService = chatArchiveService;
 
     private static readonly string[] DefaultColumnNames =
-        ["Backlog", "Spec-ing", "Planned", "In Dev", "In Review", "Done"];
+    [
+        "Backlog",
+        "Spec-ing",
+        "Planned",
+        "In Dev",
+        "In Review",
+        "Done",
+    ];
 
-    public ProjectService(
-        IProjectRepository projectRepo,
-        IColumnRepository columnRepo,
-        IProjectMemberRepository memberRepo,
-        IProjectContextSnapshotRepository snapshotRepo,
-        IChatArchiveService chatArchiveService)
-    {
-        _projectRepo = projectRepo;
-        _columnRepo = columnRepo;
-        _memberRepo = memberRepo;
-        _snapshotRepo = snapshotRepo;
-        _chatArchiveService = chatArchiveService;
-    }
-
-    public async Task<Result<ProjectDto>> CreateAsync(CreateProjectCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ProjectDto>> CreateAsync(
+        CreateProjectCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = new Project
         {
@@ -129,7 +110,7 @@ public class ProjectService
             GitRemoteUrl = cmd.GitRemoteUrl,
             GitProvider = cmd.GitProvider,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
         };
 
         await _projectRepo.AddAsync(project, ct);
@@ -140,19 +121,24 @@ public class ProjectService
             ProjectId = project.Id,
             UserId = cmd.OwnerId,
             Role = MemberRole.Owner,
-            JoinedAt = DateTime.UtcNow
+            JoinedAt = DateTime.UtcNow,
         };
         await _memberRepo.AddMemberAsync(ownerMember, ct);
 
-        var columns = DefaultColumnNames.Select((name, index) => new Column
-        {
-            Id = Guid.NewGuid(),
-            ProjectId = project.Id,
-            Name = name,
-            Position = index,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        }).ToList();
+        var columns = DefaultColumnNames
+            .Select(
+                (name, index) =>
+                    new Column
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = project.Id,
+                        Name = name,
+                        Position = index,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    }
+            )
+            .ToList();
 
         await _columnRepo.AddRangeAsync(columns, ct);
 
@@ -161,25 +147,38 @@ public class ProjectService
             Id = Guid.NewGuid(),
             ProjectId = project.Id,
             TemplateContent = "{}",
-            TemplateGeneratedAt = DateTime.UtcNow
+            TemplateGeneratedAt = DateTime.UtcNow,
         };
         await _snapshotRepo.AddAsync(snapshot, ct);
 
-        return Result<ProjectDto>.Success(MapToDto(project, columns, new[] { ownerMember }));
+        return Result<ProjectDto>.Success(MapToDto(project, columns, [ownerMember]));
     }
 
-    public async Task<Result<ProjectDto>> GetByIdAsync(Guid projectId, Guid requestUserId, CancellationToken ct = default)
+    public async Task<Result<ProjectDto>> GetByIdAsync(
+        Guid projectId,
+        Guid requestUserId,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(projectId, ct);
         if (project == null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
         if (project.ArchivedAt != null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.Archived, "Project is archived."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.Archived, "Project is archived.")
+            );
 
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
         if (membership == null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
 
         var columns = await _columnRepo.GetByProjectIdAsync(projectId, ct);
         var members = await _memberRepo.ListMembersAsync(projectId, ct);
@@ -187,38 +186,66 @@ public class ProjectService
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
-    public async Task<Result<IReadOnlyList<ProjectListDto>>> GetAllAsync(Guid requestUserId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<ProjectListDto>>> GetAllAsync(
+        Guid requestUserId,
+        CancellationToken ct = default
+    )
     {
         var projects = await _projectRepo.ListByUserIdAsync(requestUserId, ct);
-        var result = new List<ProjectListDto>();
+        var activeProjects = projects.Where(p => p.ArchivedAt == null).ToList();
 
-        foreach (var project in projects)
-        {
-            if (project.ArchivedAt != null)
-                continue;
+        var memberCounts = await _memberRepo.GetMemberCountsAsync(
+            activeProjects.Select(p => p.Id),
+            ct
+        );
 
-            var members = await _memberRepo.ListMembersAsync(project.Id, ct);
-            result.Add(new ProjectListDto(project.Id, project.Name, project.Description, project.CreatedAt, project.ArchivedAt, members.Count));
-        }
+        var result = activeProjects.Select(project => new ProjectListDto(
+            project.Id,
+            project.Name,
+            project.Description,
+            project.CreatedAt,
+            project.ArchivedAt,
+            memberCounts.GetValueOrDefault(project.Id, 0)
+        )).ToList();
 
         return Result<IReadOnlyList<ProjectListDto>>.Success(result);
     }
 
-    public async Task<Result<ProjectDto>> UpdateAsync(UpdateProjectCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ProjectDto>> UpdateAsync(
+        UpdateProjectCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
         if (project.ArchivedAt != null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.Archived, "Cannot update archived project."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.Archived,
+                    "Cannot update archived project."
+                )
+            );
 
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
 
         if (membership.Role != MemberRole.Owner && membership.Role != MemberRole.Member)
-            return Result<ProjectDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner or Member role required."));
+            return Result<ProjectDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner or Member role required."
+                )
+            );
 
         project.Name = cmd.Name;
         project.Description = cmd.Description;
@@ -234,18 +261,33 @@ public class ProjectService
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
-    public async Task<Result> ArchiveAsync(ArchiveProjectCommand cmd, CancellationToken ct = default)
+    public async Task<Result> ArchiveAsync(
+        ArchiveProjectCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return Result.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
 
         if (membership.Role != MemberRole.Owner)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required."));
+            return Result.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner role required."
+                )
+            );
 
         project.ArchivedAt = DateTime.UtcNow;
         project.UpdatedAt = DateTime.UtcNow;
@@ -260,39 +302,84 @@ public class ProjectService
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return Result.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
 
         if (membership.Role != MemberRole.Owner)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required."));
+            return Result.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner role required."
+                )
+            );
 
         await _projectRepo.UpdateAsync(project, ct);
 
         return Result.Success();
     }
 
-    public async Task<Result<ProjectMemberDto>> AddMemberAsync(AddProjectMemberCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ProjectMemberDto>> AddMemberAsync(
+        AddProjectMemberCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
         if (project.ArchivedAt != null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.Archived, "Cannot add member to archived project."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.Archived,
+                    "Cannot add member to archived project."
+                )
+            );
 
-        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.AddedByUserId, ct);
+        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(
+            cmd.ProjectId,
+            cmd.AddedByUserId,
+            ct
+        );
         if (actorMembership == null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
 
         if (actorMembership.Role != MemberRole.Owner)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner role required."
+                )
+            );
 
-        var existingMember = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.UserId, ct);
+        var existingMember = await _memberRepo.GetByProjectAndUserAsync(
+            cmd.ProjectId,
+            cmd.UserId,
+            ct
+        );
         if (existingMember != null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.MemberDuplicate, "User is already a member."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.MemberDuplicate,
+                    "User is already a member."
+                )
+            );
 
         var newMember = new ProjectMember
         {
@@ -300,54 +387,95 @@ public class ProjectService
             ProjectId = cmd.ProjectId,
             UserId = cmd.UserId,
             Role = cmd.Role,
-            JoinedAt = DateTime.UtcNow
+            JoinedAt = DateTime.UtcNow,
         };
 
         await _memberRepo.AddMemberAsync(newMember, ct);
 
-        return Result<ProjectMemberDto>.Success(new ProjectMemberDto(newMember.Id, newMember.UserId, newMember.Role, newMember.JoinedAt));
+        return Result<ProjectMemberDto>.Success(
+            new ProjectMemberDto(newMember.Id, newMember.UserId, newMember.Role, newMember.JoinedAt)
+        );
     }
 
-    public async Task<Result<ProjectMemberDto>> UpdateMemberAsync(UpdateProjectMemberCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ProjectMemberDto>> UpdateMemberAsync(
+        UpdateProjectMemberCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
-        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ChangedByUserId, ct);
+        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(
+            cmd.ProjectId,
+            cmd.ChangedByUserId,
+            ct
+        );
         if (actorMembership == null || actorMembership.Role != MemberRole.Owner)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner role required."
+                )
+            );
 
         var member = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.UserId, ct);
         if (member == null)
-            return Result<ProjectMemberDto>.Failure(new Domain.Common.Error(DomainErrorCodes.Membership.NotFound, "Member not found."));
+            return Result<ProjectMemberDto>.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
+            );
 
         member.Role = cmd.NewRole;
         await _memberRepo.UpdateMemberAsync(member, ct);
 
-        return Result<ProjectMemberDto>.Success(new ProjectMemberDto(member.Id, member.UserId, member.Role, member.JoinedAt));
+        return Result<ProjectMemberDto>.Success(
+            new ProjectMemberDto(member.Id, member.UserId, member.Role, member.JoinedAt)
+        );
     }
 
-    public async Task<Result> RemoveMemberAsync(RemoveProjectMemberCommand cmd, CancellationToken ct = default)
+    public async Task<Result> RemoveMemberAsync(
+        RemoveProjectMemberCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var project = await _projectRepo.GetByIdAsync(cmd.ProjectId, ct);
         if (project == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found."));
+            return Result.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
 
-        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.RemovedByUserId, ct);
+        var actorMembership = await _memberRepo.GetByProjectAndUserAsync(
+            cmd.ProjectId,
+            cmd.RemovedByUserId,
+            ct
+        );
         if (actorMembership == null || actorMembership.Role != MemberRole.Owner)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required."));
+            return Result.Failure(
+                new Domain.Common.Error(
+                    DomainErrorCodes.Projects.OwnerRequired,
+                    "Owner role required."
+                )
+            );
 
         var member = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.UserId, ct);
         if (member == null)
-            return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Membership.NotFound, "Member not found."));
+            return Result.Failure(
+                new Domain.Common.Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
+            );
 
         if (member.Role == MemberRole.Owner)
         {
             var allMembers = await _memberRepo.ListMembersAsync(cmd.ProjectId, ct);
             var ownerCount = allMembers.Count(m => m.Role == MemberRole.Owner);
             if (ownerCount <= 1)
-                return Result.Failure(new Domain.Common.Error(DomainErrorCodes.Projects.LastOwnerRemovalDenied, "Cannot remove the last owner."));
+                return Result.Failure(
+                    new Domain.Common.Error(
+                        DomainErrorCodes.Projects.LastOwnerRemovalDenied,
+                        "Cannot remove the last owner."
+                    )
+                );
         }
 
         await _memberRepo.RemoveMemberAsync(member.Id, ct);
@@ -355,7 +483,11 @@ public class ProjectService
         return Result.Success();
     }
 
-    private static ProjectDto MapToDto(Project project, IReadOnlyList<Column> columns, IReadOnlyList<ProjectMember> members)
+    private static ProjectDto MapToDto(
+        Project project,
+        IReadOnlyList<Column> columns,
+        IReadOnlyList<ProjectMember> members
+    )
     {
         return new ProjectDto(
             project.Id,
@@ -366,7 +498,9 @@ public class ProjectService
             project.CreatedAt,
             project.UpdatedAt,
             project.ArchivedAt,
-            columns.Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color)).ToList(),
+            columns
+                .Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color))
+                .ToList(),
             members.Select(m => new ProjectMemberDto(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList()
         );
     }

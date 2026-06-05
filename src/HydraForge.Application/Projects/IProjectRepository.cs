@@ -20,6 +20,7 @@ public interface IProjectMemberRepository
 {
     Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default);
     Task AddMemberAsync(ProjectMember member, CancellationToken ct = default);
     Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default);
     Task RemoveMemberAsync(Guid id, CancellationToken ct = default);

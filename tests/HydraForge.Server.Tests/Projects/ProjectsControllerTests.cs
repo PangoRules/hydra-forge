@@ -383,6 +383,16 @@ internal class TestProjectMemberRepository : IProjectMemberRepository
     public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<ProjectMember>>(_members.Where(m => m.ProjectId == projectId).ToList());
 
+    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var counts = _members
+            .Where(m => idList.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Count());
+        return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
+    }
+
     public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
     {
         _members.RemoveAll(m => m.Id == id);

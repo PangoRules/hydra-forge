@@ -71,6 +71,26 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+        IEnumerable<Guid> projectIds,
+        CancellationToken ct = default
+    )
+    {
+        var idList = projectIds.ToList();
+        if (idList.Count == 0)
+            return EmptyDictionary();
+
+        var counts = await context.ProjectMembers
+            .Where(m => idList.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        return counts.ToDictionary(x => x.ProjectId, x => x.Count);
+    }
+
+    private static IReadOnlyDictionary<Guid, int> EmptyDictionary() => new Dictionary<Guid, int>();
+
     public async Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
         context.ProjectMembers.Add(member);
