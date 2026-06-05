@@ -1,24 +1,20 @@
 using System.Security.Claims;
 using HydraForge.Application.Projects;
-using HydraForge.Domain.Enums;
 using HydraForge.Server.Errors;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HydraForge.Server.Controllers.Projects;
 
+[Authorize]
 [ApiController]
-[Route("api/projects")]
+[Route("api/[controller]")]
 public class ProjectsController(ProjectService projectService) : ControllerBase
 {
     private Guid GetUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return claim != null && Guid.TryParse(claim, out var id) ? id : Guid.Empty;
-    }
-
-    private bool IsAdmin()
-    {
-        return User.FindFirst(ClaimTypes.Role)?.Value == "Admin";
     }
 
     [HttpPost]
@@ -28,12 +24,19 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         if (userId == Guid.Empty)
             return Unauthorized();
 
-        var cmd = new CreateProjectCommand(userId, request.Name, request.Description, request.GitRemoteUrl, request.GitProvider);
+        var cmd = new CreateProjectCommand(
+            userId,
+            request.Name,
+            request.Description,
+            request.GitRemoteUrl,
+            request.GitProvider
+        );
         var result = await projectService.CreateAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -51,8 +54,23 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             result.Value.CreatedAt,
             result.Value.UpdatedAt,
             result.Value.ArchivedAt,
-            result.Value.Columns.Select(c => new ColumnResponse(c.Id, c.Name, c.Position, c.WipLimit, c.Color)).ToList(),
-            result.Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList()
+            [
+                .. result.Value.Columns.Select(c => new ColumnResponse(
+                    c.Id,
+                    c.Name,
+                    c.Position,
+                    c.WipLimit,
+                    c.Color
+                )),
+            ],
+            [
+                .. result.Value.Members.Select(m => new MemberResponse(
+                    m.Id,
+                    m.UserId,
+                    m.Role,
+                    m.JoinedAt
+                )),
+            ]
         );
 
         return CreatedAtAction(nameof(GetById), new { projectId = result.Value.Id }, response);
@@ -69,7 +87,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -78,7 +97,16 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             };
         }
 
-        var response = result.Value.Select(p => new ProjectListResponse(p.Id, p.Name, p.Description, p.CreatedAt, p.ArchivedAt, p.MemberCount)).ToList();
+        var response = result
+            .Value.Select(p => new ProjectListResponse(
+                p.Id,
+                p.Name,
+                p.Description,
+                p.CreatedAt,
+                p.ArchivedAt,
+                p.MemberCount
+            ))
+            .ToList();
         return Ok(response);
     }
 
@@ -93,7 +121,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -111,8 +140,18 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             result.Value.CreatedAt,
             result.Value.UpdatedAt,
             result.Value.ArchivedAt,
-            result.Value.Columns.Select(c => new ColumnResponse(c.Id, c.Name, c.Position, c.WipLimit, c.Color)).ToList(),
-            result.Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList()
+            result
+                .Value.Columns.Select(c => new ColumnResponse(
+                    c.Id,
+                    c.Name,
+                    c.Position,
+                    c.WipLimit,
+                    c.Color
+                ))
+                .ToList(),
+            result
+                .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
+                .ToList()
         );
 
         return Ok(response);
@@ -125,12 +164,20 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         if (userId == Guid.Empty)
             return Unauthorized();
 
-        var cmd = new UpdateProjectCommand(projectId, userId, request.Name, request.Description, request.GitRemoteUrl, request.GitProvider);
+        var cmd = new UpdateProjectCommand(
+            projectId,
+            userId,
+            request.Name,
+            request.Description,
+            request.GitRemoteUrl,
+            request.GitProvider
+        );
         var result = await projectService.UpdateAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -148,8 +195,18 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             result.Value.CreatedAt,
             result.Value.UpdatedAt,
             result.Value.ArchivedAt,
-            result.Value.Columns.Select(c => new ColumnResponse(c.Id, c.Name, c.Position, c.WipLimit, c.Color)).ToList(),
-            result.Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList()
+            result
+                .Value.Columns.Select(c => new ColumnResponse(
+                    c.Id,
+                    c.Name,
+                    c.Position,
+                    c.WipLimit,
+                    c.Color
+                ))
+                .ToList(),
+            result
+                .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
+                .ToList()
         );
 
         return Ok(response);
@@ -167,7 +224,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -189,7 +247,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var projectResult = await projectService.GetByIdAsync(projectId, userId);
         if (projectResult.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(projectResult.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -198,7 +257,9 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             };
         }
 
-        var response = projectResult.Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList();
+        var response = projectResult
+            .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
+            .ToList();
         return Ok(response);
     }
 
@@ -214,7 +275,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -223,12 +285,21 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             };
         }
 
-        var response = new MemberResponse(result.Value.Id, result.Value.UserId, result.Value.Role, result.Value.JoinedAt);
+        var response = new MemberResponse(
+            result.Value.Id,
+            result.Value.UserId,
+            result.Value.Role,
+            result.Value.JoinedAt
+        );
         return CreatedAtAction(nameof(GetById), new { projectId }, response);
     }
 
     [HttpPut("{projectId:guid}/members/{memberId:guid}")]
-    public async Task<IActionResult> UpdateMember(Guid projectId, Guid memberId, [FromBody] UpdateMemberRequest request)
+    public async Task<IActionResult> UpdateMember(
+        Guid projectId,
+        Guid memberId,
+        [FromBody] UpdateMemberRequest request
+    )
     {
         var userId = GetUserId();
         if (userId == Guid.Empty)
@@ -239,7 +310,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {
@@ -248,7 +320,12 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             };
         }
 
-        var response = new MemberResponse(result.Value.Id, result.Value.UserId, result.Value.Role, result.Value.JoinedAt);
+        var response = new MemberResponse(
+            result.Value.Id,
+            result.Value.UserId,
+            result.Value.Role,
+            result.Value.JoinedAt
+        );
         return Ok(response);
     }
 
@@ -264,7 +341,8 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {

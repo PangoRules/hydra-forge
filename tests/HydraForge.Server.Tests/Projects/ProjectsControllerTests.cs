@@ -4,8 +4,10 @@ using System.Net;
 using System.Text;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
+using HydraForge.Infrastructure.Auth;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,50 @@ public class ProjectsControllerTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Project", body);
         Assert.Contains("id", body);
+    }
+
+    [Fact]
+    public async Task Create_TokenIssuedByJwtTokenIssuer_ReturnsCreatedProject()
+    {
+        var factory = new ProjectsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = factory.IssueApplicationToken(Guid.NewGuid(), "admin", isAdmin: true);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
+        {
+            Content = new StringContent(
+                "{\"name\":\"JWT Project\",\"description\":\"A test\",\"gitRemoteUrl\":null,\"gitProvider\":null}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_TokenWithRawSubClaim_ReturnsCreatedProject()
+    {
+        var factory = new ProjectsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = factory.IssueRawSubToken(Guid.NewGuid(), "admin", isAdmin: true);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
+        {
+            Content = new StringContent(
+                "{\"name\":\"Raw Sub Project\",\"description\":\"A test\",\"gitRemoteUrl\":null,\"gitProvider\":null}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]
@@ -116,7 +162,7 @@ public class ProjectsControllerTests
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/members")
         {
             Content = new StringContent(
-                $"{{\"userId\":\"{newUserId}\",\"role\":2}}",
+                $"{{\"userId\":\"{newUserId}\",\"role\":\"Member\"}}",
                 Encoding.UTF8,
                 "application/json"
             ),
@@ -190,6 +236,47 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
         });
 
         return token;
+    }
+
+    public string IssueApplicationToken(Guid userId, string username, bool isAdmin)
+    {
+        var issuer = new JwtTokenIssuer(
+            "HydraForge",
+            "HydraForge",
+            "test-secret-key-that-is-at-least-32-chars-long-for-hs256",
+            30
+        );
+
+        return issuer.IssueToken(new User
+        {
+            Id = userId,
+            Username = username,
+            IsAdmin = isAdmin,
+        }).Value;
+    }
+
+    public string IssueRawSubToken(Guid userId, string username, bool isAdmin)
+    {
+        var claims = new[]
+        {
+            new System.Security.Claims.Claim("sub", userId.ToString()),
+            new System.Security.Claims.Claim("name", username),
+            new System.Security.Claims.Claim("is_admin", isAdmin.ToString().ToLowerInvariant())
+        };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
+        var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256"));
+        var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+
+        return handler.CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
+        {
+            Subject = identity,
+            Issuer = "HydraForge",
+            Audience = "HydraForge",
+            SigningCredentials = credentials,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime
+        });
     }
 }
 

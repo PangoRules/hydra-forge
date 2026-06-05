@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Auth;
@@ -21,7 +22,9 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
 
@@ -106,4 +109,3 @@ app.MapControllers();
 app.Run();
 
 public partial class Program { }
-
