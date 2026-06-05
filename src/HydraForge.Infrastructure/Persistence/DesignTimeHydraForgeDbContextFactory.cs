@@ -9,7 +9,7 @@ public class DesignTimeHydraForgeDbContextFactory : IDesignTimeDbContextFactory<
     public HydraForgeDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<HydraForgeDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Database=hydraforge;Username=postgres;Password=password", o => o.UseVector());
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydr4l0c4", o => o.UseVector());
 
         return new HydraForgeDbContext(optionsBuilder.Options);
     }
