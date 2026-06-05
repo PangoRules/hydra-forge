@@ -2,6 +2,8 @@ using System.Text;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Auth;
+using HydraForge.Application.Projects;
+using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +23,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddProjectServices();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";

@@ -15,4 +15,20 @@ public static class DomainErrorCodes
         public const string AuditWriteFailed = "AUDIT_WRITE_FAILED";
         public const string LlmProviderUnavailable = "LLM_PROVIDER_UNAVAILABLE";
     }
+
+    public static class Projects
+    {
+        public const string NotFound = "PROJECT_NOT_FOUND";
+        public const string Archived = "PROJECT_ARCHIVED";
+        public const string OwnerRequired = "PROJECT_OWNER_REQUIRED";
+        public const string LastOwnerRemovalDenied = "PROJECT_LAST_OWNER_REMOVAL_DENIED";
+        public const string MembershipDenied = "PROJECT_MEMBERSHIP_DENIED";
+        public const string MemberDuplicate = "PROJECT_MEMBER_DUPLICATE";
+    }
+
+    public static class Membership
+    {
+        public const string NotFound = "MEMBERSHIP_NOT_FOUND";
+        public const string RoleDenied = "MEMBERSHIP_ROLE_DENIED";
+    }
 }

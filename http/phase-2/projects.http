@@ -1,0 +1,154 @@
+@baseUrl = http://localhost:5000
+@adminToken = {{loginAdmin}}
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-Correlation-Id: smoke-test-001
+
+{
+  "username": "admin",
+  "password": "Admin123!"
+}
+
+###
+
+# ── Projects ────────────────────────────────────────────────
+
+# Create a project
+# @name createProject
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-002
+
+{
+  "name": "Smoke Test Project",
+  "description": "Project created by HTTP smoke test",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "gitProvider": "github"
+}
+
+###
+
+# List user's projects
+GET {{baseUrl}}/api/projects
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-003
+
+###
+
+# Get project by ID
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-004
+
+###
+
+# Update project
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-005
+
+{
+  "name": "Smoke Test Project - Updated",
+  "description": "Updated description",
+  "gitRemoteUrl": null,
+  "gitProvider": null
+}
+
+###
+
+# List project members
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/members
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-006
+
+###
+
+# Archive (soft delete) project
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-007
+
+###
+
+# ── Member Operations ─────────────────────────────────────
+
+# Add a member to the project (owner-only)
+# @name addMember
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/members
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-008
+
+{
+  "userId": "11111111-1111-1111-1111-111111111111",
+  "role": "Member"
+}
+
+###
+
+# Update a member's role (owner-only)
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/members/{{addMember.response.body.$.id}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-009
+
+{
+  "role": "Member"
+}
+
+###
+
+# Remove a member from the project (owner-only)
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/members/{{addMember.response.body.$.id}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-010
+
+###
+
+# ── Non-member / Invalid ID Examples ────────────────────
+
+# Get project by ID with non-member user (should return 403)
+# Use a different token for a non-member user after logging in as a non-owner
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-Correlation-Id: smoke-test-011
+
+{
+  "username": "nonmember",
+  "password": "NonMember123!"
+}
+
+###
+
+# Try to get archived project (should return 400)
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-012
+
+###
+
+# Get project with invalid ID (should return 404)
+GET {{baseUrl}}/api/projects/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-013
+
+###
+
+# Add member to archived project (should return 400)
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/members
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-014
+
+{
+  "userId": "22222222-2222-2222-2222-222222222222",
+  "role": "Member"
+}
+
+###
