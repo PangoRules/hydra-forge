@@ -7,6 +7,11 @@ namespace HydraForge.Infrastructure.Auth;
 
 public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
 {
+    public async Task<User?> FindByIdAsync(Guid id)
+    {
+        return await context.Users.FindAsync(id);
+    }
+
     public async Task<User?> FindByUsernameAsync(string username)
     {
         var normalized = username.ToLowerInvariant();

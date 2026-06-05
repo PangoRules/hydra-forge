@@ -89,6 +89,9 @@ internal class InMemoryUserRepository : IUserRepository
 
     public InMemoryUserRepository(User? user) => _user = user;
 
+    public Task<User?> FindByIdAsync(Guid id)
+        => Task.FromResult(_user);
+
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(_user);
 

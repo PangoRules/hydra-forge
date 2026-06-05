@@ -149,6 +149,10 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<ProjectMember>(modelBuilder, "project_members", b =>
         {
             b.HasIndex(e => new { e.ProjectId, e.UserId }).IsUnique();
+            b.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         ConfigureEntity<ProjectContextSnapshot>(modelBuilder, "project_context_snapshots", b =>

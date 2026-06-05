@@ -53,6 +53,7 @@ public record ColumnResponse(
 public record MemberResponse(
     Guid Id,
     Guid UserId,
+    string Username,
     MemberRole Role,
     DateTime JoinedAt
 );

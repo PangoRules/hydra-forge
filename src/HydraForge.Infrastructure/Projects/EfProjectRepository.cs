@@ -67,6 +67,7 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
     public async Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
     {
         return await context.ProjectMembers
+            .Include(m => m.User)
             .Where(m => m.ProjectId == projectId)
             .ToListAsync(ct);
     }

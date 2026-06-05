@@ -52,6 +52,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
                 .. result.Value.Members.Select(m => new MemberResponse(
                     m.Id,
                     m.UserId,
+                    m.Username,
                     m.Role,
                     m.JoinedAt
                 )),
@@ -107,18 +108,24 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             result.Value.CreatedAt,
             result.Value.UpdatedAt,
             result.Value.ArchivedAt,
-            result
-                .Value.Columns.Select(c => new ColumnResponse(
+            [
+                .. result.Value.Columns.Select(c => new ColumnResponse(
                     c.Id,
                     c.Name,
                     c.Position,
                     c.WipLimit,
                     c.Color
-                ))
-                .ToList(),
-            result
-                .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
-                .ToList()
+                )),
+            ],
+            [
+                .. result.Value.Members.Select(m => new MemberResponse(
+                    m.Id,
+                    m.UserId,
+                    m.Username,
+                    m.Role,
+                    m.JoinedAt
+                )),
+            ]
         );
 
         return Ok(response);
@@ -153,18 +160,24 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
             result.Value.CreatedAt,
             result.Value.UpdatedAt,
             result.Value.ArchivedAt,
-            result
-                .Value.Columns.Select(c => new ColumnResponse(
+            [
+                .. result.Value.Columns.Select(c => new ColumnResponse(
                     c.Id,
                     c.Name,
                     c.Position,
                     c.WipLimit,
                     c.Color
-                ))
-                .ToList(),
-            result
-                .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
-                .ToList()
+                )),
+            ],
+            [
+                .. result.Value.Members.Select(m => new MemberResponse(
+                    m.Id,
+                    m.UserId,
+                    m.Username,
+                    m.Role,
+                    m.JoinedAt
+                )),
+            ]
         );
 
         return Ok(response);
@@ -198,7 +211,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         }
 
         var response = projectResult
-            .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Role, m.JoinedAt))
+            .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Username, m.Role, m.JoinedAt))
             .ToList();
         return Ok(response);
     }
@@ -219,6 +232,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var response = new MemberResponse(
             result.Value.Id,
             result.Value.UserId,
+            result.Value.Username,
             result.Value.Role,
             result.Value.JoinedAt
         );
@@ -245,6 +259,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var response = new MemberResponse(
             result.Value.Id,
             result.Value.UserId,
+            result.Value.Username,
             result.Value.Role,
             result.Value.JoinedAt
         );

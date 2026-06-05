@@ -60,7 +60,7 @@ public record ProjectDto(
 
 public record ColumnDto(Guid Id, string Name, int Position, int? WipLimit, string? Color);
 
-public record ProjectMemberDto(Guid Id, Guid UserId, MemberRole Role, DateTime JoinedAt);
+public record ProjectMemberDto(Guid Id, Guid UserId, string Username, MemberRole Role, DateTime JoinedAt);
 
 public record ProjectListDto(
     Guid Id,
@@ -78,7 +78,8 @@ public class ProjectService(
     IColumnRepository columnRepo,
     IProjectMemberRepository memberRepo,
     IProjectContextSnapshotRepository snapshotRepo,
-    IChatArchiveService chatArchiveService
+    IChatArchiveService chatArchiveService,
+    HydraForge.Application.Auth.IUserRepository userRepo
 )
 {
     private readonly IProjectRepository _projectRepo = projectRepo;
@@ -86,6 +87,7 @@ public class ProjectService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IProjectContextSnapshotRepository _snapshotRepo = snapshotRepo;
     private readonly IChatArchiveService _chatArchiveService = chatArchiveService;
+    private readonly HydraForge.Application.Auth.IUserRepository _userRepo = userRepo;
 
     private static readonly string[] DefaultColumnNames =
     [
@@ -392,8 +394,10 @@ public class ProjectService(
 
         await _memberRepo.AddMemberAsync(newMember, ct);
 
+        var user = await _userRepo.FindByIdAsync(newMember.UserId);
+
         return Result<ProjectMemberDto>.Success(
-            new ProjectMemberDto(newMember.Id, newMember.UserId, newMember.Role, newMember.JoinedAt)
+            new ProjectMemberDto(newMember.Id, newMember.UserId, user?.Username ?? string.Empty, newMember.Role, newMember.JoinedAt)
         );
     }
 
@@ -430,8 +434,10 @@ public class ProjectService(
         member.Role = cmd.NewRole;
         await _memberRepo.UpdateMemberAsync(member, ct);
 
+        var user = await _userRepo.FindByIdAsync(member.UserId);
+
         return Result<ProjectMemberDto>.Success(
-            new ProjectMemberDto(member.Id, member.UserId, member.Role, member.JoinedAt)
+            new ProjectMemberDto(member.Id, member.UserId, user?.Username ?? string.Empty, member.Role, member.JoinedAt)
         );
     }
 
@@ -501,7 +507,7 @@ public class ProjectService(
             columns
                 .Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color))
                 .ToList(),
-            members.Select(m => new ProjectMemberDto(m.Id, m.UserId, m.Role, m.JoinedAt)).ToList()
+            members.Select(m => new ProjectMemberDto(m.Id, m.UserId, m.User?.Username ?? string.Empty, m.Role, m.JoinedAt)).ToList()
         );
     }
 }
