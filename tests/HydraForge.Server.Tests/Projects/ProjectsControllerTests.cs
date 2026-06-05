@@ -84,6 +84,28 @@ public class ProjectsControllerTests
     }
 
     [Fact]
+    public async Task Create_TokenWithoutUserIdClaim_ReturnsForbidden()
+    {
+        var factory = new ProjectsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = factory.IssueTokenWithoutUserId("admin", isAdmin: true);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
+        {
+            Content = new StringContent(
+                "{\"name\":\"Missing User\",\"description\":\"A test\",\"gitRemoteUrl\":null,\"gitProvider\":null}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetById_NonMember_Returns403()
     {
         var factory = new ProjectsTestWebApplicationFactory();
@@ -260,6 +282,29 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
         var claims = new[]
         {
             new System.Security.Claims.Claim("sub", userId.ToString()),
+            new System.Security.Claims.Claim("name", username),
+            new System.Security.Claims.Claim("is_admin", isAdmin.ToString().ToLowerInvariant())
+        };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
+        var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256"));
+        var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+
+        return handler.CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
+        {
+            Subject = identity,
+            Issuer = "HydraForge",
+            Audience = "HydraForge",
+            SigningCredentials = credentials,
+            Expires = DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime
+        });
+    }
+
+    public string IssueTokenWithoutUserId(string username, bool isAdmin)
+    {
+        var claims = new[]
+        {
             new System.Security.Claims.Claim("name", username),
             new System.Security.Claims.Claim("is_admin", isAdmin.ToString().ToLowerInvariant())
         };

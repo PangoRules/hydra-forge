@@ -1,28 +1,20 @@
-using System.Security.Claims;
 using HydraForge.Application.Projects;
+using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HydraForge.Server.Controllers.Projects;
 
-[Authorize]
+[Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/[controller]")]
 public class ProjectsController(ProjectService projectService) : ControllerBase
 {
-    private Guid GetUserId()
-    {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return claim != null && Guid.TryParse(claim, out var id) ? id : Guid.Empty;
-    }
-
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new CreateProjectCommand(
             userId,
@@ -35,14 +27,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = new ProjectResponse(
@@ -79,22 +64,13 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List()
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var result = await projectService.GetAllAsync(userId);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = result
@@ -113,22 +89,13 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpGet("{projectId:guid}")]
     public async Task<IActionResult> GetById(Guid projectId)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var result = await projectService.GetByIdAsync(projectId, userId);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = new ProjectResponse(
@@ -160,9 +127,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpPut("{projectId:guid}")]
     public async Task<IActionResult> Update(Guid projectId, [FromBody] UpdateProjectRequest request)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new UpdateProjectCommand(
             projectId,
@@ -176,14 +141,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = new ProjectResponse(
@@ -215,23 +173,14 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpDelete("{projectId:guid}")]
     public async Task<IActionResult> Delete(Guid projectId)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new ArchiveProjectCommand(projectId, userId);
         var result = await projectService.ArchiveAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         return NoContent();
@@ -240,21 +189,12 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpGet("{projectId:guid}/members")]
     public async Task<IActionResult> ListMembers(Guid projectId)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var projectResult = await projectService.GetByIdAsync(projectId, userId);
         if (projectResult.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(projectResult.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(projectResult.Error);
         }
 
         var response = projectResult
@@ -266,23 +206,14 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpPost("{projectId:guid}/members")]
     public async Task<IActionResult> AddMember(Guid projectId, [FromBody] AddMemberRequest request)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new AddProjectMemberCommand(projectId, request.UserId, request.Role, userId);
         var result = await projectService.AddMemberAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = new MemberResponse(
@@ -301,23 +232,14 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         [FromBody] UpdateMemberRequest request
     )
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new UpdateProjectMemberCommand(projectId, memberId, request.Role, userId);
         var result = await projectService.UpdateMemberAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         var response = new MemberResponse(
@@ -332,23 +254,14 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
     [HttpDelete("{projectId:guid}/members/{memberId:guid}")]
     public async Task<IActionResult> RemoveMember(Guid projectId, Guid memberId)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-            return Unauthorized();
+        var userId = User.GetRequiredUserId();
 
         var cmd = new RemoveProjectMemberCommand(projectId, memberId, userId);
         var result = await projectService.RemoveMemberAsync(cmd);
 
         if (result.IsFailure)
         {
-            var correlationId =
-                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
-            var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status,
-                ContentTypes = { "application/problem+json" },
-            };
+            return this.ToProblemResult(result.Error);
         }
 
         return NoContent();

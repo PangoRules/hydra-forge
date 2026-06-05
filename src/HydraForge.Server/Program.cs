@@ -6,6 +6,7 @@ using HydraForge.Infrastructure.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Server.Auth;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,14 @@ builder
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.UserIdRequired, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context => context.User.TryGetUserId(out _));
+    });
+});
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
