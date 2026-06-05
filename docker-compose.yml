@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # 5433 on host → 5432 in container. Avoids conflict with local postgres or
+      # any other service using 5432 on the host (e.g. local dev postgres install).
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
+      - "5000:8080"
+    extra_hosts:
+      # Allows the container to reach services on the Docker host, including
+      # Odysseus's SearXNG at http://host.docker.internal:8080.
+      - "host.docker.internal:host-gateway"
+
+  searxng:
+    # Only needed if Odysseus (or another SearXNG instance) is NOT running.
+    # Default: reuse Odysseus's SearXNG at http://host.docker.internal:8080.
+    # To use this instead: docker compose --profile search up
+    # and set SearXng__BaseUrl=http://searxng:8080 in .env
+    image: searxng/searxng:latest
+    profiles: ["search"]
+    ports:
+      - "8082:8080"
+
+volumes:
+  postgres-data:

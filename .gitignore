@@ -1,0 +1,81 @@
+# ─── .NET ────────────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/
+_ReSharper*/
+*.resharper
+*.DotSettings.user
+
+# Published output
+publish/
+out/
+
+# EF Core migrations (keep the files, ignore nothing — but exclude snapshot generation temp)
+# (migrations themselves ARE committed)
+
+# ─── ASP.NET Core ────────────────────────────────────────────────────────────
+appsettings.Production.json
+appsettings.Local.json
+appsettings.Development.json
+
+# ─── Nuxt / Vue / Node ───────────────────────────────────────────────────────
+node_modules/
+.nuxt/
+.output/
+dist/
+.cache/
+*.local
+
+# Nuxt auto-generated
+src/web-ui/.nuxt/
+src/web-ui/.output/
+src/web-ui/dist/
+
+# ─── Environment & secrets ───────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+# (docker-compose.yml IS committed — only ignore overrides)
+docker-compose.override.yml
+
+# ─── PostgreSQL ──────────────────────────────────────────────────────────────
+*.sql.bak
+pgdata/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/
+Logs/
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editors ─────────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.idea/
+
+# ─── Test results ────────────────────────────────────────────────────────────
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# ─── File storage (runtime uploads — never commit user data) ─────────────────
+uploads/
+storage/

@@ -177,7 +177,7 @@ Each entry has:
 | **Decision** | **PostgreSQL per install.** Server uses EF Core + Npgsql. Docker Compose for one-command setup (server + postgres containers). |
 | **Rationale** | HydraForge is multi-user and real-time — multiple users simultaneously move cards, post comments, trigger SignalR events, and create notifications. SQLite uses file-level locking (even in WAL mode) and causes write contention under concurrent load. PostgreSQL uses MVCC (multi-version concurrency control) — built for exactly this pattern. Additional benefits: `pgvector` (active — used for Brain/Memory semantic search and RAG document chunks), native full-text search (`tsvector`) for card/spec search, mature tooling. The docker-compose overhead is one extra service (5 lines) — trivial cost for the concurrency gain. |
 | **Alternatives considered** | SQLite (rejected — write contention under multi-user real-time load). MySQL/MariaDB (rejected — PostgreSQL has better EF Core support, pgvector, and JSON). |
-| **Impact** | `docker-compose.yml` includes a `postgres:16-alpine` service with a named volume. EF Core uses `Npgsql.EntityFrameworkCore.PostgreSQL` provider. Migrations unchanged in structure. Backup via `pg_dump`. Connection string via environment variable `DATABASE_URL`. |
+| **Impact** | `docker-compose.yml` includes a `pgvector/pgvector:pg16` PostgreSQL service with a named volume. EF Core uses `Npgsql.EntityFrameworkCore.PostgreSQL` plus pgvector mapping. Backup via `pg_dump`. Connection strings use standard .NET configuration, usually `ConnectionStrings__Default` in environment variables. |
 
 ---
 
@@ -209,7 +209,7 @@ Each entry has:
 | D-22 | Notification rules | Card move → assignees, comment → watchers, project events → all members | ✅ |
 | D-23 | LLM configuration | Admin-only, no personal provider by users | ✅ |
 | D-24 | AI agent personality | User-definable system prompt per account | ✅ |
-| D-25 | Presence indicators | SignalR green dot, Phase 1 | ✅ |
+| D-25 | Presence indicators | SignalR green dot, Phase 2 | ✅ |
 | D-26 | Error handling | Air Force standard — global middleware, Result pattern, ProblemDetails, correlationId | ✅ |
 | D-27 | Card dependencies | Typed relationships (BlockedBy, Precedes, Relates), soft warnings, cycle detection | ✅ |
 | D-28 | Keyboard navigation | Both TUI and Web UI fully keyboard-navigable, shortcut reference overlay | ✅ |
@@ -486,10 +486,10 @@ Chats
 | **Context compression** | Configurable threshold (default: 80% of target model's window). `ContextCompressor` auto-summarizes injected context before sending. ProjectContextSnapshot is the primary compression target. |
 | **Prompt caching** | `ILlmClient` abstraction exposes `cache_control` block placement. `ProjectContextSnapshot` and user memory formatted as cache-eligible prefix. Anthropic and OpenAI cache hits tracked in `TokenUsageRecord.CachedTokens`. |
 | **Fallback chain** | Admin defines `LlmProvider.FallbackProviderId`. On rate-limit or 5xx, `ModelRouter` retries with fallback before surfacing error. Max 1 fallback hop to avoid cascading delays. |
-| **Token tracking** | Every LLM call writes a `TokenUsageRecord`: user, feature, model, input/output/cached tokens, project, pipeline run. Budget enforcement at call time — reject if daily/monthly limit exceeded, return `TOKEN_BUDGET_EXCEEDED` error. |
+| **Token tracking** | Every LLM call writes a `TokenUsageRecord`: user, `AiFeature`, model, input/output/cached tokens, project, pipeline run. Budget enforcement at call time — reject if daily/monthly limit exceeded, return `TOKEN_BUDGET_EXCEEDED` error. |
 | **Cost visibility** | Admin: usage dashboard by user / feature / model / period. User: self-service view of own usage. Deep Research and agent pipeline show input token estimate before run. |
 | **Image generation** | Image providers configured in same `LlmProvider` table with `ProviderType: Image`. Separate image tiers (Economy = local SD/Flux-schnell, Standard = DALL-E 2/SD3, Premium = DALL-E 3/Flux-pro). Image usage tracked in `ImageUsageRecord` (not `TokenUsageRecord` — images are per-image priced, not per-token). Surfaces: in-chat generation, gallery editor (inpaint/upscale/style), document insert. |
-| **Impact** | New domain services: `ModelRouter`, `ContextCompressor`. New entities: `ModelTier` enum, `ProviderType` enum, `FeatureModelConfig`, `UserTokenBudget`, `TokenUsageRecord`, `ImageUsageRecord`, `LlmProvider.Tier` + `FallbackProviderId` + `ProviderType`. Admin settings panel gains model routing + image provider sections. `ILlmClient` updated with cache block support. `IImageClient` abstraction added for image providers. |
+| **Impact** | New domain services: `ModelRouter`, `ContextCompressor`. New entities: `ModelTier` enum, `ProviderType` enum, `AdapterType` enum, `AiFeature` enum, `ProviderModelConfig`, planned `FeatureRoutingConfig`, `UserTokenBudget`, `TokenUsageRecord`, `ImageUsageRecord`, `LlmProvider.Tier` + `FallbackProviderId` + `ProviderType` + `AdapterType`. Admin settings panel gains model routing + image provider sections. `ILlmClient` updated with cache block support. `IImageClient` abstraction added for image providers. |
 
 ---
 

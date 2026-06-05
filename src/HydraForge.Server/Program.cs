@@ -1,41 +1,106 @@
+using System.Text;
+using HydraForge.Application.Auth;
+using HydraForge.Application.Health;
+using HydraForge.Infrastructure.Auth;
+using HydraForge.Infrastructure.Persistence;
+using HydraForge.Server.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithCorrelationId()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
+
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+builder.Services.AddPersistence(builder.Configuration);
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
+var jwtSigningKey =
+    builder.Configuration["Jwt:SigningKey"]
+    ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+var accessTokenMinutes = builder.Configuration.GetValue<int>("Jwt:AccessTokenMinutes", 60);
+
+builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
+builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
+
+builder
+    .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
+    jwtIssuer,
+    jwtAudience,
+    jwtSigningKey,
+    accessTokenMinutes
+));
+builder.Services.AddScoped<LoginUserHandler>();
+builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<GetHealthHandler>(sp =>
+    new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
+    "Database:ApplyMigrationsOnStartup",
+    true
+);
+if (applyMigrationsOnStartup)
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<HydraForgeDbContext>();
+    db.Database.Migrate();
 
-app.MapGet("/weatherforecast", () =>
+    var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
+    await adminSeeder.SeedIfNeededAsync();
+}
+
+app.UseSerilogRequestLogging(options =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("Endpoint", httpContext.Request.Path);
+        diagnosticContext.Set("CorrelationId", httpContext.Items["CorrelationId"] as string ?? "unknown");
+    };
+});
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+public partial class Program { }
+
