@@ -10,10 +10,15 @@ public class TestUserSeeder(
     ILogger<TestUserSeeder> logger
 )
 {
-    private static readonly IReadOnlyList<(string username, string password, bool isAdmin)> TestUsers =
+    private static readonly IReadOnlyList<(
+        string username,
+        string password,
+        bool isAdmin
+    )> TestUsers =
     [
         ("testadmin", "TestAdmin123!", true),
-        ("testuser",  "TestUser123!",  false),
+        ("testuser1", "TestUser123!", false),
+        ("testuser2", "TestUser123!", false),
     ];
 
     public async Task SeedIfNeededAsync()
@@ -42,7 +47,11 @@ public class TestUserSeeder(
             };
 
             await userRepository.CreateAsync(user);
-            logger.LogInformation("Test user '{Username}' created (admin={IsAdmin})", username, isAdmin);
+            logger.LogInformation(
+                "Test user '{Username}' created (admin={IsAdmin})",
+                username,
+                isAdmin
+            );
         }
     }
 }

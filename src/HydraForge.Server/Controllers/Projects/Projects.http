@@ -12,8 +12,8 @@ Content-Type: application/json
 X-Correlation-Id: smoke-test-001
 
 {
-  "password": "admin",
-  "username": "admin"
+  "password": "TestAdmin123!",
+  "username": "testadmin"
 }
 
 
