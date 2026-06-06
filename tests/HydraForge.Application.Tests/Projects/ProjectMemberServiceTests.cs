@@ -69,10 +69,11 @@ public class ProjectMemberServiceTests
         var handler = new ProjectMemberService(repo, memberRepo, userRepo);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(new ProjectMember { Id = memberId, ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
 
-        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, ownerId, ownerId));
+        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberId, ownerId));
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.LastOwnerRemovalDenied, result.Error.Code);

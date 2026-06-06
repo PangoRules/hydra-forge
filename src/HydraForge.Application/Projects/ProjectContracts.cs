@@ -32,12 +32,12 @@ public record AddProjectMemberCommand(
 
 public record UpdateProjectMemberCommand(
     Guid ProjectId,
-    Guid UserId,
+    Guid MemberId,
     MemberRole NewRole,
     Guid ChangedByUserId
 );
 
-public record RemoveProjectMemberCommand(Guid ProjectId, Guid UserId, Guid RemovedByUserId);
+public record RemoveProjectMemberCommand(Guid ProjectId, Guid MemberId, Guid RemovedByUserId);
 
 public record ProjectDto(
     Guid Id,

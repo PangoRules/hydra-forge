@@ -18,6 +18,7 @@ public interface IColumnRepository
 
 public interface IProjectMemberRepository
 {
+    Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default);

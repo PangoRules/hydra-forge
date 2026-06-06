@@ -106,8 +106,8 @@ public class ProjectMemberService(
                 )
             );
 
-        var member = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.UserId, ct);
-        if (member == null)
+        var member = await memberRepo.GetByIdAsync(cmd.MemberId, ct);
+        if (member == null || member.ProjectId != cmd.ProjectId)
             return Result<ProjectMemberDto>.Failure(
                 new Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
             );
@@ -115,10 +115,8 @@ public class ProjectMemberService(
         member.Role = cmd.NewRole;
         await memberRepo.UpdateMemberAsync(member, ct);
 
-        var user = await userRepo.FindByIdAsync(member.UserId);
-
         return Result<ProjectMemberDto>.Success(
-            new ProjectMemberDto(member.Id, member.UserId, user?.Username ?? string.Empty, member.Role, member.JoinedAt)
+            new ProjectMemberDto(member.Id, member.UserId, member.User?.Username ?? string.Empty, member.Role, member.JoinedAt)
         );
     }
 
@@ -146,8 +144,8 @@ public class ProjectMemberService(
                 )
             );
 
-        var member = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.UserId, ct);
-        if (member == null)
+        var member = await memberRepo.GetByIdAsync(cmd.MemberId, ct);
+        if (member == null || member.ProjectId != cmd.ProjectId)
             return Result.Failure(
                 new Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
             );

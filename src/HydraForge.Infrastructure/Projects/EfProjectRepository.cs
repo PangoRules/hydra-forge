@@ -58,6 +58,13 @@ public class EfColumnRepository(HydraForgeDbContext context) : IColumnRepository
 
 public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMemberRepository
 {
+    public async Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await context.ProjectMembers
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.Id == id, ct);
+    }
+
     public async Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
     {
         return await context.ProjectMembers

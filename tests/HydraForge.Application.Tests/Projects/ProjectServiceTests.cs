@@ -194,6 +194,9 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
         return Task.CompletedTask;
     }
 
+    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
+
     public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
 

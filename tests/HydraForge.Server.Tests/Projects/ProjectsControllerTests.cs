@@ -378,6 +378,9 @@ internal class TestProjectMemberRepository : IProjectMemberRepository
         return Task.CompletedTask;
     }
 
+    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(_members.FirstOrDefault(m => m.Id == id));
+
     public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
         => Task.FromResult<ProjectMember?>(_members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
 
