@@ -1,0 +1,8 @@
+# GitGuardian configuration
+matches:
+  - name: HTTP request files with hardcoded test credentials
+    match_type: path
+    value: src/HydraForge.Server/HttpTests/
+  - name: Old hardcoded connection string in DbContext factory (replaced with config)
+    match_type: path
+    value: src/HydraForge.Infrastructure/Persistence/DesignTimeHydraForgeDbContextFactory.cs

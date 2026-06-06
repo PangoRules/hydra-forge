@@ -94,6 +94,8 @@ internal class AuthTestUserRepository(bool userDisabled) : IUserRepository
         IsDisabled = userDisabled,
     };
 
+    public Task<User?> FindByIdAsync(Guid id) => Task.FromResult<User?>(_user);
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(_user);
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;

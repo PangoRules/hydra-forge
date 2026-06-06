@@ -20,6 +20,14 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Auth.AdminSeedNotConfigured => (500, "Internal server error"),
             DomainErrorCodes.Infrastructure.DatabaseUnavailable => (503, "Service unavailable"),
             DomainErrorCodes.Infrastructure.AuditWriteFailed => (500, "Internal server error"),
+            DomainErrorCodes.Projects.NotFound => (404, "Project not found"),
+            DomainErrorCodes.Projects.Archived => (400, "Project is archived"),
+            DomainErrorCodes.Projects.OwnerRequired => (403, "Owner role required"),
+            DomainErrorCodes.Projects.LastOwnerRemovalDenied => (400, "Cannot remove the last owner"),
+            DomainErrorCodes.Projects.MembershipDenied => (403, "Access denied"),
+            DomainErrorCodes.Projects.MemberDuplicate => (409, "User is already a member"),
+            DomainErrorCodes.Membership.NotFound => (404, "Member not found"),
+            DomainErrorCodes.Membership.RoleDenied => (403, "Role denied"),
             _ => (400, "Bad request"),
         };
 

@@ -22,6 +22,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
   - `docs/glossary.md` — terminology
   - `docs/agent-platform-vision.md` — agent platform direction
+  - `docs/backlog.md` — uncommitted ideas and scope-creep candidates
 - Check manifests/config before trusting prose: `HydraForge.slnx`, `*.csproj`, `src/web-ui/package.json`, `src/web-ui/nuxt.config.ts`.
 
 ## Repo Shape

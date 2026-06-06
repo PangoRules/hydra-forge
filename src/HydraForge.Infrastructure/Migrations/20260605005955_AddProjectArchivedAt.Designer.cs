@@ -3,6 +3,7 @@ using System;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    partial class HydraForgeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605005955_AddProjectArchivedAt")]
+    partial class AddProjectArchivedAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1666,8 +1669,6 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.HasIndex("ProjectId", "UserId")
                         .IsUnique();
 
@@ -1785,17 +1786,6 @@ namespace HydraForge.Infrastructure.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectMember", b =>
-                {
-                    b.HasOne("HydraForge.Domain.Entities.Auth.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.Project", b =>
