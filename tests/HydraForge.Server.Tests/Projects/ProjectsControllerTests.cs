@@ -364,6 +364,38 @@ internal class TestColumnRepository : IColumnRepository
 
     public Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Column>>(_columns.Where(c => c.ProjectId == projectId).ToList());
+
+    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(_columns.FirstOrDefault(c => c.Id == id));
+
+    public Task AddAsync(Column column, CancellationToken ct = default)
+    {
+        _columns.Add(column);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Column column, CancellationToken ct = default)
+    {
+        var idx = _columns.FindIndex(c => c.Id == column.Id);
+        if (idx >= 0) _columns[idx] = column;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        _columns.RemoveAll(c => c.Id == id);
+        return Task.CompletedTask;
+    }
+
+    public Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
+    {
+        for (var i = 0; i < orderedColumnIds.Count; i++)
+        {
+            var col = _columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
+            if (col != null) col.Position = i;
+        }
+        return Task.CompletedTask;
+    }
 }
 
 internal class TestProjectMemberRepository : IProjectMemberRepository

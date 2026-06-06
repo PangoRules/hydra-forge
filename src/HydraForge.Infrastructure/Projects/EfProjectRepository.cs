@@ -49,6 +49,58 @@ public class EfColumnRepository(HydraForgeDbContext context) : IColumnRepository
             .ToListAsync(ct);
     }
 
+    public async Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await context.Columns.FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
+
+    public async Task AddAsync(Column column, CancellationToken ct = default)
+    {
+        context.Columns.Add(column);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAsync(Column column, CancellationToken ct = default)
+    {
+        context.Columns.Update(column);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var column = await context.Columns.FindAsync([id], ct);
+        if (column != null)
+        {
+            context.Columns.Remove(column);
+            await context.SaveChangesAsync(ct);
+        }
+    }
+
+    public async Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var columns = await context.Columns
+                .Where(c => c.ProjectId == projectId)
+                .ToListAsync(ct);
+
+            for (var i = 0; i < orderedColumnIds.Count; i++)
+            {
+                var col = columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
+                if (col != null) col.Position = i;
+            }
+
+            await context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
     public async Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default)
     {
         context.Columns.AddRange(columns);

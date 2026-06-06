@@ -31,4 +31,12 @@ public static class DomainErrorCodes
         public const string NotFound = "MEMBERSHIP_NOT_FOUND";
         public const string RoleDenied = "MEMBERSHIP_ROLE_DENIED";
     }
+
+    public static class Columns
+    {
+        public const string NotFound = "COLUMN_NOT_FOUND";
+        public const string InvalidPosition = "COLUMN_INVALID_POSITION";
+        public const string DeleteNonEmpty = "COLUMN_DELETE_NON_EMPTY";
+        public const string ArchivedProjectDenied = "COLUMN_ARCHIVED_PROJECT_DENIED";
+    }
 }
