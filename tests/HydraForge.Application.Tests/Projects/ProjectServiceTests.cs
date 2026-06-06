@@ -13,8 +13,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_ValidCommand_ReturnsProjectWithOwnerMember()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -28,8 +28,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_InsertsSixDefaultColumns()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -43,8 +43,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_CreatesSnapshot()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         await handler.CreateAsync(cmd);
@@ -56,8 +56,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_CreatesProjectChatFolder()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -68,8 +68,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var projectId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Private Project" });
         var nonMemberUserId = Guid.NewGuid();
@@ -83,8 +83,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistentProject_ReturnsNotFound()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
 
         var result = await handler.GetByIdAsync(Guid.NewGuid(), Guid.NewGuid());
 
@@ -95,8 +95,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_ArchivedProject_ReturnsArchived()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var projectId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Archived Project", ArchivedAt = DateTime.UtcNow });
@@ -109,81 +109,10 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task AddMemberAsync_OwnerAddsMember_Success()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        var newMemberId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, ownerId));
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(newMemberId, result.Value.UserId);
-        Assert.Equal(MemberRole.Member, result.Value.Role);
-    }
-
-    [Fact]
-    public async Task AddMemberAsync_NonOwnerDenied_ReturnsOwnerRequired()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        var memberId = Guid.NewGuid();
-        var newMemberId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = memberId, Role = MemberRole.Member });
-
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, memberId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Projects.OwnerRequired, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task AddMemberAsync_DuplicateMember_ReturnsDuplicateError()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        var existingMemberId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = existingMemberId, Role = MemberRole.Member });
-
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, existingMemberId, MemberRole.Member, ownerId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Projects.MemberDuplicate, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task RemoveMemberAsync_LastOwnerDenied_ReturnsLastOwnerRemovalDenied()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-
-        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, ownerId, ownerId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Projects.LastOwnerRemovalDenied, result.Error.Code);
-    }
-
-    [Fact]
     public async Task ArchiveAsync_OwnerArchives_CallsChatArchiveService()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, userRepo);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
@@ -201,8 +130,7 @@ public class ProjectServiceTests
         InMemoryColumnRepository columnRepo,
         InMemoryProjectMemberRepository memberRepo,
         InMemorySnapshotRepository snapshotRepo,
-        InMemoryChatArchiveService chatService,
-        InMemoryUserRepository userRepo
+        InMemoryChatArchiveService chatService
     ) CreateMocks()
     {
         return (
@@ -210,8 +138,7 @@ public class ProjectServiceTests
             new InMemoryColumnRepository(),
             new InMemoryProjectMemberRepository(),
             new InMemorySnapshotRepository(),
-            new InMemoryChatArchiveService(),
-            new InMemoryUserRepository()
+            new InMemoryChatArchiveService()
         );
     }
 }

@@ -226,6 +226,7 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new TestSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new TestChatArchiveService());
             services.AddScoped<ProjectService>();
+            services.AddScoped<ProjectMemberService>();
         });
     }
 

@@ -14,6 +14,7 @@ public static class ProjectServiceCollectionExtensions
         services.AddScoped<IProjectContextSnapshotRepository, EfProjectContextSnapshotRepository>();
         services.AddScoped<IChatArchiveService, EfChatArchiveService>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<ProjectMemberService>();
 
         return services;
     }

@@ -9,7 +9,10 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/[controller]")]
-public class ProjectsController(ProjectService projectService) : ControllerBase
+public class ProjectsController(
+    ProjectService projectService,
+    ProjectMemberService projectMemberService
+) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
@@ -222,7 +225,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var userId = User.GetRequiredUserId();
 
         var cmd = new AddProjectMemberCommand(projectId, request.UserId, request.Role, userId);
-        var result = await projectService.AddMemberAsync(cmd);
+        var result = await projectMemberService.AddMemberAsync(cmd);
 
         if (result.IsFailure)
         {
@@ -249,7 +252,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var userId = User.GetRequiredUserId();
 
         var cmd = new UpdateProjectMemberCommand(projectId, memberId, request.Role, userId);
-        var result = await projectService.UpdateMemberAsync(cmd);
+        var result = await projectMemberService.UpdateMemberAsync(cmd);
 
         if (result.IsFailure)
         {
@@ -272,7 +275,7 @@ public class ProjectsController(ProjectService projectService) : ControllerBase
         var userId = User.GetRequiredUserId();
 
         var cmd = new RemoveProjectMemberCommand(projectId, memberId, userId);
-        var result = await projectService.RemoveMemberAsync(cmd);
+        var result = await projectMemberService.RemoveMemberAsync(cmd);
 
         if (result.IsFailure)
         {
