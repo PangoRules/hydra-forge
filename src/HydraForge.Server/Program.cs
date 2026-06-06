@@ -74,6 +74,7 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 ));
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<TestUserSeeder>();
 builder.Services.AddScoped<GetHealthHandler>(sp =>
     new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
@@ -96,6 +97,12 @@ if (applyMigrationsOnStartup)
 
     var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
     await adminSeeder.SeedIfNeededAsync();
+
+    if (app.Environment.IsDevelopment())
+    {
+        var testUserSeeder = scope.ServiceProvider.GetRequiredService<TestUserSeeder>();
+        await testUserSeeder.SeedIfNeededAsync();
+    }
 }
 
 app.UseSerilogRequestLogging(options =>
