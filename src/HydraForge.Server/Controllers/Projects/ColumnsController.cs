@@ -9,7 +9,7 @@ namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/columns")]
+[Route("api/projects/{projectId:guid}/[controller]")]
 public class ColumnsController(ColumnService columnService) : ControllerBase
 {
     [HttpGet]
@@ -24,13 +24,15 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = result.Value.Select(c => new AppColumns.ColumnResponse(
-            c.Id,
-            c.Name,
-            c.Position,
-            c.WipLimit,
-            c.Color
-        )).ToList();
+        var response = result
+            .Value.Select(c => new AppColumns.ColumnResponse(
+                c.Id,
+                c.Name,
+                c.Position,
+                c.WipLimit,
+                c.Color
+            ))
+            .ToList();
 
         return Ok(response);
     }
@@ -85,11 +87,19 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
             result.Value.Color
         );
 
-        return CreatedAtAction(nameof(GetById), new { projectId, columnId = result.Value.Id }, response);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { projectId, columnId = result.Value.Id },
+            response
+        );
     }
 
     [HttpPut("{columnId:guid}")]
-    public async Task<IActionResult> Update(Guid projectId, Guid columnId, [FromBody] UpdateColumnRequest request)
+    public async Task<IActionResult> Update(
+        Guid projectId,
+        Guid columnId,
+        [FromBody] UpdateColumnRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -136,7 +146,10 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPut("reorder")]
-    public async Task<IActionResult> Reorder(Guid projectId, [FromBody] ReorderColumnsRequest request)
+    public async Task<IActionResult> Reorder(
+        Guid projectId,
+        [FromBody] ReorderColumnsRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -151,3 +164,4 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
         return NoContent();
     }
 }
+

@@ -10,7 +10,10 @@ public class ColumnService(
     IProjectMemberRepository memberRepo
 )
 {
-    public async Task<Result<ColumnDto>> CreateAsync(CreateColumnCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ColumnDto>> CreateAsync(
+        CreateColumnCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -38,7 +41,12 @@ public class ColumnService(
         return Result<ColumnDto>.Success(MapToDto(column));
     }
 
-    public async Task<Result<ColumnDto>> GetByIdAsync(Guid projectId, Guid columnId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<ColumnDto>> GetByIdAsync(
+        Guid projectId,
+        Guid columnId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -55,7 +63,11 @@ public class ColumnService(
         return Result<ColumnDto>.Success(MapToDto(column));
     }
 
-    public async Task<Result<IReadOnlyList<ColumnDto>>> GetAllByProjectAsync(Guid projectId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<ColumnDto>>> GetAllByProjectAsync(
+        Guid projectId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -64,12 +76,13 @@ public class ColumnService(
             );
 
         var columns = await columnRepo.GetByProjectIdAsync(projectId, ct);
-        return Result<IReadOnlyList<ColumnDto>>.Success(
-            columns.Select(MapToDto).ToList()
-        );
+        return Result<IReadOnlyList<ColumnDto>>.Success([.. columns.Select(MapToDto)]);
     }
 
-    public async Task<Result<ColumnDto>> UpdateAsync(UpdateColumnCommand cmd, CancellationToken ct = default)
+    public async Task<Result<ColumnDto>> UpdateAsync(
+        UpdateColumnCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -110,7 +123,10 @@ public class ColumnService(
         var cardCount = await cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
         if (cardCount > 0)
             return Result.Failure(
-                new Error(DomainErrorCodes.Columns.DeleteNonEmpty, "Cannot delete column with cards.")
+                new Error(
+                    DomainErrorCodes.Columns.DeleteNonEmpty,
+                    "Cannot delete column with cards."
+                )
             );
 
         await columnRepo.DeleteAsync(cmd.ColumnId, ct);
@@ -125,7 +141,10 @@ public class ColumnService(
         return Result.Success();
     }
 
-    public async Task<Result> ReorderAsync(ReorderColumnsCommand cmd, CancellationToken ct = default)
+    public async Task<Result> ReorderAsync(
+        ReorderColumnsCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -157,3 +176,4 @@ public class ColumnService(
     private static ColumnDto MapToDto(Column column) =>
         new(column.Id, column.Name, column.Position, column.WipLimit, column.Color);
 }
+
