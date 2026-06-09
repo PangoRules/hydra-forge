@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
+using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -368,6 +369,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<HydraForge.Application.Auth.IUserRepository>(_ => new CardsTestUserRepository(_users));
             services.AddScoped<HydraForge.Application.Projects.IProjectContextSnapshotRepository>(_ => new CardsTestSnapshotRepository());
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CardsTestChatArchiveService());
+            services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();
@@ -596,4 +598,10 @@ internal class CardsTestChatArchiveService : HydraForge.Application.Projects.ICh
 {
     public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
     public Task UnarchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
+}
+
+internal class CardsTestAuditLogWriter : IAuditLogWriter
+{
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+        => Task.FromResult(Result.Success());
 }
