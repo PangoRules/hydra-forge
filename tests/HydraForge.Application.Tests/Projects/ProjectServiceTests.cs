@@ -174,14 +174,46 @@ internal class InMemoryColumnRepository : IColumnRepository
 {
     public List<Column> Columns { get; } = [];
 
-    public Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default)
+    public Task AddAsync(Column column, CancellationToken ct = default)
     {
-        Columns.AddRange(columns);
+        Columns.Add(column);
         return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Column>>(Columns.Where(c => c.ProjectId == projectId).ToList());
+
+    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(Columns.FirstOrDefault(c => c.Id == id));
+
+    public Task UpdateAsync(Column column, CancellationToken ct = default)
+    {
+        var idx = Columns.FindIndex(c => c.Id == column.Id);
+        if (idx >= 0) Columns[idx] = column;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        Columns.RemoveAll(c => c.Id == id);
+        return Task.CompletedTask;
+    }
+
+    public Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
+    {
+        for (var i = 0; i < orderedColumnIds.Count; i++)
+        {
+            var col = Columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
+            if (col != null) col.Position = i;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default)
+    {
+        Columns.AddRange(columns);
+        return Task.CompletedTask;
+    }
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository

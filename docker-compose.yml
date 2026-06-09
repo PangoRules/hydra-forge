@@ -6,8 +6,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      # 5433 on host → 5432 in container. Avoids conflict with local postgres or
-      # any other service using 5432 on the host (e.g. local dev postgres install).
+      # ${POSTGRES_PORT:-5433} on host → 5432 in container. Avoids conflict with
+      # local postgres or any other service using 5432 on the host.
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -26,6 +26,10 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      # Inside Docker, the server reaches Postgres by service name and container port.
+      # .env keeps localhost:${POSTGRES_PORT:-5433} for host-side `dotnet run`.
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
     ports:
       # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
       - "5000:8080"

@@ -5,7 +5,7 @@
 
 **Goal:** Ship card attachment upload/list/download/delete backed by `IFileStore`, local filesystem default, S3-compatible opt-in config, and smoke tests.
 
-**Files:** Modify/read `Attachment.cs`, `DomainErrorCodes.cs`, `HydraForge.Infrastructure.csproj`, `.env.example`, `appsettings.json`, `PersistenceServiceCollectionExtensions.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Attachments/*`, `src/HydraForge.Infrastructure/FileStorage/*`, `src/HydraForge.Infrastructure/Attachments/*`, `src/HydraForge.Server/Controllers/Projects/CardAttachmentsController.cs`, tests, smoke `http/phase-2/attachments.http`.
+**Files:** Modify/read `Attachment.cs`, `DomainErrorCodes.cs`, `HydraForge.Infrastructure.csproj`, `.env.example`, `appsettings.json`, `PersistenceServiceCollectionExtensions.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Attachments/*`, `src/HydraForge.Infrastructure/FileStorage/*`, `src/HydraForge.Infrastructure/Attachments/*`, `src/HydraForge.Server/Controllers/Projects/CardAttachmentsController.cs`, tests, smoke `src/HydraForge.Server/HttpTests/Attachments.http`.
 
 ## Steps
 
@@ -21,8 +21,8 @@
 - [ ] Wire DI based on `FileStorage:Provider`/`FILE_STORAGE_PROVIDER`.
 - [ ] Write Server multipart tests for upload/list/download/delete; use fake `IFileStore` in tests.
 - [ ] Implement controller: `POST/GET /attachments`, `GET/DELETE /attachments/{attachmentId}`. Download returns stored stream with metadata content type/name.
-- [ ] Create `http/phase-2/attachments.http` with multipart upload, list, download, delete, bad type, too large note.
+- [ ] Create `src/HydraForge.Server/HttpTests/Attachments.http` with multipart upload, list, download, delete, bad type, too large note.
 - [ ] Run attachment tests and `dotnet test`.
-- [ ] Commit: `git add src tests http .env.example && git commit -m "feat: add card attachments"`.
+- [ ] Commit: `git add src tests .env.example && git commit -m "feat: add card attachments"`.
 
 **Acceptance:** local storage works without external service; S3 disabled unless selected; raw storage exceptions do not leak; `.http` covers every attachment endpoint.

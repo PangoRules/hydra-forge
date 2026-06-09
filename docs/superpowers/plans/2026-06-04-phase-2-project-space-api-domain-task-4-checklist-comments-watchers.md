@@ -5,7 +5,7 @@
 
 **Goal:** Ship checklist and comment APIs, mention extraction against enabled users, comment archive, watcher auto-add.
 
-**Files:** Modify/read `ChecklistItem.cs`, `Comment.cs`, `CardWatcher.cs`, `User.cs`, `DomainErrorCodes.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Checklist/*`, `src/HydraForge.Application/Comments/*`, `src/HydraForge.Infrastructure/Checklist/*`, `src/HydraForge.Infrastructure/Comments/*`, `src/HydraForge.Server/Controllers/Projects/CardChecklistController.cs`, `CardCommentsController.cs`, tests, smoke `http/phase-2/checklist-comments.http`.
+**Files:** Modify/read `ChecklistItem.cs`, `Comment.cs`, `CardWatcher.cs`, `User.cs`, `DomainErrorCodes.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Checklist/*`, `src/HydraForge.Application/Comments/*`, `src/HydraForge.Infrastructure/Checklist/*`, `src/HydraForge.Infrastructure/Comments/*`, `src/HydraForge.Server/Controllers/Projects/CardChecklistController.cs`, `CardCommentsController.cs`, tests, smoke `src/HydraForge.Server/HttpTests/ChecklistComments.http`.
 
 ## Steps
 
@@ -17,8 +17,8 @@
 - [ ] Write Server tests for `/api/projects/{projectId}/cards/{cardIdOrNumber}/checklist` CRUD/toggle/reorder and `/comments` CRUD/archive.
 - [ ] Implement controllers. Return `ProblemDetails` on expected failures.
 - [ ] Update mapper.
-- [ ] Create `http/phase-2/checklist-comments.http` covering all checklist + comment endpoints, including mention and archive.
+- [ ] Create `src/HydraForge.Server/HttpTests/ChecklistComments.http` covering all checklist + comment endpoints, including mention and archive.
 - [ ] Run `dotnet test --filter Checklist`; `dotnet test --filter Comment`; `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: add checklist and comments"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: add checklist and comments"`.
 
 **Acceptance:** watcher rows created idempotently; comments archive via `ArchivedAt`; `.http` covers every endpoint.

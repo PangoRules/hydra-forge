@@ -458,7 +458,7 @@
 
 - [ ] Project CRUD + ProjectMember management (Owner / Member roles)
 - [ ] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
-- [ ] Column CRUD + reordering + per-project default columns
+- [x] Column CRUD + reordering + per-project default columns
 - [ ] Card CRUD + move between columns + position ordering
 - [ ] Card types: Task / Bug / Epic / Spec / Idea
 - [ ] Epic → child card linking

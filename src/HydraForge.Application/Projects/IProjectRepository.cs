@@ -13,7 +13,17 @@ public interface IProjectRepository
 public interface IColumnRepository
 {
     Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default);
+    Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task AddAsync(Column column, CancellationToken ct = default);
+    Task UpdateAsync(Column column, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default);
+}
+
+public interface ICardRepository
+{
+    Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default);
 }
 
 public interface IProjectMemberRepository

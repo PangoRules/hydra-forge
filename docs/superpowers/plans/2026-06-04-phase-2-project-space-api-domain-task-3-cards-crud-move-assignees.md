@@ -5,7 +5,7 @@
 
 **Goal:** Ship card APIs with per-project card numbers, dense positions, assignees/watchers, parent epic validation, archive/delete semantics, blocked-move warning preflight.
 
-**Files:** Modify/read `Card.cs`, `CardAssignee.cs`, `CardWatcher.cs`, `CardRelationship.cs`, `Column.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Cards/*`, `src/HydraForge.Infrastructure/Cards/*`, `src/HydraForge.Server/Controllers/Projects/CardsController.cs`, tests under `tests/.../Cards`, smoke `http/phase-2/cards.http`.
+**Files:** Modify/read `Card.cs`, `CardAssignee.cs`, `CardWatcher.cs`, `CardRelationship.cs`, `Column.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/Cards/*`, `src/HydraForge.Infrastructure/Cards/*`, `src/HydraForge.Server/Controllers/Projects/CardsController.cs`, tests under `tests/.../Cards`, smoke `src/HydraForge.Server/HttpTests/Cards.http`.
 
 ## Steps
 
@@ -18,8 +18,8 @@
 - [ ] Write Server tests for `/api/projects/{projectId}/cards`, `/cards/{cardIdOrNumber}`, `/move`, `/assignees`, auth, member-only, ProblemDetails.
 - [ ] Implement controller records: create/update/move/assign/unassign. Return warning payload with 409 or 200 warning contract; document in tests and `.http`.
 - [ ] Update `ProblemDetailsMapper`.
-- [ ] Create `http/phase-2/cards.http`: create epic, create task, list filters, get by number, update, assign, unassign, blocked move preflight, confirmed move, archive, delete.
+- [ ] Create `src/HydraForge.Server/HttpTests/Cards.http`: create epic, create task, list filters, get by number, update, assign, unassign, blocked move preflight, confirmed move, archive, delete.
 - [ ] Run `dotnet test --filter Card`; run `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: add card API"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: add card API"`.
 
 **Acceptance:** card numbers sequential per project; all position lists dense; parent epic cycles rejected; `.http` covers every card endpoint.

@@ -5,7 +5,7 @@
 
 **Goal:** Regenerate deterministic `ProjectContextSnapshot.TemplateContent` after project-board mutations and expose snapshot endpoint.
 
-**Files:** Modify/read `ProjectContextSnapshot.cs`, `Card.cs`, `Column.cs`, `CardRelationship.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Modify services from tasks 1-7 after merge to call snapshot port. Create `src/HydraForge.Application/ProjectSnapshots/*`, `src/HydraForge.Infrastructure/ProjectSnapshots/*`, `src/HydraForge.Server/Controllers/Projects/ProjectSnapshotController.cs`, tests, smoke `http/phase-2/snapshot.http`.
+**Files:** Modify/read `ProjectContextSnapshot.cs`, `Card.cs`, `Column.cs`, `CardRelationship.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Modify services from tasks 1-7 after merge to call snapshot port. Create `src/HydraForge.Application/ProjectSnapshots/*`, `src/HydraForge.Infrastructure/ProjectSnapshots/*`, `src/HydraForge.Server/Controllers/Projects/ProjectSnapshotController.cs`, tests, smoke `src/HydraForge.Server/HttpTests/Snapshot.http`.
 
 ## Steps
 
@@ -15,8 +15,8 @@
 - [ ] Add `ProjectBoardMutationHooks` or simple `IProjectSnapshotRefresher` port; update Project/Column/Card/Checklist/Comment/Attachment/Spec/Plan/Relationship services to call after successful board mutation before publish step (publish happens Task 9). Avoid noisy standalone audit.
 - [ ] Write Server tests for `GET /api/projects/{projectId}/snapshot`: members/admin can read, non-members get not-found-style ProblemDetails.
 - [ ] Implement controller.
-- [ ] Create `http/phase-2/snapshot.http` covering get current snapshot and non-member/invalid project.
+- [ ] Create `src/HydraForge.Server/HttpTests/Snapshot.http` covering get current snapshot and non-member/invalid project.
 - [ ] Run `dotnet test --filter Snapshot`; `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: maintain project snapshots"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: maintain project snapshots"`.
 
 **Acceptance:** every board mutation regenerates template synchronously after DB state changes; no LLM call; endpoint has `.http` smoke test.
