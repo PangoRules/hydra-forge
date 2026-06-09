@@ -10,6 +10,7 @@ public static class ProjectServiceCollectionExtensions
     {
         services.AddScoped<IProjectRepository, EfProjectRepository>();
         services.AddScoped<IColumnRepository, EfColumnRepository>();
+        services.AddScoped<ICardRepository, EfCardRepository>();
         services.AddScoped<IProjectMemberRepository, EfProjectMemberRepository>();
         services.AddScoped<IProjectContextSnapshotRepository, EfProjectContextSnapshotRepository>();
         services.AddScoped<IChatArchiveService, EfChatArchiveService>();

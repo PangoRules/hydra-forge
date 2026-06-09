@@ -87,8 +87,8 @@ public class EfColumnRepositoryTests
         var entity = model.FindEntityType(typeof(Column));
         Assert.NotNull(entity);
 
-        var queryFilter = entity.GetQueryFilter();
-        Assert.True(queryFilter == null, "Column should not have a global query filter");
+        var queryFilters = entity.GetDeclaredQueryFilters();
+        Assert.Empty(queryFilters);
     }
 
     [Fact]

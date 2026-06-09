@@ -15,21 +15,22 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
 
     public async Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await context.Projects
-            .Include(p => p.Columns)
+        return await context
+            .Projects.Include(p => p.Columns)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
-    public async Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Project>> ListByUserIdAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        var projectIds = await context.ProjectMembers
-            .Where(m => m.UserId == userId)
+        var projectIds = await context
+            .ProjectMembers.Where(m => m.UserId == userId)
             .Select(m => m.ProjectId)
             .ToListAsync(ct);
 
-        return await context.Projects
-            .Where(p => projectIds.Contains(p.Id))
-            .ToListAsync(ct);
+        return await context.Projects.Where(p => projectIds.Contains(p.Id)).ToListAsync(ct);
     }
 
     public async Task UpdateAsync(Project project, CancellationToken ct = default)
@@ -41,10 +42,13 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
 
 public class EfColumnRepository(HydraForgeDbContext context) : IColumnRepository
 {
-    public async Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Column>> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    )
     {
-        return await context.Columns
-            .Where(c => c.ProjectId == projectId)
+        return await context
+            .Columns.Where(c => c.ProjectId == projectId)
             .OrderBy(c => c.Position)
             .ToListAsync(ct);
     }
@@ -76,19 +80,23 @@ public class EfColumnRepository(HydraForgeDbContext context) : IColumnRepository
         }
     }
 
-    public async Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
+    public async Task ReorderAsync(
+        Guid projectId,
+        IReadOnlyList<Guid> orderedColumnIds,
+        CancellationToken ct = default
+    )
     {
         await using var transaction = await context.Database.BeginTransactionAsync(ct);
         try
         {
-            var columns = await context.Columns
-                .Where(c => c.ProjectId == projectId)
+            var columns = await context
+                .Columns.Where(c => c.ProjectId == projectId)
                 .ToListAsync(ct);
 
             for (var i = 0; i < orderedColumnIds.Count; i++)
             {
                 var col = columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
-                if (col != null) col.Position = i;
+                col?.Position = i;
             }
 
             await context.SaveChangesAsync(ct);
@@ -112,21 +120,30 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
 {
     public async Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await context.ProjectMembers
-            .Include(m => m.User)
+        return await context
+            .ProjectMembers.Include(m => m.User)
             .FirstOrDefaultAsync(m => m.Id == id, ct);
     }
 
-    public async Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
+    public async Task<ProjectMember?> GetByProjectAndUserAsync(
+        Guid projectId,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ProjectMembers
-            .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == userId, ct);
+        return await context.ProjectMembers.FirstOrDefaultAsync(
+            m => m.ProjectId == projectId && m.UserId == userId,
+            ct
+        );
     }
 
-    public async Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ProjectMembers
-            .Include(m => m.User)
+        return await context
+            .ProjectMembers.Include(m => m.User)
             .Where(m => m.ProjectId == projectId)
             .ToListAsync(ct);
     }
@@ -140,8 +157,8 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
         if (idList.Count == 0)
             return EmptyDictionary();
 
-        var counts = await context.ProjectMembers
-            .Where(m => idList.Contains(m.ProjectId))
+        var counts = await context
+            .ProjectMembers.Where(m => idList.Contains(m.ProjectId))
             .GroupBy(m => m.ProjectId)
             .Select(g => new { ProjectId = g.Key, Count = g.Count() })
             .ToListAsync(ct);
@@ -149,7 +166,7 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
         return counts.ToDictionary(x => x.ProjectId, x => x.Count);
     }
 
-    private static IReadOnlyDictionary<Guid, int> EmptyDictionary() => new Dictionary<Guid, int>();
+    private static Dictionary<Guid, int> EmptyDictionary() => [];
 
     public async Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
@@ -174,12 +191,18 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
     }
 }
 
-public class EfProjectContextSnapshotRepository(HydraForgeDbContext context) : IProjectContextSnapshotRepository
+public class EfProjectContextSnapshotRepository(HydraForgeDbContext context)
+    : IProjectContextSnapshotRepository
 {
-    public async Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
+    public async Task<ProjectContextSnapshot?> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ProjectContextSnapshots
-            .FirstOrDefaultAsync(s => s.ProjectId == projectId, ct);
+        return await context.ProjectContextSnapshots.FirstOrDefaultAsync(
+            s => s.ProjectId == projectId,
+            ct
+        );
     }
 
     public async Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
