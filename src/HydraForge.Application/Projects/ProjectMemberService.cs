@@ -112,7 +112,7 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
             );
 
-        member.Role = cmd.NewRole;
+        member.ChangeRole(cmd.NewRole);
         await memberRepo.UpdateMemberAsync(member, ct);
 
         return Result<ProjectMemberDto>.Success(

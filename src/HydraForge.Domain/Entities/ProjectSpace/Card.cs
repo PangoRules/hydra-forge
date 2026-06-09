@@ -23,6 +23,38 @@ public class Card
     public DateTime MovedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
 
+    public void UpdateDetails(string title, string description, CardType type, Guid? parentCardId, DateTime? dueAt)
+    {
+        Title = title;
+        Description = description;
+        Type = type;
+        ParentCardId = parentCardId;
+        DueAt = dueAt;
+        UpdatedAt = DateTime.UtcNow;
+        Version += 1;
+    }
+
+    public void MoveTo(Guid columnId, int position)
+    {
+        ColumnId = columnId;
+        Position = position;
+        MovedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+        Version += 1;
+    }
+
+    public void ShiftPosition(int delta)
+    {
+        Position += delta;
+    }
+
+    public void Archive()
+    {
+        ArchivedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+        Version += 1;
+    }
+
     public static Error? ValidateParentEpic(Card child, Card parent, IReadOnlyDictionary<Guid, Card>? cardMap = null)
     {
         if (child.Id == parent.Id)

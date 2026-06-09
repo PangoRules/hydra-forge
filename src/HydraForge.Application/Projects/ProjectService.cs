@@ -172,11 +172,7 @@ public class ProjectService(
                 )
             );
 
-        project.Name = cmd.Name;
-        project.Description = cmd.Description;
-        project.GitRemoteUrl = cmd.GitRemoteUrl;
-        project.GitProvider = cmd.GitProvider;
-        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdateDetails(cmd.Name, cmd.Description, cmd.GitRemoteUrl, cmd.GitProvider);
 
         await projectRepo.UpdateAsync(project, ct);
 
@@ -214,8 +210,7 @@ public class ProjectService(
                 )
             );
 
-        project.ArchivedAt = DateTime.UtcNow;
-        project.UpdatedAt = DateTime.UtcNow;
+        project.Archive();
 
         await projectRepo.UpdateAsync(project, ct);
         await chatArchiveService.ArchiveProjectAsync(cmd.ProjectId, ct);

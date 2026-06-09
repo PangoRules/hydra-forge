@@ -171,4 +171,71 @@ public class CardTests
 
         Assert.Null(result);
     }
+
+    [Fact]
+    public void Card_UpdateDetails_SetsFieldsAndIncrementsVersion()
+    {
+        var card = new Card { Version = 1 };
+
+        card.UpdateDetails("Updated Title", "Updated Desc", CardType.Bug, Guid.NewGuid(), DateTime.UtcNow.AddDays(1));
+
+        Assert.Equal("Updated Title", card.Title);
+        Assert.Equal("Updated Desc", card.Description);
+        Assert.Equal(CardType.Bug, card.Type);
+        Assert.NotNull(card.ParentCardId);
+        Assert.NotNull(card.DueAt);
+        Assert.Equal(2, card.Version);
+        Assert.True(card.UpdatedAt <= DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void Card_MoveTo_UpdatesPositionAndTimestamp()
+    {
+        var card = new Card { Version = 1, ColumnId = Guid.NewGuid(), Position = 0 };
+        var newColumnId = Guid.NewGuid();
+        var beforeMove = DateTime.UtcNow;
+
+        card.MoveTo(newColumnId, 5);
+
+        Assert.Equal(newColumnId, card.ColumnId);
+        Assert.Equal(5, card.Position);
+        Assert.Equal(2, card.Version);
+        Assert.True(card.MovedAt >= beforeMove);
+        Assert.True(card.MovedAt <= DateTime.UtcNow);
+        Assert.True(card.UpdatedAt >= beforeMove);
+    }
+
+    [Fact]
+    public void Card_ShiftPosition_AppliesDelta()
+    {
+        var card = new Card { Position = 3 };
+
+        card.ShiftPosition(2);
+
+        Assert.Equal(5, card.Position);
+    }
+
+    [Fact]
+    public void Card_ShiftPosition_NegativeDelta()
+    {
+        var card = new Card { Position = 5 };
+
+        card.ShiftPosition(-2);
+
+        Assert.Equal(3, card.Position);
+    }
+
+    [Fact]
+    public void Card_Archive_SetsTimestampAndIncrementsVersion()
+    {
+        var card = new Card { Version = 3 };
+        var beforeArchive = DateTime.UtcNow;
+
+        card.Archive();
+
+        Assert.NotNull(card.ArchivedAt);
+        Assert.True(card.ArchivedAt >= beforeArchive);
+        Assert.True(card.ArchivedAt <= DateTime.UtcNow);
+        Assert.Equal(4, card.Version);
+    }
 }

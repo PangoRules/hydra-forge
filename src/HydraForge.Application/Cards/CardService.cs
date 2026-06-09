@@ -1,6 +1,5 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -47,11 +46,9 @@ public class CardService(
 
         var maxNumber = await _cardRepo.GetMaxCardNumberAsync(cmd.ProjectId, ct);
         var cardCount = await _cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
-
-        Card? parentCard = null;
         if (cmd.ParentCardId.HasValue)
         {
-            parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
+            Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
             if (parentCard == null)
                 return Result<CardDto>.Failure(
                     new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
@@ -170,9 +167,12 @@ public class CardService(
         {
             var allCardIds = cards.Select(c => c.Id).ToList();
             var assigneeLookup = await _assigneeRepo.ListByCardIdsAsync(allCardIds, ct);
-            cards = cards
-                .Where(c => assigneeLookup[c.Id].Any(a => a.UserId == filter.AssigneeUserId.Value))
-                .ToList();
+            cards =
+            [
+                .. cards.Where(c =>
+                    assigneeLookup[c.Id].Any(a => a.UserId == filter.AssigneeUserId.Value)
+                ),
+            ];
         }
 
         var cardIds = cards.Select(c => c.Id).ToList();
@@ -183,11 +183,14 @@ public class CardService(
             .Concat(watcherLookupFinal.SelectMany(g => g.Select(w => w.UserId)))
             .Distinct()
             .ToList();
-        var usersById = allUserIds.Count > 0
-            ? await _userRepo.FindByIdsAsync(allUserIds, ct)
-            : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+        var usersById =
+            allUserIds.Count > 0
+                ? await _userRepo.FindByIdsAsync(allUserIds, ct)
+                : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
 
-        var dtos = cards.Select(card => MapCardToDto(card, assigneeLookupFinal, watcherLookupFinal, usersById)).ToList();
+        var dtos = cards
+            .Select(card => MapCardToDto(card, assigneeLookupFinal, watcherLookupFinal, usersById))
+            .ToList();
 
         return Result<IReadOnlyList<CardDto>>.Success(dtos);
     }
@@ -218,11 +221,9 @@ public class CardService(
             return Result<CardDto>.Failure(
                 new Error(DomainErrorCodes.Cards.Archived, "Card is archived.")
             );
-
-        Card? parentCard = null;
         if (cmd.ParentCardId.HasValue)
         {
-            parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
+            Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
             if (parentCard == null)
                 return Result<CardDto>.Failure(
                     new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
@@ -233,13 +234,13 @@ public class CardService(
                 return Result<CardDto>.Failure(parentError);
         }
 
-        card.Title = cmd.Title;
-        card.Description = cmd.Description;
-        card.Type = cmd.Type;
-        card.ParentCardId = cmd.ParentCardId;
-        card.DueAt = cmd.DueAt;
-        card.UpdatedAt = DateTime.UtcNow;
-        card.Version += 1;
+        card.UpdateDetails(
+            cmd.Title,
+            cmd.Description,
+            cmd.Type,
+            cmd.ParentCardId,
+            cmd.DueAt
+        );
 
         await _cardRepo.UpdateAsync(card, ct);
 
@@ -288,15 +289,19 @@ public class CardService(
             .Distinct()
             .ToList();
 
-        var cardsById = relatedCardIds.Count > 0
-            ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
-            : new Dictionary<Guid, Card>();
+        var cardsById =
+            relatedCardIds.Count > 0
+                ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
+                : new Dictionary<Guid, Card>();
 
         var blockerDtos = new List<BlockerDto>();
 
         foreach (var blocker in blockers)
         {
-            if (cardsById.TryGetValue(blocker.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null)
+            if (
+                cardsById.TryGetValue(blocker.SourceCardId, out var blockerCard)
+                && blockerCard.ArchivedAt == null
+            )
             {
                 blockerDtos.Add(
                     new BlockerDto(
@@ -311,7 +316,10 @@ public class CardService(
 
         foreach (var pred in predecessors)
         {
-            if (cardsById.TryGetValue(pred.TargetCardId, out var predCard) && predCard.ArchivedAt == null)
+            if (
+                cardsById.TryGetValue(pred.TargetCardId, out var predCard)
+                && predCard.ArchivedAt == null
+            )
             {
                 blockerDtos.Add(
                     new BlockerDto(
@@ -394,6 +402,8 @@ public class CardService(
         var oldColumnId = card.ColumnId;
         var oldPosition = card.Position;
 
+        var toUpdate = new List<Card>();
+
         if (oldColumnId == cmd.TargetColumnId)
         {
             if (oldPosition > cmd.TargetPosition)
@@ -412,25 +422,8 @@ public class CardService(
                     .ToList();
                 foreach (var c in cardsToShift)
                 {
-                    c.Position += 1;
-                    await _cardRepo.UpdateAsync(c, ct);
-                }
-            }
-            else
-            {
-                await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
-                var allCards = await _cardRepo.ListByProjectAsync(
-                    cmd.ProjectId,
-                    new CardListFilter(cmd.TargetColumnId, true),
-                    ct
-                );
-                var cardsToShift = allCards
-                    .Where(c => c.Position >= cmd.TargetPosition && c.Id != card.Id)
-                    .ToList();
-                foreach (var c in cardsToShift)
-                {
-                    c.Position += 1;
-                    await _cardRepo.UpdateAsync(c, ct);
+                    c.ShiftPosition(1);
+                    toUpdate.Add(c);
                 }
             }
         }
@@ -444,18 +437,15 @@ public class CardService(
             );
             foreach (var c in cardsInTarget.Where(c => c.Position >= cmd.TargetPosition))
             {
-                c.Position += 1;
-                await _cardRepo.UpdateAsync(c, ct);
+                c.ShiftPosition(1);
+                toUpdate.Add(c);
             }
         }
 
-        card.ColumnId = cmd.TargetColumnId;
-        card.Position = cmd.TargetPosition;
-        card.MovedAt = DateTime.UtcNow;
-        card.UpdatedAt = DateTime.UtcNow;
-        card.Version += 1;
+        card.MoveTo(cmd.TargetColumnId, cmd.TargetPosition);
+        toUpdate.Add(card);
 
-        await _cardRepo.UpdateAsync(card, ct);
+        await _cardRepo.UpdateRangeAsync(toUpdate, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -617,9 +607,7 @@ public class CardService(
         var oldPosition = card.Position;
         var oldColumnId = card.ColumnId;
 
-        card.ArchivedAt = DateTime.UtcNow;
-        card.UpdatedAt = DateTime.UtcNow;
-        card.Version += 1;
+        card.Archive();
 
         await _cardRepo.UpdateAsync(card, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
