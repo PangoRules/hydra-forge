@@ -345,6 +345,7 @@ internal class InMemoryCardRepository : ICardRepository
 
     public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
     public Task UpdateAsync(Card card, CancellationToken ct = default) { var idx = Cards.FindIndex(c => c.Id == card.Id); if (idx >= 0) Cards[idx] = card; return Task.CompletedTask; }
+    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = Cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) Cards[idx] = c; } return Task.CompletedTask; }
     public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
     public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)

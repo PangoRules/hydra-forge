@@ -494,6 +494,7 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
         if (idx >= 0) _cards[idx] = card;
         return Task.CompletedTask;
     }
+    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = _cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) _cards[idx] = c; } return Task.CompletedTask; }
     public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { _cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
     public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
     {

@@ -59,6 +59,12 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         await context.SaveChangesAsync(ct);
     }
 
+    public async Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
+    {
+        context.Cards.UpdateRange(cards);
+        await context.SaveChangesAsync(ct);
+    }
+
     public async Task DeleteAsync(Guid cardId, CancellationToken ct = default)
     {
         var card = await context.Cards.FindAsync([cardId], ct);
