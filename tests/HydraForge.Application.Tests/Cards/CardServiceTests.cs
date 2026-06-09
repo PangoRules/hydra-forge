@@ -135,6 +135,30 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_FiltersByAssignee()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+        var assigneeId = NewId();
+        var columnId = NewId();
+        var assignedCardId = NewId();
+        var unassignedCardId = NewId();
+
+        cardRepo.Add(new Card { Id = assignedCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Title = "Assigned" });
+        cardRepo.Add(new Card { Id = unassignedCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Title = "Unassigned" });
+        assigneeRepo.Add(new CardAssignee { CardId = assignedCardId, UserId = assigneeId, AssignedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.ListAsync(projectId, new CardListFilter(AssigneeUserId: assigneeId), actorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value);
+        Assert.Equal("Assigned", result.Value[0].Title);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ExistingCard_ReturnsCard()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
@@ -226,6 +250,29 @@ public class CardServiceTests
         cardRepo.Add(card);
         cardRepo.Add(new Card { Id = blockerCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Title = "Blocker" });
         relationshipRepo.Add(new CardRelationship { SourceCardId = blockerCardId, TargetCardId = cardId, Type = RelationshipType.BlockedBy });
+        columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.MoveAsync(new MoveCardCommand(projectId, cardId, columnId, 0, actorId, false, 1));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Cards.BlockedMoveWarning, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task MoveAsync_PredecessorWithoutConfirm_ReturnsWarningResult()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var predecessorCardId = NewId();
+        var columnId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 1, Version = 1 });
+        cardRepo.Add(new Card { Id = predecessorCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Title = "Predecessor" });
+        relationshipRepo.Add(new CardRelationship { SourceCardId = cardId, TargetCardId = predecessorCardId, Type = RelationshipType.Precedes });
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 

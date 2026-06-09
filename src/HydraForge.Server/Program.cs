@@ -1,7 +1,5 @@
 using System.Text;
 using System.Text.Json.Serialization;
-using System.Text;
-using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Auth;

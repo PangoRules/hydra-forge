@@ -139,6 +139,13 @@ public class CardService(
         var dtos = new List<CardDto>();
         foreach (var card in cards)
         {
+            if (filter.AssigneeUserId.HasValue)
+            {
+                var assignee = await _assigneeRepo.GetByCardAndUserAsync(card.Id, filter.AssigneeUserId.Value, ct);
+                if (assignee == null)
+                    continue;
+            }
+
             dtos.Add(await MapToDtoAsync(card, ct));
         }
 
@@ -281,12 +288,21 @@ public class CardService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Target column not found.")
             );
 
-        var blockers = await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct);
-        var hasBlockers = blockers.Any(b =>
+        var blockingRelationships = (await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct))
+            .Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct));
+        var hasBlockers = false;
+        foreach (var relationship in blockingRelationships)
         {
-            var blockerCard = _cardRepo.GetByIdAsync(b.SourceCardId, ct).Result;
-            return blockerCard != null && blockerCard.ArchivedAt == null;
-        });
+            var relatedCardId = relationship.SourceCardId == cmd.CardId
+                ? relationship.TargetCardId
+                : relationship.SourceCardId;
+            var relatedCard = await _cardRepo.GetByIdAsync(relatedCardId, ct);
+            if (relatedCard != null && relatedCard.ArchivedAt == null)
+            {
+                hasBlockers = true;
+                break;
+            }
+        }
 
         if (hasBlockers && !cmd.ConfirmBlockedMove)
         {
@@ -302,7 +318,7 @@ public class CardService(
         var oldColumnId = card.ColumnId;
         var oldPosition = card.Position;
 
-if (oldColumnId == cmd.TargetColumnId)
+        if (oldColumnId == cmd.TargetColumnId)
         {
             if (oldPosition > cmd.TargetPosition)
             {
