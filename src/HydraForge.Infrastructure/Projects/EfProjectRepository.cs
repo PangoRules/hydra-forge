@@ -93,19 +93,21 @@ public class EfColumnRepository(HydraForgeDbContext context) : IColumnRepository
                 .Columns.Where(c => c.ProjectId == projectId)
                 .ToListAsync(ct);
 
+            var columnMap = columns.ToDictionary(c => c.Id);
+
             for (var i = 0; i < orderedColumnIds.Count; i++)
             {
-                var col = columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
-                col?.Position = i;
+                if (columnMap.TryGetValue(orderedColumnIds[i], out var col))
+                    col.Position = i;
             }
 
             await context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new InvalidOperationException("Failed to reorder columns.", ex);
         }
     }
 
