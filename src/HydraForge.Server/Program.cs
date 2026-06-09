@@ -1,11 +1,14 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text;
+using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Columns;
+using HydraForge.Infrastructure.Cards;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Middleware;
@@ -30,6 +33,7 @@ builder.Services.AddControllers()
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
 builder.Services.AddColumnServices();
+builder.Services.AddCardServices();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";

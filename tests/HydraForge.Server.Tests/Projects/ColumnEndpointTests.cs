@@ -2,6 +2,7 @@ namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
 using System.Text;
+using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Entities.Auth;
@@ -489,6 +490,49 @@ internal class ColTestCardRepository : ICardRepository
     private readonly List<Card> _cards;
 
     public ColTestCardRepository(List<Card> cards) => _cards = cards;
+
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
+
+    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
+        => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    {
+        var query = _cards.Where(c => c.ProjectId == projectId);
+        if (filter.ColumnId.HasValue)
+            query = query.Where(c => c.ColumnId == filter.ColumnId.Value);
+        if (!filter.IncludeArchived)
+            query = query.Where(c => c.ArchivedAt == null);
+        if (filter.Type.HasValue)
+            query = query.Where(c => c.Type == filter.Type.Value);
+        return Task.FromResult<IReadOnlyList<Card>>(query.ToList());
+    }
+
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+
+    public Task AddAsync(Card card, CancellationToken ct = default)
+    {
+        _cards.Add(card);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Card card, CancellationToken ct = default)
+    {
+        var idx = _cards.FindIndex(c => c.Id == card.Id);
+        if (idx >= 0) _cards[idx] = card;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+    {
+        _cards.RemoveAll(c => c.Id == cardId);
+        return Task.CompletedTask;
+    }
+
+    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
+        => Task.CompletedTask;
 
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
         => Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));

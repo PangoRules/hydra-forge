@@ -32,6 +32,15 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Columns.InvalidPosition => (400, "Invalid column positions"),
             DomainErrorCodes.Columns.DeleteNonEmpty => (409, "Cannot delete column with cards"),
             DomainErrorCodes.Columns.ArchivedProjectDenied => (400, "Project is archived"),
+            DomainErrorCodes.Cards.NotFound => (404, "Card not found"),
+            DomainErrorCodes.Cards.Archived => (400, "Card is archived"),
+            DomainErrorCodes.Cards.InvalidType => (400, "Invalid card type"),
+            DomainErrorCodes.Cards.InvalidAssignee => (400, "Invalid assignee"),
+            DomainErrorCodes.Cards.DuplicateAssignee => (409, "User is already assigned"),
+            DomainErrorCodes.Cards.InvalidParentEpic => (400, "Invalid parent epic"),
+            DomainErrorCodes.Cards.ParentCycle => (400, "Parent cycle detected"),
+            DomainErrorCodes.Cards.BlockedMoveWarning => (409, "Card has blockers"),
+            DomainErrorCodes.Cards.ConcurrencyMismatch => (409, "Card has been modified"),
             _ => (400, "Bad request"),
         };
 

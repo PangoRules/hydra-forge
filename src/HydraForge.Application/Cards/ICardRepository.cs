@@ -1,0 +1,40 @@
+using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
+
+namespace HydraForge.Application.Cards;
+
+public interface ICardRepository
+{
+    Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default);
+    Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default);
+    Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default);
+    Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default);
+    Task AddAsync(Card card, CancellationToken ct = default);
+    Task UpdateAsync(Card card, CancellationToken ct = default);
+    Task DeleteAsync(Guid cardId, CancellationToken ct = default);
+    Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default);
+    Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default);
+}
+
+public interface ICardAssigneeRepository
+{
+    Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
+    Task AddAsync(CardAssignee assignee, CancellationToken ct = default);
+    Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+}
+
+public interface ICardWatcherRepository
+{
+    Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
+    Task AddAsync(CardWatcher watcher, CancellationToken ct = default);
+    Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+}
+
+public interface ICardRelationshipRepository
+{
+    Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
+    Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default);
+    Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default);
+}

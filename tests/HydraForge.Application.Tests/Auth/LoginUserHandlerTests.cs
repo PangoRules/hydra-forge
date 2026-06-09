@@ -92,6 +92,9 @@ internal class InMemoryUserRepository : IUserRepository
     public Task<User?> FindByIdAsync(Guid id)
         => Task.FromResult(_user);
 
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(_user);
+
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(_user);
 

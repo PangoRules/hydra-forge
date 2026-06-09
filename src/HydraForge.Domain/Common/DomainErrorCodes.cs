@@ -39,4 +39,17 @@ public static class DomainErrorCodes
         public const string DeleteNonEmpty = "COLUMN_DELETE_NON_EMPTY";
         public const string ArchivedProjectDenied = "COLUMN_ARCHIVED_PROJECT_DENIED";
     }
+
+    public static class Cards
+    {
+        public const string NotFound = "CARD_NOT_FOUND";
+        public const string Archived = "CARD_ARCHIVED";
+        public const string InvalidType = "CARD_INVALID_TYPE";
+        public const string InvalidAssignee = "CARD_INVALID_ASSIGNEE";
+        public const string DuplicateAssignee = "CARD_DUPLICATE_ASSIGNEE";
+        public const string InvalidParentEpic = "CARD_INVALID_PARENT_EPIC";
+        public const string ParentCycle = "CARD_PARENT_CYCLE";
+        public const string BlockedMoveWarning = "CARD_BLOCKED_MOVE_WARNING";
+        public const string ConcurrencyMismatch = "CARD_CONCURRENCY_MISMATCH";
+    }
 }

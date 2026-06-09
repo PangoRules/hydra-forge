@@ -21,11 +21,6 @@ public interface IColumnRepository
     Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default);
 }
 
-public interface ICardRepository
-{
-    Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default);
-}
-
 public interface IProjectMemberRepository
 {
     Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default);
