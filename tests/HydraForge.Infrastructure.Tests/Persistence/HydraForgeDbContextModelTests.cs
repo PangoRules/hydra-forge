@@ -410,4 +410,53 @@ public class HydraForgeDbContextModelTests
         Assert.NotNull(projectIdIndex);
         Assert.True(projectIdIndex.IsUnique);
     }
+
+    [Fact]
+    public void GetIndexes_CardAssignee_CardIdUserId_IsUnique()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(CardAssignee));
+        Assert.NotNull(entity);
+
+        var index = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "CardId") &&
+                                  i.Properties.Any(p => p.Name == "UserId"));
+
+        Assert.NotNull(index);
+        Assert.True(index.IsUnique);
+    }
+
+    [Fact]
+    public void GetIndexes_CardWatcher_CardIdUserId_IsKey()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(CardWatcher));
+        Assert.NotNull(entity);
+
+        var key = entity.FindPrimaryKey();
+        Assert.NotNull(key);
+        Assert.Equal(2, key.Properties.Count);
+        Assert.Contains(key.Properties, p => p.Name == "CardId");
+        Assert.Contains(key.Properties, p => p.Name == "UserId");
+    }
+
+    [Fact]
+    public void GetIndexes_Card_ColumnIdPosition_NotConfigured()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Card));
+        Assert.NotNull(entity);
+
+        var columnPositionIndex = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ColumnId") &&
+                                  i.Properties.Any(p => p.Name == "Position"));
+
+        Assert.Null(columnPositionIndex);
+    }
 }

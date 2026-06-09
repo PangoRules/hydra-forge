@@ -302,21 +302,34 @@ public class CardService(
         var oldColumnId = card.ColumnId;
         var oldPosition = card.Position;
 
-        if (oldColumnId == cmd.TargetColumnId)
+if (oldColumnId == cmd.TargetColumnId)
         {
-            await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
- var cardsBelow = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId), ct);
-            var cardsToShift = cardsBelow.Where(c => c.ColumnId == cmd.TargetColumnId && c.Position >= cmd.TargetPosition && c.Id != card.Id).ToList();
-            foreach (var c in cardsToShift)
+            if (oldPosition > cmd.TargetPosition)
             {
-                c.Position += 1;
-                await _cardRepo.UpdateAsync(c, ct);
+                var allCards = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
+                var cardsToShift = allCards.Where(c => c.Position >= cmd.TargetPosition && c.Position < oldPosition && c.Id != card.Id).ToList();
+                foreach (var c in cardsToShift)
+                {
+                    c.Position += 1;
+                    await _cardRepo.UpdateAsync(c, ct);
+                }
+            }
+            else
+            {
+                await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
+                var allCards = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
+                var cardsToShift = allCards.Where(c => c.Position >= cmd.TargetPosition && c.Id != card.Id).ToList();
+                foreach (var c in cardsToShift)
+                {
+                    c.Position += 1;
+                    await _cardRepo.UpdateAsync(c, ct);
+                }
             }
         }
         else
         {
             await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
-            var cardsInTarget = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId), ct);
+            var cardsInTarget = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
             foreach (var c in cardsInTarget.Where(c => c.Position >= cmd.TargetPosition))
             {
                 c.Position += 1;
