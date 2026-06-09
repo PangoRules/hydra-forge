@@ -289,10 +289,7 @@ internal class InMemoryChatArchiveService : IChatArchiveService
 
 internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserRepository
 {
-    public Task<HydraForge.Domain.Entities.Auth.User?> FindByIdAsync(Guid id)
-        => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
-
-    public Task<HydraForge.Domain.Entities.Auth.User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public Task<HydraForge.Domain.Entities.Auth.User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
 
     public Task<HydraForge.Domain.Entities.Auth.User?> FindByUsernameAsync(string username)

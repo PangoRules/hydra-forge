@@ -585,8 +585,7 @@ internal class InMemoryUserRepository : IUserRepository
 {
     public List<User> Users { get; } = [];
 
-    public Task<User?> FindByIdAsync(Guid id) => GetByIdAsync(id);
-    public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));

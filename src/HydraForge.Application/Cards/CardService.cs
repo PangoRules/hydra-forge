@@ -389,7 +389,7 @@ public class CardService(
                 new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
             );
 
-        var assigneeUser = await _userRepo.GetByIdAsync(cmd.AssigneeUserId, ct);
+        var assigneeUser = await _userRepo.FindByIdAsync(cmd.AssigneeUserId, ct);
         if (assigneeUser == null)
             return Result<CardDto>.Failure(
                 new Error(DomainErrorCodes.Cards.InvalidAssignee, "Assignee user not found.")
@@ -556,7 +556,7 @@ public class CardService(
         var assigneeDtos = new List<CardAssigneeDto>();
         foreach (var a in assignees)
         {
-            var user = await _userRepo.GetByIdAsync(a.UserId, ct);
+            var user = await _userRepo.FindByIdAsync(a.UserId, ct);
             assigneeDtos.Add(new CardAssigneeDto(a.Id, a.UserId, user?.Username ?? string.Empty, a.AssignedAt));
         }
 
@@ -564,7 +564,7 @@ public class CardService(
         var watcherDtos = new List<CardWatcherDto>();
         foreach (var w in watchers)
         {
-            var user = await _userRepo.GetByIdAsync(w.UserId, ct);
+            var user = await _userRepo.FindByIdAsync(w.UserId, ct);
             watcherDtos.Add(new CardWatcherDto(w.UserId, user?.Username ?? string.Empty, w.AddedAt));
         }
 
