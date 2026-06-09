@@ -1,4 +1,6 @@
 ### Column API Smoke Tests
+
+
 ### Run against local development environment
 
 @adminToken = {{loginAdmin.response.body.$.accessToken}}
@@ -66,8 +68,8 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-004
 
 {
-  "name": "Extra Column 1",
   "color": "#336699",
+  "name": "Extra Column 1",
   "wipLimit": null
 }
 
@@ -84,8 +86,8 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-005
 
 {
-  "name": "Extra Column 2",
   "color": "#FF0000",
+  "name": "Extra Column 2",
   "wipLimit": 5
 }
 
@@ -102,8 +104,8 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-006
 
 {
-  "name": "Extra Column 3",
   "color": "#00FF00",
+  "name": "Extra Column 3",
   "wipLimit": null
 }
 
@@ -137,8 +139,8 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-009
 
 {
-  "name": "Extra Column 1 - Updated",
   "color": "#0000FF",
+  "name": "Extra Column 1 - Updated",
   "wipLimit": 10
 }
 
@@ -160,6 +162,12 @@ X-Correlation-Id: smoke-test-col-010
 
 {
   "columnIds": [
+    "15e0cf1d-bc3d-466e-8bb8-c7e023c381d2",
+    "32e1241f-3b4a-4a16-8ae6-02db24b4a569",
+    "5387fb97-8331-46ae-becd-5fcc69b95cfe",
+    "b163b714-3a7a-4c29-8a8a-1df7bcce080a",
+    "1dd951fe-59bb-4e99-a4a8-584e97efd814",
+    "dc4cdac4-6d19-423d-a1f3-520d2c06b27b",
     "{{createColumn3.response.body.$.id}}",
     "{{createColumn2.response.body.$.id}}",
     "{{createColumn1.response.body.$.id}}"
@@ -168,21 +176,22 @@ X-Correlation-Id: smoke-test-col-010
 
 
 ###
+
 # NOTE: The above reorder will fail until you replace the default column IDs
 # with real values from listDefaultColumns.response.body.$.columns
 # After first run, uncomment and fill in all 9 IDs:
 # {
-#   "columnIds": [
-#     "REPLACE-WITH-BACKLOG-ID",
-#     "REPLACE-WITH-SPEC-ING-ID",
-#     "REPLACE-WITH-PLANNED-ID",
-#     "REPLACE-WITH-IN-DEV-ID",
-#     "REPLACE-WITH-IN-REVIEW-ID",
-#     "REPLACE-WITH-DONE-ID",
-#     "{{createColumn1.response.body.$.id}}",
-#     "{{createColumn2.response.body.$.id}}",
-#     "{{createColumn3.response.body.$.id}}"
-#   ]
+# "columnIds": [
+# "REPLACE-WITH-BACKLOG-ID",
+# "REPLACE-WITH-SPEC-ING-ID",
+# "REPLACE-WITH-PLANNED-ID",
+# "REPLACE-WITH-IN-DEV-ID",
+# "REPLACE-WITH-IN-REVIEW-ID",
+# "REPLACE-WITH-DONE-ID",
+# "{{createColumn1.response.body.$.id}}",
+# "{{createColumn2.response.body.$.id}}",
+# "{{createColumn3.response.body.$.id}}"
+# ]
 # }
 
 
@@ -242,29 +251,20 @@ X-Correlation-Id: smoke-test-col-014
 ###
 
 # Delete non-empty column returns 409
+# TODO: Re-enable once CardsController exists (POST /api/projects/{projectId}/cards)
 # Create a card in Extra Column 2, then try to delete it
-
-# @name createCardInColumn
-
-POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
-Content-Type: application/json
-Authorization: Bearer {{adminToken}}
-X-Correlation-Id: smoke-test-col-015
-
-{
-  "columnId": "{{createColumn2.response.body.$.id}}",
-  "name": "Card in Extra Column 2",
-  "description": "This card prevents column deletion"
-}
-
-
-###
-
-# Try to delete column that has cards - should return 409
-
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn2.response.body.$.id}} HTTP/1.1
-Authorization: Bearer {{adminToken}}
-X-Correlation-Id: smoke-test-col-016
+# POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+# Content-Type: application/json
+# Authorization: Bearer {{adminToken}}
+# X-Correlation-Id: smoke-test-col-015
+# {
+#   "columnId": "{{createColumn2.response.body.$.id}}",
+#   "name": "Card in Extra Column 2",
+#   "description": "This card prevents column deletion"
+# }
+# DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn2.response.body.$.id}} HTTP/1.1
+# Authorization: Bearer {{adminToken}}
+# X-Correlation-Id: smoke-test-col-016
 
 
 ###
@@ -300,8 +300,8 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-019
 
 {
-  "name": "Updated Name",
   "color": "#FF0000",
+  "name": "Updated Name",
   "wipLimit": 1
 }
 
