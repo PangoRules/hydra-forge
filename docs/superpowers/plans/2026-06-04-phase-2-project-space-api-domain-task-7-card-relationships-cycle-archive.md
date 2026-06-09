@@ -5,7 +5,7 @@
 
 **Goal:** Ship relationship APIs for `BlockedBy`, `Precedes`, `Relates`, DAG validation, archive-impact preflight, confirmed relationship archive.
 
-**Files:** Modify/read `CardRelationship.cs`, `RelationshipType.cs`, `Card.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/CardRelationships/*`, `src/HydraForge.Infrastructure/CardRelationships/*`, `src/HydraForge.Server/Controllers/Projects/CardRelationshipsController.cs`, tests, smoke `http/phase-2/card-relationships.http`.
+**Files:** Modify/read `CardRelationship.cs`, `RelationshipType.cs`, `Card.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/CardRelationships/*`, `src/HydraForge.Infrastructure/CardRelationships/*`, `src/HydraForge.Server/Controllers/Projects/CardRelationshipsController.cs`, tests, smoke `src/HydraForge.Server/HttpTests/CardRelationships.http`.
 
 ## Steps
 
@@ -17,8 +17,8 @@
 - [ ] Write Server tests for list/create/delete and `/archive-impact`; confirmed archive flow should archive relationships touching card.
 - [ ] Implement controller routes per spec under `/relationships` and `/archive-impact`.
 - [ ] Update mapper.
-- [ ] Create `http/phase-2/card-relationships.http` covering create blocked-by, duplicate failure, cycle failure, relates success, list, delete, archive impact, confirm archive.
+- [ ] Create `src/HydraForge.Server/HttpTests/CardRelationships.http` covering create blocked-by, duplicate failure, cycle failure, relates success, list, delete, archive impact, confirm archive.
 - [ ] Run `dotnet test --filter Relationship`; `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: add card relationships"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: add card relationships"`.
 
 **Acceptance:** cycles never persist; cross-project edges rejected; archive preflight lists dependents; `.http` covers every relationship endpoint.

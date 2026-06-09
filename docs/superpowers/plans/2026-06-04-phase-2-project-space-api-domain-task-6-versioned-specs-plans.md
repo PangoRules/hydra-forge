@@ -5,7 +5,7 @@
 
 **Goal:** Ship project-level versioned markdown specs/plans, immutable version snapshots, restore, and card link/unlink APIs.
 
-**Files:** Modify/read `Spec.cs`, `SpecVersion.cs`, `Plan.cs`, `PlanVersion.cs`, `Card.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/ProjectDocuments/*`, `src/HydraForge.Infrastructure/ProjectDocuments/*`, `src/HydraForge.Server/Controllers/Projects/SpecsController.cs`, `PlansController.cs`, tests, smoke `http/phase-2/specs-plans.http`.
+**Files:** Modify/read `Spec.cs`, `SpecVersion.cs`, `Plan.cs`, `PlanVersion.cs`, `Card.cs`, `DomainErrorCodes.cs`, `HydraForgeDbContext.cs`, `ProblemDetailsMapper.cs`, `Program.cs`. Create `src/HydraForge.Application/ProjectDocuments/*`, `src/HydraForge.Infrastructure/ProjectDocuments/*`, `src/HydraForge.Server/Controllers/Projects/SpecsController.cs`, `PlansController.cs`, tests, smoke `src/HydraForge.Server/HttpTests/SpecsPlans.http`.
 
 ## Steps
 
@@ -17,8 +17,8 @@
 - [ ] Write Server tests for `/api/projects/{projectId}/specs`, `/specs/{specId}/versions`, restore, card link/unlink; repeat for plans.
 - [ ] Implement controllers. Routes per spec: `/api/projects/{projectId}/specs`, `/api/projects/{projectId}/plans`, `/versions`.
 - [ ] Update mapper.
-- [ ] Create `http/phase-2/specs-plans.http` covering create/list/get/update/version-list/restore/link/unlink for spec and plan.
+- [ ] Create `src/HydraForge.Server/HttpTests/SpecsPlans.http` covering create/list/get/update/version-list/restore/link/unlink for spec and plan.
 - [ ] Run `dotnet test --filter Spec`; `dotnet test --filter Plan`; `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: add versioned specs and plans"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: add versioned specs and plans"`.
 
 **Acceptance:** every save creates version snapshot atomically; restore creates new version not mutating old; `.http` covers every endpoint.

@@ -5,7 +5,7 @@
 
 **Goal:** Add SignalR board mutation invalidation events after successful commits and ephemeral presence join/leave/card-focus without DB writes.
 
-**Files:** Modify/read `Program.cs`, `DomainErrorCodes.cs`, project/card services from prior tasks after merge. Create `src/HydraForge.Application/Realtime/*`, `src/HydraForge.Server/Hubs/BoardHub.cs`, `PresenceHub.cs`, `src/HydraForge.Infrastructure/Realtime/SignalRProjectBoardEventPublisher.cs` if Infrastructure owns publisher adapter, tests, smoke `http/phase-2/realtime.http`.
+**Files:** Modify/read `Program.cs`, `DomainErrorCodes.cs`, project/card services from prior tasks after merge. Create `src/HydraForge.Application/Realtime/*`, `src/HydraForge.Server/Hubs/BoardHub.cs`, `PresenceHub.cs`, `src/HydraForge.Infrastructure/Realtime/SignalRProjectBoardEventPublisher.cs` if Infrastructure owns publisher adapter, tests, smoke `src/HydraForge.Server/HttpTests/Realtime.http`.
 
 ## Steps
 
@@ -15,8 +15,8 @@
 - [ ] Register SignalR in `Program.cs`: `builder.Services.AddSignalR(); app.MapHub<BoardHub>("/hubs/board"); app.MapHub<PresenceHub>("/hubs/presence");` after auth.
 - [ ] Implement publisher adapter that sends `BoardEvent` to project group. Ensure task services call publisher after transaction/SaveChanges. If service lacks unit-of-work hook, repository method returns committed result then service publishes.
 - [ ] Write Server tests for unauthorized hub connect/join denial where practical; unit-test `PresenceService` directly for join/focus/disconnect cleanup and no audit/DB dependency.
-- [ ] Create `http/phase-2/realtime.http` documenting SignalR negotiate URLs and HTTP mutations that should emit board events. `.http` cannot open WebSocket reliably; include smoke GET/POST examples plus comments with expected hub methods.
+- [ ] Create `src/HydraForge.Server/HttpTests/Realtime.http` documenting SignalR negotiate URLs and HTTP mutations that should emit board events. `.http` cannot open WebSocket reliably; include smoke GET/POST examples plus comments with expected hub methods.
 - [ ] Run `dotnet test --filter Realtime`; `dotnet test`.
-- [ ] Commit: `git add src tests http && git commit -m "feat: add realtime board presence"`.
+- [ ] Commit: `git add src tests && git commit -m "feat: add realtime board presence"`.
 
 **Acceptance:** Board events emitted after commit only; presence has no DB writes/audit rows; `.http` documents smoke flow for endpoints/mutations that trigger events.
