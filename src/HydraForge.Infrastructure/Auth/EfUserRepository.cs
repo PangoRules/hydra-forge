@@ -12,6 +12,11 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        return await context.Users.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
+    }
+
     public async Task<User?> FindByUsernameAsync(string username)
     {
         var normalized = username.ToLowerInvariant();

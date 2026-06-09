@@ -13,6 +13,14 @@ public class EfCardAssigneeRepository(HydraForgeDbContext context) : ICardAssign
             .FirstOrDefaultAsync(a => a.CardId == cardId && a.UserId == userId, ct);
     }
 
+    public async Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+    {
+        var result = await context.CardAssignees
+            .Where(a => cardIds.Contains(a.CardId))
+            .ToListAsync(ct);
+        return result.ToLookup(a => a.CardId);
+    }
+
     public async Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardAssignees

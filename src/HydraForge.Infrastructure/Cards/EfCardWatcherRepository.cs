@@ -13,6 +13,14 @@ public class EfCardWatcherRepository(HydraForgeDbContext context) : ICardWatcher
             .FirstOrDefaultAsync(w => w.CardId == cardId && w.UserId == userId, ct);
     }
 
+    public async Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+    {
+        var result = await context.CardWatchers
+            .Where(w => cardIds.Contains(w.CardId))
+            .ToListAsync(ct);
+        return result.ToLookup(w => w.CardId);
+    }
+
     public async Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardWatchers

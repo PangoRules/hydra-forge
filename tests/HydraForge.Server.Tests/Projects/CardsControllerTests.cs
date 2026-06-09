@@ -470,6 +470,8 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
 
     public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(_cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null));
     public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, HydraForge.Application.Cards.CardListFilter filter, CancellationToken ct = default)
@@ -511,6 +513,8 @@ internal class CardsTestCardAssigneeRepository : HydraForge.Application.Cards.IC
 
     public Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(_assignees.FirstOrDefault(a => a.CardId == cardId && a.UserId == userId));
+    public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<ILookup<Guid, CardAssignee>>(_assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.CardId == cardId).ToList());
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { _assignees.Add(assignee); return Task.CompletedTask; }
@@ -523,6 +527,8 @@ internal class CardsTestCardWatcherRepository : HydraForge.Application.Cards.ICa
 
     public Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(_watchers.FirstOrDefault(w => w.CardId == cardId && w.UserId == userId));
+    public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<ILookup<Guid, CardWatcher>>(_watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardWatcher>>(_watchers.Where(w => w.CardId == cardId).ToList());
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { _watchers.Add(watcher); return Task.CompletedTask; }
@@ -577,6 +583,8 @@ internal class CardsTestUserRepository : HydraForge.Application.Auth.IUserReposi
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(_users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(_users.FirstOrDefault(u => u.Username == username));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;

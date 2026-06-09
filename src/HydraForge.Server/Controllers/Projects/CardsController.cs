@@ -33,9 +33,7 @@ public class CardsController(CardService cardService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppCards.CardListResponse(
-            result.Value.Select(MapToResponse).ToList()
-        );
+        var response = new AppCards.CardListResponse([.. result.Value.Select(MapToResponse)]);
         return Ok(response);
     }
 
@@ -68,7 +66,10 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Guid projectId, [FromBody] AppCards.CreateCardRequest request)
+    public async Task<IActionResult> Create(
+        Guid projectId,
+        [FromBody] AppCards.CreateCardRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -90,7 +91,11 @@ public class CardsController(CardService cardService) : ControllerBase
         }
 
         var response = MapToResponse(result.Value);
-        return CreatedAtAction(nameof(GetByIdOrNumber), new { projectId, cardIdOrNumber = result.Value.Id }, response);
+        return CreatedAtAction(
+            nameof(GetByIdOrNumber),
+            new { projectId, cardIdOrNumber = result.Value.Id },
+            response
+        );
     }
 
     [HttpPut("{cardId:guid}")]
@@ -147,7 +152,11 @@ public class CardsController(CardService cardService) : ControllerBase
         {
             if (result.Error.Code == DomainErrorCodes.Cards.BlockedMoveWarning)
             {
-                var warningResult = await cardService.GetBlockedMoveWarningAsync(projectId, cardId, userId);
+                var warningResult = await cardService.GetBlockedMoveWarningAsync(
+                    projectId,
+                    cardId,
+                    userId
+                );
                 if (warningResult.IsFailure)
                 {
                     return this.ToProblemResult(warningResult.Error);
@@ -155,12 +164,14 @@ public class CardsController(CardService cardService) : ControllerBase
 
                 var warningResponse = new AppCards.BlockedMoveWarningResponse(
                     warningResult.Value.CardId,
-                    warningResult.Value.Blockers.Select(b => new AppCards.BlockerResponse(
-                        b.CardId,
-                        b.CardNumber,
-                        b.Title,
-                        b.BlockerType.ToString()
-                    )).ToList()
+                    warningResult
+                        .Value.Blockers.Select(b => new AppCards.BlockerResponse(
+                            b.CardId,
+                            b.CardNumber,
+                            b.Title,
+                            b.BlockerType.ToString()
+                        ))
+                        .ToList()
                 );
                 return StatusCode(409, warningResponse);
             }
@@ -179,12 +190,7 @@ public class CardsController(CardService cardService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.AssignCardCommand(
-            projectId,
-            cardId,
-            request.AssigneeUserId,
-            userId
-        );
+        var cmd = new AppCards.AssignCardCommand(projectId, cardId, request.AssigneeUserId, userId);
         var result = await cardService.AssignAsync(cmd);
 
         if (result.IsFailure)
@@ -196,20 +202,11 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpDelete("{cardId:guid}/assignees/{assigneeUserId:guid}")]
-    public async Task<IActionResult> Unassign(
-        Guid projectId,
-        Guid cardId,
-        Guid assigneeUserId
-    )
+    public async Task<IActionResult> Unassign(Guid projectId, Guid cardId, Guid assigneeUserId)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.UnassignCardCommand(
-            projectId,
-            cardId,
-            assigneeUserId,
-            userId
-        );
+        var cmd = new AppCards.UnassignCardCommand(projectId, cardId, assigneeUserId, userId);
         var result = await cardService.UnassignAsync(cmd);
 
         if (result.IsFailure)
@@ -229,12 +226,7 @@ public class CardsController(CardService cardService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.ArchiveCardCommand(
-            projectId,
-            cardId,
-            userId,
-            request.Version
-        );
+        var cmd = new AppCards.ArchiveCardCommand(projectId, cardId, userId, request.Version);
         var result = await cardService.ArchiveAsync(cmd);
 
         if (result.IsFailure)
@@ -250,11 +242,7 @@ public class CardsController(CardService cardService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.DeleteCardCommand(
-            projectId,
-            cardId,
-            userId
-        );
+        var cmd = new AppCards.DeleteCardCommand(projectId, cardId, userId);
         var result = await cardService.DeleteAsync(cmd);
 
         if (result.IsFailure)
@@ -282,16 +270,20 @@ public class CardsController(CardService cardService) : ControllerBase
             dto.MovedAt,
             dto.ArchivedAt,
             dto.ParentCardId,
-            dto.Assignees.Select(a => new AppCards.CardAssigneeResponse(
-                a.Id,
-                a.UserId,
-                a.Username,
-                a.AssignedAt
-            )).ToList(),
-            dto.Watchers.Select(w => new AppCards.CardWatcherResponse(
-                w.UserId,
-                w.Username,
-                AddedAt: w.AddedAt
-            )).ToList()
+            [
+                .. dto.Assignees.Select(a => new AppCards.CardAssigneeResponse(
+                    a.Id,
+                    a.UserId,
+                    a.Username,
+                    a.AssignedAt
+                )),
+            ],
+            [
+                .. dto.Watchers.Select(w => new AppCards.CardWatcherResponse(
+                    w.UserId,
+                    w.Username,
+                    AddedAt: w.AddedAt
+                )),
+            ]
         );
 }

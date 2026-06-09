@@ -12,6 +12,11 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         return await context.Cards.FirstOrDefaultAsync(c => c.Id == cardId, ct);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+    {
+        return await context.Cards.Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, ct);
+    }
+
     public async Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
     {
         return await context.Cards

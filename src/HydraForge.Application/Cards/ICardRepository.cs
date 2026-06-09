@@ -6,6 +6,7 @@ namespace HydraForge.Application.Cards;
 public interface ICardRepository
 {
     Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default);
     Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default);
     Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default);
     Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default);
@@ -19,6 +20,7 @@ public interface ICardRepository
 public interface ICardAssigneeRepository
 {
     Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+    Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default);
     Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
     Task AddAsync(CardAssignee assignee, CancellationToken ct = default);
     Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);
@@ -27,6 +29,7 @@ public interface ICardAssigneeRepository
 public interface ICardWatcherRepository
 {
     Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default);
+    Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default);
     Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
     Task AddAsync(CardWatcher watcher, CancellationToken ct = default);
     Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);

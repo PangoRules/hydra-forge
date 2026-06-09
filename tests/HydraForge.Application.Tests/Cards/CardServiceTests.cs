@@ -442,6 +442,9 @@ internal class InMemoryCardRepository : ICardRepository
     public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
 
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null));
 
@@ -486,6 +489,9 @@ internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository
     public Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(Assignees.FirstOrDefault(a => a.CardId == cardId && a.UserId == userId));
 
+    public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<ILookup<Guid, CardAssignee>>(Assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
+
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>(Assignees.Where(a => a.CardId == cardId).ToList());
 
@@ -500,6 +506,9 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
 
     public Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(Watchers.FirstOrDefault(w => w.CardId == cardId && w.UserId == userId));
+
+    public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<ILookup<Guid, CardWatcher>>(Watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
 
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
@@ -587,6 +596,8 @@ internal class InMemoryUserRepository : IUserRepository
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;

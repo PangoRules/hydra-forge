@@ -292,6 +292,9 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
     public Task<HydraForge.Domain.Entities.Auth.User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
 
+    public Task<IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>());
+
     public Task<HydraForge.Domain.Entities.Auth.User?> FindByUsernameAsync(string username)
         => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
 

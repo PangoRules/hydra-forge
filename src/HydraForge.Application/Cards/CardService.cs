@@ -28,7 +28,10 @@ public class CardService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
-    public async Task<Result<CardDto>> CreateAsync(CreateCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> CreateAsync(
+        CreateCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -54,7 +57,15 @@ public class CardService(
                     new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
                 );
 
-            var parentError = Card.ValidateParentEpic(new Card { Id = Guid.Empty, ProjectId = cmd.ProjectId, Type = cmd.Type }, parentCard);
+            var parentError = Card.ValidateParentEpic(
+                new Card
+                {
+                    Id = Guid.Empty,
+                    ProjectId = cmd.ProjectId,
+                    Type = cmd.Type,
+                },
+                parentCard
+            );
             if (parentError != null)
                 return Result<CardDto>.Failure(parentError);
         }
@@ -79,21 +90,29 @@ public class CardService(
 
         await _cardRepo.AddAsync(card, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Created",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Created",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<CardDto>> GetByIdAsync(Guid projectId, Guid cardId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<CardDto>> GetByIdAsync(
+        Guid projectId,
+        Guid cardId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -110,7 +129,12 @@ public class CardService(
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<CardDto>> GetByNumberAsync(Guid projectId, int cardNumber, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<CardDto>> GetByNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -127,7 +151,12 @@ public class CardService(
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<IReadOnlyList<CardDto>>> ListAsync(Guid projectId, CardListFilter filter, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<CardDto>>> ListAsync(
+        Guid projectId,
+        CardListFilter filter,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -136,23 +165,37 @@ public class CardService(
             );
 
         var cards = await _cardRepo.ListByProjectAsync(projectId, filter, ct);
-        var dtos = new List<CardDto>();
-        foreach (var card in cards)
-        {
-            if (filter.AssigneeUserId.HasValue)
-            {
-                var assignee = await _assigneeRepo.GetByCardAndUserAsync(card.Id, filter.AssigneeUserId.Value, ct);
-                if (assignee == null)
-                    continue;
-            }
 
-            dtos.Add(await MapToDtoAsync(card, ct));
+        if (filter.AssigneeUserId.HasValue)
+        {
+            var allCardIds = cards.Select(c => c.Id).ToList();
+            var assigneeLookup = await _assigneeRepo.ListByCardIdsAsync(allCardIds, ct);
+            cards = cards
+                .Where(c => assigneeLookup[c.Id].Any(a => a.UserId == filter.AssigneeUserId.Value))
+                .ToList();
         }
+
+        var cardIds = cards.Select(c => c.Id).ToList();
+        var assigneeLookupFinal = await _assigneeRepo.ListByCardIdsAsync(cardIds, ct);
+        var watcherLookupFinal = await _watcherRepo.ListByCardIdsAsync(cardIds, ct);
+        var allUserIds = assigneeLookupFinal
+            .SelectMany(g => g.Select(a => a.UserId))
+            .Concat(watcherLookupFinal.SelectMany(g => g.Select(w => w.UserId)))
+            .Distinct()
+            .ToList();
+        var usersById = allUserIds.Count > 0
+            ? await _userRepo.FindByIdsAsync(allUserIds, ct)
+            : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+
+        var dtos = cards.Select(card => MapCardToDto(card, assigneeLookupFinal, watcherLookupFinal, usersById)).ToList();
 
         return Result<IReadOnlyList<CardDto>>.Success(dtos);
     }
 
-    public async Task<Result<CardDto>> UpdateAsync(UpdateCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> UpdateAsync(
+        UpdateCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -200,21 +243,29 @@ public class CardService(
 
         await _cardRepo.UpdateAsync(card, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Updated",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Updated",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<BlockedMoveWarningDto>> GetBlockedMoveWarningAsync(Guid projectId, Guid cardId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<BlockedMoveWarningDto>> GetBlockedMoveWarningAsync(
+        Guid projectId,
+        Guid cardId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -229,41 +280,59 @@ public class CardService(
             );
 
         var blockers = await _relationshipRepo.ListBlockersForCardAsync(cardId, ct);
+        var predecessors = await _relationshipRepo.ListPredecessorsAsync(cardId, ct);
+
+        var relatedCardIds = blockers
+            .Select(b => b.SourceCardId)
+            .Concat(predecessors.Select(p => p.TargetCardId))
+            .Distinct()
+            .ToList();
+
+        var cardsById = relatedCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
         var blockerDtos = new List<BlockerDto>();
 
         foreach (var blocker in blockers)
         {
-            var blockerCard = await _cardRepo.GetByIdAsync(blocker.SourceCardId, ct);
-            if (blockerCard != null && blockerCard.ArchivedAt == null)
+            if (cardsById.TryGetValue(blocker.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null)
             {
-                blockerDtos.Add(new BlockerDto(
-                    blockerCard.Id,
-                    blockerCard.CardNumber,
-                    blockerCard.Title,
-                    RelationshipBlockerType.BlockedBy
-                ));
+                blockerDtos.Add(
+                    new BlockerDto(
+                        blockerCard.Id,
+                        blockerCard.CardNumber,
+                        blockerCard.Title,
+                        RelationshipBlockerType.BlockedBy
+                    )
+                );
             }
         }
 
-        var predecessors = await _relationshipRepo.ListPredecessorsAsync(cardId, ct);
         foreach (var pred in predecessors)
         {
-            var predCard = await _cardRepo.GetByIdAsync(pred.TargetCardId, ct);
-            if (predCard != null && predCard.ArchivedAt == null)
+            if (cardsById.TryGetValue(pred.TargetCardId, out var predCard) && predCard.ArchivedAt == null)
             {
-                blockerDtos.Add(new BlockerDto(
-                    predCard.Id,
-                    predCard.CardNumber,
-                    predCard.Title,
-                    RelationshipBlockerType.Precedes
-                ));
+                blockerDtos.Add(
+                    new BlockerDto(
+                        predCard.Id,
+                        predCard.CardNumber,
+                        predCard.Title,
+                        RelationshipBlockerType.Precedes
+                    )
+                );
             }
         }
 
-        return Result<BlockedMoveWarningDto>.Success(new BlockedMoveWarningDto(cardId, blockerDtos));
+        return Result<BlockedMoveWarningDto>.Success(
+            new BlockedMoveWarningDto(cardId, blockerDtos)
+        );
     }
 
-    public async Task<Result<CardDto>> MoveAsync(MoveCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> MoveAsync(
+        MoveCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -288,14 +357,16 @@ public class CardService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Target column not found.")
             );
 
-        var blockingRelationships = (await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct))
-            .Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct));
+        var blockingRelationships = (
+            await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct)
+        ).Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct));
         var hasBlockers = false;
         foreach (var relationship in blockingRelationships)
         {
-            var relatedCardId = relationship.SourceCardId == cmd.CardId
-                ? relationship.TargetCardId
-                : relationship.SourceCardId;
+            var relatedCardId =
+                relationship.SourceCardId == cmd.CardId
+                    ? relationship.TargetCardId
+                    : relationship.SourceCardId;
             var relatedCard = await _cardRepo.GetByIdAsync(relatedCardId, ct);
             if (relatedCard != null && relatedCard.ArchivedAt == null)
             {
@@ -306,7 +377,12 @@ public class CardService(
 
         if (hasBlockers && !cmd.ConfirmBlockedMove)
         {
-            var warning = await GetBlockedMoveWarningAsync(cmd.ProjectId, cmd.CardId, cmd.ActorId, ct);
+            var warning = await GetBlockedMoveWarningAsync(
+                cmd.ProjectId,
+                cmd.CardId,
+                cmd.ActorId,
+                ct
+            );
             if (warning.IsFailure)
                 return Result<CardDto>.Failure(warning.Error);
 
@@ -322,8 +398,18 @@ public class CardService(
         {
             if (oldPosition > cmd.TargetPosition)
             {
-                var allCards = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
-                var cardsToShift = allCards.Where(c => c.Position >= cmd.TargetPosition && c.Position < oldPosition && c.Id != card.Id).ToList();
+                var allCards = await _cardRepo.ListByProjectAsync(
+                    cmd.ProjectId,
+                    new CardListFilter(cmd.TargetColumnId, true),
+                    ct
+                );
+                var cardsToShift = allCards
+                    .Where(c =>
+                        c.Position >= cmd.TargetPosition
+                        && c.Position < oldPosition
+                        && c.Id != card.Id
+                    )
+                    .ToList();
                 foreach (var c in cardsToShift)
                 {
                     c.Position += 1;
@@ -333,8 +419,14 @@ public class CardService(
             else
             {
                 await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
-                var allCards = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
-                var cardsToShift = allCards.Where(c => c.Position >= cmd.TargetPosition && c.Id != card.Id).ToList();
+                var allCards = await _cardRepo.ListByProjectAsync(
+                    cmd.ProjectId,
+                    new CardListFilter(cmd.TargetColumnId, true),
+                    ct
+                );
+                var cardsToShift = allCards
+                    .Where(c => c.Position >= cmd.TargetPosition && c.Id != card.Id)
+                    .ToList();
                 foreach (var c in cardsToShift)
                 {
                     c.Position += 1;
@@ -345,7 +437,11 @@ public class CardService(
         else
         {
             await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
-            var cardsInTarget = await _cardRepo.ListByProjectAsync(cmd.ProjectId, new CardListFilter(cmd.TargetColumnId, true), ct);
+            var cardsInTarget = await _cardRepo.ListByProjectAsync(
+                cmd.ProjectId,
+                new CardListFilter(cmd.TargetColumnId, true),
+                ct
+            );
             foreach (var c in cardsInTarget.Where(c => c.Position >= cmd.TargetPosition))
             {
                 c.Position += 1;
@@ -361,21 +457,27 @@ public class CardService(
 
         await _cardRepo.UpdateAsync(card, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Moved",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Moved",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<CardDto>> AssignAsync(AssignCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> AssignAsync(
+        AssignCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -395,7 +497,11 @@ public class CardService(
                 new Error(DomainErrorCodes.Cards.InvalidAssignee, "Assignee user not found.")
             );
 
-        var existing = await _assigneeRepo.GetByCardAndUserAsync(cmd.CardId, cmd.AssigneeUserId, ct);
+        var existing = await _assigneeRepo.GetByCardAndUserAsync(
+            cmd.CardId,
+            cmd.AssigneeUserId,
+            ct
+        );
         if (existing != null)
             return Result<CardDto>.Failure(
                 new Error(DomainErrorCodes.Cards.DuplicateAssignee, "User is already assigned.")
@@ -423,21 +529,27 @@ public class CardService(
             await _watcherRepo.AddAsync(newWatcher, ct);
         }
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Assigned",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Assigned",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<CardDto>> UnassignAsync(UnassignCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> UnassignAsync(
+        UnassignCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -451,7 +563,11 @@ public class CardService(
                 new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
             );
 
-        var existing = await _assigneeRepo.GetByCardAndUserAsync(cmd.CardId, cmd.AssigneeUserId, ct);
+        var existing = await _assigneeRepo.GetByCardAndUserAsync(
+            cmd.CardId,
+            cmd.AssigneeUserId,
+            ct
+        );
         if (existing == null)
             return Result<CardDto>.Failure(
                 new Error(DomainErrorCodes.Cards.InvalidAssignee, "Assignee not found.")
@@ -459,21 +575,27 @@ public class CardService(
 
         await _assigneeRepo.RemoveAsync(cmd.CardId, cmd.AssigneeUserId, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Unassigned",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Unassigned",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
-    public async Task<Result<CardDto>> ArchiveAsync(ArchiveCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result<CardDto>> ArchiveAsync(
+        ArchiveCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -502,16 +624,19 @@ public class CardService(
         await _cardRepo.UpdateAsync(card, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Archived",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Archived",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -526,9 +651,7 @@ public class CardService(
 
         var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
         if (card == null || card.ProjectId != cmd.ProjectId)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
-            );
+            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
 
         var oldPosition = card.Position;
         var oldColumnId = card.ColumnId;
@@ -536,16 +659,19 @@ public class CardService(
         await _cardRepo.DeleteAsync(cmd.CardId, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId,
-            AuditLogScope.Project,
-            "Card",
-            card.Id,
-            "Deleted",
-            cmd.ProjectId,
-            null,
-            null
-        ), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Deleted",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result.Success();
     }
@@ -557,7 +683,9 @@ public class CardService(
         foreach (var a in assignees)
         {
             var user = await _userRepo.FindByIdAsync(a.UserId, ct);
-            assigneeDtos.Add(new CardAssigneeDto(a.Id, a.UserId, user?.Username ?? string.Empty, a.AssignedAt));
+            assigneeDtos.Add(
+                new CardAssigneeDto(a.Id, a.UserId, user?.Username ?? string.Empty, a.AssignedAt)
+            );
         }
 
         var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
@@ -565,8 +693,55 @@ public class CardService(
         foreach (var w in watchers)
         {
             var user = await _userRepo.FindByIdAsync(w.UserId, ct);
-            watcherDtos.Add(new CardWatcherDto(w.UserId, user?.Username ?? string.Empty, w.AddedAt));
+            watcherDtos.Add(
+                new CardWatcherDto(w.UserId, user?.Username ?? string.Empty, w.AddedAt)
+            );
         }
+
+        return new CardDto(
+            card.Id,
+            card.ProjectId,
+            card.ColumnId,
+            card.CardNumber,
+            card.Title,
+            card.Description,
+            card.Type,
+            card.Position,
+            card.DueAt,
+            card.Version,
+            card.CreatedAt,
+            card.UpdatedAt,
+            card.MovedAt,
+            card.ArchivedAt,
+            card.ParentCardId,
+            assigneeDtos,
+            watcherDtos
+        );
+    }
+
+    private static CardDto MapCardToDto(
+        Card card,
+        ILookup<Guid, CardAssignee> assigneeLookup,
+        ILookup<Guid, CardWatcher> watcherLookup,
+        IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById
+    )
+    {
+        var assigneeDtos = assigneeLookup[card.Id]
+            .Select(a => new CardAssigneeDto(
+                a.Id,
+                a.UserId,
+                usersById.TryGetValue(a.UserId, out var u) ? u.Username : string.Empty,
+                a.AssignedAt
+            ))
+            .ToList();
+
+        var watcherDtos = watcherLookup[card.Id]
+            .Select(w => new CardWatcherDto(
+                w.UserId,
+                usersById.TryGetValue(w.UserId, out var u) ? u.Username : string.Empty,
+                w.AddedAt
+            ))
+            .ToList();
 
         return new CardDto(
             card.Id,

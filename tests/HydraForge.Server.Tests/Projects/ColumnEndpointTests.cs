@@ -494,6 +494,9 @@ internal class ColTestCardRepository : ICardRepository
     public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
 
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(_cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
 
