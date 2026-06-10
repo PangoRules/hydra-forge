@@ -23,6 +23,13 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.UsernameNormalized == normalized);
     }
 
+    public async Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
+    {
+        var normalized = usernames.Select(u => u.ToLowerInvariant()).ToList();
+        var users = await context.Users.Where(u => normalized.Contains(u.UsernameNormalized)).ToListAsync(ct);
+        return users.ToDictionary(u => u.Username, u => u, StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
     {
         var user = await context.Users.FindAsync(userId);
