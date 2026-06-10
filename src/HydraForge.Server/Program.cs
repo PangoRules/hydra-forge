@@ -116,6 +116,15 @@ if (applyMigrationsOnStartup)
     }
 }
 
+// Initialize file store (bucket creation for S3/MinIO, no-op for Local)
+var fileStore = app.Services.GetRequiredService<HydraForge.Application.Attachments.IFileStore>();
+var initResult = await fileStore.InitializeAsync();
+if (initResult.IsFailure)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("File store initialization failed: {Error}", initResult.Error.Message);
+}
+
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>

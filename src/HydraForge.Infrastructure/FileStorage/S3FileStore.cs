@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Util;
 using HydraForge.Application.Attachments;
 using HydraForge.Domain.Common;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,25 @@ public class S3FileStore : IFileStore
         {
             _logger.LogError(ex, "S3 store failed for key {Key}", key);
             return Result<string>.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
+        }
+    }
+
+    public async Task<Result> InitializeAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var exists = await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
+            if (!exists)
+            {
+                await _s3Client.PutBucketAsync(_bucketName, ct);
+                _logger.LogInformation("Created S3 bucket {Bucket}", _bucketName);
+            }
+            return Result.Success();
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogError(ex, "S3 bucket init failed for {Bucket}", _bucketName);
+            return Result.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
         }
     }
 
