@@ -51,7 +51,7 @@ public partial class AttachmentService(
             );
 
         var sanitizedFileName = SanitizeFileName(cmd.FileName);
-        var storageKey = GenerateStorageKey(cmd.ProjectId, cmd.CardId);
+        var storageKey = GenerateStorageKey(cmd.ActorId, cmd.CardId);
 
         var storeResult = await _fileStore.StoreAsync(cmd.Content, cmd.ContentType, storageKey, ct);
         if (storeResult.IsFailure)
@@ -215,11 +215,9 @@ public partial class AttachmentService(
         return string.IsNullOrWhiteSpace(name) ? "unnamed" : name;
     }
 
-    private static string GenerateStorageKey(Guid projectId, Guid cardId)
+    private static string GenerateStorageKey(Guid userId, Guid cardId)
     {
-        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        var guid = Guid.NewGuid();
-        return $"project/{projectId}/card/{cardId}/date/{date}/{guid}/file.bin";
+        return $"{userId}/cards/{cardId}/{Guid.NewGuid()}";
     }
 
     private static string TrimWithMaxLength(string value, int maxLength)

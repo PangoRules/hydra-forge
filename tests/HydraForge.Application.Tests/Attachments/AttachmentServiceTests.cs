@@ -149,8 +149,10 @@ public class AttachmentServiceTests
             projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
 
         Assert.NotNull(capturedKey);
-        Assert.StartsWith($"project/{projectId}/card/{cardId}/date/", capturedKey);
+        Assert.StartsWith($"{actorId}/cards/{cardId}/", capturedKey);
         Assert.DoesNotContain("test.png", capturedKey);
+        Assert.DoesNotContain("project", capturedKey);
+        Assert.DoesNotContain("date", capturedKey);
     }
 
     [Fact]
