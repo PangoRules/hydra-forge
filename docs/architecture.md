@@ -72,7 +72,7 @@
 |---|---|---|
 | Domain | `HydraForge.Domain` | Entities, enums, interfaces, `Result<T,Error>`, error codes. No external dependencies. |
 | Application | `HydraForge.Application` | Use cases, services (CardService, ModelRouter, etc.), DTOs. Depends on Domain only. |
-| Infrastructure | `HydraForge.Infrastructure` | EF Core DbContext, migrations, LLM clients, file storage, SignalR. Implements Domain interfaces. |
+| Infrastructure | `HydraForge.Infrastructure` | EF Core DbContext, migrations, LLM clients, file storage (`IFileStore`: `LocalFileStore` fallback + `S3FileStore` for MinIO/AWS S3), SignalR. Implements Domain interfaces. |
 | Server | `HydraForge.Server` | ASP.NET Core controllers, SignalR hubs, middleware, `Program.cs`. |
 | TUI | `HydraForge.Tui` | Spectre.Console views, commands, screen rendering. |
 | Web UI | `src/web-ui` | Nuxt 4 app under `app/` (pages, components, composables). Talks only to Server via HTTP + SignalR. |
@@ -123,23 +123,25 @@ TUI / Web UI
 │          │                    │              └──────┬───────┘   │
 │          └────────────┬───────┴─────────────────────┘           │
 │                       │                                          │
-│              ┌────────▼────────┐  ┌──────────────┐              │
-│              │  Server         │  │  Git Remote  │              │
-│              │  .NET + SignalR  │  │  (GitHub/    │              │
-│              │  - REST API      │  │   GitLab/    │              │
-│              │  - SignalR hubs  │  │   self-host) │              │
-│              │  - LLM broker    │  └──────────────┘              │
-│              └────────┬────────┘                                 │
-│                       │                                          │
-│              ┌────────▼────────┐  ┌──────────────┐              │
-│              │  PostgreSQL 16  │  │  SearXNG     │              │
-│              │  (all state)    │  │  (optional   │              │
-│              └─────────────────┘  │   profile)   │              │
-│                                   └──────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
+  │              ┌────────▼────────┐  ┌──────────────┐              │
+  │              │  Server         │  │  Git Remote  │              │
+  │              │  .NET + SignalR  │  │  (GitHub/    │              │
+  │              │  - REST API      │  │   GitLab/    │              │
+  │              │  - SignalR hubs  │  │   self-host) │              │
+  │              │  - LLM broker    │  └──────────────┘              │
+  │              │  - IFileStore    │                                 │
+  │              └────────┬────────┘                                 │
+  │                       │                                          │
+  │              ┌────────▼────────┐  ┌──────────────┐  ┌──────────┐│
+  │              │  PostgreSQL 16  │  │  MinIO       │  │ SearXNG  ││
+  │              │  (all state)    │  │  (S3 storage) │  │ (optional│
+  │              └─────────────────┘  │  port 9000   │  │  profile)││
+  │                                   │  console 9001│  └──────────┘│
+  │                                   └──────────────┘              │
+  └─────────────────────────────────────────────────────────────────┘
 ```
 
-> All services run via `docker-compose up`. SearXNG enabled with `--profile search` or auto-detected if Deep Research is enabled.
+> All services run via `docker-compose up`. MinIO runs alongside Postgres as a core service. SearXNG enabled with `--profile search` or auto-detected if Deep Research is enabled.
 
 ### TUI Connectivity Behavior
 
@@ -287,6 +289,19 @@ Every error response follows RFC 7807:
 
 Log levels: 4xx → `Warning`, 5xx → `Error`. Production default: errors and warnings only. Debug configurable.
 
+### File Storage Architecture
+
+File attachments are stored via `IFileStore` (Application layer interface) with two implementations:
+
+| Implementation | When used | Storage path |
+|---|---|---|
+| `LocalFileStore` | `FileStorage:Provider=Local` (default bare-metal fallback) | `{root}/{userId}/cards/{cardId}/{guid}` |
+| `S3FileStore` | `FileStorage:Provider=S3` (MinIO/AWS S3, recommended) | `{bucket}/{userId}/cards/{cardId}/{guid}` |
+
+**Key hierarchy:** `{userId}/{sourceType}/{sourceId}/{guid}` — user-prefixed, source-type namespaced (`cards/`, future `chat/`, `notes/`). No user filenames, dates, or project IDs in the storage path. GUID prevents enumeration and collisions.
+
+**MinIO** runs as a core Docker Compose service (ports 9000/9001) — the server depends on its health. Switch between Local and S3 via `FileStorage:Provider` in config. `InitializeAsync()` on `S3FileStore` creates the bucket automatically on startup.
+
 ### External Service Resilience
 
 Failures in these services must never bring down the core board:
@@ -297,6 +312,7 @@ Failures in these services must never bring down the core board:
 | Git remote | Surface error in agent output; board continues working |
 | ntfy | Log at Warning, skip notification; board continues working |
 | PostgreSQL | 503 response; server cannot function without DB — fail loudly |
+| MinIO / S3 | Upload returns 503 `FileStoreUnavailable`; download/delete also return 503. Board still functions read-only without file store — card metadata remains intact. |
 
 ---
 
@@ -355,10 +371,12 @@ hydra-forge/
 │   │   ├── Enums/
 │   │   └── Interfaces/
 │   │
-│   ├── HydraForge.Infrastructure/  # EF Core, PostgreSQL, LLM client, git
+│   ├── HydraForge.Infrastructure/  # EF Core, PostgreSQL, LLM client, git, file storage
 │   │   ├── Persistence/
 │   │   ├── Auth/
 │   │   ├── Audit/
+│   │   ├── FileStorage/         # LocalFileStore, S3FileStore
+│   │   ├── Attachments/         # EfAttachmentRepository, DI extensions
 │   │   └── Health/
 │   │
 │   ├── HydraForge.Tui/         # Spectre.Console TUI
