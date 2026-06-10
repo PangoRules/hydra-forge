@@ -15,12 +15,11 @@ public class LocalFileStore : IFileStore
         _logger = logger;
     }
 
-    public async Task<Result<string>> StoreAsync(Stream content, string contentType, CancellationToken ct = default)
+    public async Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
     {
         try
         {
-            var relativePath = $"{Guid.NewGuid()}.bin";
-            var fullPath = Path.Combine(_rootPath, relativePath);
+            var fullPath = Path.Combine(_rootPath, storageKey);
             var directory = Path.GetDirectoryName(fullPath);
 
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -30,7 +29,7 @@ public class LocalFileStore : IFileStore
             await content.CopyToAsync(fileStream, ct);
 
             _logger.LogDebug("Stored file at {Path}", fullPath);
-            return Result<string>.Success(relativePath);
+            return Result<string>.Success(storageKey);
         }
         catch (Exception ex)
         {

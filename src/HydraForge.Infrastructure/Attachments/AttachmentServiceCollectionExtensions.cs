@@ -12,7 +12,9 @@ public static class AttachmentServiceCollectionExtensions
 {
     public static IServiceCollection AddAttachmentServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var provider = configuration["FileStorage:Provider"] ?? "Local";
+        var provider = configuration["FileStorage:Provider"]
+            ?? Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
+            ?? "Local";
         var maxBytes = long.TryParse(configuration["FileStorage:MaxBytes"], out var mb) ? mb : 10_000_000L;
         var allowedTypes = AttachmentContentTypes.Allowed;
 

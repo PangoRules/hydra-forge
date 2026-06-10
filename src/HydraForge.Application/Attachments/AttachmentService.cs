@@ -53,9 +53,7 @@ public partial class AttachmentService(
         var sanitizedFileName = SanitizeFileName(cmd.FileName);
         var storageKey = GenerateStorageKey(cmd.ProjectId, cmd.CardId);
 
-        _fileStore.SetContext(cmd.ProjectId, cmd.CardId);
-
-        var storeResult = await _fileStore.StoreAsync(cmd.Content, cmd.ContentType, ct);
+        var storeResult = await _fileStore.StoreAsync(cmd.Content, cmd.ContentType, storageKey, ct);
         if (storeResult.IsFailure)
             return Result<AttachmentDto>.Failure(
                 new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable.")
@@ -220,7 +218,8 @@ public partial class AttachmentService(
     private static string GenerateStorageKey(Guid projectId, Guid cardId)
     {
         var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        return $"project/{projectId}/card/{cardId}/date/{date}/";
+        var guid = Guid.NewGuid();
+        return $"project/{projectId}/card/{cardId}/date/{date}/{guid}/file.bin";
     }
 
     private static string TrimWithMaxLength(string value, int maxLength)

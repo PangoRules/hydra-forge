@@ -286,22 +286,17 @@ public class AttachmentServiceTests
 
     private sealed class FakeFileStore : IFileStore
     {
-        private static readonly AsyncLocal<(Guid ProjectId, Guid CardId)> _context = new();
-
-        public void SetContext(Guid projectId, Guid cardId) => _context.Value = (projectId, cardId);
         public Result<string>? NextStoreResult;
         public Action<string>? CaptureStoreKey;
         public Exception? DeleteThrow;
         public Action? DeleteCapture;
 
-        public Task<Result<string>> StoreAsync(Stream content, string contentType, CancellationToken ct = default)
+        public Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
         {
             if (NextStoreResult != null)
                 return Task.FromResult(NextStoreResult);
-            var (projectId, cardId) = _context.Value;
-            var key = $"project/{projectId}/card/{cardId}/date/{DateTime.UtcNow:yyyy-MM-dd}/";
-            CaptureStoreKey?.Invoke(key);
-            return Task.FromResult(Result<string>.Success(key));
+            CaptureStoreKey?.Invoke(storageKey);
+            return Task.FromResult(Result<string>.Success(storageKey));
         }
 
         public Task<Result<Stream>> OpenReadAsync(string storageKey, CancellationToken ct = default)

@@ -19,7 +19,7 @@ public class S3FileStore : IFileStore
         _logger = logger;
     }
 
-    public async Task<Result<string>> StoreAsync(Stream content, string contentType, CancellationToken ct = default)
+    public async Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
     {
         var key = Guid.NewGuid().ToString();
         try

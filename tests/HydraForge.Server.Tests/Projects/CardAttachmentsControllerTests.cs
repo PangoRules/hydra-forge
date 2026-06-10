@@ -339,8 +339,8 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
 
 internal class FakeFileStore : HydraForge.Application.Attachments.IFileStore
 {
-    public Task<Result<string>> StoreAsync(Stream content, string contentType, CancellationToken ct = default)
-        => Task.FromResult(Result<string>.Success($"fake/key/{Guid.NewGuid()}"));
+    public Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
+        => Task.FromResult(Result<string>.Success(storageKey));
 
     public Task<Result<Stream>> OpenReadAsync(string storageKey, CancellationToken ct = default)
         => Task.FromResult(Result<Stream>.Success(new MemoryStream([1, 2, 3])));
