@@ -462,8 +462,8 @@
 - [x] Card CRUD + move between columns + position ordering
 - [x] Card types: Task / Bug / Epic / Spec / Idea
 - [x] Epic → child card linking
-- [ ] Checklists on cards (items, completion, assignee per item)
-- [ ] Comments on cards + @mention extraction + CardWatcher auto-add
+- [x] Checklists on cards (items, completion, assignee per item)
+- [x] Comments on cards + @mention extraction + CardWatcher auto-add
 - [ ] File attachments on cards (local FS storage, S3-compatible abstraction)
 - [ ] Specs: versioned markdown documents linked to cards
 - [ ] Plans: versioned numbered markdown documents linked to specs/cards
