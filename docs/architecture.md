@@ -58,6 +58,8 @@
 │  │  - Git service                 │        │
 │  │  - LLM client (OpenAI/etc)     │        │
 │  │  - SignalR messaging           │        │
+│  │  - File storage (IFileStore:   │        │
+│  │    LocalFileStore / S3FileStore)│        │
 │  └────────────────────────────────┘        │
 └────────────────────────────────────────────┘
 ```
