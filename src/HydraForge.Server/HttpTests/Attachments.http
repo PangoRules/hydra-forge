@@ -1,93 +1,220 @@
-@baseUrl = http://localhost:8080
-@projectId = 00000000-0000-0000-0000-000000000001
-@cardId = 00000000-0000-0000-0000-000000000002
-@attachmentId = 00000000-0000-0000-0000-000000000003
-@token = {{login.response.body.accessToken}}
+### Attachment API Smoke Tests
+### Run against local development environment
 
-# === Authenticate ===
-# @name login
-POST {{baseUrl}}/api/auth/login
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
 Content-Type: application/json
+X-Correlation-Id: smoke-test-att-001
 
 {
-  "username": "admin",
-  "password": "change-this-admin-password"
+  "password": "TestAdmin123!",
+  "username": "testadmin"
 }
 
-###
-
-# === Upload a valid PNG attachment ===
-# @name uploadPng
-POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
-Authorization: Bearer {{token}}
-Content-Type: multipart/form-data
-
---boundary
-Content-Disposition: form-data; name="file"; filename="test.png"
-Content-Type: image/png
-
-< ./testdata/1x1.png
 
 ###
 
-# === Upload a PDF attachment ===
-POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
-Authorization: Bearer {{token}}
-Content-Type: multipart/form-data
+# ── Project Setup ───────────────────────────────────────────
 
---boundary
-Content-Disposition: form-data; name="file"; filename="document.pdf"
-Content-Type: application/pdf
+# @name createProject
 
-< ./testdata/document.pdf
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-002
+
+{
+  "description": "Project for attachment smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Attachment Smoke Test Project"
+}
+
 
 ###
 
-# === List all attachments for the card ===
+# List columns to get default column IDs
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-003
+
+
+###
+
+# ── Create Card ──────────────────────────────────────────────
+
+# @name createCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Card with attachments for smoke test",
+  "title": "Attachment Test Card",
+  "type": "Task"
+}
+
+
+###
+
+# ── Upload text/plain attachment ─────────────────────────────
+
+# @name uploadText
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=attachment-boundary
+X-Correlation-Id: smoke-test-att-005
+
+--attachment-boundary
+Content-Disposition: form-data; name="file"; filename="readme.txt"
+Content-Type: text/plain
+
+Hello, this is a test attachment file for the HydraForge smoke test.
+--attachment-boundary--
+
+
+###
+
+# ── Upload application/json attachment ───────────────────────
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=attachment-boundary
+X-Correlation-Id: smoke-test-att-006
+
+--attachment-boundary
+Content-Disposition: form-data; name="file"; filename="data.json"
+Content-Type: application/json
+
+{"name": "test", "version": 1}
+--attachment-boundary--
+
+
+###
+
+# ── List attachments ────────────────────────────────────────
+
 # @name listAttachments
-GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
-Authorization: Bearer {{token}}
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-007
+
 
 ###
 
-# === Download an attachment by ID ===
-# Note: Replace {{attachmentId}} with the Id from listAttachments response
-GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments/{{attachmentId}}
-Authorization: Bearer {{token}}
+# ── Download first attachment ────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments/{{listAttachments.response.body.$.attachments[0].id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-008
+
 
 ###
 
-# === Delete an attachment ===
-# Note: Replace {{attachmentId}} with the Id from listAttachments response
-DELETE {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments/{{attachmentId}}
-Authorization: Bearer {{token}}
+# ── Download second attachment ───────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments/{{listAttachments.response.body.$.attachments[1].id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-009
+
 
 ###
 
-# === Upload unsupported content type (expect 415) ===
-# @name uploadBadType
-POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
-Authorization: Bearer {{token}}
-Content-Type: multipart/form-data
+# ── Delete second attachment ────────────────────────────────
 
---boundary
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments/{{listAttachments.response.body.$.attachments[1].id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-010
+
+
+###
+
+# ── Verify deletion (list should return 1 attachment) ────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-011
+
+
+###
+
+# ── Upload unsupported content type (expect 415) ─────────────
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=attachment-boundary
+X-Correlation-Id: smoke-test-att-012
+
+--attachment-boundary
 Content-Disposition: form-data; name="file"; filename="malware.exe"
-Content-Type: application/x-executable
+Content-Type: application/x-msdownload
 
-< ./testdata/malware.exe
+fake exe content
+--attachment-boundary--
+
 
 ###
 
-# === Upload file exceeding size limit (expect 413) ===
-# Generate a file larger than FileStorage:MaxBytes (10 MB default)
-# Using a 12 MB file as test payload
-# @name uploadTooLarge
-POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
-Authorization: Bearer {{token}}
-Content-Type: multipart/form-data
+# ── Upload file exceeding size limit (expect 413) ───────────
+# NOTE: Requires a file larger than FileStorage:MaxBytes (10 MB).
+# Generate one with: dd if=/dev/zero of=./large.bin bs=1M count=12
 
---boundary
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=attachment-boundary
+X-Correlation-Id: smoke-test-att-013
+
+--attachment-boundary
 Content-Disposition: form-data; name="file"; filename="large.bin"
 Content-Type: application/octet-stream
 
 < ./testdata/large.bin
+--attachment-boundary--
+
+
+###
+
+# ── Download non-existent attachment (expect 404) ────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-014
+
+
+###
+
+# ── Upload without auth (expect 401) ─────────────────────────
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/attachments HTTP/1.1
+Content-Type: multipart/form-data; boundary=attachment-boundary
+X-Correlation-Id: smoke-test-att-015
+
+--attachment-boundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+no auth
+--attachment-boundary--
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-att-016
