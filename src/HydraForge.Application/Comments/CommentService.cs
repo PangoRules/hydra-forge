@@ -212,7 +212,9 @@ public class CommentService(
         if (validation.IsFailure)
             return Result<IReadOnlyList<CommentDto>>.Failure(validation.Error);
 
-        var comments = await _commentRepo.ListByCardAsync(cardId, ct);
+        var comments = (await _commentRepo.ListByCardAsync(cardId, ct))
+            .Where(c => c.ArchivedAt == null)
+            .ToList();
 
         // Preload all authors + members once
         var authorIds = comments.Select(c => c.AuthorId).Distinct().ToList();

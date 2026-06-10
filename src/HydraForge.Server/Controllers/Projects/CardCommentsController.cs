@@ -20,8 +20,8 @@ public class CardCommentsController(CommentService commentService) : ControllerB
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        var response = new CommentListResponse(
-            result.Value.Select(c => new CommentResponse(
+        var response = new CommentListResponse([
+            .. result.Value.Select(c => new CommentResponse(
                 c.Id,
                 c.CardId,
                 c.AuthorId,
@@ -31,13 +31,17 @@ public class CardCommentsController(CommentService commentService) : ControllerB
                 c.UpdatedAt,
                 c.ArchivedAt,
                 c.MentionedUserIds
-            )).ToList()
-        );
+            )),
+        ]);
         return Ok(response);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Guid projectId, Guid cardId, [FromBody] CreateCommentRequest request)
+    public async Task<IActionResult> Create(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] CreateCommentRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -116,3 +120,4 @@ public class CardCommentsController(CommentService commentService) : ControllerB
         return Ok(response);
     }
 }
+

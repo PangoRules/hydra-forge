@@ -41,16 +41,26 @@ public class ChecklistService(
 
         if (cmd.AssignedTo.HasValue)
         {
-            var assigneeMember = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.AssignedTo.Value, ct);
+            var assigneeMember = await _memberRepo.GetByProjectAndUserAsync(
+                cmd.ProjectId,
+                cmd.AssignedTo.Value,
+                ct
+            );
             if (assigneeMember == null)
                 return Result<ChecklistItemDto>.Failure(
-                    new Error(DomainErrorCodes.Checklist.InvalidAssignee, "Assignee is not a project member.")
+                    new Error(
+                        DomainErrorCodes.Checklist.InvalidAssignee,
+                        "Assignee is not a project member."
+                    )
                 );
 
             var assigneeUser = await _userRepo.FindByIdAsync(cmd.AssignedTo.Value, ct);
             if (assigneeUser == null || assigneeUser.IsDisabled)
                 return Result<ChecklistItemDto>.Failure(
-                    new Error(DomainErrorCodes.Checklist.InvalidAssignee, "Assignee user is disabled.")
+                    new Error(
+                        DomainErrorCodes.Checklist.InvalidAssignee,
+                        "Assignee user is disabled."
+                    )
                 );
         }
 
@@ -139,16 +149,26 @@ public class ChecklistService(
 
         if (cmd.AssignedTo.HasValue)
         {
-            var assigneeMember = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.AssignedTo.Value, ct);
+            var assigneeMember = await _memberRepo.GetByProjectAndUserAsync(
+                cmd.ProjectId,
+                cmd.AssignedTo.Value,
+                ct
+            );
             if (assigneeMember == null)
                 return Result<ChecklistItemDto>.Failure(
-                    new Error(DomainErrorCodes.Checklist.InvalidAssignee, "Assignee is not a project member.")
+                    new Error(
+                        DomainErrorCodes.Checklist.InvalidAssignee,
+                        "Assignee is not a project member."
+                    )
                 );
 
             var assigneeUser = await _userRepo.FindByIdAsync(cmd.AssignedTo.Value, ct);
             if (assigneeUser == null || assigneeUser.IsDisabled)
                 return Result<ChecklistItemDto>.Failure(
-                    new Error(DomainErrorCodes.Checklist.InvalidAssignee, "Assignee user is disabled.")
+                    new Error(
+                        DomainErrorCodes.Checklist.InvalidAssignee,
+                        "Assignee user is disabled."
+                    )
                 );
         }
 
@@ -279,7 +299,8 @@ public class ChecklistService(
         var toUpdate = new List<ChecklistItem>();
         foreach (var i in allItems)
         {
-            if (i.Id == item.Id) continue;
+            if (i.Id == item.Id)
+                continue;
             if (oldPosition < newPosition)
             {
                 if (i.Position > oldPosition && i.Position <= newPosition)
@@ -392,18 +413,20 @@ public class ChecklistService(
             .Distinct()
             .ToList();
 
-        var assigneeUsers = assigneeIds.Count > 0
-            ? await _userRepo.FindByIdsAsync(assigneeIds, ct)
-            : (IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>)new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+        var assigneeUsers =
+            assigneeIds.Count > 0
+                ? await _userRepo.FindByIdsAsync(assigneeIds, ct)
+                : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
 
         var dtos = items
             .OrderBy(i => i.Position)
             .Select(item =>
             {
-                var username = item.AssignedTo.HasValue
+                var username =
+                    item.AssignedTo.HasValue
                     && assigneeUsers.TryGetValue(item.AssignedTo.Value, out var user)
-                    ? user.Username
-                    : null;
+                        ? user.Username
+                        : null;
                 return ToDto(item, username);
             })
             .ToList();
@@ -412,7 +435,7 @@ public class ChecklistService(
     }
 
     private static ChecklistItemDto ToDto(ChecklistItem item, string? assigneeUsername) =>
-        new ChecklistItemDto(
+        new(
             item.Id,
             item.CardId,
             item.Text,

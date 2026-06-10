@@ -20,8 +20,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        var response = new ChecklistItemListResponse(
-            result.Value.Select(i => new ChecklistItemResponse(
+        var response = new ChecklistItemListResponse([
+            .. result.Value.Select(i => new ChecklistItemResponse(
                 i.Id,
                 i.CardId,
                 i.Text,
@@ -30,13 +30,17 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
                 i.AssignedTo,
                 i.AssignedToUsername,
                 i.CreatedAt
-            )).ToList()
-        );
+            )),
+        ]);
         return Ok(response);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Guid projectId, Guid cardId, [FromBody] CreateChecklistItemRequest request)
+    public async Task<IActionResult> Create(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] CreateChecklistItemRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -136,7 +140,13 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new ReorderChecklistItemCommand(projectId, cardId, itemId, userId, request.NewPosition);
+        var cmd = new ReorderChecklistItemCommand(
+            projectId,
+            cardId,
+            itemId,
+            userId,
+            request.NewPosition
+        );
         var result = await checklistService.ReorderAsync(cmd);
 
         if (result.IsFailure)
@@ -169,3 +179,4 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
         return NoContent();
     }
 }
+
