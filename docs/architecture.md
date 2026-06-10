@@ -308,6 +308,7 @@ Failures in these services must never bring down the core board:
 | **Database** | PostgreSQL 16 + pgvector | MVCC handles concurrent multi-user writes. pgvector powers RAG and Brain/Memory semantic search. Native full-text search. EF Core Npgsql provider. |
 | **Real-time** | SignalR (WebSocket + SSE fallback) | Built into ASP.NET Core. Battle-tested. Auto-fallback. |
 | **Tests** | xUnit | Default .NET testing. No FluentAssertions (prone to deprecation). Plain `Assert.*` only. |
+| **API documentation** | `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` | Built-in OpenAPI 3.1 doc generation at `/openapi/v1.json`. Scalar UI at `/scalar/v1`. Replaces deprecated Swashbuckle/Swagger (see D-33). |
 | **Containerization** | Docker + docker-compose | Single-command setup. Portable. Reproducible. |
 | **Architecture pattern** | Clean Architecture (DI, SOLID) | Testable, maintainable, readable. |
 | **Web search** | SearXNG | Open-source, self-hosted metasearch. Bundled as optional Docker service. |
@@ -331,7 +332,8 @@ hydra-forge/
 │   │   ├── Controllers/
 │   │   ├── Errors/           # ProblemDetails mapping
 │   │   ├── Middleware/
-│   │   └── Program.cs
+│   │   ├── Program.cs        # AddOpenApi() + MapOpenApi() + MapScalarApiReference()
+│   │   └── ...               # OpenAPI at /openapi/v1.json, Scalar UI at /scalar/v1
 │   │
 │   ├── HydraForge.Application/ # Use cases, services, DTOs
 │   │   ├── Cards/

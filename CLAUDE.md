@@ -53,6 +53,9 @@ PATH="$PATH:/home/pango/.dotnet/tools" \
     --project src/HydraForge.Infrastructure \
     --startup-project src/HydraForge.Server
 
+# API docs (OpenAPI JSON): http://localhost:5000/openapi/v1.json
+# API reference (Scalar UI): http://localhost:5000/scalar/v1
+
 # Docker — full stack (Postgres + Server)
 docker compose up
 
@@ -160,7 +163,7 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/architecture.md` — Clean Architecture, real-time, LLM, error handling, tech stack
 - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
 - `docs/glossary.md` — terminology
-- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-32)
+- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-33)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

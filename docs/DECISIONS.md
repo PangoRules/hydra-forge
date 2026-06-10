@@ -2,8 +2,8 @@
 
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
-> **Date:** 2026-06-02 (updated 2026-06-02)
-> **Status:** 10 original questions resolved + 19 new decisions added (D-13–D-32). D-3, D-7 revised/rejected. Ready for Phase 1.
+> **Date:** 2026-06-02 (updated 2026-06-09)
+> **Status:** 10 original questions resolved + 20 new decisions added (D-13–D-33). D-3, D-7 revised/rejected. Ready for Phase 1.
 
 ---
 
@@ -181,6 +181,20 @@ Each entry has:
 
 ---
 
+## D-33: OpenAPI Documentation (Swagger Replacement)
+
+| Field | Value |
+|---|---|
+| **Topic** | How the REST API is documented and tested interactively |
+| **Date** | 2026-06-09 |
+| **Status** | ✅ Settled |
+| **Decision** | **Replace Swashbuckle/Swagger with built-in `Microsoft.AspNetCore.OpenApi` for doc generation + `Scalar.AspNetCore` for the interactive UI.** |
+| **Rationale** | Microsoft deprecated Swashbuckle in default templates starting .NET 9, and in .NET 10 the `Microsoft.OpenApi` library had a major v2 breaking change. Swashbuckle 10.x depends on `Microsoft.OpenApi` 2.x which removed the `Microsoft.OpenApi.Models` namespace, broke all type references (`OpenApiInfo`, `OpenApiSecurityScheme`, etc.), and restructured the public API. Rather than fight the breaking changes and maintain compatibility with a deprecated library, we switch to Microsoft's recommended path: `Microsoft.AspNetCore.OpenApi` (already in the project) generates the OpenAPI 3.1 document, and Scalar provides a modern dark-mode interactive reference UI. Scalar is actively maintained, has no legacy compatibility burden, and is the de-facto standard in the .NET ecosystem for replacing Swagger UI. |
+| **Alternatives considered** | 1. Fix Swashbuckle 10.x references to use root `Microsoft.OpenApi` namespace + new v2 API (rejected — the `Reference` property on security schemes was removed, security requirement API changed, and migration path is poorly documented / unstable). 2. Use `Microsoft.AspNetCore.OpenApi` for docs + `Swashbuckle.AspNetCore.SwaggerUI` for UI (rejected — adds complexity of mixing two systems with different transformer/filter models for no benefit over Scalar). |
+| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Removed `using Swashbuckle.AspNetCore.Annotations` and all `[SwaggerTag]`, `[SwaggerOperation]`, `[SwaggerResponse]` attributes from all 5 controllers. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. |
+
+---
+
 ## Summary
 
 | # | Topic | Decision | Status |
@@ -217,6 +231,7 @@ Each entry has:
 | D-30 | Card human-readable number | Sequential `CardNumber` per project (1, 2, 3…) — like GitHub issues | ✅ |
 | D-31 | RAG pipeline | DocumentChunk + pgvector; IEmbeddingClient abstraction; chunks regenerated on doc change | ✅ |
 | D-32 | ProjectContextSnapshot strategy | TemplateContent instant on mutation; AiNarrative nightly scheduled job only | ✅ |
+| D-33 | OpenAPI docs (Swagger replacement) | `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` instead of Swashbuckle | ✅ |
 
 ---
 

@@ -5,7 +5,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 ## Current State
 
 - Phase 1 foundation is complete on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
-- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-3 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking. Tasks 4-10 (checklists, comments, attachments, specs, plans, relationships, snapshot, hubs, hardening) remain.
+- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-3 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking. Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 4-10 (checklists, comments, attachments, specs, plans, relationships, snapshot, hubs, hardening) remain.
 - 196 xUnit tests across Domain (52), Application (55), Infrastructure (43), Server (46). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
@@ -44,6 +44,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - Apply migrations: `... dotnet ef database update --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server`
 - Docker (full stack): `docker compose up`
 - Docker (Postgres only): `docker compose up -d postgres` (host port 5433)
+- API docs (OpenAPI JSON): `http://localhost:5000/openapi/v1.json`
+- API reference (Scalar UI): `http://localhost:5000/scalar/v1`
 - Install web deps: `cd src/web-ui && pnpm install`
 - Web dev server: `cd src/web-ui && pnpm dev`
 - Web typecheck: `cd src/web-ui && pnpm typecheck`
@@ -56,6 +58,14 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Test projects are xUnit with plain `Assert.*`; do not add FluentAssertions.
 - Domain/Application tests are pure logic. Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, params string[])` — these run without a database because they inspect `context.Model`, not `context.Database`.
 - Most tests run without PostgreSQL. Optional PostgreSQL-backed tests use `HYDRAFORGE_TEST_CONNECTION_STRING`; the architecture requires real PostgreSQL for DB behavior tests, not SQLite or mocked DB behavior.
+
+## API Documentation
+
+- Swashbuckle/Swagger was replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` (D-33).
+- OpenAPI doc at `/openapi/v1.json`; Scalar UI at `/scalar/v1` (dev only).
+- Do NOT add Swashbuckle back. Use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` for customizing the OpenAPI doc (e.g. adding Bearer auth scheme to Scalar's "Authorize" button).
+- Controller endpoint metadata comes from `[ProducesResponseType]`, `[ApiExplorerSettings]`, and return type inference. The `[SwaggerOperation]`, `[SwaggerResponse]`, `[SwaggerTag]` attributes from Swashbuckle are gone.
+- `Microsoft.OpenApi.Models` namespace DOES NOT EXIST in OpenAPI.NET v2.x. Types live in root `Microsoft.OpenApi` — don't try to add `using Microsoft.OpenApi.Models`.
 
 ## Architecture Constraints To Preserve
 
