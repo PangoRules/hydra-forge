@@ -52,4 +52,22 @@ public static class DomainErrorCodes
         public const string BlockedMoveWarning = "CARD_BLOCKED_MOVE_WARNING";
         public const string ConcurrencyMismatch = "CARD_CONCURRENCY_MISMATCH";
     }
+
+    public static class Checklist
+    {
+        public const string ItemNotFound = "CHECKLIST_ITEM_NOT_FOUND";
+        public const string InvalidPosition = "CHECKLIST_INVALID_POSITION";
+        public const string InvalidAssignee = "CHECKLIST_INVALID_ASSIGNEE";
+    }
+
+    public static class Comments
+    {
+        public const string NotFound = "COMMENT_NOT_FOUND";
+        public const string Archived = "COMMENT_ARCHIVED";
+    }
+
+    public static class Mentions
+    {
+        public const string UserNotFound = "MENTION_USER_NOT_FOUND";
+    }
 }
