@@ -7,7 +7,8 @@ namespace HydraForge.Application.Auth;
 
 public interface IUserRepository
 {
-    Task<User?> FindByIdAsync(Guid id);
+    Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
     Task<User?> FindByUsernameAsync(string username);
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();

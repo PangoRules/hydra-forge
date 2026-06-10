@@ -456,12 +456,12 @@
 
 > ⚠️ **Pre-phase decision needed:** File storage default — local FS or S3? Define `IFileStore` abstraction (`LocalFileStore` + `S3FileStore` implementations) and add storage config to app settings (`FILE_STORAGE_PROVIDER`, `FILE_STORAGE_PATH` / S3 credentials). Decide before implementing `Attachment` upload. Recommendation: default to local FS, S3 is opt-in via env var.
 
-- [ ] Project CRUD + ProjectMember management (Owner / Member roles)
-- [ ] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
+- [x] Project CRUD + ProjectMember management (Owner / Member roles)
+- [x] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
 - [x] Column CRUD + reordering + per-project default columns
-- [ ] Card CRUD + move between columns + position ordering
-- [ ] Card types: Task / Bug / Epic / Spec / Idea
-- [ ] Epic → child card linking
+- [x] Card CRUD + move between columns + position ordering
+- [x] Card types: Task / Bug / Epic / Spec / Idea
+- [x] Epic → child card linking
 - [ ] Checklists on cards (items, completion, assignee per item)
 - [ ] Comments on cards + @mention extraction + CardWatcher auto-add
 - [ ] File attachments on cards (local FS storage, S3-compatible abstraction)

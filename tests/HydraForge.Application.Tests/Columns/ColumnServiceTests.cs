@@ -1,3 +1,4 @@
+using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -318,6 +319,35 @@ internal class InMemoryCardRepository : ICardRepository
 {
     public List<Card> Cards { get; } = [];
 
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
+
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+
+    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
+        => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    {
+        var query = Cards.Where(c => c.ProjectId == projectId);
+        if (filter.ColumnId.HasValue)
+            query = query.Where(c => c.ColumnId == filter.ColumnId.Value);
+        if (!filter.IncludeArchived)
+            query = query.Where(c => c.ArchivedAt == null);
+        if (filter.Type.HasValue)
+            query = query.Where(c => c.Type == filter.Type.Value);
+        return Task.FromResult<IReadOnlyList<Card>>(query.ToList());
+    }
+
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+
+    public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
+    public Task UpdateAsync(Card card, CancellationToken ct = default) { var idx = Cards.FindIndex(c => c.Id == card.Id); if (idx >= 0) Cards[idx] = card; return Task.CompletedTask; }
+    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = Cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) Cards[idx] = c; } return Task.CompletedTask; }
+    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
+    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
         => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }

@@ -28,12 +28,27 @@ public class ProjectTests
         var project = new Project { Name = "Test", Description = "Test project" };
         var beforeArchive = DateTime.UtcNow;
 
-        project.ArchivedAt = DateTime.UtcNow;
-        var afterArchive = DateTime.UtcNow;
+        project.Archive();
 
         Assert.NotNull(project.ArchivedAt);
         Assert.True(project.ArchivedAt >= beforeArchive);
-        Assert.True(project.ArchivedAt <= afterArchive);
+        Assert.True(project.ArchivedAt <= DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void UpdateDetails_SetsPropertiesAndTimestamp()
+    {
+        var project = new Project();
+        var beforeUpdate = DateTime.UtcNow;
+
+        project.UpdateDetails("New Name", "New Desc", "https://git.example.com", "GitHub");
+
+        Assert.Equal("New Name", project.Name);
+        Assert.Equal("New Desc", project.Description);
+        Assert.Equal("https://git.example.com", project.GitRemoteUrl);
+        Assert.Equal("GitHub", project.GitProvider);
+        Assert.True(project.UpdatedAt >= beforeUpdate);
+        Assert.True(project.UpdatedAt <= DateTime.UtcNow);
     }
 
     [Fact]

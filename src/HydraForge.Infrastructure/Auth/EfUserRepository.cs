@@ -7,9 +7,14 @@ namespace HydraForge.Infrastructure.Auth;
 
 public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
 {
-    public async Task<User?> FindByIdAsync(Guid id)
+    public async Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await context.Users.FindAsync(id);
+        return await context.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        return await context.Users.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
     }
 
     public async Task<User?> FindByUsernameAsync(string username)
@@ -44,4 +49,3 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         await context.SaveChangesAsync();
     }
 }
-

@@ -1,3 +1,4 @@
+using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -96,10 +97,7 @@ public class ColumnService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Column not found.")
             );
 
-        column.Name = cmd.Name;
-        column.Color = cmd.Color;
-        column.WipLimit = cmd.WipLimit;
-        column.UpdatedAt = DateTime.UtcNow;
+        column.UpdateDetails(cmd.Name, cmd.Color, cmd.WipLimit);
 
         await columnRepo.UpdateAsync(column, ct);
 
@@ -134,7 +132,7 @@ public class ColumnService(
         var remaining = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         for (var i = 0; i < remaining.Count; i++)
         {
-            remaining[i].Position = i;
+            remaining[i].AssignPosition(i);
             await columnRepo.UpdateAsync(remaining[i], ct);
         }
 

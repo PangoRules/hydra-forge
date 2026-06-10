@@ -36,14 +36,17 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
             _dbContext.AuditLogEntries.Add(entry);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "Audit log entry written: {EntityType}/{EntityId} {Action} by {ActorId} ({Scope})",
-                entry.EntityType,
-                entry.EntityId,
-                entry.Action,
-                entry.ActorId,
-                entry.Scope
-            );
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Audit log entry written: {EntityType}/{EntityId} {Action} by {ActorId} ({Scope})",
+                    entry.EntityType,
+                    entry.EntityId,
+                    entry.Action,
+                    entry.ActorId,
+                    entry.Scope
+                );
+            }
 
             return Result.Success();
         }
@@ -51,16 +54,17 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
         {
             _logger.LogWarning(ex, "Invalid audit log request: {Message}", ex.Message);
             return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Infrastructure.AuditWriteFailed,
-                    ex.Message
-                )
+                new Error(DomainErrorCodes.Infrastructure.AuditWriteFailed, ex.Message)
             );
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Failed to write audit log entry for {EntityType}/{EntityId}",
-                request.EntityType, request.EntityId);
+            _logger.LogError(
+                ex,
+                "Failed to write audit log entry for {EntityType}/{EntityId}",
+                request.EntityType,
+                request.EntityId
+            );
 
             return Result.Failure(
                 new Error(
@@ -71,3 +75,4 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
         }
     }
 }
+

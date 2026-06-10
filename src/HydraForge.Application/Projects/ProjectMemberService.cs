@@ -75,7 +75,7 @@ public class ProjectMemberService(
 
         await memberRepo.AddMemberAsync(newMember, ct);
 
-        var user = await userRepo.FindByIdAsync(newMember.UserId);
+        var user = await userRepo.FindByIdAsync(newMember.UserId, ct);
 
         return Result<ProjectMemberDto>.Success(
             new ProjectMemberDto(newMember.Id, newMember.UserId, user?.Username ?? string.Empty, newMember.Role, newMember.JoinedAt)
@@ -112,7 +112,7 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
             );
 
-        member.Role = cmd.NewRole;
+        member.ChangeRole(cmd.NewRole);
         await memberRepo.UpdateMemberAsync(member, ct);
 
         return Result<ProjectMemberDto>.Success(

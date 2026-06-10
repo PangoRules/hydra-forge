@@ -9,8 +9,8 @@ POST {{host}}/api/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-  "password": "pango",
-  "username": "pango"
+  "password": "TestAdmin123!",
+  "username": "testadmin"
 }
 
 
