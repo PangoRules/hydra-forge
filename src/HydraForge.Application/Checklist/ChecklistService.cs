@@ -111,18 +111,7 @@ public class ChecklistService(
             assigneeUsername = user?.Username;
         }
 
-        return Result<ChecklistItemDto>.Success(
-            new ChecklistItemDto(
-                item.Id,
-                item.CardId,
-                item.Text,
-                item.IsCompleted,
-                item.Position,
-                item.AssignedTo,
-                assigneeUsername,
-                item.CreatedAt
-            )
-        );
+        return Result<ChecklistItemDto>.Success(ToDto(item, assigneeUsername));
     }
 
     public async Task<Result<ChecklistItemDto>> UpdateAsync(
@@ -188,18 +177,7 @@ public class ChecklistService(
             assigneeUsername = user?.Username;
         }
 
-        return Result<ChecklistItemDto>.Success(
-            new ChecklistItemDto(
-                item.Id,
-                item.CardId,
-                item.Text,
-                item.IsCompleted,
-                item.Position,
-                item.AssignedTo,
-                assigneeUsername,
-                item.CreatedAt
-            )
-        );
+        return Result<ChecklistItemDto>.Success(ToDto(item, assigneeUsername));
     }
 
     public async Task<Result<ChecklistItemDto>> ToggleAsync(
@@ -249,18 +227,7 @@ public class ChecklistService(
             assigneeUsername = user?.Username;
         }
 
-        return Result<ChecklistItemDto>.Success(
-            new ChecklistItemDto(
-                item.Id,
-                item.CardId,
-                item.Text,
-                item.IsCompleted,
-                item.Position,
-                item.AssignedTo,
-                assigneeUsername,
-                item.CreatedAt
-            )
-        );
+        return Result<ChecklistItemDto>.Success(ToDto(item, assigneeUsername));
     }
 
     public async Task<Result<ChecklistItemDto>> ReorderAsync(
@@ -306,12 +273,7 @@ public class ChecklistService(
                 var user = await _userRepo.FindByIdAsync(item.AssignedTo.Value, ct);
                 assigneeUsername2 = user?.Username;
             }
-            return Result<ChecklistItemDto>.Success(
-                new ChecklistItemDto(
-                    item.Id, item.CardId, item.Text, item.IsCompleted, item.Position,
-                    item.AssignedTo, assigneeUsername2, item.CreatedAt
-                )
-            );
+            return Result<ChecklistItemDto>.Success(ToDto(item, assigneeUsername2));
         }
 
         var toUpdate = new List<ChecklistItem>();
@@ -356,12 +318,7 @@ public class ChecklistService(
             assigneeUsername = user?.Username;
         }
 
-        return Result<ChecklistItemDto>.Success(
-            new ChecklistItemDto(
-                item.Id, item.CardId, item.Text, item.IsCompleted, item.Position,
-                item.AssignedTo, assigneeUsername, item.CreatedAt
-            )
-        );
+        return Result<ChecklistItemDto>.Success(ToDto(item, assigneeUsername));
     }
 
     public async Task<Result> DeleteAsync(
@@ -426,28 +383,43 @@ public class ChecklistService(
             );
 
         var items = await _checklistRepo.ListByCardAsync(cardId, ct);
-        var dtos = new List<ChecklistItemDto>();
 
-        foreach (var item in items.OrderBy(i => i.Position))
-        {
-            string? assigneeUsername = null;
-            if (item.AssignedTo.HasValue)
+        // Batch resolve all assignee usernames in 1 query
+        var assigneeIds = items
+            .Select(i => i.AssignedTo)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var assigneeUsers = assigneeIds.Count > 0
+            ? await _userRepo.FindByIdsAsync(assigneeIds, ct)
+            : (IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>)new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+
+        var dtos = items
+            .OrderBy(i => i.Position)
+            .Select(item =>
             {
-                var user = await _userRepo.FindByIdAsync(item.AssignedTo.Value, ct);
-                assigneeUsername = user?.Username;
-            }
-            dtos.Add(new ChecklistItemDto(
-                item.Id,
-                item.CardId,
-                item.Text,
-                item.IsCompleted,
-                item.Position,
-                item.AssignedTo,
-                assigneeUsername,
-                item.CreatedAt
-            ));
-        }
+                var username = item.AssignedTo.HasValue
+                    && assigneeUsers.TryGetValue(item.AssignedTo.Value, out var user)
+                    ? user.Username
+                    : null;
+                return ToDto(item, username);
+            })
+            .ToList();
 
         return Result<IReadOnlyList<ChecklistItemDto>>.Success(dtos);
     }
+
+    private static ChecklistItemDto ToDto(ChecklistItem item, string? assigneeUsername) =>
+        new ChecklistItemDto(
+            item.Id,
+            item.CardId,
+            item.Text,
+            item.IsCompleted,
+            item.Position,
+            item.AssignedTo,
+            assigneeUsername,
+            item.CreatedAt
+        );
 }
