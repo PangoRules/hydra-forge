@@ -1,0 +1,93 @@
+@baseUrl = http://localhost:8080
+@projectId = 00000000-0000-0000-0000-000000000001
+@cardId = 00000000-0000-0000-0000-000000000002
+@attachmentId = 00000000-0000-0000-0000-000000000003
+@token = {{login.response.body.accessToken}}
+
+# === Authenticate ===
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "change-this-admin-password"
+}
+
+###
+
+# === Upload a valid PNG attachment ===
+# @name uploadPng
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test.png"
+Content-Type: image/png
+
+< ./testdata/1x1.png
+
+###
+
+# === Upload a PDF attachment ===
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="document.pdf"
+Content-Type: application/pdf
+
+< ./testdata/document.pdf
+
+###
+
+# === List all attachments for the card ===
+# @name listAttachments
+GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
+Authorization: Bearer {{token}}
+
+###
+
+# === Download an attachment by ID ===
+# Note: Replace {{attachmentId}} with the Id from listAttachments response
+GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments/{{attachmentId}}
+Authorization: Bearer {{token}}
+
+###
+
+# === Delete an attachment ===
+# Note: Replace {{attachmentId}} with the Id from listAttachments response
+DELETE {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments/{{attachmentId}}
+Authorization: Bearer {{token}}
+
+###
+
+# === Upload unsupported content type (expect 415) ===
+# @name uploadBadType
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="malware.exe"
+Content-Type: application/x-executable
+
+< ./testdata/malware.exe
+
+###
+
+# === Upload file exceeding size limit (expect 413) ===
+# Generate a file larger than FileStorage:MaxBytes (10 MB default)
+# Using a 12 MB file as test payload
+# @name uploadTooLarge
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/attachments
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="large.bin"
+Content-Type: application/octet-stream
+
+< ./testdata/large.bin
