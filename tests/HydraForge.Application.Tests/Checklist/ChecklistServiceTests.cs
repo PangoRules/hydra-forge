@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Cards;
 using HydraForge.Application.Checklist;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -313,7 +314,7 @@ public class ChecklistServiceTests
         Assert.True(result.IsSuccess);
         var remaining = (await repo.ListByCardAsync(cardId)).OrderBy(i => i.Position).ToList();
         Assert.Single(remaining);
-        Assert.Equal(0, remaining[0].Position);
+        Assert.Equal(1, remaining[0].Position);
     }
 
     [Fact]

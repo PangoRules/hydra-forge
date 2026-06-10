@@ -29,7 +29,7 @@ public class ChecklistCommentsControllerTests
         factory.AddProject(new Project { Id = projectId, Name = "Test" });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/checklist")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist")
         {
             Content = new StringContent("""
                 {"text": "Do this"}
@@ -57,7 +57,7 @@ public class ChecklistCommentsControllerTests
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/checklist")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist")
         {
             Content = new StringContent("""
                 {"text": "Do this"}
@@ -91,7 +91,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
         factory.AddUser(new User { Id = assigneeId, Username = "assignee", Email = "a@a.com", PasswordHash = "x" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/checklist")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist")
         {
             Content = new StringContent($"{{\"text\": \"Task\", \"assignedTo\": \"{assigneeId}\"}}",
                 System.Text.Encoding.UTF8, "application/json")
@@ -122,7 +122,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
         factory.AddUser(new User { Id = nonMemberId, Username = "outsider", Email = "o@o.com", PasswordHash = "x" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/checklist")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist")
         {
             Content = new StringContent($"{{\"text\": \"Task\", \"assignedTo\": \"{nonMemberId}\"}}",
                 System.Text.Encoding.UTF8, "application/json")
@@ -153,7 +153,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
         factory.AddChecklistItem(new ChecklistItem { Id = itemId, CardId = cardId, Text = "Task", Position = 0, IsCompleted = false });
 
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/projects/{projectId}/cards/{cardId}/checklist/{itemId}/toggle");
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist/{itemId}/toggle");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -181,7 +181,7 @@ public class ChecklistCommentsControllerTests
         factory.AddChecklistItem(new ChecklistItem { Id = itemId, CardId = cardId, Text = "A", Position = 0 });
         factory.AddChecklistItem(new ChecklistItem { Id = Guid.NewGuid(), CardId = cardId, Text = "B", Position = 1 });
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/cards/{cardId}/checklist/{itemId}/reorder")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist/{itemId}/reorder")
         {
             Content = new StringContent("""
                 {"newPosition": 1}
@@ -213,7 +213,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
         factory.AddChecklistItem(new ChecklistItem { Id = itemId, CardId = cardId, Text = "ToDelete", Position = 0 });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardId}/checklist/{itemId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist/{itemId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -239,7 +239,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
         factory.AddUser(new User { Id = mentionedId, Username = "alice", Email = "alice@a.com", PasswordHash = "x" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/comments")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardcomments")
         {
             Content = new StringContent("""
                 {"content": "Hey @alice check this"}
@@ -267,7 +267,7 @@ public class ChecklistCommentsControllerTests
         factory.AddProject(new Project { Id = projectId, Name = "Test" });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/comments")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/cardcomments")
         {
             Content = new StringContent("""
                 {"content": "Hello"}
@@ -297,7 +297,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
         factory.AddComment(new Comment { Id = commentId, CardId = cardId, AuthorId = userId, Content = "Original" });
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/cards/{cardId}/comments/{commentId}")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/cards/{cardId}/cardcomments/{commentId}")
         {
             Content = new StringContent("""
                 {"content": "Updated content"}
@@ -329,7 +329,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
         factory.AddComment(new Comment { Id = commentId, CardId = cardId, AuthorId = userId, Content = "To archive" });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardId}/comments/{commentId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardId}/cardcomments/{commentId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -355,7 +355,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
         factory.AddComment(new Comment { Id = Guid.NewGuid(), CardId = cardId, AuthorId = userId, Content = "First comment" });
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/comments");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/cardcomments");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -381,7 +381,7 @@ public class ChecklistCommentsControllerTests
         factory.AddUser(new User { Id = userId, Username = "member", Email = "m@m.com", PasswordHash = "x" });
         factory.AddChecklistItem(new ChecklistItem { Id = Guid.NewGuid(), CardId = cardId, Text = "Task 1", Position = 0 });
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/checklist");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/cardchecklist");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -401,6 +401,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
     private readonly List<ChecklistItem> _checklistItems = [];
     private readonly List<Comment> _comments = [];
     private readonly List<CardWatcher> _watchers = [];
+    private readonly List<CardAssignee> _assignees = [];
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -434,7 +435,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
             services.AddScoped<HydraForge.Application.Projects.IProjectRepository>(_ => new CCTestProjectRepository(_projects));
             services.AddScoped<HydraForge.Application.Projects.IColumnRepository>(_ => new CCTestColumnRepository(_projects));
             services.AddScoped<HydraForge.Application.Cards.ICardRepository>(_ => new CCTestCardRepository(_cards));
-            services.AddScoped<HydraForge.Application.Cards.ICardAssigneeRepository>(_ => new CCTestCardAssigneeRepository());
+            services.AddScoped<HydraForge.Application.Cards.ICardAssigneeRepository>(_ => new CCTestCardAssigneeRepository(_assignees));
             services.AddScoped<HydraForge.Application.Cards.ICardWatcherRepository>(_ => new CCTestCardWatcherRepository(_watchers));
             services.AddScoped<HydraForge.Application.Cards.ICardRelationshipRepository>(_ => new CCTestCardRelationshipRepository());
             services.AddScoped<HydraForge.Application.Projects.IProjectMemberRepository>(_ => new CCTestProjectMemberRepository(_members));
@@ -551,12 +552,18 @@ internal class CCTestCardRepository : HydraForge.Application.Cards.ICardReposito
 
 internal class CCTestCardAssigneeRepository : HydraForge.Application.Cards.ICardAssigneeRepository
 {
-    public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) => Task.CompletedTask;
-    public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) => Task.CompletedTask;
+    private readonly List<CardAssignee> _assignees;
+    public CCTestCardAssigneeRepository(List<CardAssignee> assignees) => _assignees = assignees;
+    public Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
+        => Task.FromResult(_assignees.FirstOrDefault(a => a.CardId == cardId && a.UserId == userId));
+    public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<ILookup<Guid, CardAssignee>>(_assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardAssignee>>([]);
+        => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.CardId == cardId).ToList());
+    public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { _assignees.Add(assignee); return Task.CompletedTask; }
+    public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { _assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
     public Task<IReadOnlyList<CardAssignee>> ListByUserAsync(Guid userId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardAssignee>>([]);
+        => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.UserId == userId).ToList());
 }
 
 internal class CCTestCardWatcherRepository : HydraForge.Application.Cards.ICardWatcherRepository
@@ -633,6 +640,8 @@ internal class CCTestSnapshotRepository : HydraForge.Application.Projects.IProje
 
 internal class CCTestChatArchiveService : HydraForge.Application.Projects.IChatArchiveService
 {
+    public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task UnarchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
     public Task<Result> ArchiveAsync(Guid projectId, Guid cardId, CancellationToken ct = default) => Task.FromResult(Result.Success());
 }
 

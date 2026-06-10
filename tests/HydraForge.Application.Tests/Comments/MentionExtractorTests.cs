@@ -1,3 +1,5 @@
+using HydraForge.Application.Comments;
+
 namespace HydraForge.Application.Tests.Comments;
 
 public class MentionExtractorTests

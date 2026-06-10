@@ -42,22 +42,42 @@ public class EfChecklistItemRepository(HydraForgeDbContext context) : IChecklist
 
     public async Task DeleteAsync(Guid itemId, CancellationToken ct = default)
     {
-        var item = await context.ChecklistItems.FindAsync([itemId], ct);
-        if (item != null)
-            context.ChecklistItems.Remove(item);
-        await context.SaveChangesAsync(ct);
+        await using var transaction = await context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var item = await context.ChecklistItems.FindAsync([itemId], ct);
+            if (item != null)
+                context.ChecklistItems.Remove(item);
+            await context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task CompactPositionsAsync(Guid cardId, int deletedPosition, CancellationToken ct = default)
     {
-        var toCompact = await context.ChecklistItems
-            .Where(i => i.CardId == cardId && i.Position > deletedPosition)
-            .ToListAsync(ct);
+        await using var transaction = await context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var toCompact = await context.ChecklistItems
+                .Where(i => i.CardId == cardId && i.Position > deletedPosition)
+                .ToListAsync(ct);
 
-        foreach (var item in toCompact)
-            item.Position -= 1;
+            foreach (var item in toCompact)
+                item.Position -= 1;
 
-        await context.SaveChangesAsync(ct);
+            await context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task UpdatePositionsAsync(IReadOnlyList<ChecklistItem> items, CancellationToken ct = default)
