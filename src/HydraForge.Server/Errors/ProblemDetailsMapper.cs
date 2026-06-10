@@ -41,6 +41,11 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Cards.ParentCycle => (400, "Parent cycle detected"),
             DomainErrorCodes.Cards.BlockedMoveWarning => (409, "Card has blockers"),
             DomainErrorCodes.Cards.ConcurrencyMismatch => (409, "Card has been modified"),
+            DomainErrorCodes.Checklist.ItemNotFound => (404, "Checklist item not found"),
+            DomainErrorCodes.Checklist.InvalidPosition => (400, "Invalid position"),
+            DomainErrorCodes.Checklist.InvalidAssignee => (400, "Invalid assignee"),
+            DomainErrorCodes.Comments.NotFound => (404, "Comment not found"),
+            DomainErrorCodes.Comments.Archived => (400, "Comment is archived"),
             _ => (400, "Bad request"),
         };
 
