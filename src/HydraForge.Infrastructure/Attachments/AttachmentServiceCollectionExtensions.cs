@@ -12,8 +12,8 @@ public static class AttachmentServiceCollectionExtensions
 {
     public static IServiceCollection AddAttachmentServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var provider = configuration["FileStorage:Provider"]
-            ?? Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
+        var provider = Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
+            ?? configuration["FileStorage:Provider"]
             ?? "Local";
         var maxBytes = long.TryParse(configuration["FileStorage:MaxBytes"], out var mb) ? mb : 10_000_000L;
         var allowedTypes = AttachmentContentTypes.Allowed;
@@ -51,7 +51,8 @@ public static class AttachmentServiceCollectionExtensions
         }
         else
         {
-            var localPath = configuration["FileStorage:LocalPath"]
+            var localPath = Environment.GetEnvironmentVariable("FILE_STORAGE_PATH")
+                ?? configuration["FileStorage:LocalPath"]
                 ?? Path.Combine(AppContext.BaseDirectory, "App_Data", "attachments");
             services.AddSingleton<IFileStore>(sp =>
                 new LocalFileStore(

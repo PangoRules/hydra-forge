@@ -7,39 +7,38 @@ using Microsoft.Extensions.Logging;
 
 namespace HydraForge.Infrastructure.FileStorage;
 
-public class S3FileStore : IFileStore
+public class S3FileStore(IAmazonS3 s3Client, string bucketName, ILogger<S3FileStore> logger)
+    : IFileStore
 {
-    private readonly IAmazonS3 _s3Client;
-    private readonly string _bucketName;
-    private readonly ILogger<S3FileStore> _logger;
-
-    public S3FileStore(IAmazonS3 s3Client, string bucketName, ILogger<S3FileStore> logger)
+    public async Task<Result<string>> StoreAsync(
+        Stream content,
+        string contentType,
+        string storageKey,
+        CancellationToken ct = default
+    )
     {
-        _s3Client = s3Client;
-        _bucketName = bucketName;
-        _logger = logger;
-    }
-
-    public async Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
-    {
-        var key = Guid.NewGuid().ToString();
         try
         {
             var request = new PutObjectRequest
             {
-                BucketName = _bucketName,
-                Key = key,
+                BucketName = bucketName,
+                Key = storageKey,
                 InputStream = content,
                 ContentType = contentType,
             };
-            await _s3Client.PutObjectAsync(request, ct);
-            _logger.LogDebug("Stored S3 object {Key} in bucket {Bucket}", key, _bucketName);
-            return Result<string>.Success(key);
+            await s3Client.PutObjectAsync(request, ct);
+            logger.LogDebug("Stored S3 object {Key} in bucket {Bucket}", storageKey, bucketName);
+            return Result<string>.Success(storageKey);
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 store failed for key {Key}", key);
-            return Result<string>.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
+            logger.LogError(ex, "S3 store failed for key {Key}", storageKey);
+            return Result<string>.Failure(
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
+            );
         }
     }
 
@@ -47,36 +46,51 @@ public class S3FileStore : IFileStore
     {
         try
         {
-            var exists = await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
+            var exists = await AmazonS3Util.DoesS3BucketExistV2Async(s3Client, bucketName);
             if (!exists)
             {
-                await _s3Client.PutBucketAsync(_bucketName, ct);
-                _logger.LogInformation("Created S3 bucket {Bucket}", _bucketName);
+                await s3Client.PutBucketAsync(bucketName, ct);
+                logger.LogInformation("Created S3 bucket {Bucket}", bucketName);
             }
             return Result.Success();
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 bucket init failed for {Bucket}", _bucketName);
-            return Result.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
+            logger.LogError(ex, "S3 bucket init failed for {Bucket}", bucketName);
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
+            );
         }
     }
 
-    public async Task<Result<Stream>> OpenReadAsync(string storageKey, CancellationToken ct = default)
+    public async Task<Result<Stream>> OpenReadAsync(
+        string storageKey,
+        CancellationToken ct = default
+    )
     {
         try
         {
-            var response = await _s3Client.GetObjectAsync(_bucketName, storageKey, ct);
+            var response = await s3Client.GetObjectAsync(bucketName, storageKey, ct);
             return Result<Stream>.Success(response.ResponseStream);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            return Result<Stream>.Failure(new Error(DomainErrorCodes.Attachments.NotFound, "File not found."));
+            return Result<Stream>.Failure(
+                new Error(DomainErrorCodes.Attachments.NotFound, "File not found.")
+            );
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 read failed for key {Key}", storageKey);
-            return Result<Stream>.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
+            logger.LogError(ex, "S3 read failed for key {Key}", storageKey);
+            return Result<Stream>.Failure(
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
+            );
         }
     }
 
@@ -84,14 +98,19 @@ public class S3FileStore : IFileStore
     {
         try
         {
-            await _s3Client.DeleteObjectAsync(_bucketName, storageKey, ct);
-            _logger.LogDebug("Deleted S3 object {Key}", storageKey);
+            await s3Client.DeleteObjectAsync(bucketName, storageKey, ct);
+            logger.LogDebug("Deleted S3 object {Key}", storageKey);
             return Result.Success();
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 delete failed for key {Key}", storageKey);
-            return Result.Failure(new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable."));
+            logger.LogError(ex, "S3 delete failed for key {Key}", storageKey);
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
+            );
         }
     }
 }

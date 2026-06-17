@@ -51,6 +51,7 @@ services:
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       # MinIO defaults for Docker — only active when FileStorage__Provider=S3.
       # Override via .env for local `dotnet run` (endpoint=http://localhost:9000).
+      FileStorage__LocalPath: /data/hydraforge/attachments
       FileStorage__S3__Endpoint: http://minio:9000
       FileStorage__S3__AccessKey: ${MINIO_ROOT_USER:-minioadmin}
       FileStorage__S3__SecretKey: ${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -60,6 +61,8 @@ services:
     ports:
       # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
       - "5000:8080"
+    volumes:
+      - hydraforge-attachments:/data/hydraforge/attachments
     extra_hosts:
       # Allows the container to reach services on the Docker host, including
       # Odysseus's SearXNG at http://host.docker.internal:8080.
@@ -78,3 +81,4 @@ services:
 volumes:
   postgres-data:
   minio-data:
+  hydraforge-attachments:
