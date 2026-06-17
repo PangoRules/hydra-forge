@@ -20,16 +20,16 @@ public class CardAttachmentsController(AttachmentService attachmentService) : Co
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        var response = new AttachmentListResponse(
-            result.Value.Select(a => new AttachmentResponse(
+        var response = new AttachmentListResponse([
+            .. result.Value.Select(a => new AttachmentResponse(
                 a.Id,
                 a.CardId,
                 a.FileName,
                 a.ContentType,
                 a.Size,
                 a.CreatedAt
-            )).ToList()
-        );
+            )),
+        ]);
         return Ok(response);
     }
 
