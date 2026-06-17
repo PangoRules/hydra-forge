@@ -158,7 +158,7 @@ public class SpecServiceTests
         cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), SpecId = specId, Title = "C", CardNumber = 1 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.UnlinkFromCardAsync(new UnlinkSpecFromCardCommand(projectId, cardId, actorId));
+        var result = await service.UnlinkFromCardAsync(new UnlinkSpecFromCardCommand(projectId, specId, cardId, actorId));
 
         Assert.True(result.IsSuccess);
         Assert.Null(cardRepo.Cards.First().SpecId);

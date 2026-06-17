@@ -273,7 +273,7 @@ public class PlansControllerTests
         factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = userId });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), PlanId = planId, Title = "C", CardNumber = 1 });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/plans/{planId}/link?cardId={cardId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/plans/{planId}/link/{cardId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);

@@ -305,6 +305,9 @@ public class SpecService(
                 new Error(DomainErrorCodes.Specs.CardDocumentProjectMismatch, "Card is in a different project.")
             );
 
+        if (card.SpecId != cmd.SpecId)
+            return Result.Failure(new Error(DomainErrorCodes.Specs.NotFound, "Card is not linked to this spec."));
+
         if (card.SpecId == null)
             return Result.Success();
 

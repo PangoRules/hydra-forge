@@ -274,7 +274,7 @@ public class SpecsControllerTests
         factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = userId });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), SpecId = specId, Title = "C", CardNumber = 1 });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/specs/{specId}/link?cardId={cardId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/specs/{specId}/link/{cardId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);

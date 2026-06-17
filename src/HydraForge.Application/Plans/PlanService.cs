@@ -305,6 +305,9 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.CardDocumentProjectMismatch, "Card is in a different project.")
             );
 
+        if (card.PlanId != cmd.PlanId)
+            return Result.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Card is not linked to this plan."));
+
         if (card.PlanId == null)
             return Result.Success();
 

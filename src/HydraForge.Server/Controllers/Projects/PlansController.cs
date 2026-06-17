@@ -230,13 +230,14 @@ public class PlansController(PlanService planService) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{planId:guid}/link")]
-    public async Task<IActionResult> UnlinkFromCard(Guid projectId, Guid planId, [FromQuery] Guid cardId)
+    [HttpDelete("{planId:guid}/link/{cardId:guid}")]
+    public async Task<IActionResult> UnlinkFromCard(Guid projectId, Guid planId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
         var cmd = new AppPlans.UnlinkPlanFromCardCommand(
             projectId,
+            planId,
             cardId,
             userId
         );

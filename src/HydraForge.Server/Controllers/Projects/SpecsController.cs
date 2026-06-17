@@ -13,7 +13,10 @@ namespace HydraForge.Server.Controllers.Projects;
 public class SpecsController(SpecService specService) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Create(Guid projectId, [FromBody] AppSpecs.CreateSpecRequest request)
+    public async Task<IActionResult> Create(
+        Guid projectId,
+        [FromBody] AppSpecs.CreateSpecRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -64,8 +67,8 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecListResponse(
-            result.Value.Select(s => new AppSpecs.SpecResponse(
+        var response = new AppSpecs.SpecListResponse([
+            .. result.Value.Select(s => new AppSpecs.SpecResponse(
                 s.Id,
                 s.ProjectId,
                 s.Title,
@@ -76,8 +79,8 @@ public class SpecsController(SpecService specService) : ControllerBase
                 s.CreatedAt,
                 s.UpdatedAt,
                 s.LinkedCardId
-            )).ToList()
-        );
+            )),
+        ]);
 
         return Ok(response);
     }
@@ -111,7 +114,11 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpPut("{specId:guid}")]
-    public async Task<IActionResult> Update(Guid projectId, Guid specId, [FromBody] AppSpecs.UpdateSpecRequest request)
+    public async Task<IActionResult> Update(
+        Guid projectId,
+        Guid specId,
+        [FromBody] AppSpecs.UpdateSpecRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -159,22 +166,26 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecVersionListResponse(
-            result.Value.Select(v => new AppSpecs.SpecVersionResponse(
+        var response = new AppSpecs.SpecVersionListResponse([
+            .. result.Value.Select(v => new AppSpecs.SpecVersionResponse(
                 v.Id,
                 v.SpecId,
                 v.Version,
                 v.Content,
                 v.CreatedAt,
                 v.CreatedByUserId
-            )).ToList()
-        );
+            )),
+        ]);
 
         return Ok(response);
     }
 
     [HttpPost("{specId:guid}/restore")]
-    public async Task<IActionResult> Restore(Guid projectId, Guid specId, [FromBody] AppSpecs.RestoreSpecVersionRequest request)
+    public async Task<IActionResult> Restore(
+        Guid projectId,
+        Guid specId,
+        [FromBody] AppSpecs.RestoreSpecVersionRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
@@ -209,16 +220,15 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpPost("{specId:guid}/link")]
-    public async Task<IActionResult> LinkToCard(Guid projectId, Guid specId, [FromBody] AppSpecs.LinkSpecToCardRequest request)
+    public async Task<IActionResult> LinkToCard(
+        Guid projectId,
+        Guid specId,
+        [FromBody] AppSpecs.LinkSpecToCardRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppSpecs.LinkSpecToCardCommand(
-            projectId,
-            specId,
-            request.CardId,
-            userId
-        );
+        var cmd = new AppSpecs.LinkSpecToCardCommand(projectId, specId, request.CardId, userId);
 
         var result = await specService.LinkToCardAsync(cmd);
 
@@ -230,16 +240,16 @@ public class SpecsController(SpecService specService) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{specId:guid}/link")]
-    public async Task<IActionResult> UnlinkFromCard(Guid projectId, Guid specId, [FromQuery] Guid cardId)
+    [HttpDelete("{specId:guid}/link/{cardId:guid}")]
+    public async Task<IActionResult> UnlinkFromCard(
+        Guid projectId,
+        Guid specId,
+        Guid cardId
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppSpecs.UnlinkSpecFromCardCommand(
-            projectId,
-            cardId,
-            userId
-        );
+        var cmd = new AppSpecs.UnlinkSpecFromCardCommand(projectId, specId, cardId, userId);
 
         var result = await specService.UnlinkFromCardAsync(cmd);
 

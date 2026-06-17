@@ -33,6 +33,7 @@ public record LinkPlanToCardCommand(
 
 public record UnlinkPlanFromCardCommand(
     Guid ProjectId,
+    Guid PlanId,
     Guid CardId,
     Guid ActorId
 );

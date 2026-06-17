@@ -193,7 +193,7 @@ X-Correlation-Id: smoke-test-specplan-012
 
 # ── Unlink Spec from Card ───────────────────────────────────
 
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/link?cardId={{createCard.response.body.$.id}} HTTP/1.1
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/link/{{createCard.response.body.$.id}} HTTP/1.1
 Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-specplan-013
 
@@ -317,7 +317,7 @@ X-Correlation-Id: smoke-test-specplan-021
 
 # ── Unlink Plan from Card ────────────────────────────────────
 
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/link?cardId={{createCard.response.body.$.id}} HTTP/1.1
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/link/{{createCard.response.body.$.id}} HTTP/1.1
 Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-specplan-022
 

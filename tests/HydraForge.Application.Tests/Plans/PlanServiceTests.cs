@@ -158,7 +158,7 @@ public class PlanServiceTests
         cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), PlanId = planId, Title = "C", CardNumber = 1 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.UnlinkFromCardAsync(new UnlinkPlanFromCardCommand(projectId, cardId, actorId));
+        var result = await service.UnlinkFromCardAsync(new UnlinkPlanFromCardCommand(projectId, planId, cardId, actorId));
 
         Assert.True(result.IsSuccess);
         Assert.Null(cardRepo.Cards.First().PlanId);

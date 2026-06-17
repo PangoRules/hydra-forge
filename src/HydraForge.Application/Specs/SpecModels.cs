@@ -33,6 +33,7 @@ public record LinkSpecToCardCommand(
 
 public record UnlinkSpecFromCardCommand(
     Guid ProjectId,
+    Guid SpecId,
     Guid CardId,
     Guid ActorId
 );
