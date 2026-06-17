@@ -2,14 +2,14 @@ using System.Text;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Auth;
-using HydraForge.Application.Projects;
-using HydraForge.Infrastructure.Projects;
-using HydraForge.Infrastructure.Columns;
-using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Cards;
+using HydraForge.Infrastructure.Checklist;
+using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Infrastructure.Projects;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -37,6 +37,7 @@ builder.Services.AddColumnServices();
 builder.Services.AddCardServices();
 builder.Services.AddChecklistServices();
 builder.Services.AddCommentServices();
+builder.Services.AddAttachmentServices(builder.Configuration);
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
@@ -113,6 +114,15 @@ if (applyMigrationsOnStartup)
         var testUserSeeder = scope.ServiceProvider.GetRequiredService<TestUserSeeder>();
         await testUserSeeder.SeedIfNeededAsync();
     }
+}
+
+// Initialize file store (bucket creation for S3/MinIO, no-op for Local)
+var fileStore = app.Services.GetRequiredService<HydraForge.Application.Attachments.IFileStore>();
+var initResult = await fileStore.InitializeAsync();
+if (initResult.IsFailure)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("File store initialization failed: {Error}", initResult.Error.Message);
 }
 
 app.UseSerilogRequestLogging(options =>

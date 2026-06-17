@@ -46,6 +46,10 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Checklist.InvalidAssignee => (400, "Invalid assignee"),
             DomainErrorCodes.Comments.NotFound => (404, "Comment not found"),
             DomainErrorCodes.Comments.Archived => (400, "Comment is archived"),
+            DomainErrorCodes.Attachments.UnsupportedContentType => (415, "Unsupported media type"),
+            DomainErrorCodes.Attachments.NotFound => (404, "Not found"),
+            DomainErrorCodes.Attachments.FileTooLarge => (413, "Payload too large"),
+            DomainErrorCodes.Attachments.FileStoreUnavailable => (503, "Service unavailable"),
             _ => (400, "Bad request"),
         };
 

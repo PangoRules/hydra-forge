@@ -66,6 +66,14 @@ public static class DomainErrorCodes
         public const string Archived = "COMMENT_ARCHIVED";
     }
 
+    public static class Attachments
+    {
+        public const string NotFound = "ATTACHMENT_NOT_FOUND";
+        public const string UnsupportedContentType = "ATTACHMENT_UNSUPPORTED_CONTENT_TYPE";
+        public const string FileTooLarge = "ATTACHMENT_FILE_TOO_LARGE";
+        public const string FileStoreUnavailable = "ATTACHMENT_FILE_STORE_UNAVAILABLE";
+    }
+
     public static class Mentions
     {
         public const string UserNotFound = "MENTION_USER_NOT_FOUND";

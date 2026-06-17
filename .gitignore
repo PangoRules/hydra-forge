@@ -77,5 +77,6 @@ coverage/
 *.coveragexml
 
 # ─── File storage (runtime uploads — never commit user data) ─────────────────
+.hydraforge/
 uploads/
 storage/

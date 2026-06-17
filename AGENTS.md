@@ -5,8 +5,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 ## Current State
 
 - Phase 1 foundation is complete on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
-- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-3 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking. Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 4-10 (checklists, comments, attachments, specs, plans, relationships, snapshot, hubs, hardening) remain.
-- 196 xUnit tests across Domain (52), Application (55), Infrastructure (43), Server (46). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
+- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-5 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 6-10 (specs, plans, relationships, snapshot, hubs, hardening) remain.
+- 269 xUnit tests across Domain (52), Application (108), Infrastructure (43), Server (66). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
 
@@ -43,7 +43,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - Verify model is clean: `... dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server`
   - Apply migrations: `... dotnet ef database update --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server`
 - Docker (full stack): `docker compose up`
-- Docker (Postgres only): `docker compose up -d postgres` (host port 5433)
+- Docker (Postgres + MinIO only): `docker compose up -d postgres minio` (host ports 5433, 9000, 9001)
+- MinIO console: `http://localhost:9001` (default: minioadmin / minioadmin)
 - API docs (OpenAPI JSON): `http://localhost:5000/openapi/v1.json`
 - API reference (Scalar UI): `http://localhost:5000/scalar/v1`
 - Install web deps: `cd src/web-ui && pnpm install`
@@ -66,6 +67,17 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Do NOT add Swashbuckle back. Use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` for customizing the OpenAPI doc (e.g. adding Bearer auth scheme to Scalar's "Authorize" button).
 - Controller endpoint metadata comes from `[ProducesResponseType]`, `[ApiExplorerSettings]`, and return type inference. The `[SwaggerOperation]`, `[SwaggerResponse]`, `[SwaggerTag]` attributes from Swashbuckle are gone.
 - `Microsoft.OpenApi.Models` namespace DOES NOT EXIST in OpenAPI.NET v2.x. Types live in root `Microsoft.OpenApi` — don't try to add `using Microsoft.OpenApi.Models`.
+
+## File Storage
+
+- `IFileStore` abstraction in Application: `StoreAsync(Stream, contentType, storageKey)` → `Result<string>`, `OpenReadAsync(storageKey)` → `Result<Stream>`, `DeleteAsync(storageKey)` → `Result`. `InitializeAsync()` for bucket creation (default no-op).
+- Two implementations: `LocalFileStore` (bare-metal fallback) and `S3FileStore` (MinIO/AWS S3, recommended). Switch via `FileStorage:Provider` config.
+- MinIO runs as a core Docker Compose service alongside Postgres. Server `depends_on: minio`.
+- Storage key hierarchy: `{userId}/{sourceType}/{sourceId}/{guid}` — never include user filenames, dates, or project IDs in the key.
+- Metadata (filename, content-type, size) stored in `Attachment` entity — never extract from storage path.
+- Flow: validate membership → validate card → validate size/content-type → sanitize filename → generate key → store file → store metadata → audit log.
+- Delete: metadata first, then file (non-fatal if file-store delete fails).
+- `S3FileStore` auto-creates bucket on startup. `InitializeAsync` failure logged as warning, server continues.
 
 ## Architecture Constraints To Preserve
 
