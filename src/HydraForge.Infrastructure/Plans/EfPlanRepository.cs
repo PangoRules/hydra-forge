@@ -34,6 +34,14 @@ public class EfPlanRepository(HydraForgeDbContext context) : IPlanRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var linkedCards = await _context.Cards
+            .Where(c => c.PlanId != null && c.ProjectId == projectId)
+            .ToListAsync(ct);
+        return linkedCards.ToDictionary(c => c.PlanId!.Value, c => (Guid?)c.Id);
+    }
+
     public async Task<Guid?> GetLinkedCardIdAsync(Guid planId, CancellationToken ct = default)
     {
         var card = await _context.Cards.FirstOrDefaultAsync(c => c.PlanId == planId, ct);

@@ -201,6 +201,17 @@ internal class InMemorySpecRepository : ISpecRepository
     public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<SpecVersion>>(Versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version).ToList());
 
+    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var ids = _cardRepo.Cards
+            .Where(c => c.SpecId != null && c.ProjectId == projectId)
+            .Select(c => new { c.SpecId, c.Id })
+            .ToList();
+        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(
+            ids.ToDictionary(x => x.SpecId!.Value, x => (Guid?)x.Id)
+        );
+    }
+
     public Task<Guid?> GetLinkedCardIdAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<Guid?>(null);
 

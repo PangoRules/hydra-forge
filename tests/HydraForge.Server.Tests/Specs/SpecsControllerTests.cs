@@ -404,6 +404,11 @@ internal class SpecsTestSpecRepository : ISpecRepository
         => Task.FromResult(_versions.FirstOrDefault(v => v.SpecId == specId && v.Version == version));
     public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<SpecVersion>>(_versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version).ToList());
+    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var ids = _cards.Where(c => c.SpecId != null && c.ProjectId == projectId).Select(c => new { c.SpecId, c.Id }).ToList();
+        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(ids.ToDictionary(x => x.SpecId!.Value, x => (Guid?)x.Id));
+    }
     public Task<Guid?> GetLinkedCardIdAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<Guid?>(_cards.FirstOrDefault(c => c.SpecId == specId)?.Id);
     public Task AddAsync(Spec spec, CancellationToken ct = default) { _specs.Add(spec); return Task.CompletedTask; }

@@ -20,7 +20,10 @@ public class SpecService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
-    public async Task<Result<SpecDto>> CreateAsync(CreateSpecCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SpecDto>> CreateAsync(
+        CreateSpecCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -30,7 +33,10 @@ public class SpecService(
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<SpecDto>.Failure(
-                new Error(DomainErrorCodes.Specs.MarkdownPayloadTooLarge, "Markdown payload exceeds limit.")
+                new Error(
+                    DomainErrorCodes.Specs.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
             );
 
         var spec = new Spec
@@ -77,7 +83,12 @@ public class SpecService(
         return Result<SpecDto>.Success(MapToDto(spec, null));
     }
 
-    public async Task<Result<SpecDto>> GetByIdAsync(Guid projectId, Guid specId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<SpecDto>> GetByIdAsync(
+        Guid projectId,
+        Guid specId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -95,7 +106,12 @@ public class SpecService(
         return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
     }
 
-    public async Task<Result<IReadOnlyList<SpecDto>>> ListAsync(Guid projectId, SpecListFilter filter, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<SpecDto>>> ListAsync(
+        Guid projectId,
+        SpecListFilter filter,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -104,16 +120,15 @@ public class SpecService(
             );
 
         var specs = await _specRepo.ListByProjectAsync(projectId, filter, ct);
-        var dtos = new List<SpecDto>();
-        foreach (var s in specs)
-        {
-            var linkedCardId = await _specRepo.GetLinkedCardIdAsync(s.Id, ct);
-            dtos.Add(MapToDto(s, linkedCardId));
-        }
+        var linkedCardIds = await _specRepo.GetLinkedCardIdsAsync(projectId, ct);
+        var dtos = specs.Select(s => MapToDto(s, linkedCardIds.TryGetValue(s.Id, out var id) ? id : null)).ToList();
         return Result<IReadOnlyList<SpecDto>>.Success(dtos);
     }
 
-    public async Task<Result<SpecDto>> UpdateAsync(UpdateSpecCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SpecDto>> UpdateAsync(
+        UpdateSpecCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -129,7 +144,10 @@ public class SpecService(
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<SpecDto>.Failure(
-                new Error(DomainErrorCodes.Specs.MarkdownPayloadTooLarge, "Markdown payload exceeds limit.")
+                new Error(
+                    DomainErrorCodes.Specs.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
             );
 
         spec.Title = cmd.Title;
@@ -170,7 +188,12 @@ public class SpecService(
         return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
     }
 
-    public async Task<Result<IReadOnlyList<SpecVersionDto>>> ListVersionsAsync(Guid projectId, Guid specId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<SpecVersionDto>>> ListVersionsAsync(
+        Guid projectId,
+        Guid specId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -186,11 +209,23 @@ public class SpecService(
 
         var versions = await _specRepo.ListVersionsAsync(specId, ct);
         return Result<IReadOnlyList<SpecVersionDto>>.Success(
-            versions.Select(v => new SpecVersionDto(v.Id, v.SpecId, v.Version, v.Content, v.CreatedAt, v.CreatedByUserId)).ToList()
+            versions
+                .Select(v => new SpecVersionDto(
+                    v.Id,
+                    v.SpecId,
+                    v.Version,
+                    v.Content,
+                    v.CreatedAt,
+                    v.CreatedByUserId
+                ))
+                .ToList()
         );
     }
 
-    public async Task<Result<SpecDto>> RestoreVersionAsync(RestoreSpecVersionCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SpecDto>> RestoreVersionAsync(
+        RestoreSpecVersionCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -246,7 +281,10 @@ public class SpecService(
         return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
     }
 
-    public async Task<Result> LinkToCardAsync(LinkSpecToCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result> LinkToCardAsync(
+        LinkSpecToCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -264,7 +302,10 @@ public class SpecService(
 
         if (card.ProjectId != cmd.ProjectId)
             return Result.Failure(
-                new Error(DomainErrorCodes.Specs.CardDocumentProjectMismatch, "Card is in a different project.")
+                new Error(
+                    DomainErrorCodes.Specs.CardDocumentProjectMismatch,
+                    "Card is in a different project."
+                )
             );
 
         card.SpecId = cmd.SpecId;
@@ -288,7 +329,10 @@ public class SpecService(
         return Result.Success();
     }
 
-    public async Task<Result> UnlinkFromCardAsync(UnlinkSpecFromCardCommand cmd, CancellationToken ct = default)
+    public async Task<Result> UnlinkFromCardAsync(
+        UnlinkSpecFromCardCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -302,11 +346,16 @@ public class SpecService(
 
         if (card.ProjectId != cmd.ProjectId)
             return Result.Failure(
-                new Error(DomainErrorCodes.Specs.CardDocumentProjectMismatch, "Card is in a different project.")
+                new Error(
+                    DomainErrorCodes.Specs.CardDocumentProjectMismatch,
+                    "Card is in a different project."
+                )
             );
 
         if (card.SpecId != cmd.SpecId)
-            return Result.Failure(new Error(DomainErrorCodes.Specs.NotFound, "Card is not linked to this spec."));
+            return Result.Failure(
+                new Error(DomainErrorCodes.Specs.NotFound, "Card is not linked to this spec.")
+            );
 
         if (card.SpecId == null)
             return Result.Success();

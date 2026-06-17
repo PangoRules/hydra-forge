@@ -104,12 +104,8 @@ public class PlanService(
             );
 
         var plans = await _planRepo.ListByProjectAsync(projectId, filter, ct);
-        var dtos = new List<PlanDto>();
-        foreach (var p in plans)
-        {
-            var linkedCardId = await _planRepo.GetLinkedCardIdAsync(p.Id, ct);
-            dtos.Add(MapToDto(p, linkedCardId));
-        }
+        var linkedCardIds = await _planRepo.GetLinkedCardIdsAsync(projectId, ct);
+        var dtos = plans.Select(p => MapToDto(p, linkedCardIds.TryGetValue(p.Id, out var id) ? id : null)).ToList();
         return Result<IReadOnlyList<PlanDto>>.Success(dtos);
     }
 

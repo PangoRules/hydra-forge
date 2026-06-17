@@ -401,6 +401,11 @@ internal class PlansTestPlanRepository : IPlanRepository
         => Task.FromResult(_versions.FirstOrDefault(v => v.PlanId == planId && v.Version == version));
     public Task<IReadOnlyList<PlanVersion>> ListVersionsAsync(Guid planId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<PlanVersion>>(_versions.Where(v => v.PlanId == planId).OrderBy(v => v.Version).ToList());
+    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var ids = _cards.Where(c => c.PlanId != null && c.ProjectId == projectId).Select(c => new { c.PlanId, c.Id }).ToList();
+        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(ids.ToDictionary(x => x.PlanId!.Value, x => (Guid?)x.Id));
+    }
     public Task<Guid?> GetLinkedCardIdAsync(Guid planId, CancellationToken ct = default)
         => Task.FromResult<Guid?>(_cards.FirstOrDefault(c => c.PlanId == planId)?.Id);
     public Task AddAsync(Plan plan, CancellationToken ct = default) { _plans.Add(plan); return Task.CompletedTask; }
