@@ -127,6 +127,11 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<SpecVersion>(modelBuilder, "spec_versions", b =>
         {
             b.HasIndex(e => e.SpecId);
+            b.HasIndex(e => new { e.SpecId, e.Version }).IsUnique();
+            b.HasOne<Spec>()
+                .WithMany()
+                .HasForeignKey(e => e.SpecId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         ConfigureEntity<Plan>(modelBuilder, "plans", b =>
@@ -137,6 +142,11 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<PlanVersion>(modelBuilder, "plan_versions", b =>
         {
             b.HasIndex(e => e.PlanId);
+            b.HasIndex(e => new { e.PlanId, e.Version }).IsUnique();
+            b.HasOne<Plan>()
+                .WithMany()
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         ConfigureEntity<AuditLogEntry>(modelBuilder, "audit_log_entries", b =>

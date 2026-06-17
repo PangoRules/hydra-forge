@@ -9,7 +9,9 @@ using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
+using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -38,6 +40,8 @@ builder.Services.AddCardServices();
 builder.Services.AddChecklistServices();
 builder.Services.AddCommentServices();
 builder.Services.AddAttachmentServices(builder.Configuration);
+builder.Services.AddSpecServices();
+builder.Services.AddPlanServices();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";

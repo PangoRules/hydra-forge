@@ -78,4 +78,20 @@ public static class DomainErrorCodes
     {
         public const string UserNotFound = "MENTION_USER_NOT_FOUND";
     }
+
+    public static class Specs
+    {
+        public const string NotFound = "SPEC_NOT_FOUND";
+        public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
+        public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
+        public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
+    }
+
+    public static class Plans
+    {
+        public const string NotFound = "PLAN_NOT_FOUND";
+        public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
+        public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
+        public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
+    }
 }

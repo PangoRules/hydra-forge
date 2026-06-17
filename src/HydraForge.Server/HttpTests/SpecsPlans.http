@@ -1,0 +1,331 @@
+### Specs & Plans API Smoke Tests
+
+
+### Run against local development environment
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-test-specplan-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-002
+
+{
+  "description": "Project for specs/plans smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/specplan.git",
+  "name": "Specs Plans Smoke Test"
+}
+
+
+###
+
+# Create a card to link specs/plans to
+
+# @name createColumn
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-003
+
+{
+  "name": "Backlog",
+  "color": "#cccccc",
+  "wipLimit": null
+}
+
+
+###
+
+# @name createCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-004
+
+{
+  "columnId": "{{createColumn.response.body.$.id}}",
+  "description": "Card to link specs and plans",
+  "title": "Link Target Card",
+  "type": "Task"
+}
+
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# SPEC ENDPOINTS
+# ═══════════════════════════════════════════════════════════
+
+# ── Create Spec ─────────────────────────────────────────────
+
+# @name createSpec
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-005
+
+{
+  "content": "# Spec v1\n\nInitial specification content.",
+  "description": "API specification document",
+  "title": "API Spec"
+}
+
+
+###
+
+# ── List Specs ──────────────────────────────────────────────
+
+# @name listSpecs
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-006
+
+
+###
+
+# ── Get Spec by ID ──────────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-007
+
+
+###
+
+# ── Update Spec ─────────────────────────────────────────────
+
+# @name updateSpec
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-008
+
+{
+  "content": "# Spec v2\n\nUpdated specification content.",
+  "description": "API specification document updated",
+  "title": "API Spec Updated",
+  "version": "{{createSpec.response.body.$.version}}"
+}
+
+
+###
+
+# ── List Spec Versions ──────────────────────────────────────
+
+# @name listSpecVersions
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/versions HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-009
+
+
+###
+
+# ── Restore Spec to v1 ───────────────────────────────────────
+
+# @name restoreSpec
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/restore HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-010
+
+{
+  "version": 1
+}
+
+
+###
+
+# ── Link Spec to Card ───────────────────────────────────────
+
+# @name linkSpecToCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/link HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-011
+
+{
+  "cardId": "{{createCard.response.body.$.id}}"
+}
+
+
+###
+
+# ── Verify Spec Linked Card ID ──────────────────────────────
+
+# @name getSpecAfterLink
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-012
+
+
+###
+
+# ── Unlink Spec from Card ───────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/link?cardId={{createCard.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-013
+
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# PLAN ENDPOINTS
+# ═══════════════════════════════════════════════════════════
+
+# ── Create Plan ─────────────────────────────────────────────
+
+# @name createPlan
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-014
+
+{
+  "content": "# Plan v1\n\nInitial plan content.",
+  "description": "Implementation plan document",
+  "title": "Implementation Plan"
+}
+
+
+###
+
+# ── List Plans ──────────────────────────────────────────────
+
+# @name listPlans
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-015
+
+
+###
+
+# ── Get Plan by ID ──────────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-016
+
+
+###
+
+# ── Update Plan ─────────────────────────────────────────────
+
+# @name updatePlan
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-017
+
+{
+  "content": "# Plan v2\n\nUpdated plan content.",
+  "description": "Implementation plan document updated",
+  "title": "Implementation Plan Updated",
+  "version": "{{createPlan.response.body.$.version}}"
+}
+
+
+###
+
+# ── List Plan Versions ──────────────────────────────────────
+
+# @name listPlanVersions
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/versions HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-018
+
+
+###
+
+# ── Restore Plan to v1 ──────────────────────────────────────
+
+# @name restorePlan
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/restore HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-019
+
+{
+  "version": 1
+}
+
+
+###
+
+# ── Link Plan to Card ───────────────────────────────────────
+
+# @name linkPlanToCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/link HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-020
+
+{
+  "cardId": "{{createCard.response.body.$.id}}"
+}
+
+
+###
+
+# ── Verify Plan Linked Card ID ──────────────────────────────
+
+# @name getPlanAfterLink
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-021
+
+
+###
+
+# ── Unlink Plan from Card ────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/link?cardId={{createCard.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-022
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-specplan-023
