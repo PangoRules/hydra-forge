@@ -2,6 +2,8 @@ namespace HydraForge.Application.Plans;
 
 public record CreatePlanCommand(
     Guid ProjectId,
+    Guid CardId,
+    Guid? SpecId,
     Guid ActorId,
     string Title,
     string? Description,
@@ -24,31 +26,17 @@ public record RestorePlanVersionCommand(
     Guid ActorId
 );
 
-public record LinkPlanToCardCommand(
-    Guid ProjectId,
-    Guid PlanId,
-    Guid CardId,
-    Guid ActorId
-);
-
-public record UnlinkPlanFromCardCommand(
-    Guid ProjectId,
-    Guid PlanId,
-    Guid CardId,
-    Guid ActorId
-);
-
 public record PlanDto(
     Guid Id,
     Guid ProjectId,
+    Guid CardId,
     string Title,
     string? Description,
     string Content,
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
-    DateTime UpdatedAt,
-    Guid? LinkedCardId
+    DateTime UpdatedAt
 );
 
 public record PlanVersionDto(
@@ -78,21 +66,17 @@ public record RestorePlanVersionRequest(
     int Version
 );
 
-public record LinkPlanToCardRequest(
-    Guid CardId
-);
-
 public record PlanResponse(
     Guid Id,
     Guid ProjectId,
+    Guid CardId,
     string Title,
     string? Description,
     string Content,
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
-    DateTime UpdatedAt,
-    Guid? LinkedCardId
+    DateTime UpdatedAt
 );
 
 public record PlanVersionResponse(

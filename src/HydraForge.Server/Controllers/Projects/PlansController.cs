@@ -9,16 +9,18 @@ namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/plans")]
+[Route("api/projects/{projectId:guid}/cards/{cardId:guid}/plans")]
 public class PlansController(PlanService planService) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Create(Guid projectId, [FromBody] AppPlans.CreatePlanRequest request)
+    public async Task<IActionResult> Create(Guid projectId, Guid cardId, [FromBody] AppPlans.CreatePlanRequest request)
     {
         var userId = User.GetRequiredUserId();
 
         var cmd = new AppPlans.CreatePlanCommand(
             projectId,
+            cardId,
+            null,
             userId,
             request.Title,
             request.Description,
@@ -35,14 +37,14 @@ public class PlansController(PlanService planService) : ControllerBase
         var response = new AppPlans.PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return CreatedAtAction(
@@ -53,11 +55,11 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List(Guid projectId)
+    public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await planService.ListAsync(projectId, new AppPlans.PlanListFilter(), userId);
+        var result = await planService.ListByCardAsync(projectId, cardId, new AppPlans.PlanListFilter(), userId);
 
         if (result.IsFailure)
         {
@@ -68,21 +70,21 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.Select(p => new AppPlans.PlanResponse(
                 p.Id,
                 p.ProjectId,
+                p.CardId,
                 p.Title,
                 p.Description,
                 p.Content,
                 p.Version,
                 p.CreatedByUserId,
                 p.CreatedAt,
-                p.UpdatedAt,
-                p.LinkedCardId
+                p.UpdatedAt
             )).ToList()
         );
 
         return Ok(response);
     }
 
-    [HttpGet("{planId:guid}")]
+    [HttpGet("~/api/projects/{projectId:guid}/plans/{planId:guid}")]
     public async Task<IActionResult> GetById(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -97,20 +99,20 @@ public class PlansController(PlanService planService) : ControllerBase
         var response = new AppPlans.PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
     }
 
-    [HttpPut("{planId:guid}")]
+    [HttpPut("~/api/projects/{projectId:guid}/plans/{planId:guid}")]
     public async Task<IActionResult> Update(Guid projectId, Guid planId, [FromBody] AppPlans.UpdatePlanRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -134,20 +136,20 @@ public class PlansController(PlanService planService) : ControllerBase
         var response = new AppPlans.PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
     }
 
-    [HttpGet("{planId:guid}/versions")]
+    [HttpGet("~/api/projects/{projectId:guid}/plans/{planId:guid}/versions")]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -173,7 +175,7 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("{planId:guid}/restore")]
+    [HttpPost("~/api/projects/{projectId:guid}/plans/{planId:guid}/restore")]
     public async Task<IActionResult> Restore(Guid projectId, Guid planId, [FromBody] AppPlans.RestorePlanVersionRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -195,60 +197,16 @@ public class PlansController(PlanService planService) : ControllerBase
         var response = new AppPlans.PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
-    }
-
-    [HttpPost("{planId:guid}/link")]
-    public async Task<IActionResult> LinkToCard(Guid projectId, Guid planId, [FromBody] AppPlans.LinkPlanToCardRequest request)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new AppPlans.LinkPlanToCardCommand(
-            projectId,
-            planId,
-            request.CardId,
-            userId
-        );
-
-        var result = await planService.LinkToCardAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
-    }
-
-    [HttpDelete("{planId:guid}/link/{cardId:guid}")]
-    public async Task<IActionResult> UnlinkFromCard(Guid projectId, Guid planId, Guid cardId)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new AppPlans.UnlinkPlanFromCardCommand(
-            projectId,
-            planId,
-            cardId,
-            userId
-        );
-
-        var result = await planService.UnlinkFromCardAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
     }
 }

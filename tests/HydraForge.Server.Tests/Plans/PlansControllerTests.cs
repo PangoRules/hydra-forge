@@ -26,10 +26,12 @@ public class PlansControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/plans")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/plans")
         {
             Content = new StringContent(
                 "{\"title\":\"My Plan\",\"description\":\"desc\",\"content\":\"# Plan\"}",
@@ -69,7 +71,7 @@ public class PlansControllerTests
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -81,11 +83,13 @@ public class PlansControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = Guid.NewGuid(), ProjectId = projectId, Title = "Plan 1", Content = "#1", Version = 1, CreatedByUserId = userId });
+        factory.AddPlan(new Plan { Id = Guid.NewGuid(), CardId = cardId, ProjectId = projectId, Title = "Plan 1", Content = "#1", Version = 1, CreatedByUserId = userId });
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/plans");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/plans");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -105,9 +109,11 @@ public class PlansControllerTests
 
         var projectId = Guid.NewGuid();
         var planId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "Test Plan", Content = "# Content", Version = 1, CreatedByUserId = userId });
+        factory.AddPlan(new Plan { Id = planId, CardId = cardId, ProjectId = projectId, Title = "Test Plan", Content = "# Content", Version = 1, CreatedByUserId = userId });
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/plans/{planId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -152,9 +158,11 @@ public class PlansControllerTests
 
         var projectId = Guid.NewGuid();
         var planId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = userId });
+        factory.AddPlan(new Plan { Id = planId, CardId = cardId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = userId });
 
         var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/plans/{planId}")
         {
@@ -184,9 +192,11 @@ public class PlansControllerTests
 
         var projectId = Guid.NewGuid();
         var planId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "V2", Version = 2, CreatedByUserId = userId });
+        factory.AddPlan(new Plan { Id = planId, CardId = cardId, ProjectId = projectId, Title = "P", Content = "V2", Version = 2, CreatedByUserId = userId });
         factory.AddPlanVersion(new PlanVersion { Id = Guid.NewGuid(), PlanId = planId, Version = 1, Content = "V1", CreatedByUserId = userId });
         factory.AddPlanVersion(new PlanVersion { Id = Guid.NewGuid(), PlanId = planId, Version = 2, Content = "V2", CreatedByUserId = userId });
 
@@ -211,9 +221,11 @@ public class PlansControllerTests
 
         var projectId = Guid.NewGuid();
         var planId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "V2", Version = 2, CreatedByUserId = userId });
+        factory.AddPlan(new Plan { Id = planId, CardId = cardId, ProjectId = projectId, Title = "P", Content = "V2", Version = 2, CreatedByUserId = userId });
         factory.AddPlanVersion(new PlanVersion { Id = Guid.NewGuid(), PlanId = planId, Version = 1, Content = "V1", CreatedByUserId = userId });
         factory.AddPlanVersion(new PlanVersion { Id = Guid.NewGuid(), PlanId = planId, Version = 2, Content = "V2", CreatedByUserId = userId });
 
@@ -228,57 +240,6 @@ public class PlansControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("\"version\":3", body);
-    }
-
-    [Fact]
-    public async Task LinkToCard_ValidCard_Returns204()
-    {
-        var factory = new PlansTestWebApplicationFactory();
-        using var client = factory.CreateClient();
-        var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
-
-        var projectId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var cardId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = userId });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "C", CardNumber = 1 });
-
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/plans/{planId}/link")
-        {
-            Content = new StringContent($"{{\"cardId\":\"{cardId}\"}}", Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Add("Authorization", $"Bearer {token}");
-
-        var response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task UnlinkFromCard_Returns204()
-    {
-        var factory = new PlansTestWebApplicationFactory();
-        using var client = factory.CreateClient();
-        var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
-
-        var projectId = Guid.NewGuid();
-        var planId = Guid.NewGuid();
-        var cardId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddPlan(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = userId });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), PlanId = planId, Title = "C", CardNumber = 1 });
-
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/plans/{planId}/link/{cardId}");
-        request.Headers.Add("Authorization", $"Bearer {token}");
-
-        var response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 }
 
@@ -397,17 +358,12 @@ internal class PlansTestPlanRepository : IPlanRepository
         => Task.FromResult(_plans.FirstOrDefault(p => p.Id == planId));
     public Task<IReadOnlyList<Plan>> ListByProjectAsync(Guid projectId, PlanListFilter filter, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Plan>>(_plans.Where(p => p.ProjectId == projectId).ToList());
+    public Task<IReadOnlyList<Plan>> ListByCardAsync(Guid cardId, PlanListFilter filter, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Plan>>(_plans.Where(p => p.CardId == cardId).ToList());
     public Task<PlanVersion?> GetVersionAsync(Guid planId, int version, CancellationToken ct = default)
         => Task.FromResult(_versions.FirstOrDefault(v => v.PlanId == planId && v.Version == version));
     public Task<IReadOnlyList<PlanVersion>> ListVersionsAsync(Guid planId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<PlanVersion>>(_versions.Where(v => v.PlanId == planId).OrderBy(v => v.Version).ToList());
-    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var ids = _cards.Where(c => c.PlanId != null && c.ProjectId == projectId).Select(c => new { c.PlanId, c.Id }).ToList();
-        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(ids.ToDictionary(x => x.PlanId!.Value, x => (Guid?)x.Id));
-    }
-    public Task<Guid?> GetLinkedCardIdAsync(Guid planId, CancellationToken ct = default)
-        => Task.FromResult<Guid?>(_cards.FirstOrDefault(c => c.PlanId == planId)?.Id);
     public Task AddAsync(Plan plan, CancellationToken ct = default) { _plans.Add(plan); return Task.CompletedTask; }
     public Task AddVersionAsync(PlanVersion version, CancellationToken ct = default) { _versions.Add(version); return Task.CompletedTask; }
     public Task UpdateAsync(Plan plan, CancellationToken ct = default)

@@ -1,5 +1,4 @@
 using HydraForge.Application.Audit;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
@@ -10,13 +9,11 @@ namespace HydraForge.Application.Specs;
 
 public class SpecService(
     ISpecRepository specRepo,
-    ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter
 )
 {
     private readonly ISpecRepository _specRepo = specRepo;
-    private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
@@ -43,6 +40,7 @@ public class SpecService(
         {
             Id = Guid.NewGuid(),
             ProjectId = cmd.ProjectId,
+            CardId = cmd.CardId,
             Title = cmd.Title,
             Description = cmd.Description,
             Content = cmd.Content,
@@ -80,7 +78,7 @@ public class SpecService(
             ct
         );
 
-        return Result<SpecDto>.Success(MapToDto(spec, null));
+        return Result<SpecDto>.Success(MapToDto(spec));
     }
 
     public async Task<Result<SpecDto>> GetByIdAsync(
@@ -102,8 +100,7 @@ public class SpecService(
                 new Error(DomainErrorCodes.Specs.NotFound, "Spec not found.")
             );
 
-        var linkedCardId = await _specRepo.GetLinkedCardIdAsync(specId, ct);
-        return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
+        return Result<SpecDto>.Success(MapToDto(spec));
     }
 
     public async Task<Result<IReadOnlyList<SpecDto>>> ListAsync(
@@ -120,8 +117,26 @@ public class SpecService(
             );
 
         var specs = await _specRepo.ListByProjectAsync(projectId, filter, ct);
-        var linkedCardIds = await _specRepo.GetLinkedCardIdsAsync(projectId, ct);
-        var dtos = specs.Select(s => MapToDto(s, linkedCardIds.TryGetValue(s.Id, out var id) ? id : null)).ToList();
+        var dtos = specs.Select(MapToDto).ToList();
+        return Result<IReadOnlyList<SpecDto>>.Success(dtos);
+    }
+
+    public async Task<Result<IReadOnlyList<SpecDto>>> ListByCardAsync(
+        Guid projectId,
+        Guid cardId,
+        SpecListFilter filter,
+        Guid actorId,
+        CancellationToken ct = default
+    )
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
+        if (membership == null)
+            return Result<IReadOnlyList<SpecDto>>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var specs = await _specRepo.ListByCardAsync(cardId, filter, ct);
+        var dtos = specs.Select(MapToDto).ToList();
         return Result<IReadOnlyList<SpecDto>>.Success(dtos);
     }
 
@@ -184,8 +199,7 @@ public class SpecService(
             ct
         );
 
-        var linkedCardId = await _specRepo.GetLinkedCardIdAsync(spec.Id, ct);
-        return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
+        return Result<SpecDto>.Success(MapToDto(spec));
     }
 
     public async Task<Result<IReadOnlyList<SpecVersionDto>>> ListVersionsAsync(
@@ -277,107 +291,20 @@ public class SpecService(
             ct
         );
 
-        var linkedCardId = await _specRepo.GetLinkedCardIdAsync(spec.Id, ct);
-        return Result<SpecDto>.Success(MapToDto(spec, linkedCardId));
+        return Result<SpecDto>.Success(MapToDto(spec));
     }
 
-    public async Task<Result> LinkToCardAsync(
-        LinkSpecToCardCommand cmd,
-        CancellationToken ct = default
-    )
-    {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
-            );
-
-        var spec = await _specRepo.GetByIdAsync(cmd.SpecId, ct);
-        if (spec == null || spec.ProjectId != cmd.ProjectId)
-            return Result.Failure(new Error(DomainErrorCodes.Specs.NotFound, "Spec not found."));
-
-        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
-        if (card == null)
-            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
-
-        if (card.ProjectId != cmd.ProjectId)
-            return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Specs.CardDocumentProjectMismatch,
-                    "Card is in a different project."
-                )
-            );
-
-        card.SpecId = cmd.SpecId;
-        await _cardRepo.UpdateAsync(card, ct);
-        await _specRepo.SaveChangesAsync(ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(
-                cmd.ActorId,
-                AuditLogScope.Project,
-                "Spec",
-                spec.Id,
-                "Linked",
-                cmd.ProjectId,
-                null,
-                null
-            ),
-            ct
-        );
-
-        return Result.Success();
-    }
-
-    public async Task<Result> UnlinkFromCardAsync(
-        UnlinkSpecFromCardCommand cmd,
-        CancellationToken ct = default
-    )
-    {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
-            );
-
-        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
-        if (card == null)
-            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
-
-        if (card.ProjectId != cmd.ProjectId)
-            return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Specs.CardDocumentProjectMismatch,
-                    "Card is in a different project."
-                )
-            );
-
-        if (card.SpecId != cmd.SpecId)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Specs.NotFound, "Card is not linked to this spec.")
-            );
-
-        if (card.SpecId == null)
-            return Result.Success();
-
-        card.SpecId = null;
-        await _cardRepo.UpdateAsync(card, ct);
-        await _specRepo.SaveChangesAsync(ct);
-
-        return Result.Success();
-    }
-
-    private static SpecDto MapToDto(Spec spec, Guid? linkedCardId) =>
+    private static SpecDto MapToDto(Spec spec) =>
         new(
             spec.Id,
             spec.ProjectId,
+            spec.CardId,
             spec.Title,
             spec.Description,
             spec.Content,
             spec.Version,
             spec.CreatedByUserId,
             spec.CreatedAt,
-            spec.UpdatedAt,
-            linkedCardId
+            spec.UpdatedAt
         );
 }

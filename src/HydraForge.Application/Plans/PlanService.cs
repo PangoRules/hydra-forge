@@ -1,5 +1,4 @@
 using HydraForge.Application.Audit;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
@@ -10,13 +9,11 @@ namespace HydraForge.Application.Plans;
 
 public class PlanService(
     IPlanRepository planRepo,
-    ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter
 )
 {
     private readonly IPlanRepository _planRepo = planRepo;
-    private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
@@ -37,6 +34,8 @@ public class PlanService(
         {
             Id = Guid.NewGuid(),
             ProjectId = cmd.ProjectId,
+            CardId = cmd.CardId,
+            SpecId = cmd.SpecId,
             Title = cmd.Title,
             Description = cmd.Description,
             Content = cmd.Content,
@@ -74,7 +73,7 @@ public class PlanService(
             ct
         );
 
-        return Result<PlanDto>.Success(MapToDto(plan, null));
+        return Result<PlanDto>.Success(MapToDto(plan));
     }
 
     public async Task<Result<PlanDto>> GetByIdAsync(Guid projectId, Guid planId, Guid actorId, CancellationToken ct = default)
@@ -91,8 +90,7 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.NotFound, "Plan not found.")
             );
 
-        var linkedCardId = await _planRepo.GetLinkedCardIdAsync(planId, ct);
-        return Result<PlanDto>.Success(MapToDto(plan, linkedCardId));
+        return Result<PlanDto>.Success(MapToDto(plan));
     }
 
     public async Task<Result<IReadOnlyList<PlanDto>>> ListAsync(Guid projectId, PlanListFilter filter, Guid actorId, CancellationToken ct = default)
@@ -104,8 +102,20 @@ public class PlanService(
             );
 
         var plans = await _planRepo.ListByProjectAsync(projectId, filter, ct);
-        var linkedCardIds = await _planRepo.GetLinkedCardIdsAsync(projectId, ct);
-        var dtos = plans.Select(p => MapToDto(p, linkedCardIds.TryGetValue(p.Id, out var id) ? id : null)).ToList();
+        var dtos = plans.Select(MapToDto).ToList();
+        return Result<IReadOnlyList<PlanDto>>.Success(dtos);
+    }
+
+    public async Task<Result<IReadOnlyList<PlanDto>>> ListByCardAsync(Guid projectId, Guid cardId, PlanListFilter filter, Guid actorId, CancellationToken ct = default)
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
+        if (membership == null)
+            return Result<IReadOnlyList<PlanDto>>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var plans = await _planRepo.ListByCardAsync(cardId, filter, ct);
+        var dtos = plans.Select(MapToDto).ToList();
         return Result<IReadOnlyList<PlanDto>>.Success(dtos);
     }
 
@@ -162,8 +172,7 @@ public class PlanService(
             ct
         );
 
-        var linkedCardId = await _planRepo.GetLinkedCardIdAsync(plan.Id, ct);
-        return Result<PlanDto>.Success(MapToDto(plan, linkedCardId));
+        return Result<PlanDto>.Success(MapToDto(plan));
     }
 
     public async Task<Result<IReadOnlyList<PlanVersionDto>>> ListVersionsAsync(Guid projectId, Guid planId, Guid actorId, CancellationToken ct = default)
@@ -238,93 +247,20 @@ public class PlanService(
             ct
         );
 
-        var linkedCardId = await _planRepo.GetLinkedCardIdAsync(plan.Id, ct);
-        return Result<PlanDto>.Success(MapToDto(plan, linkedCardId));
+        return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    public async Task<Result> LinkToCardAsync(LinkPlanToCardCommand cmd, CancellationToken ct = default)
-    {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
-            );
-
-        var plan = await _planRepo.GetByIdAsync(cmd.PlanId, ct);
-        if (plan == null || plan.ProjectId != cmd.ProjectId)
-            return Result.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Plan not found."));
-
-        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
-        if (card == null)
-            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
-
-        if (card.ProjectId != cmd.ProjectId)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Plans.CardDocumentProjectMismatch, "Card is in a different project.")
-            );
-
-        card.PlanId = cmd.PlanId;
-        await _cardRepo.UpdateAsync(card, ct);
-        await _planRepo.SaveChangesAsync(ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(
-                cmd.ActorId,
-                AuditLogScope.Project,
-                "Plan",
-                plan.Id,
-                "Linked",
-                cmd.ProjectId,
-                null,
-                null
-            ),
-            ct
-        );
-
-        return Result.Success();
-    }
-
-    public async Task<Result> UnlinkFromCardAsync(UnlinkPlanFromCardCommand cmd, CancellationToken ct = default)
-    {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
-            );
-
-        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
-        if (card == null)
-            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
-
-        if (card.ProjectId != cmd.ProjectId)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Plans.CardDocumentProjectMismatch, "Card is in a different project.")
-            );
-
-        if (card.PlanId != cmd.PlanId)
-            return Result.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Card is not linked to this plan."));
-
-        if (card.PlanId == null)
-            return Result.Success();
-
-        card.PlanId = null;
-        await _cardRepo.UpdateAsync(card, ct);
-        await _planRepo.SaveChangesAsync(ct);
-
-        return Result.Success();
-    }
-
-    private static PlanDto MapToDto(Plan plan, Guid? linkedCardId) =>
+    private static PlanDto MapToDto(Plan plan) =>
         new(
             plan.Id,
             plan.ProjectId,
+            plan.CardId,
             plan.Title,
             plan.Description,
             plan.Content,
             plan.Version,
             plan.CreatedByUserId,
             plan.CreatedAt,
-            plan.UpdatedAt,
-            linkedCardId
+            plan.UpdatedAt
         );
 }

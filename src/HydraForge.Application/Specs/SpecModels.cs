@@ -2,6 +2,7 @@ namespace HydraForge.Application.Specs;
 
 public record CreateSpecCommand(
     Guid ProjectId,
+    Guid CardId,
     Guid ActorId,
     string Title,
     string? Description,
@@ -24,31 +25,17 @@ public record RestoreSpecVersionCommand(
     Guid ActorId
 );
 
-public record LinkSpecToCardCommand(
-    Guid ProjectId,
-    Guid SpecId,
-    Guid CardId,
-    Guid ActorId
-);
-
-public record UnlinkSpecFromCardCommand(
-    Guid ProjectId,
-    Guid SpecId,
-    Guid CardId,
-    Guid ActorId
-);
-
 public record SpecDto(
     Guid Id,
     Guid ProjectId,
+    Guid CardId,
     string Title,
     string? Description,
     string Content,
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
-    DateTime UpdatedAt,
-    Guid? LinkedCardId
+    DateTime UpdatedAt
 );
 
 public record SpecVersionDto(
@@ -78,21 +65,17 @@ public record RestoreSpecVersionRequest(
     int Version
 );
 
-public record LinkSpecToCardRequest(
-    Guid CardId
-);
-
 public record SpecResponse(
     Guid Id,
     Guid ProjectId,
+    Guid CardId,
     string Title,
     string? Description,
     string Content,
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
-    DateTime UpdatedAt,
-    Guid? LinkedCardId
+    DateTime UpdatedAt
 );
 
 public record SpecVersionResponse(

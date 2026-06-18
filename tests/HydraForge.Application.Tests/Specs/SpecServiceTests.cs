@@ -1,7 +1,6 @@
 namespace HydraForge.Application.Tests.Specs;
 
 using HydraForge.Application.Audit;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
 using HydraForge.Domain.Common;
@@ -17,14 +16,15 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CreatesSpecAndVersion1InSameTransaction()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter);
         var projectId = NewId();
+        var cardId = NewId();
         var actorId = NewId();
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateSpecCommand(projectId, actorId, "Spec Title", "Desc", "# Hello"));
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Spec Title", "Desc", "# Hello"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Version);
@@ -37,8 +37,8 @@ public class SpecServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -64,8 +64,8 @@ public class SpecServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -90,91 +90,29 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter);
         var projectId = NewId();
+        var cardId = NewId();
         var actorId = NewId();
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         var largeContent = new string('x', 1_000_001);
 
-        var result = await service.CreateAsync(new CreateSpecCommand(projectId, actorId, "Big", null, largeContent));
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Big", null, largeContent));
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Specs.MarkdownPayloadTooLarge, result.Error.Code);
     }
 
-    [Fact]
-    public async Task LinkToCardAsync_ValidatesSameProjectAndMembership()
-    {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var actorId = NewId();
-        var specId = NewId();
-        var cardId = NewId();
-
-        specRepo.Add(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.LinkToCardAsync(new LinkSpecToCardCommand(projectId, specId, cardId, actorId));
-
-        Assert.True(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task LinkToCardAsync_CardInDifferentProject_ReturnsError()
-    {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var otherProjectId = NewId();
-        var actorId = NewId();
-        var specId = NewId();
-        var cardId = NewId();
-
-        specRepo.Add(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = otherProjectId, ColumnId = NewId(), Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.LinkToCardAsync(new LinkSpecToCardCommand(projectId, specId, cardId, actorId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.CardDocumentProjectMismatch, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task UnlinkFromCardAsync_RemovesAssociation()
-    {
-        var (specRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var actorId = NewId();
-        var specId = NewId();
-        var cardId = NewId();
-
-        specRepo.Add(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), SpecId = specId, Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.UnlinkFromCardAsync(new UnlinkSpecFromCardCommand(projectId, specId, cardId, actorId));
-
-        Assert.True(result.IsSuccess);
-        Assert.Null(cardRepo.Cards.First().SpecId);
-    }
-
     private static (
         InMemorySpecRepository specRepo,
-        InMemoryCardRepository cardRepo,
         InMemoryProjectMemberRepository memberRepo,
         InMemoryAuditLogWriter auditWriter
     ) CreateMocks()
     {
-        var cardRepo = new InMemoryCardRepository();
         return (
-            new InMemorySpecRepository(cardRepo),
-            cardRepo,
+            new InMemorySpecRepository(),
             new InMemoryProjectMemberRepository(),
             new InMemoryAuditLogWriter()
         );
@@ -183,11 +121,8 @@ public class SpecServiceTests
 
 internal class InMemorySpecRepository : ISpecRepository
 {
-    private readonly InMemoryCardRepository _cardRepo;
     public List<Spec> Specs { get; } = [];
     public List<SpecVersion> Versions { get; } = [];
-
-    public InMemorySpecRepository(InMemoryCardRepository cardRepo) => _cardRepo = cardRepo;
 
     public Task<Spec?> GetByIdAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult(Specs.FirstOrDefault(s => s.Id == specId));
@@ -201,19 +136,8 @@ internal class InMemorySpecRepository : ISpecRepository
     public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<SpecVersion>>(Versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version).ToList());
 
-    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var ids = _cardRepo.Cards
-            .Where(c => c.SpecId != null && c.ProjectId == projectId)
-            .Select(c => new { c.SpecId, c.Id })
-            .ToList();
-        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(
-            ids.ToDictionary(x => x.SpecId!.Value, x => (Guid?)x.Id)
-        );
-    }
-
-    public Task<Guid?> GetLinkedCardIdAsync(Guid specId, CancellationToken ct = default)
-        => Task.FromResult<Guid?>(null);
+    public Task<IReadOnlyList<Spec>> ListByCardAsync(Guid cardId, SpecListFilter filter, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Spec>>(Specs.Where(s => s.CardId == cardId).ToList());
 
     public Task AddAsync(Spec spec, CancellationToken ct = default) { Specs.Add(spec); return Task.CompletedTask; }
     public void Add(Spec spec) => AddAsync(spec).GetAwaiter().GetResult();
@@ -226,45 +150,6 @@ internal class InMemorySpecRepository : ISpecRepository
         return Task.CompletedTask;
     }
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => Task.FromResult(1);
-}
-
-internal class InMemoryCardRepository : ICardRepository
-{
-    public List<Card> Cards { get; } = [];
-
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
-
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
-
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
-
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.ProjectId == projectId).ToList());
-
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
-
-    public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
-    public void Add(Card card) => AddAsync(card).GetAwaiter().GetResult();
-    public Task UpdateAsync(Card card, CancellationToken ct = default)
-    {
-        var idx = Cards.FindIndex(c => c.Id == card.Id);
-        if (idx >= 0) Cards[idx] = card;
-        return Task.CompletedTask;
-    }
-    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = Cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) Cards[idx] = c; } return Task.CompletedTask; }
-    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
-    {
-        var toCompact = Cards.Where(c => c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null).ToList();
-        foreach (var c in toCompact) c.Position -= 1;
-        return Task.CompletedTask;
-    }
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository

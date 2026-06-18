@@ -1,7 +1,6 @@
 namespace HydraForge.Application.Tests.Plans;
 
 using HydraForge.Application.Audit;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -17,14 +16,15 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CreatesPlanAndVersion1InSameTransaction()
     {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter);
         var projectId = NewId();
+        var cardId = NewId();
         var actorId = NewId();
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreatePlanCommand(projectId, actorId, "Plan Title", "Desc", "# Plan"));
+        var result = await service.CreateAsync(new CreatePlanCommand(projectId, cardId, null, actorId, "Plan Title", "Desc", "# Plan"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Version);
@@ -37,8 +37,8 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var planId = NewId();
@@ -64,8 +64,8 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var planId = NewId();
@@ -90,91 +90,29 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter);
         var projectId = NewId();
+        var cardId = NewId();
         var actorId = NewId();
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         var largeContent = new string('x', 1_000_001);
 
-        var result = await service.CreateAsync(new CreatePlanCommand(projectId, actorId, "Big", null, largeContent));
+        var result = await service.CreateAsync(new CreatePlanCommand(projectId, cardId, null, actorId, "Big", null, largeContent));
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Plans.MarkdownPayloadTooLarge, result.Error.Code);
     }
 
-    [Fact]
-    public async Task LinkToCardAsync_ValidatesSameProjectAndMembership()
-    {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var actorId = NewId();
-        var planId = NewId();
-        var cardId = NewId();
-
-        planRepo.Add(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.LinkToCardAsync(new LinkPlanToCardCommand(projectId, planId, cardId, actorId));
-
-        Assert.True(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task LinkToCardAsync_CardInDifferentProject_ReturnsError()
-    {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var otherProjectId = NewId();
-        var actorId = NewId();
-        var planId = NewId();
-        var cardId = NewId();
-
-        planRepo.Add(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = otherProjectId, ColumnId = NewId(), Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.LinkToCardAsync(new LinkPlanToCardCommand(projectId, planId, cardId, actorId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Plans.CardDocumentProjectMismatch, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task UnlinkFromCardAsync_RemovesAssociation()
-    {
-        var (planRepo, cardRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, cardRepo, memberRepo, auditWriter);
-        var projectId = NewId();
-        var actorId = NewId();
-        var planId = NewId();
-        var cardId = NewId();
-
-        planRepo.Add(new Plan { Id = planId, ProjectId = projectId, Title = "P", Content = "", Version = 1, CreatedByUserId = actorId });
-        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), PlanId = planId, Title = "C", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        var result = await service.UnlinkFromCardAsync(new UnlinkPlanFromCardCommand(projectId, planId, cardId, actorId));
-
-        Assert.True(result.IsSuccess);
-        Assert.Null(cardRepo.Cards.First().PlanId);
-    }
-
     private static (
         InMemoryPlanRepository planRepo,
-        InMemoryCardRepository cardRepo,
         InMemoryProjectMemberRepository memberRepo,
         InMemoryAuditLogWriter auditWriter
     ) CreateMocks()
     {
-        var cardRepo = new InMemoryCardRepository();
         return (
-            new InMemoryPlanRepository(cardRepo),
-            cardRepo,
+            new InMemoryPlanRepository(),
             new InMemoryProjectMemberRepository(),
             new InMemoryAuditLogWriter()
         );
@@ -183,11 +121,8 @@ public class PlanServiceTests
 
 internal class InMemoryPlanRepository : IPlanRepository
 {
-    private readonly InMemoryCardRepository _cardRepo;
     public List<Plan> Plans { get; } = [];
     public List<PlanVersion> Versions { get; } = [];
-
-    public InMemoryPlanRepository(InMemoryCardRepository cardRepo) => _cardRepo = cardRepo;
 
     public Task<Plan?> GetByIdAsync(Guid planId, CancellationToken ct = default)
         => Task.FromResult(Plans.FirstOrDefault(p => p.Id == planId));
@@ -201,19 +136,8 @@ internal class InMemoryPlanRepository : IPlanRepository
     public Task<IReadOnlyList<PlanVersion>> ListVersionsAsync(Guid planId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<PlanVersion>>(Versions.Where(v => v.PlanId == planId).OrderBy(v => v.Version).ToList());
 
-    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var ids = _cardRepo.Cards
-            .Where(c => c.PlanId != null && c.ProjectId == projectId)
-            .Select(c => new { c.PlanId, c.Id })
-            .ToList();
-        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(
-            ids.ToDictionary(x => x.PlanId!.Value, x => (Guid?)x.Id)
-        );
-    }
-
-    public Task<Guid?> GetLinkedCardIdAsync(Guid planId, CancellationToken ct = default)
-        => Task.FromResult<Guid?>(null);
+    public Task<IReadOnlyList<Plan>> ListByCardAsync(Guid cardId, PlanListFilter filter, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Plan>>(Plans.Where(p => p.CardId == cardId).ToList());
 
     public Task AddAsync(Plan plan, CancellationToken ct = default) { Plans.Add(plan); return Task.CompletedTask; }
     public void Add(Plan plan) => AddAsync(plan).GetAwaiter().GetResult();
@@ -226,45 +150,6 @@ internal class InMemoryPlanRepository : IPlanRepository
         return Task.CompletedTask;
     }
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => Task.FromResult(1);
-}
-
-internal class InMemoryCardRepository : ICardRepository
-{
-    public List<Card> Cards { get; } = [];
-
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
-
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
-
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
-
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.ProjectId == projectId).ToList());
-
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
-
-    public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
-    public void Add(Card card) => AddAsync(card).GetAwaiter().GetResult();
-    public Task UpdateAsync(Card card, CancellationToken ct = default)
-    {
-        var idx = Cards.FindIndex(c => c.Id == card.Id);
-        if (idx >= 0) Cards[idx] = card;
-        return Task.CompletedTask;
-    }
-    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = Cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) Cards[idx] = c; } return Task.CompletedTask; }
-    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
-    {
-        var toCompact = Cards.Where(c => c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null).ToList();
-        foreach (var c in toCompact) c.Position -= 1;
-        return Task.CompletedTask;
-    }
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository

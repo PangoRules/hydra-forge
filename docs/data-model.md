@@ -39,6 +39,7 @@ User (1) ──┬── (N) ProjectMember
 Project (1) ──┬── (N) Column
               ├── (N) Card
               ├── (N) Spec ──── (N) SpecVersion
+              │       └── (N) Plan (ownership via Plan.SpecId)
               ├── (N) Plan ──── (N) PlanVersion
               ├── (N) AuditLogEntry
               ├── (N) ProjectMember
@@ -56,8 +57,8 @@ Card (1) ──┬── (N) Comment
            ├── (N) CardWatcher
            ├── (N) CardRelationship (as source)
            ├── (N) CardRelationship (as target)
-           ├── (1) Spec? (optional link)
-           └── (1) Plan? (optional link)
+           ├── (N) Spec (ownership via Spec.CardId)
+           └── (N) Plan (ownership via Plan.CardId)
 
 ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
                  └── (N) ChatSession
@@ -115,8 +116,6 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ProjectId | Guid | FK to Project |
 | ColumnId | Guid | FK to Column |
 | ParentCardId | Guid? | FK to parent card (epic → child) |
-| SpecId | Guid? | FK to Spec (optional linked document) |
-| PlanId | Guid? | FK to Plan (optional linked document) |
 | Title | string | |
 | Description | string | Markdown content |
 | Type | CardType | Task / Bug / Epic / Spec / Idea |
@@ -196,6 +195,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
+| CardId | Guid | FK to Card — owning card (the card that created this spec) |
 | Title | string | Display name, e.g. "Auth Module Spec" |
 | Content | string | Current markdown content |
 | Version | int | Increments on each edit |
@@ -220,6 +220,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
+| CardId | Guid | FK to Card — owning card (the card that created this plan) |
+| SpecId | Guid? | FK to Spec — optional parent specification |
 | Title | string | Display name, e.g. "Auth Implementation Plan" |
 | Content | string | Current markdown (numbered steps) |
 | Version | int | Increments on each edit |

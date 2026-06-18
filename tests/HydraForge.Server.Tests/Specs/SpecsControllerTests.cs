@@ -27,10 +27,12 @@ public class SpecsControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/specs")
         {
             Content = new StringContent(
                 "{\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"# Spec\"}",
@@ -70,7 +72,7 @@ public class SpecsControllerTests
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -82,11 +84,13 @@ public class SpecsControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = Guid.NewGuid(), ProjectId = projectId, Title = "Spec 1", Content = "#1", Version = 1, CreatedByUserId = userId });
+        factory.AddSpec(new Spec { Id = Guid.NewGuid(), CardId = cardId, ProjectId = projectId, Title = "Spec 1", Content = "#1", Version = 1, CreatedByUserId = userId });
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/specs");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -106,9 +110,11 @@ public class SpecsControllerTests
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "Test Spec", Content = "# Content", Version = 1, CreatedByUserId = userId });
+        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "Test Spec", Content = "# Content", Version = 1, CreatedByUserId = userId });
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs/{specId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -153,9 +159,11 @@ public class SpecsControllerTests
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = userId });
+        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = userId });
 
         var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/specs/{specId}")
         {
@@ -185,9 +193,11 @@ public class SpecsControllerTests
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
+        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
         factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = userId });
         factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 2, Content = "V2", CreatedByUserId = userId });
 
@@ -212,9 +222,11 @@ public class SpecsControllerTests
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
+        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
         factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = userId });
         factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 2, Content = "V2", CreatedByUserId = userId });
 
@@ -229,57 +241,6 @@ public class SpecsControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("\"version\":3", body);
-    }
-
-    [Fact]
-    public async Task LinkToCard_ValidCard_Returns204()
-    {
-        var factory = new SpecsTestWebApplicationFactory();
-        using var client = factory.CreateClient();
-        var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
-
-        var projectId = Guid.NewGuid();
-        var specId = Guid.NewGuid();
-        var cardId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = userId });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "C", CardNumber = 1 });
-
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs/{specId}/link")
-        {
-            Content = new StringContent($"{{\"cardId\":\"{cardId}\"}}", Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Add("Authorization", $"Bearer {token}");
-
-        var response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task UnlinkFromCard_Returns204()
-    {
-        var factory = new SpecsTestWebApplicationFactory();
-        using var client = factory.CreateClient();
-        var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
-
-        var projectId = Guid.NewGuid();
-        var specId = Guid.NewGuid();
-        var cardId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, ProjectId = projectId, Title = "S", Content = "", Version = 1, CreatedByUserId = userId });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), SpecId = specId, Title = "C", CardNumber = 1 });
-
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/specs/{specId}/link/{cardId}");
-        request.Headers.Add("Authorization", $"Bearer {token}");
-
-        var response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 }
 
@@ -400,17 +361,12 @@ internal class SpecsTestSpecRepository : ISpecRepository
         => Task.FromResult(_specs.FirstOrDefault(s => s.Id == specId));
     public Task<IReadOnlyList<Spec>> ListByProjectAsync(Guid projectId, SpecListFilter filter, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Spec>>(_specs.Where(s => s.ProjectId == projectId).ToList());
+    public Task<IReadOnlyList<Spec>> ListByCardAsync(Guid cardId, SpecListFilter filter, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Spec>>(_specs.Where(s => s.CardId == cardId).ToList());
     public Task<SpecVersion?> GetVersionAsync(Guid specId, int version, CancellationToken ct = default)
         => Task.FromResult(_versions.FirstOrDefault(v => v.SpecId == specId && v.Version == version));
     public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<SpecVersion>>(_versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version).ToList());
-    public Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var ids = _cards.Where(c => c.SpecId != null && c.ProjectId == projectId).Select(c => new { c.SpecId, c.Id }).ToList();
-        return Task.FromResult<IReadOnlyDictionary<Guid, Guid?>>(ids.ToDictionary(x => x.SpecId!.Value, x => (Guid?)x.Id));
-    }
-    public Task<Guid?> GetLinkedCardIdAsync(Guid specId, CancellationToken ct = default)
-        => Task.FromResult<Guid?>(_cards.FirstOrDefault(c => c.SpecId == specId)?.Id);
     public Task AddAsync(Spec spec, CancellationToken ct = default) { _specs.Add(spec); return Task.CompletedTask; }
     public Task AddVersionAsync(SpecVersion version, CancellationToken ct = default) { _versions.Add(version); return Task.CompletedTask; }
     public Task UpdateAsync(Spec spec, CancellationToken ct = default)

@@ -9,12 +9,13 @@ namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/specs")]
+[Route("api/projects/{projectId:guid}/cards/{cardId:guid}/specs")]
 public class SpecsController(SpecService specService) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Create(
         Guid projectId,
+        Guid cardId,
         [FromBody] AppSpecs.CreateSpecRequest request
     )
     {
@@ -22,6 +23,7 @@ public class SpecsController(SpecService specService) : ControllerBase
 
         var cmd = new AppSpecs.CreateSpecCommand(
             projectId,
+            cardId,
             userId,
             request.Title,
             request.Description,
@@ -38,14 +40,14 @@ public class SpecsController(SpecService specService) : ControllerBase
         var response = new AppSpecs.SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return CreatedAtAction(
@@ -56,11 +58,11 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List(Guid projectId)
+    public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await specService.ListAsync(projectId, new AppSpecs.SpecListFilter(), userId);
+        var result = await specService.ListByCardAsync(projectId, cardId, new AppSpecs.SpecListFilter(), userId);
 
         if (result.IsFailure)
         {
@@ -71,21 +73,21 @@ public class SpecsController(SpecService specService) : ControllerBase
             .. result.Value.Select(s => new AppSpecs.SpecResponse(
                 s.Id,
                 s.ProjectId,
+                s.CardId,
                 s.Title,
                 s.Description,
                 s.Content,
                 s.Version,
                 s.CreatedByUserId,
                 s.CreatedAt,
-                s.UpdatedAt,
-                s.LinkedCardId
+                s.UpdatedAt
             )),
         ]);
 
         return Ok(response);
     }
 
-    [HttpGet("{specId:guid}")]
+    [HttpGet("~/api/projects/{projectId:guid}/specs/{specId:guid}")]
     public async Task<IActionResult> GetById(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -100,20 +102,20 @@ public class SpecsController(SpecService specService) : ControllerBase
         var response = new AppSpecs.SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
     }
 
-    [HttpPut("{specId:guid}")]
+    [HttpPut("~/api/projects/{projectId:guid}/specs/{specId:guid}")]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid specId,
@@ -141,20 +143,20 @@ public class SpecsController(SpecService specService) : ControllerBase
         var response = new AppSpecs.SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
     }
 
-    [HttpGet("{specId:guid}/versions")]
+    [HttpGet("~/api/projects/{projectId:guid}/specs/{specId:guid}/versions")]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -180,7 +182,7 @@ public class SpecsController(SpecService specService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("{specId:guid}/restore")]
+    [HttpPost("~/api/projects/{projectId:guid}/specs/{specId:guid}/restore")]
     public async Task<IActionResult> Restore(
         Guid projectId,
         Guid specId,
@@ -206,58 +208,16 @@ public class SpecsController(SpecService specService) : ControllerBase
         var response = new AppSpecs.SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
+            result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
             result.Value.Content,
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.LinkedCardId
+            result.Value.UpdatedAt
         );
 
         return Ok(response);
-    }
-
-    [HttpPost("{specId:guid}/link")]
-    public async Task<IActionResult> LinkToCard(
-        Guid projectId,
-        Guid specId,
-        [FromBody] AppSpecs.LinkSpecToCardRequest request
-    )
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new AppSpecs.LinkSpecToCardCommand(projectId, specId, request.CardId, userId);
-
-        var result = await specService.LinkToCardAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
-    }
-
-    [HttpDelete("{specId:guid}/link/{cardId:guid}")]
-    public async Task<IActionResult> UnlinkFromCard(
-        Guid projectId,
-        Guid specId,
-        Guid cardId
-    )
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new AppSpecs.UnlinkSpecFromCardCommand(projectId, specId, cardId, userId);
-
-        var result = await specService.UnlinkFromCardAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
     }
 }

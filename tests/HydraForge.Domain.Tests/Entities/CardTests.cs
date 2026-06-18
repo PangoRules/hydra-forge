@@ -33,8 +33,6 @@ public class CardTests
         Assert.Equal(1, card.Version);
         Assert.Null(card.ArchivedAt);
         Assert.Null(card.ParentCardId);
-        Assert.Null(card.SpecId);
-        Assert.Null(card.PlanId);
         Assert.Equal(string.Empty, card.Title);
         Assert.Equal(string.Empty, card.Description);
     }
