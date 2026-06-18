@@ -19,7 +19,7 @@ public record CardRelationshipListResponse(List<CardRelationshipDto> Relationshi
 
 public record CreateRelationshipRequest(Guid TargetCardId, RelationshipType Type);
 public record CreateRelationshipCommand(Guid ProjectId, Guid SourceCardId, Guid TargetCardId, RelationshipType Type, Guid ActorId);
-public record DeleteRelationshipCommand(Guid ProjectId, Guid RelationshipId, Guid ActorId);
+public record DeleteRelationshipCommand(Guid ProjectId, Guid CardId, Guid RelationshipId, Guid ActorId);
 public record ArchiveImpactRequest(bool Confirm);
 public record ArchiveImpactCommand(Guid ProjectId, Guid CardId, bool Confirm, Guid ActorId);
 public record ArchiveImpactResponse(Guid CardId, List<DependentCardDto> DependentCards, bool RequiresConfirmation);

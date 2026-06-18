@@ -56,9 +56,6 @@ public class CardRelationshipService(
         if (cmd.SourceCardId == cmd.TargetCardId)
             return Result<CardRelationshipDto>.Failure(new Error(DomainErrorCodes.Relationships.SelfDenied, "Card cannot have a relationship with itself."));
 
-        if (sourceCard.ProjectId != targetCard.ProjectId)
-            return Result<CardRelationshipDto>.Failure(new Error(DomainErrorCodes.Relationships.CrossProjectDenied, "Relationships must be within the same project."));
-
         var existing = await _relationshipRepo.FindActiveAsync(cmd.SourceCardId, cmd.TargetCardId, cmd.Type, ct);
         if (existing != null)
             return Result<CardRelationshipDto>.Failure(new Error(DomainErrorCodes.Relationships.Duplicate, "Relationship already exists."));
@@ -102,6 +99,10 @@ public class CardRelationshipService(
 
         var relationship = await _relationshipRepo.GetByIdAsync(cmd.RelationshipId, ct);
         if (relationship == null)
+            return Result.Failure(new Error(DomainErrorCodes.Relationships.NotFound, "Relationship not found."));
+
+        // Verify the cardId from the route matches either endpoint of the relationship
+        if (relationship.SourceCardId != cmd.CardId && relationship.TargetCardId != cmd.CardId)
             return Result.Failure(new Error(DomainErrorCodes.Relationships.NotFound, "Relationship not found."));
 
         var sourceCard = await _cardRepo.GetByIdAsync(relationship.SourceCardId, ct);

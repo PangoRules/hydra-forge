@@ -50,7 +50,7 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     public async Task<IActionResult> Delete(Guid projectId, Guid cardId, Guid relationshipId)
     {
         var userId = User.GetRequiredUserId();
-        var cmd = new DeleteRelationshipCommand(projectId, relationshipId, userId);
+        var cmd = new DeleteRelationshipCommand(projectId, cardId, relationshipId, userId);
         var result = await service.DeleteAsync(cmd);
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);

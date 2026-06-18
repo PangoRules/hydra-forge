@@ -187,7 +187,7 @@ public class CardRelationshipServiceTests
         Assert.True(createResult.IsSuccess);
         var relId = createResult.Value.Id;
 
-        var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, relId, actorId));
+        var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, cardA, relId, actorId));
         Assert.True(deleteResult.IsSuccess);
 
         // List should now return empty
