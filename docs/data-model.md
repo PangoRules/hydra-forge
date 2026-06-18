@@ -197,6 +197,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ProjectId | Guid | FK to Project |
 | CardId | Guid | FK to Card — owning card (the card that created this spec) |
 | Title | string | Display name, e.g. "Auth Module Spec" |
+| Description | string? | Optional description |
 | Content | string | Current markdown content |
 | Version | int | Increments on each edit |
 | CreatedByUserId | Guid | |
@@ -209,6 +210,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | SpecId | Guid | FK to Spec |
+| Title | string | Title at time of snapshot |
+| Description | string? | Description at time of snapshot |
 | Content | string | Full markdown snapshot at this version |
 | Version | int | Matches Spec.Version at time of snapshot |
 | CreatedAt | DateTime | |
@@ -235,6 +238,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | PlanId | Guid | FK to Plan |
+| Title | string | Title at time of snapshot |
+| Description | string? | Description at time of snapshot |
 | Content | string | Full markdown snapshot at this version |
 | Version | int | Matches Plan.Version at time of snapshot |
 | CreatedAt | DateTime | |

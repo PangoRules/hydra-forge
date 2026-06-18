@@ -83,7 +83,7 @@ Each entry has:
 | **Status** | ✅ Settled |
 | **Decision** | **CardType enum:** `Task`, `Bug`, `Epic`, `Spec`, `Idea`. Plans are a **separate entity**, not a card type. |
 | **Rationale** | Epics are cards that group other cards (parent-child). Specs and Plans are rich markdown documents, distinct from cards. Keeping them as separate entities with links is cleaner than overloading Card. |
-| **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are standalone project-level entities (with `Title` field). `Card` has optional `SpecId?` and `PlanId?` FKs — multiple cards can reference the same spec/plan. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) for history + restore. |
+| **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are project-level entities owned by cards via `Spec.CardId` and `Plan.CardId` FKs (ownership — one card creates and owns its spec/plan, other cards can read but not edit). `Plan.SpecId` is an optional FK linking a plan to its parent specification. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) storing full document state (title, description, content) for history + restore. |
 
 ---
 
