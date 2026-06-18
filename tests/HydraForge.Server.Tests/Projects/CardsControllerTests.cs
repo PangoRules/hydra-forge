@@ -560,6 +560,13 @@ internal class CardsTestCardRelationshipRepository : HydraForge.Application.Card
         if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
+
+    public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        foreach (var rel in _relationships.Where(r => ids.Contains(r.Id)))
+            rel.ArchivedAt = DateTime.UtcNow;
+        return Task.CompletedTask;
+    }
 }
 
 internal class CardsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository

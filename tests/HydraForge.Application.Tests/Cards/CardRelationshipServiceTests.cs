@@ -208,35 +208,14 @@ public class CardRelationshipServiceTests
         cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        // Card A blocks Card B (Card B is blocked by Card A)
-        // GetArchiveImpactAsync(A) looks for cards that A blocks → cardB is dependent
+        // Card A blocks Card B — preflight always returns dependent list, regardless of confirm
         await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
 
         var result = await service.GetArchiveImpactAsync(new ArchiveImpactCommand(projectId, cardA, false, actorId));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task GetArchiveImpactAsync_confirm_required_when_dependents_exist()
-    {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
-        var projectId = NewId();
-        var actorId = NewId();
-        var cardA = NewId();
-        var cardB = NewId();
-
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
-
-        var result = await service.GetArchiveImpactAsync(new ArchiveImpactCommand(projectId, cardA, false, actorId));
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired, result.Error.Code);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value.DependentCards);
+        Assert.Equal(cardB, result.Value.DependentCards[0].Id);
     }
 
     [Fact]
@@ -266,6 +245,35 @@ public class CardRelationshipServiceTests
         // Card A should be archived
         var archivedCard = cardRepo.GetById(cardA);
         Assert.NotNull(archivedCard!.ArchivedAt);
+    }
+
+    [Fact]
+    public async Task ArchiveCardWithRelationshipsAsync_confirm_required_when_dependents_exist()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+        var colId = NewId();
+
+        var cardARecord = new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, Title = "Card A", CardNumber = 1, Position = 0 };
+        var cardBRecord = new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, Title = "Card B", CardNumber = 2, Position = 1 };
+        cardRepo.Add(cardARecord);
+        cardRepo.Add(cardBRecord);
+        cardRepo.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+
+        var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, false, actorId));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired, result.Error.Code);
+
+        // Card A should NOT be archived
+        var notArchived = cardRepo.GetById(cardA);
+        Assert.Null(notArchived!.ArchivedAt);
     }
 
     [Fact]
@@ -320,6 +328,13 @@ public class CardRelationshipServiceTests
         {
             var rel = Relationships.FirstOrDefault(r => r.Id == id);
             if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+            return Task.CompletedTask;
+        }
+
+        public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        {
+            foreach (var rel in Relationships.Where(r => ids.Contains(r.Id)))
+                rel.ArchivedAt = DateTime.UtcNow;
             return Task.CompletedTask;
         }
     }

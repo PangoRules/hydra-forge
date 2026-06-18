@@ -59,4 +59,13 @@ public class EfCardRelationshipRepository(HydraForgeDbContext context) : ICardRe
         if (rel != null)
             rel.ArchivedAt = DateTime.UtcNow;
     }
+
+    public async Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        var existing = await context.CardRelationships
+            .Where(r => ids.Contains(r.Id))
+            .ToListAsync(ct);
+        foreach (var rel in existing)
+            rel.ArchivedAt = DateTime.UtcNow;
+    }
 }

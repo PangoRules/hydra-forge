@@ -84,4 +84,5 @@ public interface ICardRelationshipRepository
     Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default);
     Task AddAsync(CardRelationship relationship, CancellationToken ct = default);
     Task ArchiveAsync(Guid id, CancellationToken ct = default);
+    Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
 }

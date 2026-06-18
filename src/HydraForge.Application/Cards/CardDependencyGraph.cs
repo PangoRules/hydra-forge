@@ -11,17 +11,21 @@ public static class CardDependencyGraph
         Guid sourceId,
         Guid targetId,
         RelationshipType type,
-        IReadOnlyDictionary<Guid, Card> cardsById,
-        IReadOnlyList<CardRelationship> existingRelationships)
+        IReadOnlyList<CardRelationship> existingRelationships
+    )
     {
         if (type == RelationshipType.Relates)
             return false;
 
         var deps = new Dictionary<Guid, List<Guid>>();
-        foreach (var r in existingRelationships.Where(r => r.ArchivedAt == null && r.Type != RelationshipType.Relates))
+        foreach (
+            var r in existingRelationships.Where(r =>
+                r.ArchivedAt == null && r.Type != RelationshipType.Relates
+            )
+        )
         {
             if (!deps.ContainsKey(r.SourceCardId))
-                deps[r.SourceCardId] = new List<Guid>();
+                deps[r.SourceCardId] = [];
             deps[r.SourceCardId].Add(r.TargetCardId);
         }
 
@@ -44,5 +48,4 @@ public static class CardDependencyGraph
         }
         return false;
     }
-
 }

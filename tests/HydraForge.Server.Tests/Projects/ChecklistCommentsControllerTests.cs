@@ -598,6 +598,8 @@ internal class CCTestCardRelationshipRepository : HydraForge.Application.Cards.I
         => Task.CompletedTask;
     public Task ArchiveAsync(Guid id, CancellationToken ct = default)
         => Task.CompletedTask;
+    public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.CompletedTask;
 }
 
 internal class CCTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository

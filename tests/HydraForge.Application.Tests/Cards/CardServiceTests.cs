@@ -546,6 +546,13 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
         return Task.CompletedTask;
     }
 
+    public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    {
+        foreach (var rel in Relationships.Where(r => ids.Contains(r.Id)))
+            rel.ArchivedAt = DateTime.UtcNow;
+        return Task.CompletedTask;
+    }
+
     public void Add(CardRelationship relationship) => Relationships.Add(relationship);
 }
 
