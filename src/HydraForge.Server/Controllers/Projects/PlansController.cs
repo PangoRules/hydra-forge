@@ -3,21 +3,24 @@ using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AppPlans = HydraForge.Application.Plans;
 
 namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/plans")]
+[Route("api/projects/{projectId:guid}/[controller]")]
 public class PlansController(PlanService planService) : ControllerBase
 {
     [HttpPost("cards/{cardId:guid}")]
-    public async Task<IActionResult> Create(Guid projectId, Guid cardId, [FromBody] AppPlans.CreatePlanRequest request)
+    public async Task<IActionResult> Create(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] CreatePlanRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppPlans.CreatePlanCommand(
+        var cmd = new CreatePlanCommand(
             projectId,
             cardId,
             null,
@@ -34,7 +37,7 @@ public class PlansController(PlanService planService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanResponse(
+        var response = new PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -59,15 +62,20 @@ public class PlansController(PlanService planService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await planService.ListByCardAsync(projectId, cardId, new AppPlans.PlanListFilter(), userId);
+        var result = await planService.ListByCardAsync(
+            projectId,
+            cardId,
+            new PlanListFilter(),
+            userId
+        );
 
         if (result.IsFailure)
         {
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanListResponse(
-            result.Value.Select(p => new AppPlans.PlanResponse(
+        var response = new PlanListResponse([
+            .. result.Value.Select(p => new PlanResponse(
                 p.Id,
                 p.ProjectId,
                 p.CardId,
@@ -78,8 +86,8 @@ public class PlansController(PlanService planService) : ControllerBase
                 p.CreatedByUserId,
                 p.CreatedAt,
                 p.UpdatedAt
-            )).ToList()
-        );
+            )),
+        ]);
 
         return Ok(response);
     }
@@ -96,7 +104,7 @@ public class PlansController(PlanService planService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanResponse(
+        var response = new PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -113,11 +121,15 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpPut("{planId:guid}")]
-    public async Task<IActionResult> Update(Guid projectId, Guid planId, [FromBody] AppPlans.UpdatePlanRequest request)
+    public async Task<IActionResult> Update(
+        Guid projectId,
+        Guid planId,
+        [FromBody] UpdatePlanRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppPlans.UpdatePlanCommand(
+        var cmd = new UpdatePlanCommand(
             projectId,
             planId,
             userId,
@@ -133,7 +145,7 @@ public class PlansController(PlanService planService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanResponse(
+        var response = new PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -161,8 +173,8 @@ public class PlansController(PlanService planService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanVersionListResponse(
-            result.Value.Select(v => new AppPlans.PlanVersionResponse(
+        var response = new PlanVersionListResponse([
+            .. result.Value.Select(v => new PlanVersionResponse(
                 v.Id,
                 v.PlanId,
                 v.Version,
@@ -171,23 +183,22 @@ public class PlansController(PlanService planService) : ControllerBase
                 v.Content,
                 v.CreatedAt,
                 v.CreatedByUserId
-            )).ToList()
-        );
+            )),
+        ]);
 
         return Ok(response);
     }
 
     [HttpPost("{planId:guid}/restore")]
-    public async Task<IActionResult> Restore(Guid projectId, Guid planId, [FromBody] AppPlans.RestorePlanVersionRequest request)
+    public async Task<IActionResult> Restore(
+        Guid projectId,
+        Guid planId,
+        [FromBody] RestorePlanVersionRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppPlans.RestorePlanVersionCommand(
-            projectId,
-            planId,
-            request.Version,
-            userId
-        );
+        var cmd = new RestorePlanVersionCommand(projectId, planId, request.Version, userId);
 
         var result = await planService.RestoreVersionAsync(cmd);
 
@@ -196,7 +207,7 @@ public class PlansController(PlanService planService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppPlans.PlanResponse(
+        var response = new PlanResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,

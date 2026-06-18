@@ -17,7 +17,10 @@ public class PlanService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
-    public async Task<Result<PlanDto>> CreateAsync(CreatePlanCommand cmd, CancellationToken ct = default)
+    public async Task<Result<PlanDto>> CreateAsync(
+        CreatePlanCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -27,7 +30,10 @@ public class PlanService(
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.MarkdownPayloadTooLarge, "Markdown payload exceeds limit.")
+                new Error(
+                    DomainErrorCodes.Plans.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
             );
 
         var plan = new Plan
@@ -78,7 +84,12 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    public async Task<Result<PlanDto>> GetByIdAsync(Guid projectId, Guid planId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<PlanDto>> GetByIdAsync(
+        Guid projectId,
+        Guid planId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -95,7 +106,12 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    public async Task<Result<IReadOnlyList<PlanDto>>> ListAsync(Guid projectId, PlanListFilter filter, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<PlanDto>>> ListAsync(
+        Guid projectId,
+        PlanListFilter filter,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -108,7 +124,13 @@ public class PlanService(
         return Result<IReadOnlyList<PlanDto>>.Success(dtos);
     }
 
-    public async Task<Result<IReadOnlyList<PlanDto>>> ListByCardAsync(Guid projectId, Guid cardId, PlanListFilter filter, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<PlanDto>>> ListByCardAsync(
+        Guid projectId,
+        Guid cardId,
+        PlanListFilter filter,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -121,7 +143,10 @@ public class PlanService(
         return Result<IReadOnlyList<PlanDto>>.Success(dtos);
     }
 
-    public async Task<Result<PlanDto>> UpdateAsync(UpdatePlanCommand cmd, CancellationToken ct = default)
+    public async Task<Result<PlanDto>> UpdateAsync(
+        UpdatePlanCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
@@ -137,7 +162,10 @@ public class PlanService(
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.MarkdownPayloadTooLarge, "Markdown payload exceeds limit.")
+                new Error(
+                    DomainErrorCodes.Plans.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
             );
 
         plan.Title = cmd.Title;
@@ -179,7 +207,12 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    public async Task<Result<IReadOnlyList<PlanVersionDto>>> ListVersionsAsync(Guid projectId, Guid planId, Guid actorId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<PlanVersionDto>>> ListVersionsAsync(
+        Guid projectId,
+        Guid planId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
         if (membership == null)
@@ -194,12 +227,24 @@ public class PlanService(
             );
 
         var versions = await _planRepo.ListVersionsAsync(planId, ct);
-        return Result<IReadOnlyList<PlanVersionDto>>.Success(
-            versions.Select(v => new PlanVersionDto(v.Id, v.PlanId, v.Version, v.Title, v.Description, v.Content, v.CreatedAt, v.CreatedByUserId)).ToList()
-        );
+        return Result<IReadOnlyList<PlanVersionDto>>.Success([
+            .. versions.Select(v => new PlanVersionDto(
+                v.Id,
+                v.PlanId,
+                v.Version,
+                v.Title,
+                v.Description,
+                v.Content,
+                v.CreatedAt,
+                v.CreatedByUserId
+            )),
+        ]);
     }
 
-    public async Task<Result<PlanDto>> RestoreVersionAsync(RestorePlanVersionCommand cmd, CancellationToken ct = default)
+    public async Task<Result<PlanDto>> RestoreVersionAsync(
+        RestorePlanVersionCommand cmd,
+        CancellationToken ct = default
+    )
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
