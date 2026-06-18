@@ -124,6 +124,14 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - On Column: `UpdateDetails`, `AssignPosition(position)`
 - On ProjectMember: `ChangeRole(role)`
 - Services call these methods instead of `entity.Property = value`
+- **Spec/Plan ownership:** `Spec.CardId` and `Plan.CardId` are ownership FKs — the card that created the doc owns it. Other cards read but don't edit. No link/unlink.
+- **Version snapshots:** `SpecVersion` and `PlanVersion` store `Title`, `Description`, `Content` — full document state at each snapshot. Restore reverts all three.
+
+**Controller routing:**
+- Resource sub-controllers use `[Route("api/projects/{projectId:guid}/[controller]")]` — no `~` overrides
+- Card-scoped actions get `"cards/{cardId:guid}"` prefix: `[HttpPost("cards/{cardId:guid}")]`
+- Standalone actions by resource ID: `[HttpGet("{specId:guid}")]`, `[HttpPut("{specId:guid}")]`
+- Never use `~/api/...` absolute route overrides
 
 **Testing:**
 - `xUnit` only — no FluentAssertions (deprecation risk), use plain `Assert.*`
@@ -154,6 +162,12 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - All LLM calls go through `ModelRouter` which selects provider based on feature tier
 - Admin configures providers — users cannot add personal API keys
 - `ILlmClient`, `IImageClient`, `IEmbeddingClient` — always code to the interface
+
+### API smoke tests
+
+- `.http` files in `src/HydraForge.Server/HttpTests/` — each resource has its own file (auth, setup, full flow, cleanup)
+- Requires dev server running with seeded users: `testadmin`/`TestAdmin123!` (admin), `nonmember`/`NonMember123!` (regular), `testuser1`/`TestUser123!` (regular)
+- Test users seeded only in `Development` environment — controlled by `TestUserSeeder`
 
 ## Key domain rules
 
@@ -187,7 +201,7 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/architecture.md` — Clean Architecture, real-time, LLM, error handling, tech stack
 - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
 - `docs/glossary.md` — terminology
-- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-33)
+- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-34)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

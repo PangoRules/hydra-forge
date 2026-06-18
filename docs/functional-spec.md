@@ -465,8 +465,8 @@
 - [x] Checklists on cards (items, completion, assignee per item)
 - [x] Comments on cards + @mention extraction + CardWatcher auto-add
 - [x] File attachments on cards (local FS storage, S3-compatible abstraction)
-- [ ] Specs: versioned markdown documents linked to cards
-- [ ] Plans: versioned numbered markdown documents linked to specs/cards
+- [x] Specs: versioned markdown documents linked to cards
+- [x] Plans: versioned numbered markdown documents linked to specs/cards
 - [ ] CardRelationship CRUD: BlockedBy, Precedes, Relates
 - [ ] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
 - [ ] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log

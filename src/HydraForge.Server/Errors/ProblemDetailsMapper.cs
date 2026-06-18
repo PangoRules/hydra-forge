@@ -50,6 +50,14 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Attachments.NotFound => (404, "Not found"),
             DomainErrorCodes.Attachments.FileTooLarge => (413, "Payload too large"),
             DomainErrorCodes.Attachments.FileStoreUnavailable => (503, "Service unavailable"),
+            DomainErrorCodes.Specs.NotFound => (404, "Spec not found"),
+            DomainErrorCodes.Plans.NotFound => (404, "Plan not found"),
+            DomainErrorCodes.Specs.DocumentVersionNotFound
+                or DomainErrorCodes.Plans.DocumentVersionNotFound => (404, "Spec/Plan version not found"),
+            DomainErrorCodes.Specs.MarkdownPayloadTooLarge
+                or DomainErrorCodes.Plans.MarkdownPayloadTooLarge => (413, "Payload too large"),
+            DomainErrorCodes.Specs.CardDocumentProjectMismatch
+                or DomainErrorCodes.Plans.CardDocumentProjectMismatch => (409, "Card is in a different project"),
             _ => (400, "Bad request"),
         };
 

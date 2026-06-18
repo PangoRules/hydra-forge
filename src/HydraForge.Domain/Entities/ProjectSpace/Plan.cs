@@ -4,6 +4,8 @@ public class Plan
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
+    public Guid CardId { get; set; }
+    public Guid? SpecId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string Content { get; set; } = string.Empty;

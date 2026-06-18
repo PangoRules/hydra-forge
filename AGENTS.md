@@ -5,8 +5,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 ## Current State
 
 - Phase 1 foundation is complete on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
-- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-5 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 6-10 (specs, plans, relationships, snapshot, hubs, hardening) remain.
-- 269 xUnit tests across Domain (52), Application (108), Infrastructure (43), Server (66). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
+- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-6 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO), specs and plans (versioned markdown with ownership FK model, full document state snapshots, restore). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 7-10 (relationships, snapshot, hubs, hardening) remain.
+- 303 xUnit tests across Domain (52), Application (116), Infrastructure (53), Server (82). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
 
@@ -91,10 +91,10 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - If implementing card relationships, validate acyclic dependencies before persisting them; circular relationships are rejected in Application logic.
 - `ProjectContextSnapshot.TemplateContent` is intended for instant board-mutation updates; `AiNarrative` is intended for nightly scheduled generation only.
 - Domain entities encapsulate state transitions via instance methods (e.g. `card.MoveTo(columnId, position)`, `project.Archive()`, `column.UpdateDetails(name, color, wipLimit)`, `member.ChangeRole(role)`). Services MUST call these methods — never set entity properties directly in Application layer. This keeps all mutation logic on the entity itself.
+- Spec/Plan ownership: `Spec.CardId` and `Plan.CardId` are ownership FKs (the card that created the document owns it). Other cards can read but not edit. No link/unlink endpoints — ownership is set at creation and immutable.
+- Controller route pattern for sub-resources: `[Route("api/projects/{projectId:guid}/[controller]")]` on class. Card-scoped actions use `[HttpPost("cards/{cardId:guid}")]` prefix. Standalone actions use `[HttpGet("{specId:guid}")]`. Never use `~/api/...` override routes.
+- Version snapshots (`SpecVersion`, `PlanVersion`) store full document state: `Title`, `Description`, `Content`. Restore reverts all three fields.
 - Blocked card move: API returns `409 Conflict` with warning payload when `confirmBlockedMove=false`. 200 OK must not be used for blocked moves — the move was not executed.
-- Housekeeping cascade: DbContext `OnDelete: Cascade` for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message. `DocumentChunk` is polymorphic (`SourceType`+`SourceId`); its cascade must be handled manually in `HousekeepingBackgroundService`, not via FK.
-- One global admin-configurable retention period for all archived ownable content (via `SystemSettings.ArchivedItemRetentionDays`). Notifications and audit logs have their own (shorter) retention knobs.
-- Archive is `ArchivedAt: DateTime?`, not `IsArchived: bool`. Archived-by-default queries use manual `.Where(x => x.ArchivedAt == null)` filters (no global query filter), so admin and audit views can see archived rows.
 - Housekeeping cascade: DbContext `OnDelete: Cascade` for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message. `DocumentChunk` is polymorphic (`SourceType`+`SourceId`); its cascade must be handled manually in `HousekeepingBackgroundService`, not via FK.
 - One global admin-configurable retention period for all archived ownable content (via `SystemSettings.ArchivedItemRetentionDays`). Notifications and audit logs have their own (shorter) retention knobs.
 

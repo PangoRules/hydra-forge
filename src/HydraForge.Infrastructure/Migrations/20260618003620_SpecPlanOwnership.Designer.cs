@@ -3,6 +3,7 @@ using System;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    partial class HydraForgeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618003620_SpecPlanOwnership")]
+    partial class SpecPlanOwnership
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1568,15 +1571,8 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
@@ -1750,15 +1746,8 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("SpecId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
