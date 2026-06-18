@@ -19,6 +19,7 @@ public class TestUserSeeder(
         ("testadmin", "TestAdmin123!", true),
         ("testuser1", "TestUser123!", false),
         ("testuser2", "TestUser123!", false),
+        ("nonmember", "NonMember123!", false),
     ];
 
     public async Task SeedIfNeededAsync()
