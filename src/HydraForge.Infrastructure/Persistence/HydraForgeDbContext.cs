@@ -84,8 +84,6 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => new { e.ProjectId, e.CardNumber }).IsUnique();
             b.HasIndex(e => e.ColumnId);
             b.HasIndex(e => e.ParentCardId);
-            b.HasIndex(e => e.SpecId);
-            b.HasIndex(e => e.PlanId);
         });
 
         ConfigureEntity<CardAssignee>(modelBuilder, "card_assignees", b =>
@@ -122,6 +120,9 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<Spec>(modelBuilder, "specs", b =>
         {
             b.HasIndex(e => e.ProjectId);
+            b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
+            b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(e => e.CardId).HasDatabaseName("ix_specs_card_id");
         });
 
         ConfigureEntity<SpecVersion>(modelBuilder, "spec_versions", b =>
@@ -137,6 +138,12 @@ public class HydraForgeDbContext : DbContext
         ConfigureEntity<Plan>(modelBuilder, "plans", b =>
         {
             b.HasIndex(e => e.ProjectId);
+            b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
+            b.Property(e => e.SpecId).HasColumnName("spec_id");
+            b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<Spec>().WithMany().HasForeignKey(e => e.SpecId).OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(e => e.CardId).HasDatabaseName("ix_plans_card_id");
+            b.HasIndex(e => e.SpecId).HasDatabaseName("ix_plans_spec_id");
         });
 
         ConfigureEntity<PlanVersion>(modelBuilder, "plan_versions", b =>
