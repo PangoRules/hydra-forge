@@ -50,6 +50,8 @@ public class PlanService(
             Id = Guid.NewGuid(),
             PlanId = plan.Id,
             Version = 1,
+            Title = cmd.Title,
+            Description = cmd.Description,
             Content = cmd.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,
@@ -149,6 +151,8 @@ public class PlanService(
             Id = Guid.NewGuid(),
             PlanId = plan.Id,
             Version = plan.Version,
+            Title = cmd.Title,
+            Description = cmd.Description,
             Content = cmd.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,
@@ -191,7 +195,7 @@ public class PlanService(
 
         var versions = await _planRepo.ListVersionsAsync(planId, ct);
         return Result<IReadOnlyList<PlanVersionDto>>.Success(
-            versions.Select(v => new PlanVersionDto(v.Id, v.PlanId, v.Version, v.Content, v.CreatedAt, v.CreatedByUserId)).ToList()
+            versions.Select(v => new PlanVersionDto(v.Id, v.PlanId, v.Version, v.Title, v.Description, v.Content, v.CreatedAt, v.CreatedByUserId)).ToList()
         );
     }
 
@@ -215,6 +219,8 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.DocumentVersionNotFound, "Plan version not found.")
             );
 
+        plan.Title = oldVersion.Title;
+        plan.Description = oldVersion.Description;
         plan.Content = oldVersion.Content;
         plan.Version += 1;
         plan.UpdatedAt = DateTime.UtcNow;
@@ -224,6 +230,8 @@ public class PlanService(
             Id = Guid.NewGuid(),
             PlanId = plan.Id,
             Version = plan.Version,
+            Title = oldVersion.Title,
+            Description = oldVersion.Description,
             Content = oldVersion.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,

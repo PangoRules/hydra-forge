@@ -42,6 +42,8 @@ public record SpecVersionDto(
     Guid Id,
     Guid SpecId,
     int Version,
+    string Title,
+    string? Description,
     string Content,
     DateTime CreatedAt,
     Guid CreatedByUserId
@@ -82,6 +84,8 @@ public record SpecVersionResponse(
     Guid Id,
     Guid SpecId,
     int Version,
+    string Title,
+    string? Description,
     string Content,
     DateTime CreatedAt,
     Guid CreatedByUserId

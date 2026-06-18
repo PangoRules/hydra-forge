@@ -43,6 +43,8 @@ public record PlanVersionDto(
     Guid Id,
     Guid PlanId,
     int Version,
+    string Title,
+    string? Description,
     string Content,
     DateTime CreatedAt,
     Guid CreatedByUserId
@@ -83,6 +85,8 @@ public record PlanVersionResponse(
     Guid Id,
     Guid PlanId,
     int Version,
+    string Title,
+    string? Description,
     string Content,
     DateTime CreatedAt,
     Guid CreatedByUserId

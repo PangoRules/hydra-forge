@@ -3,25 +3,24 @@ using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AppSpecs = HydraForge.Application.Specs;
 
 namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/cards/{cardId:guid}/specs")]
+[Route("api/projects/{projectId:guid}/[controller]")]
 public class SpecsController(SpecService specService) : ControllerBase
 {
-    [HttpPost]
+    [HttpPost("cards/{cardId:guid}")]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppSpecs.CreateSpecRequest request
+        [FromBody] CreateSpecRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppSpecs.CreateSpecCommand(
+        var cmd = new CreateSpecCommand(
             projectId,
             cardId,
             userId,
@@ -37,7 +36,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecResponse(
+        var response = new SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -57,20 +56,20 @@ public class SpecsController(SpecService specService) : ControllerBase
         );
     }
 
-    [HttpGet]
+    [HttpGet("cards/{cardId:guid}")]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await specService.ListByCardAsync(projectId, cardId, new AppSpecs.SpecListFilter(), userId);
+        var result = await specService.ListByCardAsync(projectId, cardId, new(), userId);
 
         if (result.IsFailure)
         {
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecListResponse([
-            .. result.Value.Select(s => new AppSpecs.SpecResponse(
+        var response = new SpecListResponse([
+            .. result.Value.Select(s => new SpecResponse(
                 s.Id,
                 s.ProjectId,
                 s.CardId,
@@ -87,7 +86,7 @@ public class SpecsController(SpecService specService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet("~/api/projects/{projectId:guid}/specs/{specId:guid}")]
+    [HttpGet("{specId:guid}")]
     public async Task<IActionResult> GetById(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -99,7 +98,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecResponse(
+        var response = new SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -115,16 +114,16 @@ public class SpecsController(SpecService specService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPut("~/api/projects/{projectId:guid}/specs/{specId:guid}")]
+    [HttpPut("{specId:guid}")]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid specId,
-        [FromBody] AppSpecs.UpdateSpecRequest request
+        [FromBody] UpdateSpecRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppSpecs.UpdateSpecCommand(
+        var cmd = new UpdateSpecCommand(
             projectId,
             specId,
             userId,
@@ -140,7 +139,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecResponse(
+        var response = new SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,
@@ -156,7 +155,7 @@ public class SpecsController(SpecService specService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet("~/api/projects/{projectId:guid}/specs/{specId:guid}/versions")]
+    [HttpGet("{specId:guid}/versions")]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -168,11 +167,13 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecVersionListResponse([
-            .. result.Value.Select(v => new AppSpecs.SpecVersionResponse(
+        var response = new SpecVersionListResponse([
+            .. result.Value.Select(v => new SpecVersionResponse(
                 v.Id,
                 v.SpecId,
                 v.Version,
+                v.Title,
+                v.Description,
                 v.Content,
                 v.CreatedAt,
                 v.CreatedByUserId
@@ -182,21 +183,16 @@ public class SpecsController(SpecService specService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("~/api/projects/{projectId:guid}/specs/{specId:guid}/restore")]
+    [HttpPost("{specId:guid}/restore")]
     public async Task<IActionResult> Restore(
         Guid projectId,
         Guid specId,
-        [FromBody] AppSpecs.RestoreSpecVersionRequest request
+        [FromBody] RestoreSpecVersionRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppSpecs.RestoreSpecVersionCommand(
-            projectId,
-            specId,
-            request.Version,
-            userId
-        );
+        var cmd = new RestoreSpecVersionCommand(projectId, specId, request.Version, userId);
 
         var result = await specService.RestoreVersionAsync(cmd);
 
@@ -205,7 +201,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppSpecs.SpecResponse(
+        var response = new SpecResponse(
             result.Value.Id,
             result.Value.ProjectId,
             result.Value.CardId,

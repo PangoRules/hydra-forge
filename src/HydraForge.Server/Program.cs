@@ -22,17 +22,24 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, services, configuration) => configuration
-    .ReadFrom.Configuration(context.Configuration)
-    .ReadFrom.Services(services)
-    .Enrich.FromLogContext()
-    .Enrich.WithCorrelationId()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
+builder.Host.UseSerilog(
+    (context, services, configuration) =>
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .Enrich.WithCorrelationId()
+            .WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+            )
+);
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers()
+builder
+    .Services.AddControllers()
     .AddJsonOptions(options =>
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
+    );
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
 builder.Services.AddColumnServices();
@@ -71,11 +78,14 @@ builder
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(AuthPolicies.UserIdRequired, policy =>
-    {
-        policy.RequireAuthenticatedUser();
-        policy.RequireAssertion(context => context.User.TryGetUserId(out _));
-    });
+    options.AddPolicy(
+        AuthPolicies.UserIdRequired,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context => context.User.TryGetUserId(out _));
+        }
+    );
 });
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
@@ -89,8 +99,9 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<TestUserSeeder>();
-builder.Services.AddScoped<GetHealthHandler>(sp =>
-    new GetHealthHandler(sp.GetServices<IHealthProbe>()));
+builder.Services.AddScoped<GetHealthHandler>(sp => new GetHealthHandler(
+    sp.GetServices<IHealthProbe>()
+));
 
 var app = builder.Build();
 
@@ -134,7 +145,10 @@ app.UseSerilogRequestLogging(options =>
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
     {
         diagnosticContext.Set("Endpoint", httpContext.Request.Path);
-        diagnosticContext.Set("CorrelationId", httpContext.Items["CorrelationId"] as string ?? "unknown");
+        diagnosticContext.Set(
+            "CorrelationId",
+            httpContext.Items["CorrelationId"] as string ?? "unknown"
+        );
     };
 });
 

@@ -31,7 +31,7 @@ public class PlansControllerTests
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1 });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/plans")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/plans/cards/{cardId}")
         {
             Content = new StringContent(
                 "{\"title\":\"My Plan\",\"description\":\"desc\",\"content\":\"# Plan\"}",
@@ -59,7 +59,8 @@ public class PlansControllerTests
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/plans")
+        var cardId = Guid.NewGuid();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/plans/cards/{cardId}")
         {
             Content = new StringContent(
                 "{\"title\":\"P\",\"description\":null,\"content\":\"# P\"}",
@@ -71,7 +72,7 @@ public class PlansControllerTests
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public class PlansControllerTests
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
         factory.AddPlan(new Plan { Id = Guid.NewGuid(), CardId = cardId, ProjectId = projectId, Title = "Plan 1", Content = "#1", Version = 1, CreatedByUserId = userId });
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/plans");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/plans/cards/{cardId}");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);

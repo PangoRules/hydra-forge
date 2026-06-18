@@ -55,6 +55,8 @@ public class SpecService(
             Id = Guid.NewGuid(),
             SpecId = spec.Id,
             Version = 1,
+            Title = cmd.Title,
+            Description = cmd.Description,
             Content = cmd.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,
@@ -176,6 +178,8 @@ public class SpecService(
             Id = Guid.NewGuid(),
             SpecId = spec.Id,
             Version = spec.Version,
+            Title = cmd.Title,
+            Description = cmd.Description,
             Content = cmd.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,
@@ -228,6 +232,8 @@ public class SpecService(
                     v.Id,
                     v.SpecId,
                     v.Version,
+                    v.Title,
+                    v.Description,
                     v.Content,
                     v.CreatedAt,
                     v.CreatedByUserId
@@ -259,6 +265,8 @@ public class SpecService(
                 new Error(DomainErrorCodes.Specs.DocumentVersionNotFound, "Spec version not found.")
             );
 
+        spec.Title = oldVersion.Title;
+        spec.Description = oldVersion.Description;
         spec.Content = oldVersion.Content;
         spec.Version += 1;
         spec.UpdatedAt = DateTime.UtcNow;
@@ -268,6 +276,8 @@ public class SpecService(
             Id = Guid.NewGuid(),
             SpecId = spec.Id,
             Version = spec.Version,
+            Title = oldVersion.Title,
+            Description = oldVersion.Description,
             Content = oldVersion.Content,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = cmd.ActorId,

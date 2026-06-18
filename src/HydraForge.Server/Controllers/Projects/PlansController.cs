@@ -9,10 +9,10 @@ namespace HydraForge.Server.Controllers.Projects;
 
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
-[Route("api/projects/{projectId:guid}/cards/{cardId:guid}/plans")]
+[Route("api/projects/{projectId:guid}/plans")]
 public class PlansController(PlanService planService) : ControllerBase
 {
-    [HttpPost]
+    [HttpPost("cards/{cardId:guid}")]
     public async Task<IActionResult> Create(Guid projectId, Guid cardId, [FromBody] AppPlans.CreatePlanRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -54,7 +54,7 @@ public class PlansController(PlanService planService) : ControllerBase
         );
     }
 
-    [HttpGet]
+    [HttpGet("cards/{cardId:guid}")]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -84,7 +84,7 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet("~/api/projects/{projectId:guid}/plans/{planId:guid}")]
+    [HttpGet("{planId:guid}")]
     public async Task<IActionResult> GetById(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -112,7 +112,7 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPut("~/api/projects/{projectId:guid}/plans/{planId:guid}")]
+    [HttpPut("{planId:guid}")]
     public async Task<IActionResult> Update(Guid projectId, Guid planId, [FromBody] AppPlans.UpdatePlanRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -149,7 +149,7 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet("~/api/projects/{projectId:guid}/plans/{planId:guid}/versions")]
+    [HttpGet("{planId:guid}/versions")]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -166,6 +166,8 @@ public class PlansController(PlanService planService) : ControllerBase
                 v.Id,
                 v.PlanId,
                 v.Version,
+                v.Title,
+                v.Description,
                 v.Content,
                 v.CreatedAt,
                 v.CreatedByUserId
@@ -175,7 +177,7 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("~/api/projects/{projectId:guid}/plans/{planId:guid}/restore")]
+    [HttpPost("{planId:guid}/restore")]
     public async Task<IActionResult> Restore(Guid projectId, Guid planId, [FromBody] AppPlans.RestorePlanVersionRequest request)
     {
         var userId = User.GetRequiredUserId();
