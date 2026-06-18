@@ -20,6 +20,12 @@ public class EfSpecRepository(HydraForgeDbContext context) : ISpecRepository
         return await query.OrderBy(s => s.CreatedAt).ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Spec>> ListByCardAsync(Guid cardId, SpecListFilter filter, CancellationToken ct = default)
+    {
+        var query = _context.Specs.Where(s => s.CardId == cardId);
+        return await query.OrderBy(s => s.CreatedAt).ToListAsync(ct);
+    }
+
     public async Task<SpecVersion?> GetVersionAsync(Guid specId, int version, CancellationToken ct = default)
     {
         return await _context.SpecVersions
@@ -32,20 +38,6 @@ public class EfSpecRepository(HydraForgeDbContext context) : ISpecRepository
             .Where(v => v.SpecId == specId)
             .OrderBy(v => v.Version)
             .ToListAsync(ct);
-    }
-
-    public async Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var linkedCards = await _context.Cards
-            .Where(c => c.SpecId != null && c.ProjectId == projectId)
-            .ToListAsync(ct);
-        return linkedCards.ToDictionary(c => c.SpecId!.Value, c => (Guid?)c.Id);
-    }
-
-    public async Task<Guid?> GetLinkedCardIdAsync(Guid specId, CancellationToken ct = default)
-    {
-        var card = await _context.Cards.FirstOrDefaultAsync(c => c.SpecId == specId, ct);
-        return card?.Id;
     }
 
     public async Task AddAsync(Spec spec, CancellationToken ct = default)

@@ -20,6 +20,12 @@ public class EfPlanRepository(HydraForgeDbContext context) : IPlanRepository
         return await query.OrderBy(p => p.CreatedAt).ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Plan>> ListByCardAsync(Guid cardId, PlanListFilter filter, CancellationToken ct = default)
+    {
+        var query = _context.Plans.Where(p => p.CardId == cardId);
+        return await query.OrderBy(p => p.CreatedAt).ToListAsync(ct);
+    }
+
     public async Task<PlanVersion?> GetVersionAsync(Guid planId, int version, CancellationToken ct = default)
     {
         return await _context.PlanVersions
@@ -32,20 +38,6 @@ public class EfPlanRepository(HydraForgeDbContext context) : IPlanRepository
             .Where(v => v.PlanId == planId)
             .OrderBy(v => v.Version)
             .ToListAsync(ct);
-    }
-
-    public async Task<IReadOnlyDictionary<Guid, Guid?>> GetLinkedCardIdsAsync(Guid projectId, CancellationToken ct = default)
-    {
-        var linkedCards = await _context.Cards
-            .Where(c => c.PlanId != null && c.ProjectId == projectId)
-            .ToListAsync(ct);
-        return linkedCards.ToDictionary(c => c.PlanId!.Value, c => (Guid?)c.Id);
-    }
-
-    public async Task<Guid?> GetLinkedCardIdAsync(Guid planId, CancellationToken ct = default)
-    {
-        var card = await _context.Cards.FirstOrDefaultAsync(c => c.PlanId == planId, ct);
-        return card?.Id;
     }
 
     public async Task AddAsync(Plan plan, CancellationToken ct = default)
