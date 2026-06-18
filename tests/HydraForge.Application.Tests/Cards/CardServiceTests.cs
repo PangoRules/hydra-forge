@@ -524,13 +524,27 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
     public List<CardRelationship> Relationships { get; } = [];
 
     public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.SourceCardId == cardId || r.TargetCardId == cardId).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
 
     public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
 
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+
+    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(Relationships.FirstOrDefault(r => r.Id == id));
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+    public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(Relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
+    public Task AddAsync(CardRelationship relationship, CancellationToken ct = default) { Relationships.Add(relationship); return Task.CompletedTask; }
+    public Task ArchiveAsync(Guid id, CancellationToken ct = default)
+    {
+        var rel = Relationships.FirstOrDefault(r => r.Id == id);
+        if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+        return Task.CompletedTask;
+    }
 
     public void Add(CardRelationship relationship) => Relationships.Add(relationship);
 }

@@ -374,6 +374,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();
             services.AddScoped<HydraForge.Application.Projects.ProjectMemberService>();
+            services.AddScoped<HydraForge.Application.Cards.CardRelationshipService>();
         });
     }
 
@@ -541,11 +542,24 @@ internal class CardsTestCardRelationshipRepository : HydraForge.Application.Card
     private readonly List<CardRelationship> _relationships = [];
 
     public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId || r.TargetCardId == cardId).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
     public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+    public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
+    public Task AddAsync(CardRelationship relationship, CancellationToken ct = default) { _relationships.Add(relationship); return Task.CompletedTask; }
+    public Task ArchiveAsync(Guid id, CancellationToken ct = default)
+    {
+        var rel = _relationships.FirstOrDefault(r => r.Id == id);
+        if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+        return Task.CompletedTask;
+    }
 }
 
 internal class CardsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository

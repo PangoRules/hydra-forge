@@ -58,6 +58,12 @@ public static class ProblemDetailsMapper
                 or DomainErrorCodes.Plans.MarkdownPayloadTooLarge => (413, "Payload too large"),
             DomainErrorCodes.Specs.CardDocumentProjectMismatch
                 or DomainErrorCodes.Plans.CardDocumentProjectMismatch => (409, "Card is in a different project"),
+            DomainErrorCodes.Relationships.NotFound => (404, "Relationship not found"),
+            DomainErrorCodes.Relationships.Duplicate => (409, "Relationship already exists"),
+            DomainErrorCodes.Relationships.CrossProjectDenied => (400, "Relationships must be in the same project"),
+            DomainErrorCodes.Relationships.Cycle => (400, "Relationship would create a cycle"),
+            DomainErrorCodes.Relationships.SelfDenied => (400, "Card cannot relate to itself"),
+            DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired => (409, "Confirmation required"),
             _ => (400, "Bad request"),
         };
 

@@ -1,4 +1,5 @@
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Cards;
 
@@ -78,4 +79,9 @@ public interface ICardRelationshipRepository
         Guid cardId,
         CancellationToken ct = default
     );
+    Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default);
+    Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default);
+    Task AddAsync(CardRelationship relationship, CancellationToken ct = default);
+    Task ArchiveAsync(Guid id, CancellationToken ct = default);
 }

@@ -1,0 +1,59 @@
+### List relationships
+GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/relationships
+Authorization: Bearer {{token}}
+
+### Create blocked-by relationship
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/relationships
+Authorization: Bearer {{token}}
+Content-Type: application/json
+{
+  "targetCardId": "{{targetCardId}}",
+  "type": 1
+}
+
+### Create relationship (duplicate failure)
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/relationships
+Authorization: Bearer {{token}}
+Content-Type: application/json
+{
+  "targetCardId": "{{targetCardId}}",
+  "type": 1
+}
+
+### Create relationship (cycle failure - A blocked by B, then B blocked by A)
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{blockingCardId}}/relationships
+Authorization: Bearer {{token}}
+Content-Type: application/json
+{
+  "targetCardId": "{{cardId}}",
+  "type": 1
+}
+
+### Create relates relationship
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/relationships
+Authorization: Bearer {{token}}
+Content-Type: application/json
+{
+  "targetCardId": "{{otherCardId}}",
+  "type": 3
+}
+
+### Delete relationship
+DELETE {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/relationships/{{relationshipId}}
+Authorization: Bearer {{token}}
+
+### Archive impact (preflight without confirm)
+GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/archive-impact
+Authorization: Bearer {{token}}
+
+### Archive impact (preflight with confirm)
+GET {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/archive-impact?confirm=true
+Authorization: Bearer {{token}}
+
+### Archive with relationships (confirm)
+POST {{baseUrl}}/api/projects/{{projectId}}/cards/{{cardId}}/archive-with-relationships
+Authorization: Bearer {{token}}
+Content-Type: application/json
+{
+  "confirm": true
+}

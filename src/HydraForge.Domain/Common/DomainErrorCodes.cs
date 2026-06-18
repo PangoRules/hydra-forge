@@ -94,4 +94,14 @@ public static class DomainErrorCodes
         public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
         public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
     }
+
+    public static class Relationships
+    {
+        public const string NotFound = "RELATIONSHIP_NOT_FOUND";
+        public const string Duplicate = "RELATIONSHIP_DUPLICATE";
+        public const string CrossProjectDenied = "RELATIONSHIP_CROSS_PROJECT_DENIED";
+        public const string Cycle = "RELATIONSHIP_CYCLE";
+        public const string SelfDenied = "RELATIONSHIP_SELF_DENIED";
+        public const string ArchiveImpactConfirmRequired = "CARD_ARCHIVE_IMPACT_CONFIRM_REQUIRED";
+    }
 }

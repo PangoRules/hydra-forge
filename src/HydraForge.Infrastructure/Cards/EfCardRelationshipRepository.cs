@@ -11,21 +11,52 @@ public class EfCardRelationshipRepository(HydraForgeDbContext context) : ICardRe
     public async Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardRelationships
-            .Where(r => r.SourceCardId == cardId || r.TargetCardId == cardId)
+            .Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null)
             .ToListAsync(ct);
     }
 
     public async Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardRelationships
-            .Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy)
+            .Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null)
             .ToListAsync(ct);
     }
 
     public async Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardRelationships
-            .Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes)
+            .Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null)
             .ToListAsync(ct);
+    }
+
+    public async Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await context.CardRelationships.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
+    public async Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
+    {
+        return await context.CardRelationships
+            .Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null)
+            .ToListAsync(ct);
+    }
+
+    public async Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
+    {
+        return await context.CardRelationships
+            .FirstOrDefaultAsync(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null, ct);
+    }
+
+    public async Task AddAsync(CardRelationship relationship, CancellationToken ct = default)
+    {
+        context.CardRelationships.Add(relationship);
+        await Task.CompletedTask;
+    }
+
+    public async Task ArchiveAsync(Guid id, CancellationToken ct = default)
+    {
+        var rel = await context.CardRelationships.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (rel != null)
+            rel.ArchivedAt = DateTime.UtcNow;
     }
 }
