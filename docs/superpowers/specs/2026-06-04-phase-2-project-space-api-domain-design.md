@@ -203,7 +203,7 @@ This is a multi-task milestone. Each task below should ship on its own implement
 - [X] Task 3: Card CRUD, card numbering, movement, assignees, parent epic links, blocked move warning
 - [X] Task 4: Checklist and comment APIs, mention extraction, CardWatcher auto-add
 - [x] Task 5: Attachment storage abstraction, local file store default, S3-compatible opt-in, attachment APIs
-- [ ] Task 6: Versioned Specs and Plans, card links, restore flow
+- [X] Task 6: Versioned Specs and Plans, card links, restore flow
 - [ ] Task 7: CardRelationship CRUD, same-project validation, cycle detection, archive impact/confirm flow
 - [ ] Task 8: ProjectContextSnapshot template regeneration on board mutations
 - [ ] Task 9: BoardHub mutation broadcasts and ephemeral PresenceHub
