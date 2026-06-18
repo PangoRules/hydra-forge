@@ -1,0 +1,287 @@
+### Specs API Smoke Tests
+### Run against local development environment
+### Requires seeded admin user (testadmin / TestAdmin123!)
+
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-spec-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@adminUserId = {{loginAdmin.response.body.$.userId}}
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-002
+
+{
+  "description": "Project for spec smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/specs.git",
+  "name": "Spec Smoke Test Project"
+}
+
+
+###
+
+# List columns to get default column IDs
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-003
+
+
+###
+
+# ── Card Setup ──────────────────────────────────────────────
+
+# @name createCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Card for spec smoke test",
+  "title": "Spec Test Card",
+  "type": "Task"
+}
+
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# SPEC ENDPOINTS
+# ═══════════════════════════════════════════════════════════
+
+# ── Create Spec ─────────────────────────────────────────────
+# POST /api/projects/{projectId}/specs/cards/{cardId}
+
+# @name createSpec
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/cards/{{createCard.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-005
+
+{
+  "content": "# Spec v1\n\nInitial specification content.",
+  "description": "API specification document",
+  "title": "API Spec"
+}
+
+
+###
+
+# ── List Specs ──────────────────────────────────────────────
+# GET /api/projects/{projectId}/specs/cards/{cardId}
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/cards/{{createCard.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-006
+
+
+###
+
+# ── Get Spec by ID ──────────────────────────────────────────
+# GET /api/projects/{projectId}/specs/{specId}
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-007
+
+
+###
+
+# ── Update Spec ─────────────────────────────────────────────
+# PUT /api/projects/{projectId}/specs/{specId}
+
+# @name updateSpec
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-008
+
+{
+  "content": "# Spec v2\n\nUpdated specification content.",
+  "description": "API specification document updated",
+  "title": "API Spec Updated",
+  "version": "{{createSpec.response.body.$.version}}"
+}
+
+
+###
+
+# ── Verify Updated Spec ─────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-009
+
+
+###
+
+# ── List Spec Versions ──────────────────────────────────────
+# GET /api/projects/{projectId}/specs/{specId}/versions
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/versions HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-010
+
+
+###
+
+# ── Restore Spec to v1 ───────────────────────────────────────
+# POST /api/projects/{projectId}/specs/{specId}/restore
+
+# @name restoreSpec
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/restore HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-011
+
+{
+  "version": 1
+}
+
+
+###
+
+# ── Verify Restored Spec ────────────────────────────────────
+# Content should now show v1 content, version bumped to 3
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-012
+
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# ERROR CASES
+# ═══════════════════════════════════════════════════════════
+
+# Non-member access — expect 403
+
+# @name loginNonMember
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-spec-013
+
+{
+  "password": "NonMember123!",
+  "username": "nonmember"
+}
+
+
+###
+
+# Non-member tries to list specs — expect 403
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/cards/{{createCard.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{loginNonMember.response.body.$.accessToken}}
+X-Correlation-Id: smoke-spec-014
+
+
+###
+
+# Get non-existent spec — expect 404
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-015
+
+
+###
+
+# Update non-existent spec — expect 404
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-016
+
+{
+  "content": "# Won't work",
+  "description": null,
+  "title": "Nope",
+  "version": 1
+}
+
+
+###
+
+# Restore non-existent spec version — expect 404
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/{{createSpec.response.body.$.id}}/restore HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-017
+
+{
+  "version": 999
+}
+
+
+###
+
+# ═══════════════════════════════════════════════════════════
+# SECOND CARD — verify spec isolation per card
+# ═══════════════════════════════════════════════════════════
+
+# @name createSecondCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-018
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Second card — should have zero specs",
+  "title": "Empty Card",
+  "type": "Task"
+}
+
+
+###
+
+# List specs for second card — expect empty array
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/specs/cards/{{createSecondCard.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-019
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-spec-020
