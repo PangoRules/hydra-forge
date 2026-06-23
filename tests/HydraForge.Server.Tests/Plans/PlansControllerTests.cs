@@ -285,6 +285,7 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IChatArchiveService>(_ => new PlansTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new PlansTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<ProjectService>();
             services.AddScoped<PlanService>();
         });

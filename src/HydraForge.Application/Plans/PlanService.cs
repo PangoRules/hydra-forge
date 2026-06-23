@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -12,13 +13,15 @@ public class PlanService(
     IPlanRepository planRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly IPlanRepository _planRepo = planRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
 
     public async Task<Result<PlanDto>> CreateAsync(
         CreatePlanCommand cmd,
@@ -84,6 +87,8 @@ public class PlanService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Created, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -209,6 +214,8 @@ public class PlanService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
@@ -306,7 +313,24 @@ public class PlanService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Restored, ct);
+
         return Result<PlanDto>.Success(MapToDto(plan));
+    }
+
+    private async Task PublishAsync(Guid projectId, Guid planId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.Plan,
+            planId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
     }
 
     private static PlanDto MapToDto(Plan plan) =>

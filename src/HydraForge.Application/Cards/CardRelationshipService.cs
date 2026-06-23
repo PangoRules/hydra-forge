@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -12,7 +13,8 @@ public class CardRelationshipService(
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly ICardRelationshipRepository _relationshipRepo = relationshipRepo;
@@ -20,6 +22,7 @@ public class CardRelationshipService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
 
     public async Task<Result<CardRelationshipListResponse>> ListAsync(
         Guid projectId,
@@ -164,6 +167,8 @@ public class CardRelationshipService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Created, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         cardsById.TryGetValue(relationship.SourceCardId, out var s);
@@ -216,6 +221,8 @@ public class CardRelationshipService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Deleted, ct);
 
         return Result.Success();
     }
@@ -337,6 +344,21 @@ public class CardRelationshipService(
                 impact.Value.RequiresConfirmation
             )
         );
+    }
+
+    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.CardRelationship,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
     }
 
     private static CardRelationshipDto MapToDto(

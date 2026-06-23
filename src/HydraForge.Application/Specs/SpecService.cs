@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -12,13 +13,15 @@ public class SpecService(
     ISpecRepository specRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly ISpecRepository _specRepo = specRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
 
     public async Task<Result<SpecDto>> CreateAsync(
         CreateSpecCommand cmd,
@@ -83,6 +86,8 @@ public class SpecService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Created, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
@@ -208,6 +213,8 @@ public class SpecService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Updated, ct);
+
         return Result<SpecDto>.Success(MapToDto(spec));
     }
 
@@ -307,7 +314,24 @@ public class SpecService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Restored, ct);
+
         return Result<SpecDto>.Success(MapToDto(spec));
+    }
+
+    private async Task PublishAsync(Guid projectId, Guid specId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.Spec,
+            specId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
     }
 
     private static SpecDto MapToDto(Spec spec) =>

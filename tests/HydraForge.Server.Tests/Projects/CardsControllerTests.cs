@@ -372,6 +372,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CardsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();

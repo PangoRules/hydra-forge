@@ -1,0 +1,19 @@
+@host = http://localhost:5001
+
+###
+
+### SignalR negotiate for board hub
+GET {{host}}/hubs/board/negotiate?negotiateVersion=1
+Authorization: Bearer {{$dotenv AUTH_TOKEN}}
+Response: { connectionToken: "..." }
+
+###
+
+### SignalR negotiate for presence hub
+GET {{host}}/hubs/presence/negotiate?negotiateVersion=1
+Authorization: Bearer {{$dotenv AUTH_TOKEN}}
+
+### Board mutation → BoardEvent broadcast
+### POST /api/projects/{projectId}/cards → BoardHub.OnBoardEvent(BoardAction.Created)
+### POST /api/projects/{projectId}/columns/{columnId}/cards/{cardId}/move → BoardHub.OnBoardEvent(BoardAction.Moved)
+### Archive project → BoardHub.OnBoardEvent(BoardAction.Archived)

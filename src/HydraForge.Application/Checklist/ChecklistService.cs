@@ -3,6 +3,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -15,7 +16,8 @@ public class ChecklistService(
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly IChecklistItemRepository _checklistRepo = checklistRepo;
@@ -24,6 +26,22 @@ public class ChecklistService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.ChecklistItem,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
+    }
 
     public async Task<Result<ChecklistItemDto>> CreateAsync(
         CreateChecklistItemCommand cmd,
@@ -117,6 +135,7 @@ public class ChecklistService(
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, BoardAction.Created, ct);
 
         string? assigneeUsername = null;
         if (cmd.AssignedTo.HasValue)

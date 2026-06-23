@@ -2,6 +2,7 @@ using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -17,7 +18,8 @@ public class CardService(
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly ICardRepository _cardRepo = cardRepo;
@@ -29,6 +31,7 @@ public class CardService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
 
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
@@ -105,7 +108,24 @@ public class CardService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
+
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+    }
+
+    private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            entityType,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
     }
 
     public async Task<Result<CardDto>> GetByIdAsync(
@@ -262,6 +282,8 @@ public class CardService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Updated, ct);
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -467,6 +489,8 @@ public class CardService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Moved, ct);
+
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
@@ -539,6 +563,8 @@ public class CardService(
             ct
         );
 
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Assigned, ct);
+
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
@@ -584,6 +610,8 @@ public class CardService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Unassigned, ct);
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -632,6 +660,8 @@ public class CardService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Archived, ct);
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }

@@ -3,6 +3,7 @@ using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -16,6 +17,7 @@ public partial class AttachmentService(
     IFileStore fileStore,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher,
     long maxBytes,
     IReadOnlySet<string> allowedContentTypes
 )
@@ -26,6 +28,7 @@ public partial class AttachmentService(
     private readonly IFileStore _fileStore = fileStore;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly long _maxBytes = maxBytes;
     private readonly IReadOnlySet<string> _allowedContentTypes = allowedContentTypes;
 
@@ -90,6 +93,8 @@ public partial class AttachmentService(
             ),
             ct
         );
+
+        await PublishAsync(cmd.ProjectId, attachment.Id, BoardAction.Created, ct);
 
         return Result<AttachmentDto>.Success(MapToDto(attachment));
     }
@@ -206,7 +211,24 @@ public partial class AttachmentService(
             ct
         );
 
+        await PublishAsync(projectId, attachmentId, BoardAction.Deleted, ct);
+
         return Result.Success();
+    }
+
+    private async Task PublishAsync(Guid projectId, Guid attachmentId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.Attachment,
+            attachmentId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
     }
 
     private static string SanitizeFileName(string fileName)

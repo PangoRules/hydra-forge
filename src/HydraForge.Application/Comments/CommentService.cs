@@ -3,6 +3,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -17,7 +18,8 @@ public class CommentService(
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly ICommentRepository _commentRepo = commentRepo;
@@ -27,6 +29,22 @@ public class CommentService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.Comment,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
+    }
 
     // ── Shared helpers ──────────────────────────────────────
 
@@ -143,6 +161,7 @@ public class CommentService(
         await EnsureWatcherAsync(cmd.CardId, cmd.ActorId, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Created, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -175,6 +194,7 @@ public class CommentService(
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Updated", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Updated, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -203,6 +223,7 @@ public class CommentService(
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Archived", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Archived, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, [], ct);
     }

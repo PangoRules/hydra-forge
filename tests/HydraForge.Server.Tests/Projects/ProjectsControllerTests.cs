@@ -227,6 +227,7 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new TestSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new TestChatArchiveService());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<ProjectService>();
             services.AddScoped<ProjectMemberService>();
         });

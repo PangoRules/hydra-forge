@@ -1,4 +1,6 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -8,9 +10,26 @@ namespace HydraForge.Application.Projects;
 public class ProjectMemberService(
     IProjectRepository projectRepo,
     IProjectMemberRepository memberRepo,
-    IUserRepository userRepo
+    IUserRepository userRepo,
+    IProjectBoardEventPublisher publisher
 )
 {
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            entityType,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
+    }
     public async Task<Result<ProjectMemberDto>> AddMemberAsync(
         AddProjectMemberCommand cmd,
         CancellationToken ct = default
@@ -74,6 +93,7 @@ public class ProjectMemberService(
         };
 
         await memberRepo.AddMemberAsync(newMember, ct);
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, newMember.Id, BoardAction.Created, ct);
 
         var user = await userRepo.FindByIdAsync(newMember.UserId, ct);
 
@@ -164,6 +184,7 @@ public class ProjectMemberService(
         }
 
         await memberRepo.RemoveMemberAsync(member.Id, ct);
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Project, member.Id, BoardAction.Deleted, ct);
 
         return Result.Success();
     }

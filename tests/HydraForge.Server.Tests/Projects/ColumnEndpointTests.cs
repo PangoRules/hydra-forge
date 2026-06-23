@@ -373,6 +373,7 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new ColTestColumnSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new ColTestColumnChatArchiveService());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<ProjectService>();
             services.AddScoped<ColumnService>();
             services.AddScoped<ProjectMemberService>();
