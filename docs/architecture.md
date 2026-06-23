@@ -41,6 +41,8 @@
 │  │  - ProjectContextSnapshotService│        │
 │  │    + ProjectContextSnapshotRenderer (pure, no LLM)│
 │  │    + IProjectSnapshotRefresher port│
+│  │  - IProjectBoardEventPublisher  │        │
+│  │    + ProjectBoardEventEnvelope  │        │
 │  │  - ChatService                 │        │
 │  │  - ModelRouter                 │        │
 │  │  - ContextCompressor           │        │
@@ -60,6 +62,9 @@
 │  │  - Git service                 │        │
 │  │  - LLM client (OpenAI/etc)     │        │
 │  │  - SignalR messaging           │        │
+│  │    + BoardHub, PresenceHub     │        │
+│  │    + SignalRProjectBoardEventPublisher│        │
+│  │    + RealtimeServiceCollectionExtensions│
 │  │  - File storage (IFileStore:   │        │
 │  │    LocalFileStore / S3FileStore)│        │
 │  └────────────────────────────────┘        │
@@ -150,6 +155,30 @@ TUI / Web UI
 - **Online:** Normal operation. JWT auth on startup, stored in user config.
 - **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff.
 - **Reconnected:** Auto-resumes. Re-fetches board state. No manual refresh required.
+
+### SignalR Hubs
+
+Two hubs handle real-time communication:
+
+| Hub | Route | Purpose | Events |
+|---|---|---|---|
+| `BoardHub` | `/hubs/board` | Board mutation broadcasts | `OnBoardEvent(ProjectBoardEventEnvelope)` |
+| `PresenceHub` | `/hubs/presence` | Ephemeral presence | `UserJoined`, `UserLeft`, `CardFocused` |
+
+**Board mutation flow:**
+1. HTTP mutation request → controller → Application service
+2. Service applies to DB (via EF Core)
+3. Service calls `IProjectBoardEventPublisher.PublishAsync(envelope)`
+4. `SignalRProjectBoardEventPublisher` fans out to all clients in `BoardHub.ProjectGroup(projectId)`
+5. Clients receive typed `OnBoardEvent` with full `ProjectBoardEventEnvelope`
+
+**Presence flow:**
+- `JoinProject(projectId)` → adds client to project group, broadcasts `UserJoined` to others
+- `FocusCard(projectId, cardId)` → broadcasts `CardFocused` to project group
+- `LeaveProject(projectId)` or disconnect → removes from group, broadcasts `UserLeft`
+- All presence state is in-memory `ConcurrentDictionary` — no DB writes
+
+**DI wiring:** `RealtimeServiceCollectionExtensions.AddRealtimeServices()` in Infrastructure registers `IProjectBoardEventPublisher → SignalRProjectBoardEventPublisher`.
 
 ---
 
@@ -352,6 +381,7 @@ hydra-forge/
 │   │   ├── Controllers/
 │   │   │   └── Projects/
 │   │   │       └── ProjectSnapshotController.cs  # GET /api/projects/{projectId}/ProjectSnapshot
+│   │   ├── Hubs/              # PresenceHub (/hubs/presence)
 │   │   ├── Errors/           # ProblemDetails mapping
 │   │   ├── Middleware/
 │   │   ├── HttpTests/        # *.http test files (Scalar-compatible)
@@ -363,6 +393,7 @@ hydra-forge/
 │   │   ├── Columns/
 │   │   ├── Projects/
 │   │   ├── ProjectSnapshots/   # IProjectSnapshotRefresher, ProjectContextSnapshotService, ProjectContextSnapshotRenderer
+│   │   ├── Realtime/            # IBoardHub, IProjectBoardEventPublisher, ProjectBoardEventEnvelope
 │   │   ├── Specs/
 │   │   ├── Plans/
 │   │   ├── Chat/
@@ -383,6 +414,7 @@ hydra-forge/
 │   │   ├── Audit/
 │   │   ├── FileStorage/         # LocalFileStore, S3FileStore
 │   │   ├── Attachments/         # EfAttachmentRepository, DI extensions
+│   │   ├── Realtime/            # BoardHub, SignalRProjectBoardEventPublisher, RealtimeServiceCollectionExtensions
 │   │   └── Health/
 │   │
 │   ├── HydraForge.Tui/         # Spectre.Console TUI
