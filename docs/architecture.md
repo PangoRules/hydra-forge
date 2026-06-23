@@ -38,7 +38,9 @@
 │  │  - ColumnService               │        │
 │  │  - SpecService / PlanService   │        │
 │  │  - CardDependencyService       │        │
-│  │  - ProjectContextSnapshot      │        │
+│  │  - ProjectContextSnapshotService│        │
+│  │    + ProjectContextSnapshotRenderer (pure, no LLM)│
+│  │    + IProjectSnapshotRefresher port│
 │  │  - ChatService                 │        │
 │  │  - ModelRouter                 │        │
 │  │  - ContextCompressor           │        │
@@ -348,8 +350,11 @@ hydra-forge/
 ├── src/
 │   ├── HydraForge.Server/      # ASP.NET Core server
 │   │   ├── Controllers/
+│   │   │   └── Projects/
+│   │   │       └── ProjectSnapshotController.cs  # GET /api/projects/{projectId}/ProjectSnapshot
 │   │   ├── Errors/           # ProblemDetails mapping
 │   │   ├── Middleware/
+│   │   ├── HttpTests/        # *.http test files (Scalar-compatible)
 │   │   ├── Program.cs        # AddOpenApi() + MapOpenApi() + MapScalarApiReference()
 │   │   └── ...               # OpenAPI at /openapi/v1.json, Scalar UI at /scalar/v1
 │   │
@@ -357,6 +362,7 @@ hydra-forge/
 │   │   ├── Cards/
 │   │   ├── Columns/
 │   │   ├── Projects/
+│   │   ├── ProjectSnapshots/   # IProjectSnapshotRefresher, ProjectContextSnapshotService, ProjectContextSnapshotRenderer
 │   │   ├── Specs/
 │   │   ├── Plans/
 │   │   ├── Chat/

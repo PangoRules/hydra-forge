@@ -470,7 +470,7 @@
 - [x] CardRelationship CRUD: BlockedBy, Precedes, Relates
 - [x] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
 - [x] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log
-- [ ] ProjectContextSnapshot: maintain + auto-regenerate on board mutations (card index: id, title, column, type)
+- [x] ProjectContextSnapshot: `IProjectSnapshotRefresher` port (`RefreshAsync`/`GetSnapshotAsync`) injected into all mutation services; `ProjectSnapshotRefresher` EF implementation; `ProjectContextSnapshotRenderer` (pure deterministic, no LLM); `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint
 - [ ] SignalR hubs: board mutations broadcast to all connected project members
 - [ ] Presence: `PresenceHub` — join/leave events, ephemeral only (no DB writes)
 - [ ] All endpoints covered by xUnit tests (> 90% business logic coverage)

@@ -281,6 +281,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | TemplateGeneratedAt | DateTime | Set on every board mutation |
 | AiNarrativeGeneratedAt | DateTime? | Set by nightly job |
 
+> **Rendering:** `ProjectContextSnapshotRenderer` (Application layer, `static`, pure deterministic) — reads columns, cards, and active `CardRelationship`s, outputs JSON. No LLM, no DB writes, no side effects. **Refresh pipeline:** `IProjectSnapshotRefresher.RefreshAsync()` is called by all 9 mutation services (Project, Column, Card, Checklist, Comment, Attachment, Spec, Plan, CardRelationship) immediately after persisting changes. `IProjectSnapshotRefresher.GetSnapshotAsync()` serves the `GET /api/projects/{projectId}/ProjectSnapshot` endpoint (members-only).
+
 ### CardWatcher
 
 | Field | Type | Description |
