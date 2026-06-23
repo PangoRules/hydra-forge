@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -14,6 +15,7 @@ public partial class AttachmentService(
     IProjectMemberRepository memberRepo,
     IFileStore fileStore,
     IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher,
     long maxBytes,
     IReadOnlySet<string> allowedContentTypes
 )
@@ -23,6 +25,7 @@ public partial class AttachmentService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IFileStore _fileStore = fileStore;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly long _maxBytes = maxBytes;
     private readonly IReadOnlySet<string> _allowedContentTypes = allowedContentTypes;
 
@@ -72,6 +75,7 @@ public partial class AttachmentService(
         };
 
         await _attachmentRepo.AddAsync(attachment, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -177,6 +181,7 @@ public partial class AttachmentService(
             );
 
         await _attachmentRepo.DeleteAsync(attachmentId, ct);
+        await _snapshotRefresher.RefreshAsync(projectId, ct);
 
         try
         {

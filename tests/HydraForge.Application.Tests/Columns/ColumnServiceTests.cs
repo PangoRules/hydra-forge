@@ -14,8 +14,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_AppendsAtMaxPosition()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -32,8 +32,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -46,8 +46,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_ExistingColumn_ReturnsColumn()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -64,8 +64,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistent_ReturnsNotFound()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -80,8 +80,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_ChangesNameColorWip()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -100,8 +100,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_EmptyColumn_CompactsPositions()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var columnId1 = NewId();
@@ -125,8 +125,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_NonEmptyColumn_ReturnsDeleteNonEmpty()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -144,8 +144,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_ArchivedCard_DoesNotBlockDelete()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -162,8 +162,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_ValidColumnIds_RewritesDensePositions()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -189,8 +189,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_InvalidColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -206,8 +206,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WrongProjectColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var otherProjectId = NewId();
@@ -227,8 +227,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_MissingColumn_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -244,8 +244,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo);
+        var (repo, cardRepo, memberRepo, snapshotRefresher) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -258,13 +258,15 @@ public class ColumnServiceTests
     private static (
         InMemoryColumnRepository repo,
         InMemoryCardRepository cardRepo,
-        InMemoryProjectMemberRepository memberRepo
+        InMemoryProjectMemberRepository memberRepo,
+        NullSnapshotRefresher snapshotRefresher
     ) CreateMocks()
     {
         return (
             new InMemoryColumnRepository(),
             new InMemoryCardRepository(),
-            new InMemoryProjectMemberRepository()
+            new InMemoryProjectMemberRepository(),
+            new NullSnapshotRefresher()
         );
     }
 }

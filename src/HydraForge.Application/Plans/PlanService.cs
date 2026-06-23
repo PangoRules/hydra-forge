@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
@@ -10,12 +11,14 @@ namespace HydraForge.Application.Plans;
 public class PlanService(
     IPlanRepository planRepo,
     IProjectMemberRepository memberRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly IPlanRepository _planRepo = planRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     public async Task<Result<PlanDto>> CreateAsync(
         CreatePlanCommand cmd,
@@ -66,6 +69,7 @@ public class PlanService(
         await _planRepo.AddAsync(plan, ct);
         await _planRepo.AddVersionAsync(version, ct);
         await _planRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -189,6 +193,7 @@ public class PlanService(
         await _planRepo.UpdateAsync(plan, ct);
         await _planRepo.AddVersionAsync(version, ct);
         await _planRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -285,6 +290,7 @@ public class PlanService(
         await _planRepo.UpdateAsync(plan, ct);
         await _planRepo.AddVersionAsync(newVersion, ct);
         await _planRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(

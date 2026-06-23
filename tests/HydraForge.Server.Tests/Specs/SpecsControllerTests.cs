@@ -271,6 +271,7 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
                 || d.ServiceType == typeof(IProjectMemberRepository)
                 || d.ServiceType == typeof(IProjectContextSnapshotRepository)
                 || d.ServiceType == typeof(IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)
                 || d.ServiceType == typeof(IColumnRepository)
                 || d.ServiceType == typeof(ICardAssigneeRepository)
                 || d.ServiceType == typeof(ICardWatcherRepository)
@@ -286,6 +287,7 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new SpecsTestSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new SpecsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new SpecsTestAuditLogWriter());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
         });
@@ -448,6 +450,7 @@ internal class SpecsTestSnapshotRepository : IProjectContextSnapshotRepository
     public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) { _snapshots.Add(snapshot); return Task.CompletedTask; }
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class SpecsTestChatArchiveService : IChatArchiveService

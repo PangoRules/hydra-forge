@@ -233,6 +233,7 @@ Each entry has:
 | D-32 | ProjectContextSnapshot strategy | TemplateContent instant on mutation; AiNarrative nightly scheduled job only | ✅ |
 | D-33 | OpenAPI docs (Swagger replacement) | `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` instead of Swashbuckle | ✅ |
 | D-34 | File storage architecture | `IFileStore` abstraction (Local fallback + MinIO/AWS S3), `{userId}/{sourceType}/{sourceId}/{guid}` key hierarchy, `InitializeAsync` for bucket creation | ✅ |
+| D-35 | ProjectContextSnapshot implementation | Pure deterministic renderer (`ProjectContextSnapshotRenderer`) — no LLM, no side effects; `IProjectSnapshotRefresher` port injected into 9 mutation services; `ProjectSnapshotRefresher` EF impl in Infrastructure; `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint | ✅ |
 
 ---
 
@@ -564,3 +565,22 @@ Chats
 | **Rationale** | **Why `IFileStore` abstraction:** Controllers and services are decoupled from storage topology — swapping Local ↔ S3 is a config change, not a code change. **Why MinIO over Local as recommended path:** MinIO is 100% S3 API compatible, runs as a lightweight Docker container, provides a web console, and scales to cluster mode if needed. LocalFileStore remains for bare-metal dev where Docker isn't available. **Why `InitializeAsync` as default-interface-method:** S3/MinIO needs bucket creation on startup — `InitializeAsync` lets us do this without forcing every implementation to implement it. Default no-op keeps stubs/fakes simple. **Why `{userId}/{sourceType}/{sourceId}/{guid}` key hierarchy:** Single flat namespace is messy when multiple sources (cards, chat, notes) store files. User-prefix isolates data per-user, sourceType prefix (`cards/`, `chat/`, `notes/`) prevents collision between different subsystems, and the random guid prevents enumeration attacks (no sequential IDs, no filename in storage path). |
 | **Alternatives considered** | 1. Single flat bucket with sequential IDs (rejected — enumeration risk, harder to debug). 2. No MinIO, just LocalFileStore + S3 config (rejected — MinIO gives us local S3-compatible testing without cloud costs). 3. `IsArchived` flag for attachment meta (rejected — follows `ArchivedAt: DateTime?` pattern, handled by housekeeping service with same retention as cards). |
 | **Impact** | `docker-compose.yml` gains a `minio` service (ports 9000/9001, healthcheck, volume). Server `depends_on: minio` with Docker-prefilled S3 env vars. `.env.example` has commented MinIO section. `IFileStore` has `InitializeAsync()` with default no-op — `S3FileStore` creates bucket on startup. `LocalFileStore` unchanged. Storage keys are `{userId}/cards/{cardId}/{guid}` — no user filename in path, no date, no project. Supported content types: images (PNG/JPEG/GIF/WebP), PDF, text, JSON/XML/HTML/CSV, ZIP, Office docs. Default max size: 10 MB. |
+
+---
+
+## D-35: ProjectContextSnapshot Implementation
+
+| Field | Value |
+|---|---|
+| **Topic** | How the snapshot is rendered, refreshed on mutations, and exposed via API |
+| **Date** | 2026-06-22 |
+| **Status** | ✅ Settled |
+| **Decision** | **Pure deterministic renderer + `IProjectSnapshotRefresher` port injected into all 9 mutation services. `ProjectSnapshotRefresher` EF implementation. `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint.** |
+| **Renderer** | `ProjectContextSnapshotRenderer` (Application layer, `static`, no LLM, no side effects). Inputs: columns, cards, relationships. Output: structured JSON with column names, card index (`#CardNumber` + title + column + type), blockers list, recent-moved list. JSON serialized with `System.Text.Json`. |
+| **Port (`IProjectSnapshotRefresher`)** | `RefreshAsync(projectId)` — reads current board state from repos, renders, upserts snapshot. `GetSnapshotAsync(projectId)` — returns snapshot or null. Injected into: `ProjectService`, `ColumnService`, `CardService`, `ChecklistService`, `CommentService`, `AttachmentService`, `SpecService`, `PlanService`, `CardRelationshipService`. |
+| **Infrastructure impl** | `ProjectSnapshotRefresher` reads directly from `HydraForgeDbContext` (columns, active cards, active relationships), renders, upserts via EF. `IProjectContextSnapshotRepository.UpdateAsync` added for the upsert path. |
+| **API** | `GET /api/projects/{projectId}/ProjectSnapshot` — membership check via `IProjectMemberRepository`, returns `ProjectSnapshotResponse` (id, projectId, templateContent, templateGeneratedAt, aiNarrative, aiNarrativeGeneratedAt). |
+| **Repository additions** | `IProjectContextSnapshotRepository.UpdateAsync` (upsert existing snapshot), `ICardRelationshipRepository.ListActiveByProjectAsync` (active relationships only, used by renderer). |
+| **Why upsert not replace** | Snapshot row is created once per project on first mutation and updated thereafter. Avoids race conditions from concurrent mutation services trying to create duplicates. Unique constraint on `ProjectId` enforces singleton-per-project at DB level. |
+| **Alternatives considered** | 1. Snapshot as a cached view materialised in DB on mutation (rejected — same upsert logic needed, more complex). 2. Snapshot rendered lazily on first chat read (rejected — latency on first chat open; D-32 intent is instant template rendering). |
+| **Impact** | All board mutations (cards, columns, checklists, comments, attachments, specs, plans, relationships, project edits) now trigger snapshot refresh synchronously before returning. Snapshot is ready before the client receives the mutation response. |

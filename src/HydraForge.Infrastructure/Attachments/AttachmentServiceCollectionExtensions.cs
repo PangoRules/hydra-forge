@@ -1,6 +1,7 @@
 using Amazon;
 using Amazon.S3;
 using HydraForge.Application.Attachments;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.FileStorage;
 using Microsoft.Extensions.Configuration;
@@ -68,7 +69,8 @@ public static class AttachmentServiceCollectionExtensions
             var cardRepo = sp.GetRequiredService<HydraForge.Application.Cards.ICardRepository>();
             var memberRepo = sp.GetRequiredService<HydraForge.Application.Projects.IProjectMemberRepository>();
             var auditWriter = sp.GetRequiredService<HydraForge.Application.Audit.IAuditLogWriter>();
-            return new AttachmentService(attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, maxBytes, allowedTypes);
+            var snapshotRefresher = sp.GetRequiredService<IProjectSnapshotRefresher>();
+            return new AttachmentService(attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, maxBytes, allowedTypes);
         });
 
         return services;

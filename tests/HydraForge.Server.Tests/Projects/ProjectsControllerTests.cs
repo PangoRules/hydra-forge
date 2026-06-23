@@ -215,7 +215,8 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
                 || d.ServiceType == typeof(IColumnRepository)
                 || d.ServiceType == typeof(IProjectMemberRepository)
                 || d.ServiceType == typeof(IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(IChatArchiveService)).ToList())
+                || d.ServiceType == typeof(IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)).ToList())
             {
                 services.Remove(descriptor);
             }
@@ -225,6 +226,7 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IProjectMemberRepository>(_ => new TestProjectMemberRepository(_members));
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new TestSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new TestChatArchiveService());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<ProjectService>();
             services.AddScoped<ProjectMemberService>();
         });
@@ -455,6 +457,7 @@ internal class TestSnapshotRepository : IProjectContextSnapshotRepository
 
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class TestChatArchiveService : IChatArchiveService

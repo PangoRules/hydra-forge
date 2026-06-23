@@ -354,7 +354,8 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectMemberRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Auth.IUserRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IChatArchiveService)).ToList())
+                || d.ServiceType == typeof(HydraForge.Application.Projects.IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)).ToList())
             {
                 services.Remove(descriptor);
             }
@@ -370,6 +371,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<HydraForge.Application.Projects.IProjectContextSnapshotRepository>(_ => new CardsTestSnapshotRepository());
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CardsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();
@@ -567,6 +569,12 @@ internal class CardsTestCardRelationshipRepository : HydraForge.Application.Card
             rel.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 }
 
 internal class CardsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository
@@ -623,6 +631,7 @@ internal class CardsTestSnapshotRepository : HydraForge.Application.Projects.IPr
     public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) { _snapshots.Add(snapshot); return Task.CompletedTask; }
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class CardsTestChatArchiveService : HydraForge.Application.Projects.IChatArchiveService

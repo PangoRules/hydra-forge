@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
@@ -10,12 +11,14 @@ namespace HydraForge.Application.Specs;
 public class SpecService(
     ISpecRepository specRepo,
     IProjectMemberRepository memberRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly ISpecRepository _specRepo = specRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     public async Task<Result<SpecDto>> CreateAsync(
         CreateSpecCommand cmd,
@@ -65,6 +68,7 @@ public class SpecService(
         await _specRepo.AddAsync(spec, ct);
         await _specRepo.AddVersionAsync(version, ct);
         await _specRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -188,6 +192,7 @@ public class SpecService(
         await _specRepo.UpdateAsync(spec, ct);
         await _specRepo.AddVersionAsync(version, ct);
         await _specRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -286,6 +291,7 @@ public class SpecService(
         await _specRepo.UpdateAsync(spec, ct);
         await _specRepo.AddVersionAsync(newVersion, ct);
         await _specRepo.SaveChangesAsync(ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(

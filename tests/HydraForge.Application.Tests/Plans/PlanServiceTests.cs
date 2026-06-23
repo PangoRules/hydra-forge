@@ -16,8 +16,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CreatesPlanAndVersion1InSameTransaction()
     {
-        var (planRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -37,8 +37,8 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (planRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var planId = NewId();
@@ -64,8 +64,8 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (planRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var planId = NewId();
@@ -90,8 +90,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (planRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new PlanService(planRepo, memberRepo, auditWriter);
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -108,13 +108,15 @@ public class PlanServiceTests
     private static (
         InMemoryPlanRepository planRepo,
         InMemoryProjectMemberRepository memberRepo,
-        InMemoryAuditLogWriter auditWriter
+        InMemoryAuditLogWriter auditWriter,
+        NullSnapshotRefresher snapshotRefresher
     ) CreateMocks()
     {
         return (
             new InMemoryPlanRepository(),
             new InMemoryProjectMemberRepository(),
-            new InMemoryAuditLogWriter()
+            new InMemoryAuditLogWriter(),
+            new NullSnapshotRefresher()
         );
     }
 }

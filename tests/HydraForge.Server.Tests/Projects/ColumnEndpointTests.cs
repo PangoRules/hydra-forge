@@ -360,7 +360,8 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
                 || d.ServiceType == typeof(ICardRepository)
                 || d.ServiceType == typeof(IProjectMemberRepository)
                 || d.ServiceType == typeof(IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(IChatArchiveService)).ToList())
+                || d.ServiceType == typeof(IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)).ToList())
             {
                 services.Remove(descriptor);
             }
@@ -371,6 +372,7 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IProjectMemberRepository>(_ => new ColTestColumnMemberRepository(_members));
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new ColTestColumnSnapshotRepository());
             services.AddScoped<IChatArchiveService>(_ => new ColTestColumnChatArchiveService());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<ProjectService>();
             services.AddScoped<ColumnService>();
             services.AddScoped<ProjectMemberService>();
@@ -600,6 +602,14 @@ internal class ColTestColumnSnapshotRepository : IProjectContextSnapshotReposito
 
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
+    {
+        var idx = _snapshots.FindIndex(s => s.Id == snapshot.Id);
+        if (idx >= 0) _snapshots[idx] = snapshot;
+        else _snapshots.Add(snapshot);
+        return Task.CompletedTask;
+    }
 }
 
 internal class ColTestColumnChatArchiveService : IChatArchiveService

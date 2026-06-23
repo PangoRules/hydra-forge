@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -13,7 +14,8 @@ public class ChecklistService(
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly IChecklistItemRepository _checklistRepo = checklistRepo;
@@ -21,6 +23,7 @@ public class ChecklistService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     public async Task<Result<ChecklistItemDto>> CreateAsync(
         CreateChecklistItemCommand cmd,
@@ -99,6 +102,7 @@ public class ChecklistService(
         };
 
         await _checklistRepo.AddAsync(item, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -175,6 +179,7 @@ public class ChecklistService(
         item.Text = cmd.Text;
         item.AssignedTo = cmd.AssignedTo;
         await _checklistRepo.UpdateAsync(item, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -225,6 +230,7 @@ public class ChecklistService(
 
         item.IsCompleted = !item.IsCompleted;
         await _checklistRepo.UpdateAsync(item, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -317,6 +323,7 @@ public class ChecklistService(
         toUpdate.Add(item);
 
         await _checklistRepo.UpdatePositionsAsync(toUpdate, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -366,6 +373,7 @@ public class ChecklistService(
         var deletedPosition = item.Position;
         await _checklistRepo.DeleteAsync(cmd.ItemId, ct);
         await _checklistRepo.CompactPositionsAsync(cmd.CardId, deletedPosition, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(

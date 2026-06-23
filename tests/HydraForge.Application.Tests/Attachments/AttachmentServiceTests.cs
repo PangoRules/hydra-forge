@@ -107,7 +107,7 @@ public class AttachmentServiceTests
 
         var service2 = new AttachmentService(
             new InMemoryAttachmentRepository(), cardRepo, memberRepo, fileStore, new InMemoryAuditLogWriter(),
-            10_000_000, AttachmentContentTypes.Allowed);
+            new NullSnapshotRefresher(), 10_000_000, AttachmentContentTypes.Allowed);
 
         var result = await service2.CreateAsync(new CreateAttachmentCommand(
             projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
@@ -272,10 +272,11 @@ public class AttachmentServiceTests
         var memberRepo = new InMemoryProjectMemberRepository();
         var fileStore = new FakeFileStore();
         var auditWriter = new InMemoryAuditLogWriter();
+        var snapshotRefresher = new NullSnapshotRefresher();
         var allowedTypes = AttachmentContentTypes.Allowed;
 
         var service = new AttachmentService(
-            attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, maxBytes, allowedTypes);
+            attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, maxBytes, allowedTypes);
 
         return (service, fileStore, attachmentRepo, cardRepo, memberRepo);
     }

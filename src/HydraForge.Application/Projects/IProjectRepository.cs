@@ -36,4 +36,5 @@ public interface IProjectContextSnapshotRepository
 {
     Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default);
     Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default);
+    Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default);
 }

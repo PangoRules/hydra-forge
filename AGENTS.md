@@ -5,8 +5,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 ## Current State
 
 - Phase 1 foundation is complete on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
-- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-6 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO), specs and plans (versioned markdown with ownership FK model, full document state snapshots, restore). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` for API documentation. Tasks 7-10 (relationships, snapshot, hubs, hardening) remain.
-- 303 xUnit tests across Domain (52), Application (116), Infrastructure (53), Server (82). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
+- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-8 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO), specs and plans (versioned markdown with ownership FK model, full document state snapshots, restore), relationships (cycle detection, archive impact), ProjectContextSnapshot (deterministic renderer, `IProjectSnapshotRefresher` port injected into all 9 mutation services, `GET /api/projects/{projectId}/ProjectSnapshot` endpoint). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore`. Tasks 9-10 (hubs, hardening) remain.
+- 369 xUnit tests across Domain (57), Application (138), Infrastructure (53), Server (96). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
 
@@ -59,6 +59,8 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Test projects are xUnit with plain `Assert.*`; do not add FluentAssertions.
 - Domain/Application tests are pure logic. Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, params string[])` — these run without a database because they inspect `context.Model`, not `context.Database`.
 - Most tests run without PostgreSQL. Optional PostgreSQL-backed tests use `HYDRAFORGE_TEST_CONNECTION_STRING`; the architecture requires real PostgreSQL for DB behavior tests, not SQLite or mocked DB behavior.
+- When adding a new Application-layer port (e.g. `IProjectSnapshotRefresher`) that gets injected into existing services, **all 8+ Server test factories** must be updated to strip and mock the new dependency — otherwise the real Infrastructure impl gets resolved in tests and fails with 500. Create a shared `TestSnapshotRefresher` stub in `tests/HydraForge.Server.Tests/` and register it in every factory's `ConfigureServices`.
+- HTTP `.http` smoke test files must be self-contained: auth → setup (create project, add members, add data) → test cases → cleanup. Never depend on variable values from other `.http` files. Each `.http` file runs in isolation.
 
 ## API Documentation
 

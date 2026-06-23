@@ -13,20 +13,21 @@ public class CardRelationshipServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
 
-    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, InMemoryAuditLogWriter auditWriter, CardRelationshipService service) CreateService()
+    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, CardRelationshipService service) CreateService()
     {
         var relationshipRepo = new InMemoryCardRelationshipRepository2();
         var cardRepo = new InMemoryCardRepository2();
         var memberRepo = new InMemoryProjectMemberRepository();
         var auditWriter = new InMemoryAuditLogWriter();
-        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, auditWriter);
-        return (relationshipRepo, cardRepo, memberRepo, auditWriter, service);
+        var snapshotRefresher = new NullSnapshotRefresher();
+        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher);
+        return (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service);
     }
 
     [Fact]
     public async Task CreateAsync_self_link_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -43,7 +44,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_cross_project_denied()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var otherProjectId = NewId();
         var actorId = NewId();
@@ -63,7 +64,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_duplicate_active_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -84,7 +85,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_blockedby_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -107,7 +108,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_precedes_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -130,7 +131,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_relates_does_not_participate_in_cycle()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -152,7 +153,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ListAsync_returns_active_only()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -173,7 +174,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task DeleteAsync_archives_relationship()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -198,7 +199,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task GetArchiveImpactAsync_returns_dependent_cards()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -221,7 +222,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_archives_card_and_relationships()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -250,7 +251,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_confirm_required_when_dependents_exist()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -279,7 +280,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_success()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -337,6 +338,12 @@ public class CardRelationshipServiceTests
                 rel.ArchivedAt = DateTime.UtcNow;
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+
+        public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     }
 
     private class InMemoryCardRepository2 : ICardRepository
