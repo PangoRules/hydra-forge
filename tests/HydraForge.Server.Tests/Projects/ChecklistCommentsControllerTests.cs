@@ -426,6 +426,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
                 || d.ServiceType == typeof(HydraForge.Application.Auth.IUserRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectContextSnapshotRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)
                 || d.ServiceType == typeof(HydraForge.Application.Checklist.IChecklistItemRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Comments.ICommentRepository)).ToList())
             {
@@ -443,6 +444,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
             services.AddScoped<HydraForge.Application.Projects.IProjectContextSnapshotRepository>(_ => new CCTestSnapshotRepository());
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CCTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new CCTestAuditLogWriter());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Checklist.IChecklistItemRepository>(_ => new CCTestChecklistItemRepository(_checklistItems));
             services.AddScoped<HydraForge.Application.Comments.ICommentRepository>(_ => new CCTestCommentRepository(_comments));
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
@@ -600,6 +602,10 @@ internal class CCTestCardRelationshipRepository : HydraForge.Application.Cards.I
         => Task.CompletedTask;
     public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
         => Task.CompletedTask;
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 }
 
 internal class CCTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository

@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -15,7 +16,8 @@ public class CommentService(
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly ICommentRepository _commentRepo = commentRepo;
@@ -24,6 +26,7 @@ public class CommentService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     // ── Shared helpers ──────────────────────────────────────
 
@@ -139,6 +142,7 @@ public class CommentService(
         await _commentRepo.AddAsync(comment, ct);
         await EnsureWatcherAsync(cmd.CardId, cmd.ActorId, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -170,6 +174,7 @@ public class CommentService(
         comment.UpdatedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Updated", ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -197,6 +202,7 @@ public class CommentService(
         comment.ArchivedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Archived", ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, [], ct);
     }

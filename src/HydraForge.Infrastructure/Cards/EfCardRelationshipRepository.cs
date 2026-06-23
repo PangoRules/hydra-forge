@@ -8,6 +8,30 @@ namespace HydraForge.Infrastructure.Cards;
 
 public class EfCardRelationshipRepository(HydraForgeDbContext context) : ICardRelationshipRepository
 {
+    public async Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var cardIds = await context.Cards
+            .Where(c => c.ProjectId == projectId)
+            .Select(c => c.Id)
+            .ToListAsync(ct);
+
+        return await context.CardRelationships
+            .Where(r => cardIds.Contains(r.SourceCardId) || cardIds.Contains(r.TargetCardId))
+            .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+    {
+        var cardIds = await context.Cards
+            .Where(c => c.ProjectId == projectId)
+            .Select(c => c.Id)
+            .ToListAsync(ct);
+
+        return await context.CardRelationships
+            .Where(r => r.ArchivedAt == null && (cardIds.Contains(r.SourceCardId) || cardIds.Contains(r.TargetCardId)))
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
     {
         return await context.CardRelationships

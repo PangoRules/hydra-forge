@@ -16,8 +16,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CreatesSpecAndVersion1InSameTransaction()
     {
-        var (specRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -37,8 +37,8 @@ public class SpecServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (specRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -64,8 +64,8 @@ public class SpecServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (specRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -90,8 +90,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (specRepo, memberRepo, auditWriter) = CreateMocks();
-        var service = new SpecService(specRepo, memberRepo, auditWriter);
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -108,13 +108,15 @@ public class SpecServiceTests
     private static (
         InMemorySpecRepository specRepo,
         InMemoryProjectMemberRepository memberRepo,
-        InMemoryAuditLogWriter auditWriter
+        InMemoryAuditLogWriter auditWriter,
+        NullSnapshotRefresher snapshotRefresher
     ) CreateMocks()
     {
         return (
             new InMemorySpecRepository(),
             new InMemoryProjectMemberRepository(),
-            new InMemoryAuditLogWriter()
+            new InMemoryAuditLogWriter(),
+            new NullSnapshotRefresher()
         );
     }
 }

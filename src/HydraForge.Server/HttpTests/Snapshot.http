@@ -1,0 +1,40 @@
+###
+
+@baseUrl = http://localhost:5000
+
+# NOTE: Run Projects.http first to create a project and get a valid projectId.
+# Replace {{projectId}} and {{memberToken}} with actual values from your test run.
+
+# ── Snapshot ────────────────────────────────────────────────
+
+### Get snapshot as project member
+# Requires: a valid projectId and a token from a project member
+GET {{baseUrl}}/api/projects/{{projectId}}/ProjectSnapshot HTTP/1.1
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+X-Correlation-Id: smoke-test-snapshot-001
+
+# Expected: 200 OK with JSON body containing TemplateContent
+
+### Get snapshot as non-member (should be 403 Forbidden)
+GET {{baseUrl}}/api/projects/{{projectId}}/ProjectSnapshot HTTP/1.1
+Authorization: Bearer {{nonMemberToken}}
+Content-Type: application/json
+X-Correlation-Id: smoke-test-snapshot-002
+
+# Expected: 403 Forbidden
+
+### Get snapshot for non-existent project (should be 403 Forbidden)
+GET {{baseUrl}}/api/projects/00000000-0000-0000-0000-000000000000/ProjectSnapshot HTTP/1.1
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+X-Correlation-Id: smoke-test-snapshot-003
+
+# Expected: 403 Forbidden
+
+### Get snapshot without token (should be 401 Unauthorized)
+GET {{baseUrl}}/api/projects/{{projectId}}/ProjectSnapshot HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-test-snapshot-004
+
+# Expected: 401 Unauthorized

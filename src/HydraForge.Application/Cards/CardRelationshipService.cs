@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -10,13 +11,15 @@ public class CardRelationshipService(
     ICardRelationshipRepository relationshipRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly ICardRelationshipRepository _relationshipRepo = relationshipRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     public async Task<Result<CardRelationshipListResponse>> ListAsync(
         Guid projectId,
@@ -161,6 +164,7 @@ public class CardRelationshipService(
             ),
             ct
         );
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         cardsById.TryGetValue(relationship.SourceCardId, out var s);
         cardsById.TryGetValue(relationship.TargetCardId, out var t);
@@ -197,6 +201,7 @@ public class CardRelationshipService(
             );
 
         await _relationshipRepo.ArchiveAsync(cmd.RelationshipId, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -309,6 +314,7 @@ public class CardRelationshipService(
             .Select(r => r.Id)
             .ToList();
         await _relationshipRepo.ArchiveRangeAsync(relationshipIds, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(

@@ -264,6 +264,7 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                 || d.ServiceType == typeof(HydraForge.Application.Auth.IUserRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectContextSnapshotRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Projects.IChatArchiveService)
+                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)
                 || d.ServiceType == typeof(HydraForge.Application.Attachments.IAttachmentRepository)
                 || d.ServiceType == typeof(HydraForge.Application.Attachments.IFileStore)).ToList())
             {
@@ -279,6 +280,7 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddScoped<HydraForge.Application.Projects.IProjectMemberRepository>(_ => new AttachmentsTestProjectMemberRepository(_members));
             services.AddScoped<HydraForge.Application.Auth.IUserRepository>(_ => new AttachmentsTestUserRepository(_users));
             services.AddScoped<HydraForge.Application.Projects.IProjectContextSnapshotRepository>(_ => new AttachmentsTestSnapshotRepository());
+            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new AttachmentsTestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new AttachmentsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new AttachmentsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.Attachments.IFileStore>(_ => _fakeFileStore);
@@ -294,8 +296,9 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                 var cardRepo = sp.GetRequiredService<HydraForge.Application.Cards.ICardRepository>();
                 var memberRepo = sp.GetRequiredService<HydraForge.Application.Projects.IProjectMemberRepository>();
                 var auditWriter = sp.GetRequiredService<IAuditLogWriter>();
+                var snapshotRefresher = sp.GetRequiredService<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>();
                 return new HydraForge.Application.Attachments.AttachmentService(
-                    attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter,
+                    attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher,
                     10_000_000, HydraForge.Application.Attachments.AttachmentContentTypes.Allowed);
             });
         });
@@ -472,6 +475,10 @@ internal class AttachmentsTestCardRelationshipRepository : HydraForge.Applicatio
         => Task.CompletedTask;
     public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
         => Task.CompletedTask;
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 }
 
 internal class AttachmentsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository
@@ -525,6 +532,14 @@ internal class AttachmentsTestSnapshotRepository : HydraForge.Application.Projec
 {
     public Task AddAsync(HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
     public Task<HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot?>(null);
+    public Task UpdateAsync(HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
+}
+
+internal class AttachmentsTestSnapshotRefresher : HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher
+{
+    public Task RefreshAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot?> GetSnapshotAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<HydraForge.Domain.Entities.ProjectSpace.ProjectContextSnapshot?>(null);
 }
 

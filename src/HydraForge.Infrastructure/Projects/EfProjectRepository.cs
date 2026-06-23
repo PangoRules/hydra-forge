@@ -212,4 +212,10 @@ public class EfProjectContextSnapshotRepository(HydraForgeDbContext context)
         context.ProjectContextSnapshots.Add(snapshot);
         await context.SaveChangesAsync(ct);
     }
+
+    public async Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
+    {
+        context.ProjectContextSnapshots.Update(snapshot);
+        await context.SaveChangesAsync(ct);
+    }
 }

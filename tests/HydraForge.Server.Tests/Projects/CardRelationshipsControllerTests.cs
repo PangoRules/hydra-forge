@@ -443,4 +443,10 @@ internal class SharedCardRelationshipRepository : ICardRelationshipRepository
             rel.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.ArchivedAt == null).ToList());
+
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.ArchivedAt == null).ToList());
 }

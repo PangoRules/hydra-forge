@@ -1,5 +1,6 @@
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 
@@ -8,7 +9,8 @@ namespace HydraForge.Application.Columns;
 public class ColumnService(
     IColumnRepository columnRepo,
     ICardRepository cardRepo,
-    IProjectMemberRepository memberRepo
+    IProjectMemberRepository memberRepo,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     public async Task<Result<ColumnDto>> CreateAsync(
@@ -38,6 +40,7 @@ public class ColumnService(
         };
 
         await columnRepo.AddAsync(column, ct);
+        await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return Result<ColumnDto>.Success(MapToDto(column));
     }
@@ -100,6 +103,7 @@ public class ColumnService(
         column.UpdateDetails(cmd.Name, cmd.Color, cmd.WipLimit);
 
         await columnRepo.UpdateAsync(column, ct);
+        await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return Result<ColumnDto>.Success(MapToDto(column));
     }
@@ -128,6 +132,7 @@ public class ColumnService(
             );
 
         await columnRepo.DeleteAsync(cmd.ColumnId, ct);
+        await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         var remaining = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         for (var i = 0; i < remaining.Count; i++)
@@ -167,6 +172,7 @@ public class ColumnService(
         }
 
         await columnRepo.ReorderAsync(cmd.ProjectId, cmd.ColumnIds, ct);
+        await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return Result.Success();
     }

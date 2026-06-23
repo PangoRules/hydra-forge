@@ -67,6 +67,14 @@ public interface ICardWatcherRepository
 
 public interface ICardRelationshipRepository
 {
+    Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    );
+    Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    );
     Task<IReadOnlyList<CardRelationship>> ListByCardAsync(
         Guid cardId,
         CancellationToken ct = default

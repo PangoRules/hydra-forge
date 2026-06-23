@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -15,7 +16,8 @@ public class CardService(
     IColumnRepository columnRepo,
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
     private readonly ICardRepository _cardRepo = cardRepo;
@@ -26,6 +28,7 @@ public class CardService(
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
 
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
@@ -86,6 +89,7 @@ public class CardService(
         };
 
         await _cardRepo.AddAsync(card, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -243,6 +247,7 @@ public class CardService(
         );
 
         await _cardRepo.UpdateAsync(card, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -446,6 +451,7 @@ public class CardService(
         toUpdate.Add(card);
 
         await _cardRepo.UpdateRangeAsync(toUpdate, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -611,6 +617,7 @@ public class CardService(
 
         await _cardRepo.UpdateAsync(card, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -646,6 +653,7 @@ public class CardService(
 
         await _cardRepo.DeleteAsync(cmd.CardId, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(

@@ -1,3 +1,4 @@
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -9,9 +10,11 @@ public class ProjectService(
     IColumnRepository columnRepo,
     IProjectMemberRepository memberRepo,
     IProjectContextSnapshotRepository snapshotRepo,
-    IChatArchiveService chatArchiveService
+    IChatArchiveService chatArchiveService,
+    IProjectSnapshotRefresher snapshotRefresher
 )
 {
+    private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private static readonly string[] DefaultColumnNames =
     [
         "Backlog",
@@ -175,6 +178,7 @@ public class ProjectService(
         project.UpdateDetails(cmd.Name, cmd.Description, cmd.GitRemoteUrl, cmd.GitProvider);
 
         await projectRepo.UpdateAsync(project, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         var columns = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
@@ -214,6 +218,7 @@ public class ProjectService(
 
         await projectRepo.UpdateAsync(project, ct);
         await chatArchiveService.ArchiveProjectAsync(cmd.ProjectId, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         return Result.Success();
     }

@@ -17,8 +17,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_AppendsAtMaxPosition_WhenNoPositionProvided()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -39,8 +39,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_InsertsAtSpecifiedPosition_ShiftsSubsequent()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -68,8 +68,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_InvalidPosition_ReturnsFailure()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -87,8 +87,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_AssigneeNotMember_ReturnsInvalidAssignee()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -106,8 +106,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_AssigneeDisabled_ReturnsInvalidAssignee()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -127,8 +127,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_ValidAssignee_ReturnsDtoWithUsername()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -149,8 +149,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var nonMemberId = NewId();
@@ -166,8 +166,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task CreateAsync_CardNotInProject_ReturnsNotFound()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -185,8 +185,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task UpdateAsync_UpdatesTextAndAssignee()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -210,8 +210,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task UpdateAsync_NotFound_ReturnsItemNotFound()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -228,8 +228,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task ToggleAsync_TogglesCompletion()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -248,8 +248,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task ReorderAsync_MovesItem_ShiftsOthers()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -276,8 +276,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task ReorderAsync_InvalidPosition_ReturnsFailure()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -297,8 +297,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task DeleteAsync_RemovesItem_CompactsPositions()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -320,8 +320,8 @@ public class ChecklistServiceTests
     [Fact]
     public async Task ListAsync_ReturnsAllItemsOrderedByPosition()
     {
-        var (repo, cardRepo, memberRepo, userRepo, auditWriter) = CreateMocks();
-        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -339,14 +339,14 @@ public class ChecklistServiceTests
         Assert.Equal("B", result.Value[1].Text);
     }
 
-    private static (InMemoryChecklistItemRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter) CreateMocks()
+    private static (InMemoryChecklistItemRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher) CreateMocks()
     {
         var repo = new InMemoryChecklistItemRepository();
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
         var userRepo = new InMemoryUserRepository();
         var auditWriter = new InMemoryAuditLogWriter();
-        return (repo, cardRepo, memberRepo, userRepo, auditWriter);
+        return (repo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher());
     }
 }
 
