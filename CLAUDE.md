@@ -129,6 +129,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 
 **Controller routing:**
 - Resource sub-controllers use `[Route("api/projects/{projectId:guid}/[controller]")]` — no `~` overrides
+- `[controller]` token resolves to the controller class name minus "Controller" suffix — e.g. `ProjectSnapshotController` → `/ProjectSnapshot`. **Always verify the resolved URL when writing `.http` smoke tests.**
 - Card-scoped actions get `"cards/{cardId:guid}"` prefix: `[HttpPost("cards/{cardId:guid}")]`
 - Standalone actions by resource ID: `[HttpGet("{specId:guid}")]`, `[HttpPut("{specId:guid}")]`
 - Never use `~/api/...` absolute route overrides
