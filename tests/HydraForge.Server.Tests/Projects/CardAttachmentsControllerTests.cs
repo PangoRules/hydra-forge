@@ -460,6 +460,18 @@ internal class AttachmentsTestCardRelationshipRepository : HydraForge.Applicatio
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(null);
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
+        => Task.FromResult<CardRelationship?>(null);
+    public Task AddAsync(CardRelationship relationship, CancellationToken ct = default)
+        => Task.CompletedTask;
+    public Task ArchiveAsync(Guid id, CancellationToken ct = default)
+        => Task.CompletedTask;
+    public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.CompletedTask;
 }
 
 internal class AttachmentsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository

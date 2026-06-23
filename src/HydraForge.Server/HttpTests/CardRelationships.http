@@ -1,0 +1,263 @@
+### Card Relationships API Smoke Tests
+### Run against local development environment
+### Requires seeded admin user (testadmin / TestAdmin123!)
+
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-relation-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-002
+
+{
+  "description": "Project for card relationship smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Card Relationship Smoke Test Project"
+}
+
+
+###
+
+# List columns to get default column IDs
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-003
+
+
+###
+
+# ── Card Setup ──────────────────────────────────────────────
+# Need 3 cards: source, target (blocked-by), and cycle breaker
+
+# @name createCardA
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Source card for relationship tests",
+  "title": "Card A (Source)",
+  "type": "Task"
+}
+
+
+###
+
+# @name createCardB
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-005
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Target card for relationship tests",
+  "title": "Card B (Target)",
+  "type": "Task"
+}
+
+
+###
+
+# @name createCardC
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-006
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Extra card for cycle detection test",
+  "title": "Card C (Cycle)",
+  "type": "Task"
+}
+
+
+###
+
+# ── Create BlockedBy Relationship ───────────────────────────
+# Card A blocked by Card B
+
+# @name createRelationship
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-007
+
+{
+  "targetCardId": "{{createCardB.response.body.$.id}}",
+  "type": 1
+}
+
+
+###
+
+# ── List Relationships ──────────────────────────────────────
+# Should show the BlockedBy relationship
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-008
+
+
+###
+
+# ── Duplicate Relationship (409 expected) ───────────────────
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-009
+
+{
+  "targetCardId": "{{createCardB.response.body.$.id}}",
+  "type": 1
+}
+
+
+###
+
+# ── Cycle Detection (400 expected) ──────────────────────────
+# Card C blocked by Card A, then Card A blocked by Card C = cycle
+# First create C blocked-by A
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardC.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-010
+
+{
+  "targetCardId": "{{createCardA.response.body.$.id}}",
+  "type": 1
+}
+
+
+###
+
+# Now try A blocked-by C — this would create cycle A→B→A→C→A
+# Expect 400
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-011
+
+{
+  "targetCardId": "{{createCardC.response.body.$.id}}",
+  "type": 1
+}
+
+
+###
+
+# ── Create Relates Relationship ─────────────────────────────
+# Relates does not participate in cycle detection
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-012
+
+{
+  "targetCardId": "{{createCardC.response.body.$.id}}",
+  "type": 3
+}
+
+
+###
+
+# ── Delete Relationship ─────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships/{{createRelationship.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-013
+
+
+###
+
+# ── Delete Non-Existent Relationship (404 expected) ─────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-014
+
+
+###
+
+# ── Archive without confirmation (409 expected) ─────────────
+# confirm=false when dependents exist → 409 Conflict
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardC.response.body.$.id}}/cardrelationships/archive-with-relationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-017
+
+{
+  "confirm": false
+}
+
+
+###
+
+# ── Archive Impact Preflight ────────────────────────────────
+# GET always returns 200 with the dependent card list (regardless of confirm flag)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardC.response.body.$.id}}/cardrelationships/archive-impact HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-015
+
+
+###
+
+# ── Archive with Relationships (confirmed) ──────────────────
+# POST requires confirm=true when dependents exist; confirm=false returns 409
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardC.response.body.$.id}}/cardrelationships/archive-with-relationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-016
+
+{
+  "confirm": true
+}
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-018

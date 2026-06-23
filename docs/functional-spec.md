@@ -467,9 +467,9 @@
 - [x] File attachments on cards (local FS storage, S3-compatible abstraction)
 - [x] Specs: versioned markdown documents linked to cards
 - [x] Plans: versioned numbered markdown documents linked to specs/cards
-- [ ] CardRelationship CRUD: BlockedBy, Precedes, Relates
-- [ ] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
-- [ ] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log
+- [x] CardRelationship CRUD: BlockedBy, Precedes, Relates
+- [x] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
+- [x] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log
 - [ ] ProjectContextSnapshot: maintain + auto-regenerate on board mutations (card index: id, title, column, type)
 - [ ] SignalR hubs: board mutations broadcast to all connected project members
 - [ ] Presence: `PresenceHub` — join/leave events, ephemeral only (no DB writes)

@@ -14,6 +14,7 @@ public static class CardServiceCollectionExtensions
         services.AddScoped<ICardWatcherRepository, EfCardWatcherRepository>();
         services.AddScoped<ICardRelationshipRepository, EfCardRelationshipRepository>();
         services.AddScoped<CardService>();
+        services.AddScoped<CardRelationshipService>();
         return services;
     }
 }
