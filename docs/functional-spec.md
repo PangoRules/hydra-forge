@@ -479,9 +479,9 @@
 > Goal: full project board usable in browser. Feature-complete project workspace.
 
 - [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
-- [ ] Auth pages: login, first-run admin setup
+- [x] Auth pages: login, first-run admin setup
 - [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page)
-- [x] Project list + create project flow (`app/pages/projects.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`)
+- [x] Project list + create project flow (`app/pages/projects/index.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`) — includes optional git remote URL + provider fields in advanced expander
 - [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
 - [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
 - [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
