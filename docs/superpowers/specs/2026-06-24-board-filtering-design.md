@@ -54,6 +54,7 @@ Controls (left to right):
 - **Search input** — text search across all columns (filters card title). Hides columns with zero matches.
 - **Type dropdown** — "All", "Task", "Bug", "Epic", "Spec", "Idea". Filters all columns.
 - **Archived toggle** — checkbox "Archived". Default OFF. Shows archived cards across all columns.
+- **Hide empty** — checkbox "Hide empty columns". Default OFF. When ON, columns with zero visible cards (after all filters applied) are hidden from the board. When OFF, all columns display even if empty.
 - **+ Card** — opens card creation form with **column picker dropdown** (user must select target column).
 
 All global filters AND with per-column filters.
@@ -113,7 +114,7 @@ Uses `BoardMobileList` (stacked columns, not kanban).
 ### 4.1 Mobile Controls
 
 - **Search** — same as desktop: filters across all columns.
-- **Filter button** — toggles slide-out bar with Type dropdown + Archived checkbox.
+- **Filter button** — toggles slide-out bar with Type dropdown + Archived checkbox + Hide empty checkbox.
 - **+ button** — opens card creation form with column picker.
 - **Columns** — accordion style. Tap header to expand/collapse. Arrow (▼/▶) shows state.
 - **Per-column controls** — dropped on mobile (too cramped). Only global filters.
@@ -127,10 +128,10 @@ Uses `BoardMobileList` (stacked columns, not kanban).
 boardFilters: Ref<BoardFilters>
 
 interface BoardFilters {
-  search: string          // global text search
-  type: CardType | null   // global type filter
-  includeArchived: boolean
-  // per-column filters not stored globally — scoped to each BoardColumn
+  search: string            // global text search
+  type: CardType | null     // global type filter
+  includeArchived: boolean  // show archived cards
+  hideEmptyColumns: boolean // hide columns with zero visible cards
 }
 
 // Per-column filter state (local to BoardColumn component)
