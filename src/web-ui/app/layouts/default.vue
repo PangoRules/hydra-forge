@@ -1,5 +1,9 @@
 <script setup lang="ts">
-const { logout, isAuthenticated } = useAuth()
+const { logout, isAuthenticated, checkAuth } = useAuth()
+
+onMounted(() => {
+  checkAuth()
+})
 </script>
 
 <template>

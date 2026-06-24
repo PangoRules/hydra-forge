@@ -37,12 +37,9 @@ export function useAuth() {
 
   async function checkAuth() {
     if (!hasToken()) return false
-    // Token exists in cookie; restore store from it
     const token = getToken()
     if (token) {
-      // We can't decode JWT client-side without a library.
-      // For now, trust the cookie. Full validation happens on first API call.
-      // If 401, onResponse hook clears token and redirects.
+      store.restoreToken(token)
       return true
     }
     return false
