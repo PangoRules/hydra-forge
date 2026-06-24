@@ -23,6 +23,7 @@ watch(() => props.columns, (newColumns) => {
   localColumns.value = [...newColumns]
 }, { deep: true })
 
+const isClient = import.meta.client
 const api = useApi()
 
 async function onColumnDragEnd(event: SortableEvent) {
@@ -52,7 +53,7 @@ function handleCardClick(card: CardResponse) {
 
 <template>
   <VueDraggable
-    v-if="import.meta.client"
+    v-if="isClient"
     v-model="localColumns"
     class="flex gap-4 overflow-x-auto pb-4 h-full"
     group="columns"
