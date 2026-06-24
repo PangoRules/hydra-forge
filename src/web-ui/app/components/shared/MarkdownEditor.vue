@@ -72,7 +72,7 @@ const editor = useEditor({
   ],
   editorProps: {
     attributes: {
-      class: 'focus:outline-none p-3 min-h-[255px] max-h-[400px] overflow-y-auto'
+      class: 'focus:outline-none p-3 min-h-[380px] max-h-[400px] overflow-y-auto'
     }
   },
   onUpdate({ editor: ed }) {
@@ -290,7 +290,7 @@ function toggleSource() {
       v-if="sourceMode"
       v-model="sourceText"
       class="w-full p-3 font-mono text-sm leading-loose resize-none focus:outline-none bg-transparent"
-      :class="{ 'min-h-[255px] max-h-[400px]': true }"
+      :class="{ 'min-h-[380px] max-h-[400px]': true }"
       :placeholder="props.placeholder"
     />
   </div>
