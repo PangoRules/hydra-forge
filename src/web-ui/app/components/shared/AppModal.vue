@@ -37,14 +37,11 @@ function onKeydown(e: KeyboardEvent) {
     v-model:open="isOpen"
     :ui="{ content: width }"
   >
-    <div
-      class="flex flex-col max-h-[85vh]"
-      @keydown="onKeydown"
-    >
-      <!-- Header -->
+    <!-- Header — renders in UModal's #header slot -->
+    <template #header>
       <div
         v-if="title || $slots.header || showClose"
-        class="flex items-center justify-between p-4 border-b"
+        class="flex items-center justify-between gap-2"
       >
         <h2
           v-if="title"
@@ -61,41 +58,40 @@ function onKeydown(e: KeyboardEvent) {
           @click="onClose"
         />
       </div>
+    </template>
 
-      <!-- Loading -->
-      <div
-        v-if="loading"
-        class="flex items-center justify-center p-8"
-      >
-        <UIcon
-          name="i-lucide-loader"
-          class="animate-spin size-8"
+    <!-- Body — renders in UModal's #body slot -->
+    <template #body>
+      <div @keydown="onKeydown">
+        <!-- Loading -->
+        <div
+          v-if="loading"
+          class="flex items-center justify-center p-8"
+        >
+          <UIcon
+            name="i-lucide-loader"
+            class="animate-spin size-8"
+          />
+        </div>
+
+        <!-- Error -->
+        <UAlert
+          v-else-if="error"
+          color="error"
+          :title="error"
+          class="m-4"
         />
-      </div>
 
-      <!-- Error -->
-      <UAlert
-        v-else-if="error"
-        color="error"
-        :title="error"
-        class="m-4"
-      />
-
-      <!-- Body -->
-      <div
-        v-else
-        class="flex-1 overflow-y-auto"
-      >
-        <slot name="body" />
+        <!-- Content -->
+        <div v-else>
+          <slot name="body" />
+        </div>
       </div>
+    </template>
 
-      <!-- Footer -->
-      <div
-        v-if="$slots.footer"
-        class="p-4 border-t"
-      >
-        <slot name="footer" />
-      </div>
-    </div>
+    <!-- Footer — renders in UModal's #footer slot -->
+    <template #footer>
+      <slot name="footer" />
+    </template>
   </UModal>
 </template>
