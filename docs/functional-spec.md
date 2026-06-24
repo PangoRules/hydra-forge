@@ -489,7 +489,7 @@
 - [ ] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
 - [ ] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
 - [ ] Archive card with dependents: warning modal listing affected cards
-- [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
+- [x] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link (Plan 3 — CardModal, CardMetadata, CardDescription, MarkdownEditor, archive/restore, 53 component tests)
 - [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [ ] Blocked card lock icon + badge on board (always visible)
 - [ ] Soft warning modal on column move when blocked (points to blocking card)
