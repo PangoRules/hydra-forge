@@ -289,7 +289,7 @@ function toggleSource() {
     <textarea
       v-if="sourceMode"
       v-model="sourceText"
-      class="w-full p-3 font-mono text-sm resize-none focus:outline-none bg-transparent"
+      class="w-full p-3 font-mono text-sm leading-relaxed resize-none focus:outline-none bg-transparent"
       :class="{ 'min-h-[150px] max-h-[400px]': true }"
       :placeholder="props.placeholder"
     />
@@ -298,6 +298,9 @@ function toggleSource() {
 
 <style>
 /* Editor content typography — replaces broken prose plugin */
+.markdown-editor-content {
+  line-height: 1.625;
+}
 .markdown-editor-content h1 {
   font-size: 1.75rem;
   font-weight: 700;
