@@ -26,7 +26,17 @@ const sourceMode = ref(false)
 const sourceText = ref('')
 const editorReady = ref(false)
 
-const turndown = new TurndownService()
+const turndown = new TurndownService({
+  codeBlockStyle: 'fenced',
+  headingStyle: 'atx'
+})
+
+// Override <br> rule: use bare \n instead of two-trailing-spaces \n
+// paired with marked breaks:true, bare \n round-trips cleanly (no whitespace-only lines)
+turndown.addRule('lineBreak', {
+  filter: ['br'],
+  replacement: () => '\n'
+})
 
 const editor = useEditor({
   content: props.modelValue,
@@ -70,8 +80,9 @@ watch(sourceMode, (isSource) => {
   } else {
     // Switching back: convert markdown to HTML, set in editor, emit
     const html = marked.parse(sourceText.value, { async: false, breaks: true }) as string
-    editor.value.commands.setContent(html, { emitUpdate: false })
-    emit('update:modelValue', html)
+    const clean = html.trim()
+    editor.value.commands.setContent(clean, { emitUpdate: false })
+    emit('update:modelValue', clean)
   }
 })
 
