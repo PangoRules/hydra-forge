@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import Toaster from '@nuxt/ui'
-
 const { logout, isAuthenticated } = useAuth()
 </script>
 
 <template>
-  <UApp>
-    <Toaster />
+  <UApp :toaster="{ position: 'bottom-right' }">
     <UHeader>
       <template #left>
         <NuxtLink
