@@ -30,6 +30,7 @@ const emit = defineEmits<{
         v-for="card in cards"
         :key="card.id"
         :card="card"
+        :project-id="projectId"
         @click="emit('card-click', card)"
       />
     </div>

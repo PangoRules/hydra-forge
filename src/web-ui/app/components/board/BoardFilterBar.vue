@@ -21,7 +21,7 @@ function updateSearch(val: string) {
 }
 
 function updateType(val: string | null) {
-  filters.value = { ...filters.value, type: val !== '' && val !== null ? Number(val) : null }
+  filters.value = { ...filters.value, type: val !== '' ? Number(val) : null }
 }
 
 function toggleArchived() {

@@ -125,6 +125,7 @@ onMounted(async () => {
       <BoardMobileList
         :columns="board.columns"
         :cards-by-column="board.cardsByColumn"
+        :project-id="projectId"
         class="md:hidden"
         @card-click="handleCardClick"
       />

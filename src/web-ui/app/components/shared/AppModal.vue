@@ -50,14 +50,16 @@ function onKeydown(e: KeyboardEvent) {
           {{ title }}
         </h2>
         <slot name="header" />
-        <UButton
-          v-if="showClose"
-          icon="i-lucide-x"
-          variant="ghost"
-          size="sm"
-          class="ml-auto"
-          @click="onClose"
-        />
+        <div class="ml-auto flex items-center gap-2">
+          <slot name="header-trailing" />
+          <UButton
+            v-if="showClose"
+            icon="i-lucide-x"
+            variant="ghost"
+            size="sm"
+            @click="onClose"
+          />
+        </div>
       </div>
     </template>
 

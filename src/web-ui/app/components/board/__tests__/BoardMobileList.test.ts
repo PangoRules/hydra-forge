@@ -35,7 +35,7 @@ describe('BoardMobileList', () => {
     const columns = [makeColumn('col1', 'Backlog'), makeColumn('col2', 'Done')]
     const cardsByColumn = new Map([['col1', []], ['col2', []]])
     const wrapper = await mountSuspended(BoardMobileList, {
-      props: { columns, cardsByColumn }
+      props: { columns, cardsByColumn, projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('Backlog')
     expect(wrapper.text()).toContain('Done')
@@ -45,7 +45,7 @@ describe('BoardMobileList', () => {
     const columns = [makeColumn('col1', 'Todo')]
     const cardsByColumn = new Map([['col1', [makeCard('c1', 'col1', 'My Task')]]])
     const wrapper = await mountSuspended(BoardMobileList, {
-      props: { columns, cardsByColumn }
+      props: { columns, cardsByColumn, projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('My Task')
   })
@@ -57,7 +57,7 @@ describe('BoardMobileList', () => {
       ['col2', [makeCard('c2', 'col2', 'Task 2')]],
     ])
     const wrapper = await mountSuspended(BoardMobileList, {
-      props: { columns, cardsByColumn }
+      props: { columns, cardsByColumn, projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('Task 1')
     expect(wrapper.text()).toContain('Task 2')
@@ -67,7 +67,7 @@ describe('BoardMobileList', () => {
     const columns = [makeColumn('col1', 'Todo')]
     const cardsByColumn = new Map([['col1', [makeCard('c1', 'col1', 'Tap Me')]]])
     const wrapper = await mountSuspended(BoardMobileList, {
-      props: { columns, cardsByColumn }
+      props: { columns, cardsByColumn, projectId: 'p1' }
     })
     await wrapper.find('.cursor-pointer').trigger('click')
     expect(wrapper.emitted('card-click')).toBeTruthy()
@@ -84,7 +84,7 @@ describe('BoardMobileList', () => {
       ]]
     ])
     const wrapper = await mountSuspended(BoardMobileList, {
-      props: { columns, cardsByColumn }
+      props: { columns, cardsByColumn, projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('WIP 3')
   })

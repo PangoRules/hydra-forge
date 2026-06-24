@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -23,6 +24,7 @@ const error = ref<string | null>(null)
 
 const isArchived = computed(() => !!card.value?.archivedAt)
 const toast = useToast()
+const showArchiveConfirm = ref(false)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
 
@@ -54,7 +56,11 @@ function handleOpenChange(val: boolean) {
   }
 }
 
-async function handleArchive() {
+function handleArchive() {
+  showArchiveConfirm.value = true
+}
+
+async function confirmArchive() {
   const { error: apiError } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
     body: { version: card.value!.version }
   })
@@ -102,26 +108,24 @@ onMounted(() => fetchCard())
     @update:open="handleOpenChange"
     @close="onClose"
   >
-    <template #header>
-      <div class="flex items-center gap-2">
+    <template #header-trailing>
+      <div class="flex items-center gap-1">
         <UButton
           v-if="card && !isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive"
+          title="Archive card"
           @click="handleArchive"
-        >
-          Archive
-        </UButton>
+        />
         <UButton
           v-else-if="card && isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive-restore"
+          title="Restore card"
           @click="handleRestore"
-        >
-          Restore
-        </UButton>
+        />
       </div>
     </template>
 
@@ -212,4 +216,12 @@ onMounted(() => fetchCard())
       </template>
     </template>
   </AppModal>
+
+  <ConfirmDialog
+    v-model:open="showArchiveConfirm"
+    title="Archive card"
+    :message="card ? `Archive #${card.cardNumber} ${card.title}?` : ''"
+    confirm-text="Archive"
+    @confirm="confirmArchive"
+  />
 </template>

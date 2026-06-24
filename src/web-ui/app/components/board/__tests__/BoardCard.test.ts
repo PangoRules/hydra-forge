@@ -26,42 +26,42 @@ const makeCard = (overrides = {}) => ({
 describe('BoardCard', () => {
   it('renders card title', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ title: 'Fix login bug' }) }
+      props: { card: makeCard({ title: 'Fix login bug' }), projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('Fix login bug')
   })
 
   it('shows card number', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ cardNumber: 99 }) }
+      props: { card: makeCard({ cardNumber: 99 }), projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('#99')
   })
 
   it('shows description when present', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ description: 'Some description' }) }
+      props: { card: makeCard({ description: 'Some description' }), projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('Some description')
   })
 
   it('hides description when absent', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ description: '' }) }
+      props: { card: makeCard({ description: '' }), projectId: 'p1' }
     })
     expect(wrapper.text()).not.toContain('description')
   })
 
   it('shows archived badge when archived', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ archivedAt: new Date().toISOString() }) }
+      props: { card: makeCard({ archivedAt: new Date().toISOString() }), projectId: 'p1' }
     })
     expect(wrapper.text()).toContain('archived')
   })
 
   it('emits click with card', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard() }
+      props: { card: makeCard(), projectId: 'p1' }
     })
     await wrapper.find('.cursor-pointer').trigger('click')
     expect(wrapper.emitted('click')).toBeTruthy()
@@ -70,18 +70,19 @@ describe('BoardCard', () => {
 
   it('renders type-specific icon', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ type: 1 }) } // Bug type
+      props: { card: makeCard({ type: 1 }), projectId: 'p1' } // Bug type
     })
     expect(wrapper.find('.size-4').exists()).toBe(true)
   })
 
   it('shows assignee avatars when present', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: {
-        card: makeCard({
-          assignees: [{ id: 'a1', userId: 'u1', username: 'alice', assignedAt: new Date().toISOString() }]
-        })
-      }
+        props: {
+          card: makeCard({
+            assignees: [{ id: 'a1', userId: 'u1', username: 'alice', assignedAt: new Date().toISOString() }]
+          }),
+          projectId: 'p1'
+        }
     })
     expect(wrapper.text()).toContain('A')
   })
@@ -90,7 +91,7 @@ describe('BoardCard', () => {
     const futureDate = new Date()
     futureDate.setDate(futureDate.getDate() + 7)
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ dueAt: futureDate.toISOString() }) }
+      props: { card: makeCard({ dueAt: futureDate.toISOString() }), projectId: 'p1' }
     })
     expect(wrapper.find('.size-3').exists()).toBe(true)
   })

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
+import type { BoardFilters } from '~/stores/board'
 
-const defaultFilters = {
+const defaultFilters: BoardFilters = {
   search: '',
   type: null,
   includeArchived: false,
@@ -48,7 +49,37 @@ describe('BoardFilterBar', () => {
     const input = wrapper.find('input[placeholder*="Search"]')
     await input.setValue('test query')
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-    const emitted = wrapper.emitted('update:modelValue')![0][0] as typeof defaultFilters
+    const emitted = wrapper.emitted('update:modelValue')![0][0] as BoardFilters
     expect(emitted.search).toBe('test query')
+  })
+
+  it('emits update:modelValue when type changes', async () => {
+    const wrapper = await mountSuspended(BoardFilterBar, {
+      props: { modelValue: defaultFilters }
+    })
+    const select = wrapper.find('select')
+    await select.setValue('1')
+    const emitted = wrapper.emitted('update:modelValue')![0][0] as BoardFilters
+    expect(emitted.type).toBe(1)
+  })
+
+  it('emits update:modelValue when archived toggles', async () => {
+    const wrapper = await mountSuspended(BoardFilterBar, {
+      props: { modelValue: defaultFilters }
+    })
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    await checkbox.setValue(true)
+    const emitted = wrapper.emitted('update:modelValue')![0][0] as BoardFilters
+    expect(emitted.includeArchived).toBe(true)
+  })
+
+  it('emits update:modelValue when hide empty toggles', async () => {
+    const wrapper = await mountSuspended(BoardFilterBar, {
+      props: { modelValue: defaultFilters }
+    })
+    const checkboxes = wrapper.findAll('input[type="checkbox"]')
+    await checkboxes[1].setValue(true)
+    const emitted = wrapper.emitted('update:modelValue')![0][0] as BoardFilters
+    expect(emitted.hideEmptyColumns).toBe(true)
   })
 })
