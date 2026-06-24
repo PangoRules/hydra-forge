@@ -20,6 +20,23 @@ const card = ref<CardResponse | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const isArchived = computed(() => !!card.value?.archivedAt)
+
+async function handleArchive() {
+  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {})
+  if (!error) {
+    emit('archived')
+    emit('close')
+  }
+}
+
+async function handleRestore() {
+  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {})
+  if (!error) {
+    emit('restored')
+  }
+}
+
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
 
 const tabs = [
@@ -88,6 +105,24 @@ function onKeydown(e: KeyboardEvent) {
             size="sm"
             @click="emit('close')"
           />
+          <UButton
+            v-if="!isArchived"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-archive"
+            @click="handleArchive"
+          >
+            Archive
+          </UButton>
+          <UButton
+            v-else
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-archive-restore"
+            @click="handleRestore"
+          >
+            Restore
+          </UButton>
         </div>
 
         <div class="hidden md:flex flex-1 overflow-hidden">

@@ -135,6 +135,8 @@ onMounted(async () => {
       :card-id="selectedCardId"
       :project-id="projectId"
       @close="selectedCardId = null"
+      @archived="board.fetchBoard(projectId)"
+      @restored="board.fetchBoard(projectId)"
     />
   </div>
 </template>
