@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { ApiRoutes } from '~/lib/routes'
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -26,7 +26,7 @@ async function fetchProjects() {
 }
 
 function onProjectSelect(projectId: string) {
-  navigateTo(`/projects/${projectId}/board`)
+  navigateTo(UiRoutes.Projects.Board(projectId))
 }
 
 function onProjectCreated() {

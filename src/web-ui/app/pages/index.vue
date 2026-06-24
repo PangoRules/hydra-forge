@@ -3,7 +3,7 @@ import { UiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 
-await navigateTo(UiRoutes.Projects, { redirectCode: 302 })
+await navigateTo(UiRoutes.Projects.List, { redirectCode: 302 })
 </script>
 
 <template>

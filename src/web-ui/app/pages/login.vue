@@ -15,7 +15,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     await login(username.value, password.value)
-    await navigateTo(UiRoutes.Projects)
+    await navigateTo(UiRoutes.Projects.List)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Login failed'
   } finally {

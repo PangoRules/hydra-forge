@@ -15,7 +15,10 @@
 export const UiRoutes = {
   Login: '/login',
   Setup: '/setup',
-  Projects: '/projects'
+  Projects: {
+    List: '/projects',
+    Board: (projectId: string) => `/projects/${projectId}/board`
+  }
 } as const
 
 export const ApiRoutes = {
