@@ -14,6 +14,8 @@ namespace HydraForge.Server.Controllers.Projects;
 public class ColumnsController(ColumnService columnService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(List<AppColumns.ColumnResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -39,6 +41,8 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpGet("{columnId:guid}")]
+    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid projectId, Guid columnId)
     {
         var userId = User.GetRequiredUserId();
@@ -62,6 +66,8 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(Guid projectId, [FromBody] CreateColumnRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -96,6 +102,8 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPut("{columnId:guid}")]
+    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid columnId,
@@ -131,6 +139,8 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpDelete("{columnId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId, Guid columnId)
     {
         var userId = User.GetRequiredUserId();
@@ -147,6 +157,8 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPut("reorder")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reorder(
         Guid projectId,
         [FromBody] ReorderColumnsRequest request
