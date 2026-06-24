@@ -37,6 +37,15 @@ builder.Host.UseSerilog(
             )
 );
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
+
 builder.Services.AddOpenApi();
 builder
     .Services.AddControllers()
@@ -172,6 +181,8 @@ app.UseSerilogRequestLogging(options =>
         );
     };
 });
+
+app.UseCors();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
