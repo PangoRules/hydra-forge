@@ -6,7 +6,10 @@ const { logout, isAuthenticated } = useAuth()
   <UApp>
     <UHeader>
       <template #left>
-        <NuxtLink to="/projects" class="flex items-center gap-2">
+        <NuxtLink
+          to="/projects"
+          class="flex items-center gap-2"
+        >
           <span class="text-lg font-bold">HydraForge</span>
         </NuxtLink>
       </template>
