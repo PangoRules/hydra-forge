@@ -12,6 +12,7 @@ const props = defineProps<{
 
 const description = ref(props.card.description ?? '')
 const saving = ref(false)
+const dirty = ref(false)
 const saveError = ref<string | null>(null)
 const currentVersion = ref(props.card.version)
 
@@ -22,11 +23,13 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 function onDescriptionChange(value: string) {
   description.value = value
+  dirty.value = true
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(saveDescription, 2000)
 }
 
 async function saveDescription() {
+  if (!dirty.value) return
   saving.value = true
   saveError.value = null
   try {
@@ -43,11 +46,17 @@ async function saveDescription() {
     if (error) throw error
     if (data) currentVersion.value = (data as CardResponse).version
     board.updateCard(props.card.id, { description: description.value })
+    dirty.value = false
   } catch (e: unknown) {
     saveError.value = e instanceof Error ? e.message : 'Failed to save'
   } finally {
     saving.value = false
   }
+}
+
+function handleSaveClick() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveDescription()
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -65,12 +74,14 @@ function onKeydown(e: KeyboardEvent) {
       <p class="text-xs font-medium text-muted uppercase">
         Description
       </p>
-      <span
-        v-if="saving"
-        class="text-xs text-muted"
-      >
-        Saving...
-      </span>
+      <UButton
+        label="Save"
+        size="xs"
+        variant="soft"
+        :loading="saving"
+        :disabled="!dirty || saving"
+        @click="handleSaveClick"
+      />
     </div>
 
     <MarkdownEditor
