@@ -107,7 +107,14 @@ onMounted(() => {
         :columns="board.columns"
         :cards-by-column="board.cardsByColumn"
         :project-id="projectId"
+        class="hidden md:flex"
         @card-move="handleCardMove"
+        @card-click="handleCardClick"
+      />
+      <BoardMobileList
+        :columns="board.columns"
+        :cards-by-column="board.cardsByColumn"
+        class="md:hidden"
         @card-click="handleCardClick"
       />
     </div>
