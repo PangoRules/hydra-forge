@@ -14,6 +14,7 @@ defineProps<{
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'add-card': [columnId: string]
 }>()
 
 function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
@@ -35,6 +36,7 @@ function handleCardClick(card: CardResponse) {
       :project-id="projectId"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
+      @add-card="(colId: string) => emit('add-card', colId)"
     />
   </div>
 </template>
