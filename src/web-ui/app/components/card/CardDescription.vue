@@ -13,6 +13,7 @@ const props = defineProps<{
 const description = ref(props.card.description ?? '')
 const saving = ref(false)
 const saveError = ref<string | null>(null)
+const currentVersion = ref(props.card.version)
 
 const api = useApi()
 const board = useBoardStore()
@@ -22,24 +23,25 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
 function onDescriptionChange(value: string) {
   description.value = value
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(saveDescription, 1500)
+  saveTimer = setTimeout(saveDescription, 2000)
 }
 
 async function saveDescription() {
   saving.value = true
   saveError.value = null
   try {
-    const { error } = await api.PUT(ApiRoutes.Cards.update(props.projectId, props.card.id), {
+    const { data, error } = await api.PUT(ApiRoutes.Cards.update(props.projectId, props.card.id), {
       body: {
         title: props.card.title,
         description: description.value,
         type: props.card.type,
-        version: props.card.version,
+        version: currentVersion.value,
         parentCardId: props.card.parentCardId,
         dueAt: props.card.dueAt
       }
     })
     if (error) throw error
+    if (data) currentVersion.value = (data as CardResponse).version
     board.updateCard(props.card.id, { description: description.value })
   } catch (e: unknown) {
     saveError.value = e instanceof Error ? e.message : 'Failed to save'
