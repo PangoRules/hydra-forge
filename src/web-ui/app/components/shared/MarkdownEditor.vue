@@ -69,7 +69,7 @@ watch(sourceMode, (isSource) => {
     sourceText.value = turndown.turndown(editor.value.getHTML())
   } else {
     // Switching back: convert markdown to HTML, set in editor, emit
-    const html = marked.parse(sourceText.value, { async: false }) as string
+    const html = marked.parse(sourceText.value, { async: false, breaks: true }) as string
     editor.value.commands.setContent(html, { emitUpdate: false })
     emit('update:modelValue', html)
   }
