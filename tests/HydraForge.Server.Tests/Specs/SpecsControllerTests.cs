@@ -288,6 +288,7 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IChatArchiveService>(_ => new SpecsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new SpecsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
         });

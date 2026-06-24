@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.Realtime;
 using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Cards;
@@ -13,6 +14,8 @@ using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
+using HydraForge.Server.Hubs;
+using HydraForge.Infrastructure.Realtime;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +77,20 @@ builder
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hubs/board") || path.StartsWithSegments("/hubs/presence")))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -87,6 +104,8 @@ builder.Services.AddAuthorization(options =>
         }
     );
 });
+
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
@@ -102,6 +121,8 @@ builder.Services.AddScoped<TestUserSeeder>();
 builder.Services.AddScoped<GetHealthHandler>(sp => new GetHealthHandler(
     sp.GetServices<IHealthProbe>()
 ));
+
+builder.Services.AddRealtimeServices();
 
 var app = builder.Build();
 
@@ -158,6 +179,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<BoardHub>("/hubs/board");
+app.MapHub<PresenceHub>("/hubs/presence");
 
 app.Run();
 

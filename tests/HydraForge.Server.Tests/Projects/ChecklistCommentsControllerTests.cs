@@ -445,6 +445,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
             services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CCTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new CCTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<HydraForge.Application.Checklist.IChecklistItemRepository>(_ => new CCTestChecklistItemRepository(_checklistItems));
             services.AddScoped<HydraForge.Application.Comments.ICommentRepository>(_ => new CCTestCommentRepository(_comments));
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();

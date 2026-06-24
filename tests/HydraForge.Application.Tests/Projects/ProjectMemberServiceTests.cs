@@ -10,8 +10,8 @@ public class ProjectMemberServiceTests
     [Fact]
     public async Task AddMemberAsync_OwnerAddsMember_Success()
     {
-        var (repo, memberRepo, userRepo) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo);
+        var (repo, memberRepo, userRepo, publisher) = CreateMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var newMemberId = Guid.NewGuid();
@@ -28,8 +28,8 @@ public class ProjectMemberServiceTests
     [Fact]
     public async Task AddMemberAsync_NonOwnerDenied_ReturnsOwnerRequired()
     {
-        var (repo, memberRepo, userRepo) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo);
+        var (repo, memberRepo, userRepo, publisher) = CreateMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
@@ -47,8 +47,8 @@ public class ProjectMemberServiceTests
     [Fact]
     public async Task AddMemberAsync_DuplicateMember_ReturnsDuplicateError()
     {
-        var (repo, memberRepo, userRepo) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo);
+        var (repo, memberRepo, userRepo, publisher) = CreateMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var existingMemberId = Guid.NewGuid();
@@ -65,8 +65,8 @@ public class ProjectMemberServiceTests
     [Fact]
     public async Task RemoveMemberAsync_LastOwnerDenied_ReturnsLastOwnerRemovalDenied()
     {
-        var (repo, memberRepo, userRepo) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo);
+        var (repo, memberRepo, userRepo, publisher) = CreateMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
@@ -82,13 +82,15 @@ public class ProjectMemberServiceTests
     private static (
         InMemoryProjectRepository repo,
         InMemoryProjectMemberRepository memberRepo,
-        InMemoryUserRepository userRepo
+        InMemoryUserRepository userRepo,
+        FakeProjectBoardEventPublisher publisher
     ) CreateMocks()
     {
         return (
             new InMemoryProjectRepository(),
             new InMemoryProjectMemberRepository(),
-            new InMemoryUserRepository()
+            new InMemoryUserRepository(),
+            new FakeProjectBoardEventPublisher()
         );
     }
 }

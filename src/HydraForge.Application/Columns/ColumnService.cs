@@ -1,6 +1,7 @@
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 
@@ -10,9 +11,11 @@ public class ColumnService(
     IColumnRepository columnRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default
@@ -41,6 +44,7 @@ public class ColumnService(
 
         await columnRepo.AddAsync(column, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Created, ct);
 
         return Result<ColumnDto>.Success(MapToDto(column));
     }
@@ -104,6 +108,7 @@ public class ColumnService(
 
         await columnRepo.UpdateAsync(column, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Updated, ct);
 
         return Result<ColumnDto>.Success(MapToDto(column));
     }
@@ -141,6 +146,8 @@ public class ColumnService(
             await columnRepo.UpdateAsync(remaining[i], ct);
         }
 
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, cmd.ColumnId, BoardAction.Deleted, ct);
+
         return Result.Success();
     }
 
@@ -173,11 +180,27 @@ public class ColumnService(
 
         await columnRepo.ReorderAsync(cmd.ProjectId, cmd.ColumnIds, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, Guid.Empty, BoardAction.Moved, ct);
 
         return Result.Success();
     }
 
     private static ColumnDto MapToDto(Column column) =>
         new(column.Id, column.Name, column.Position, column.WipLimit, column.Color);
+
+    private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
+    {
+        var envelope = new ProjectBoardEventEnvelope(
+            Guid.NewGuid(),
+            projectId,
+            entityType,
+            entityId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!
+        );
+        await _publisher.PublishAsync(envelope, ct);
+    }
 }
 

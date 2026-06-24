@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace HydraForge.Server.Auth;
+namespace HydraForge.Application.Auth;
 
 public static class ClaimsPrincipalExtensions
 {

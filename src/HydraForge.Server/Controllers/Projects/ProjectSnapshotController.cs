@@ -1,8 +1,10 @@
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
-using HydraForge.Domain.Common;
+using HydraForge.Application.Auth;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Domain.Common;
+using HydraForge.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

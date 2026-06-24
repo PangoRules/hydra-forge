@@ -1,6 +1,7 @@
 using HydraForge.Application.Cards;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Enums;
+using HydraForge.Application.Auth;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;

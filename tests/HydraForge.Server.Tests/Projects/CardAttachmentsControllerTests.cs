@@ -299,6 +299,7 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                 var snapshotRefresher = sp.GetRequiredService<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>();
                 return new HydraForge.Application.Attachments.AttachmentService(
                     attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher,
+                    new FakeProjectBoardEventPublisher(),
                     10_000_000, HydraForge.Application.Attachments.AttachmentContentTypes.Allowed);
             });
         });

@@ -1,0 +1,69 @@
+### SignalR Hub Smoke Tests
+
+### Run against local development environment
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-realtime-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+# ── BoardHub Negotiate ──────────────────────────────────────
+
+# Returns connectionToken needed for WebSocket upgrade.
+# Client then opens ws://host/hubs/board?id=<connectionToken>
+# Supported client→server methods: JoinProject(projectId)
+# Server→client events: OnBoardEvent(ProjectBoardEventEnvelope)
+
+POST {{baseUrl}}/hubs/board/negotiate?negotiateVersion=1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+X-Correlation-Id: smoke-realtime-002
+
+
+###
+
+# ── PresenceHub Negotiate ───────────────────────────────────
+
+# Returns connectionToken needed for WebSocket upgrade.
+# Client then opens ws://host/hubs/presence?id=<connectionToken>
+# Supported client→server methods: JoinProject(projectId), LeaveProject(projectId), FocusCard(projectId, cardId)
+# Server→client events: UserJoined, UserLeft, CardFocused
+
+POST {{baseUrl}}/hubs/presence/negotiate?negotiateVersion=1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+X-Correlation-Id: smoke-realtime-003
+
+
+###
+
+# ── Mutations That Trigger Broadcasts ───────────────────────
+#
+# These HTTP mutations fire OnBoardEvent to all WebSocket
+# clients connected to the target project's BoardHub group:
+#
+# POST /api/projects             → OnBoardEvent(Created, Project)
+# POST /api/projects/{id}/cards  → OnBoardEvent(Created, Card)
+# POST .../cards/{id}/move       → OnBoardEvent(Moved, Card)
+# POST .../cards/{id}/assign     → OnBoardEvent(Assigned, Card)
+# POST .../cards/{id}/unassign   → OnBoardEvent(Unassigned, Card)
+# POST .../cards/{id}/archive    → OnBoardEvent(Archived, Card)
+# POST .../cards/{id}/comments   → OnBoardEvent(Created, Comment)
+# POST .../columns               → OnBoardEvent(Created, Column)
+# PATCH .../columns/{id}/reorder → OnBoardEvent(Updated, Column)
+# PATCH /api/projects/{id}       → OnBoardEvent(Updated, Project)
+# POST .../projects/{id}/archive → OnBoardEvent(Archived, Project)

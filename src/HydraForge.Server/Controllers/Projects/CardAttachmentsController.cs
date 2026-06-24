@@ -1,4 +1,5 @@
 using HydraForge.Application.Attachments;
+using HydraForge.Application.Auth;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -83,7 +84,10 @@ public class CardAttachmentsController(AttachmentService attachmentService) : Co
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        var (stream, contentType, fileName) = result.Value;
+        var downloadResult = result.Value;
+        var stream = downloadResult.Stream;
+        var contentType = downloadResult.ContentType;
+        var fileName = downloadResult.FileName;
         return File(stream, contentType, fileName);
     }
 

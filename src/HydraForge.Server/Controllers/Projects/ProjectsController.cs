@@ -1,4 +1,5 @@
 using HydraForge.Application.Projects;
+using HydraForge.Application.Auth;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;

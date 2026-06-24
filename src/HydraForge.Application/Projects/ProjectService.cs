@@ -1,4 +1,5 @@
 using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -11,10 +12,12 @@ public class ProjectService(
     IProjectMemberRepository memberRepo,
     IProjectContextSnapshotRepository snapshotRepo,
     IChatArchiveService chatArchiveService,
-    IProjectSnapshotRefresher snapshotRefresher
+    IProjectSnapshotRefresher snapshotRefresher,
+    IProjectBoardEventPublisher publisher
 )
 {
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
+    private readonly IProjectBoardEventPublisher _publisher = publisher;
     private static readonly string[] DefaultColumnNames =
     [
         "Backlog",
@@ -78,6 +81,8 @@ public class ProjectService(
             TemplateGeneratedAt = DateTime.UtcNow,
         };
         await snapshotRepo.AddAsync(snapshot, ct);
+        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Created, 1, DateTime.UtcNow, null!), ct);
 
         return Result<ProjectDto>.Success(MapToDto(project, columns, [ownerMember]));
     }
@@ -179,6 +184,8 @@ public class ProjectService(
 
         await projectRepo.UpdateAsync(project, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Updated, 1, DateTime.UtcNow, null!), ct);
 
         var columns = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
@@ -219,6 +226,8 @@ public class ProjectService(
         await projectRepo.UpdateAsync(project, ct);
         await chatArchiveService.ArchiveProjectAsync(cmd.ProjectId, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Archived, 1, DateTime.UtcNow, null!), ct);
 
         return Result.Success();
     }
@@ -249,6 +258,8 @@ public class ProjectService(
             );
 
         await projectRepo.UpdateAsync(project, ct);
+        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Deleted, 1, DateTime.UtcNow, null!), ct);
 
         return Result.Success();
     }
