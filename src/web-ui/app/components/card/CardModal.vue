@@ -133,7 +133,7 @@ onMounted(() => fetchCard())
             <UTabs
               v-model="activeTab"
               :items="tabs"
-              class="border-b flex-shrink-0"
+              class="border-b flex-shrink-0 px-3"
             />
             <div class="flex-1 overflow-y-auto p-4">
               <div v-if="activeTab === 'details'">
@@ -172,7 +172,7 @@ onMounted(() => fetchCard())
           <UTabs
             v-model="activeTab"
             :items="tabs"
-            class="border-b"
+            class="border-b px-3"
           />
 
           <div class="flex-1 overflow-y-auto p-4">
