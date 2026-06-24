@@ -839,11 +839,247 @@ git commit -m "feat: add SignalR PresenceHub with online users and card focus"
 
 ---
 
+## Task 21: Spec/Plan Editor + Realtime Composable Tests
+
+**Files:**
+- Create: `src/web-ui/app/components/spec/__tests__/SpecEditor.test.ts`
+- Create: `src/web-ui/app/components/spec/__tests__/SpecVersionHistory.test.ts`
+- Create: `src/web-ui/app/components/plan/__tests__/PlanEditor.test.ts`
+- Create: `src/web-ui/app/components/plan/__tests__/PlanVersionHistory.test.ts`
+- Create: `src/web-ui/app/composables/__tests__/useRealtime.test.ts`
+- Create: `src/web-ui/app/composables/__tests__/usePresence.test.ts`
+- Create: `src/web-ui/app/stores/__tests__/presence.test.ts`
+
+### Step 1: Write SpecEditor component test
+
+Create `src/web-ui/app/components/spec/__tests__/SpecEditor.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import SpecEditor from '~/components/spec/SpecEditor.vue'
+
+describe('SpecEditor', () => {
+  it('renders new spec form', async () => {
+    const wrapper = await mountSuspended(SpecEditor, {
+      props: { specId: null, cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('New Spec')
+    expect(wrapper.find('input[placeholder="Spec title"]').exists()).toBe(true)
+  })
+
+  it('renders edit spec form when specId provided', async () => {
+    const wrapper = await mountSuspended(SpecEditor, {
+      props: { specId: 's1', cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Edit Spec')
+  })
+
+  it('has save button', async () => {
+    const wrapper = await mountSuspended(SpecEditor, {
+      props: { specId: null, cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Save')
+  })
+})
+```
+
+### Step 2: Write SpecVersionHistory component test
+
+Create `src/web-ui/app/components/spec/__tests__/SpecVersionHistory.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import SpecVersionHistory from '~/components/spec/SpecVersionHistory.vue'
+
+describe('SpecVersionHistory', () => {
+  it('renders version history header', async () => {
+    const wrapper = await mountSuspended(SpecVersionHistory, {
+      props: { specId: 's1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Version History')
+  })
+
+  it('shows empty state when no versions', async () => {
+    const wrapper = await mountSuspended(SpecVersionHistory, {
+      props: { specId: 's1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('No versions')
+  })
+})
+```
+
+### Step 3: Write PlanEditor component test
+
+Create `src/web-ui/app/components/plan/__tests__/PlanEditor.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import PlanEditor from '~/components/plan/PlanEditor.vue'
+
+describe('PlanEditor', () => {
+  it('renders new plan form', async () => {
+    const wrapper = await mountSuspended(PlanEditor, {
+      props: { planId: null, cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('New Plan')
+    expect(wrapper.find('input[placeholder="Plan title"]').exists()).toBe(true)
+  })
+
+  it('has save button', async () => {
+    const wrapper = await mountSuspended(PlanEditor, {
+      props: { planId: null, cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Save')
+  })
+})
+```
+
+### Step 4: Write PlanVersionHistory component test
+
+Create `src/web-ui/app/components/plan/__tests__/PlanVersionHistory.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import PlanVersionHistory from '~/components/plan/PlanVersionHistory.vue'
+
+describe('PlanVersionHistory', () => {
+  it('renders version history header', async () => {
+    const wrapper = await mountSuspended(PlanVersionHistory, {
+      props: { planId: 'p1', projectId: 'pr1' }
+    })
+    expect(wrapper.text()).toContain('Version History')
+  })
+})
+```
+
+### Step 5: Write useRealtime composable test
+
+Create `src/web-ui/app/composables/__tests__/useRealtime.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { useRealtime } from '~/composables/useRealtime'
+
+describe('useRealtime', () => {
+  it('returns connect and disconnect functions', () => {
+    const realtime = useRealtime()
+    expect(typeof realtime.connect).toBe('function')
+    expect(typeof realtime.disconnect).toBe('function')
+  })
+
+  it('starts disconnected', () => {
+    const realtime = useRealtime()
+    expect(realtime.isConnected.value).toBe(false)
+    expect(realtime.isReconnecting.value).toBe(false)
+  })
+})
+```
+
+### Step 6: Write usePresence composable test
+
+Create `src/web-ui/app/composables/__tests__/usePresence.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { usePresence } from '~/composables/usePresence'
+
+describe('usePresence', () => {
+  it('returns connect, disconnect, and focusCard functions', () => {
+    const presence = usePresence()
+    expect(typeof presence.connect).toBe('function')
+    expect(typeof presence.disconnect).toBe('function')
+    expect(typeof presence.focusCard).toBe('function')
+  })
+})
+```
+
+### Step 7: Write usePresenceStore tests
+
+Create `src/web-ui/app/stores/__tests__/presence.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { usePresenceStore } from '~/stores/presence'
+
+describe('usePresenceStore', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('starts with empty online users', () => {
+    const store = usePresenceStore()
+    expect(store.onlineUsers.size).toBe(0)
+  })
+
+  it('addUser adds user to project', () => {
+    const store = usePresenceStore()
+    store.addUser('p1', { userId: 'u1', username: 'Alice', connectionId: 'conn1' })
+    expect(store.onlineUsers.get('p1')?.length).toBe(1)
+    expect(store.onlineUsers.get('p1')?.[0].username).toBe('Alice')
+  })
+
+  it('addUser does not duplicate same userId', () => {
+    const store = usePresenceStore()
+    store.addUser('p1', { userId: 'u1', username: 'Alice', connectionId: 'conn1' })
+    store.addUser('p1', { userId: 'u1', username: 'Alice', connectionId: 'conn2' })
+    expect(store.onlineUsers.get('p1')?.length).toBe(1)
+  })
+
+  it('removeUser removes by connectionId', () => {
+    const store = usePresenceStore()
+    store.addUser('p1', { userId: 'u1', username: 'Alice', connectionId: 'conn1' })
+    store.addUser('p1', { userId: 'u2', username: 'Bob', connectionId: 'conn2' })
+    store.removeUser('p1', 'conn1')
+    expect(store.onlineUsers.get('p1')?.length).toBe(1)
+    expect(store.onlineUsers.get('p1')?.[0].username).toBe('Bob')
+  })
+
+  it('setCardFocus and clearCardFocus work', () => {
+    const store = usePresenceStore()
+    store.setCardFocus('u1', 'c1')
+    expect(store.focusedCards.get('u1')).toBe('c1')
+
+    store.clearCardFocus('u1')
+    expect(store.focusedCards.has('u1')).toBe(false)
+  })
+
+  it('setProjectUsers replaces users for project', () => {
+    const store = usePresenceStore()
+    store.setProjectUsers('p1', [
+      { userId: 'u1', username: 'Alice', connectionId: 'conn1' },
+      { userId: 'u2', username: 'Bob', connectionId: 'conn2' }
+    ])
+    expect(store.onlineUsers.get('p1')?.length).toBe(2)
+  })
+})
+```
+
+### Step 8: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 9: Commit
+
+```bash
+git add src/web-ui/app/components/spec/__tests__/ src/web-ui/app/components/plan/__tests__/ src/web-ui/app/composables/__tests__/useRealtime.test.ts src/web-ui/app/composables/__tests__/usePresence.test.ts src/web-ui/app/stores/__tests__/presence.test.ts
+git commit -m "feat: add spec/plan editor, version history, realtime, and presence tests"
+```
+
+---
+
 ## Verification (Plan 5 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: create/edit spec → version history → restore. Create/edit plan → same.
-5. Manual: two browser tabs → real-time board sync. Presence shows online users.
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: create/edit spec → version history → restore. Create/edit plan → same.
+6. Manual: two browser tabs → real-time board sync. Presence shows online users.

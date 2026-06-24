@@ -701,10 +701,159 @@ git commit -m "feat: add full card metadata editor with type, column, due date"
 
 ---
 
+## Task 17: Card Panel Component Tests
+
+**Files:**
+- Create: `src/web-ui/app/components/card/__tests__/CardChecklist.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/CardComments.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/CardAttachments.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/CardDependencies.test.ts`
+
+### Step 1: Write CardChecklist component test
+
+Create `src/web-ui/app/components/card/__tests__/CardChecklist.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardChecklist from '~/components/card/CardChecklist.vue'
+
+describe('CardChecklist', () => {
+  it('renders checklist header', async () => {
+    const wrapper = await mountSuspended(CardChecklist, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Checklist')
+  })
+
+  it('renders add item input', async () => {
+    const wrapper = await mountSuspended(CardChecklist, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.find('input[placeholder="Add item..."]').exists()).toBe(true)
+  })
+
+  it('shows 0/0 count when no items', async () => {
+    const wrapper = await mountSuspended(CardChecklist, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('0/0')
+  })
+})
+```
+
+### Step 2: Write CardComments component test
+
+Create `src/web-ui/app/components/card/__tests__/CardComments.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardComments from '~/components/card/CardComments.vue'
+
+describe('CardComments', () => {
+  it('renders comments header', async () => {
+    const wrapper = await mountSuspended(CardComments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Comments')
+  })
+
+  it('renders comment input', async () => {
+    const wrapper = await mountSuspended(CardComments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.find('textarea[placeholder="Write a comment..."]').exists()).toBe(true)
+  })
+
+  it('shows empty state when no comments', async () => {
+    const wrapper = await mountSuspended(CardComments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('No comments yet')
+  })
+})
+```
+
+### Step 3: Write CardAttachments component test
+
+Create `src/web-ui/app/components/card/__tests__/CardAttachments.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardAttachments from '~/components/card/CardAttachments.vue'
+
+describe('CardAttachments', () => {
+  it('renders attachments header', async () => {
+    const wrapper = await mountSuspended(CardAttachments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Attachments')
+  })
+
+  it('renders upload button', async () => {
+    const wrapper = await mountSuspended(CardAttachments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Upload')
+  })
+
+  it('shows empty state when no attachments', async () => {
+    const wrapper = await mountSuspended(CardAttachments, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('No attachments')
+  })
+})
+```
+
+### Step 4: Write CardDependencies component test
+
+Create `src/web-ui/app/components/card/__tests__/CardDependencies.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardDependencies from '~/components/card/CardDependencies.vue'
+
+describe('CardDependencies', () => {
+  it('renders dependencies header', async () => {
+    const wrapper = await mountSuspended(CardDependencies, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Dependencies')
+  })
+
+  it('shows empty state when no dependencies', async () => {
+    const wrapper = await mountSuspended(CardDependencies, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('No dependencies')
+  })
+})
+```
+
+### Step 5: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 6: Commit
+
+```bash
+git add src/web-ui/app/components/card/__tests__/CardChecklist.test.ts src/web-ui/app/components/card/__tests__/CardComments.test.ts src/web-ui/app/components/card/__tests__/CardAttachments.test.ts src/web-ui/app/components/card/__tests__/CardDependencies.test.ts
+git commit -m "feat: add card panel component tests (checklist, comments, attachments, dependencies)"
+```
+
+---
+
 ## Verification (Plan 4 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: open card → all panels render → checklist add/toggle → comment post → upload attachment → dependencies visible → metadata editable
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: open card → all panels render → checklist add/toggle → comment post → upload attachment → dependencies visible → metadata editable

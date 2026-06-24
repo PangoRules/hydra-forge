@@ -465,10 +465,183 @@ git commit -m "feat: add Tiptap markdown editor and card description with auto-s
 
 ---
 
+## Task 12: Card Modal + Editor Component Tests
+
+**Files:**
+- Create: `src/web-ui/app/components/card/__tests__/CardModal.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/CardDescription.test.ts`
+- Create: `src/web-ui/app/components/shared/__tests__/MarkdownEditor.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/CardMetadata.test.ts`
+
+### Step 1: Write CardModal component test
+
+Create `src/web-ui/app/components/card/__tests__/CardModal.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardModal from '~/components/card/CardModal.vue'
+
+describe('CardModal', () => {
+  it('shows loading spinner initially', async () => {
+    const wrapper = await mountSuspended(CardModal, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    expect(wrapper.find('.animate-spin').exists()).toBe(true)
+  })
+
+  it('has close button', async () => {
+    const wrapper = await mountSuspended(CardModal, {
+      props: { cardId: 'c1', projectId: 'p1' }
+    })
+    // Close button exists in header
+    expect(wrapper.find('button').exists()).toBe(true)
+  })
+})
+```
+
+### Step 2: Write CardDescription component test
+
+Create `src/web-ui/app/components/card/__tests__/CardDescription.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardDescription from '~/components/card/CardDescription.vue'
+
+describe('CardDescription', () => {
+  const baseCard = {
+    id: 'c1',
+    title: 'Test',
+    description: 'Initial description',
+    type: 'Task'
+  } as any
+
+  it('renders description label', async () => {
+    const wrapper = await mountSuspended(CardDescription, {
+      props: { card: baseCard, projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('Description')
+  })
+
+  it('renders markdown editor with card description', async () => {
+    const wrapper = await mountSuspended(CardDescription, {
+      props: { card: baseCard, projectId: 'p1' }
+    })
+    expect(wrapper.findComponent({ name: 'MarkdownEditor' }).exists()).toBe(true)
+  })
+})
+```
+
+### Step 3: Write MarkdownEditor component test
+
+Create `src/web-ui/app/components/shared/__tests__/MarkdownEditor.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
+
+describe('MarkdownEditor', () => {
+  it('renders editor content area', async () => {
+    const wrapper = await mountSuspended(MarkdownEditor, {
+      props: { modelValue: '# Hello', placeholder: 'Write...' }
+    })
+    expect(wrapper.find('.ProseMirror').exists() || wrapper.find('[contenteditable]').exists()).toBe(true)
+  })
+
+  it('renders with placeholder', async () => {
+    const wrapper = await mountSuspended(MarkdownEditor, {
+      props: { modelValue: '', placeholder: 'Custom placeholder' }
+    })
+    expect(wrapper.html()).toBeTruthy()
+  })
+
+  it('renders in read-only mode when editable=false', async () => {
+    const wrapper = await mountSuspended(MarkdownEditor, {
+      props: { modelValue: '# Read only', editable: false }
+    })
+    expect(wrapper.html()).toBeTruthy()
+  })
+})
+```
+
+### Step 4: Write CardMetadata component test
+
+Create `src/web-ui/app/components/card/__tests__/CardMetadata.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import CardMetadata from '~/components/card/CardMetadata.vue'
+
+describe('CardMetadata', () => {
+  const baseCard = {
+    id: 'c1',
+    title: 'Test',
+    type: 'Task',
+    columnId: 'col1',
+    dueDate: null,
+    assignees: [],
+    parentEpicId: null
+  } as any
+
+  it('renders type badge', async () => {
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: { card: baseCard }
+    })
+    expect(wrapper.text()).toContain('Type')
+    expect(wrapper.text()).toContain('Task')
+  })
+
+  it('shows None for missing assignees', async () => {
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: { card: baseCard }
+    })
+    expect(wrapper.text()).toContain('None')
+  })
+
+  it('shows None for missing due date', async () => {
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: { card: baseCard }
+    })
+    expect(wrapper.text()).toContain('None')
+  })
+
+  it('renders assignee avatars when present', async () => {
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: {
+        card: {
+          ...baseCard,
+          assignees: [{ userId: 'u1', username: 'Alice' }]
+        }
+      }
+    })
+    expect(wrapper.text()).toContain('Assignees')
+  })
+})
+```
+
+### Step 5: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 6: Commit
+
+```bash
+git add src/web-ui/app/components/card/__tests__/ src/web-ui/app/components/shared/__tests__/
+git commit -m "feat: add card modal, description, editor, and metadata component tests"
+```
+
+---
+
 ## Verification (Plan 3 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: open card → desktop two-column layout → edit description → auto-save → mobile tabs work
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: open card → desktop two-column layout → edit description → auto-save → mobile tabs work

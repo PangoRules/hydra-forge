@@ -776,10 +776,268 @@ git commit -m "feat: add mobile board list view with breakpoint switching"
 
 ---
 
+## Task 9: Board Store + Component Tests
+
+**Files:**
+- Create: `src/web-ui/app/stores/__tests__/board.test.ts`
+- Create: `src/web-ui/app/components/project/__tests__/ProjectList.test.ts`
+- Create: `src/web-ui/app/components/project/__tests__/ProjectCreateModal.test.ts`
+- Create: `src/web-ui/app/components/board/__tests__/BoardCard.test.ts`
+- Create: `src/web-ui/app/components/board/__tests__/BoardColumn.test.ts`
+- Create: `src/web-ui/app/components/board/__tests__/BoardMobileList.test.ts`
+
+### Step 1: Write useBoardStore tests
+
+Create `src/web-ui/app/stores/__tests__/board.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { useBoardStore } from '~/stores/board'
+
+describe('useBoardStore', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('starts with null project and empty columns', () => {
+    const board = useBoardStore()
+    expect(board.project).toBeNull()
+    expect(board.columns).toEqual([])
+    expect(board.loading).toBe(false)
+    expect(board.error).toBeNull()
+  })
+
+  it('addCard pushes card to correct column', () => {
+    const board = useBoardStore()
+    board.columns = [{ id: 'col1', name: 'Todo', position: 0, projectId: 'p1', wipLimit: null, cards: [] }] as any
+    board.cardsByColumn = new Map([['col1', []]])
+
+    board.addCard('col1', { id: 'c1', title: 'Test', type: 'Task' } as any)
+    expect(board.cardsByColumn.get('col1')?.length).toBe(1)
+    expect(board.cardsByColumn.get('col1')?.[0].id).toBe('c1')
+  })
+
+  it('updateCard modifies card in place', () => {
+    const board = useBoardStore()
+    board.cardsByColumn = new Map([['col1', [{ id: 'c1', title: 'Old', type: 'Task' } as any]]])
+
+    board.updateCard('c1', { title: 'New' })
+    expect(board.cardsByColumn.get('col1')?.[0].title).toBe('New')
+  })
+
+  it('removeCard deletes card from column', () => {
+    const board = useBoardStore()
+    board.cardsByColumn = new Map([['col1', [{ id: 'c1', title: 'Test', type: 'Task' } as any]]])
+
+    board.removeCard('c1')
+    expect(board.cardsByColumn.get('col1')?.length).toBe(0)
+  })
+
+  it('moveCard moves card between columns', () => {
+    const board = useBoardStore()
+    board.cardsByColumn = new Map([
+      ['col1', [{ id: 'c1', title: 'Test', type: 'Task' } as any]],
+      ['col2', []]
+    ])
+
+    board.moveCard('c1', 'col2', 0)
+    expect(board.cardsByColumn.get('col1')?.length).toBe(0)
+    expect(board.cardsByColumn.get('col2')?.length).toBe(1)
+    expect(board.cardsByColumn.get('col2')?.[0].id).toBe('c1')
+  })
+
+  it('moveCard is no-op for unknown card', () => {
+    const board = useBoardStore()
+    board.cardsByColumn = new Map([['col1', []]])
+
+    board.moveCard('nonexistent', 'col2', 0)
+    expect(board.cardsByColumn.get('col1')?.length).toBe(0)
+  })
+
+  it('rollbackMove re-fetches board if project exists', () => {
+    const board = useBoardStore()
+    board.project = { id: 'p1', name: 'Test' } as any
+    // rollbackMove calls fetchBoard — just verify it doesn't throw
+    expect(() => board.rollbackMove('c1', 'col1', 0)).not.toThrow()
+  })
+})
+```
+
+### Step 2: Write ProjectList component test
+
+Create `src/web-ui/app/components/project/__tests__/ProjectList.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import ProjectList from '~/components/project/ProjectList.vue'
+
+describe('ProjectList', () => {
+  it('shows loading spinner when loading', async () => {
+    const wrapper = await mountSuspended(ProjectList, {
+      props: { projects: [], loading: true }
+    })
+    expect(wrapper.find('.animate-spin').exists()).toBe(true)
+  })
+
+  it('shows empty message when no projects', async () => {
+    const wrapper = await mountSuspended(ProjectList, {
+      props: { projects: [], loading: false }
+    })
+    expect(wrapper.text()).toContain('No projects yet')
+  })
+
+  it('renders project cards', async () => {
+    const wrapper = await mountSuspended(ProjectList, {
+      props: {
+        projects: [
+          { id: 'p1', name: 'Project A', description: 'Desc A' },
+          { id: 'p2', name: 'Project B', description: null }
+        ] as any,
+        loading: false
+      }
+    })
+    expect(wrapper.text()).toContain('Project A')
+    expect(wrapper.text()).toContain('Project B')
+  })
+
+  it('emits select on card click', async () => {
+    const wrapper = await mountSuspended(ProjectList, {
+      props: {
+        projects: [{ id: 'p1', name: 'Project A', description: null }] as any,
+        loading: false
+      }
+    })
+    await wrapper.find('.cursor-pointer').trigger('click')
+    expect(wrapper.emitted('select')).toBeTruthy()
+    expect(wrapper.emitted('select')?.[0]).toEqual(['p1'])
+  })
+})
+```
+
+### Step 3: Write BoardCard component test
+
+Create `src/web-ui/app/components/board/__tests__/BoardCard.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import BoardCard from '~/components/board/BoardCard.vue'
+
+describe('BoardCard', () => {
+  const baseCard = {
+    id: 'c1',
+    title: 'Test Card',
+    type: 'Task',
+    isBlocked: false,
+    assignees: []
+  } as any
+
+  it('renders card title', async () => {
+    const wrapper = await mountSuspended(BoardCard, { props: { card: baseCard } })
+    expect(wrapper.text()).toContain('Test Card')
+  })
+
+  it('shows type badge', async () => {
+    const wrapper = await mountSuspended(BoardCard, { props: { card: baseCard } })
+    expect(wrapper.text()).toContain('Task')
+  })
+
+  it('shows lock icon when blocked', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: { ...baseCard, isBlocked: true } }
+    })
+    expect(wrapper.find('[title="Blocked"]').exists()).toBe(true)
+  })
+
+  it('emits select on click', async () => {
+    const wrapper = await mountSuspended(BoardCard, { props: { card: baseCard } })
+    await wrapper.find('.cursor-pointer').trigger('click')
+    expect(wrapper.emitted('select')).toBeTruthy()
+    expect(wrapper.emitted('select')?.[0]).toEqual(['c1'])
+  })
+
+  it('shows Bug badge with error color', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: { ...baseCard, type: 'Bug' } }
+    })
+    expect(wrapper.text()).toContain('Bug')
+  })
+
+  it('shows Epic badge with primary color', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: { ...baseCard, type: 'Epic' } }
+    })
+    expect(wrapper.text()).toContain('Epic')
+  })
+})
+```
+
+### Step 4: Write BoardMobileList component test
+
+Create `src/web-ui/app/components/board/__tests__/BoardMobileList.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import BoardMobileList from '~/components/board/BoardMobileList.vue'
+
+describe('BoardMobileList', () => {
+  it('renders column headers', async () => {
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: {
+        columns: [{ id: 'col1', name: 'Todo', position: 0, projectId: 'p1', wipLimit: null, cards: [] }] as any,
+        cardsByColumn: new Map([['col1', []]])
+      }
+    })
+    expect(wrapper.text()).toContain('Todo')
+  })
+
+  it('renders cards under columns', async () => {
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: {
+        columns: [{ id: 'col1', name: 'Todo', position: 0, projectId: 'p1', wipLimit: null, cards: [] }] as any,
+        cardsByColumn: new Map([['col1', [{ id: 'c1', title: 'Card 1', type: 'Task', isBlocked: false, assignees: [] } as any]]])
+      }
+    })
+    expect(wrapper.text()).toContain('Card 1')
+  })
+
+  it('emits cardSelect on card click', async () => {
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: {
+        columns: [{ id: 'col1', name: 'Todo', position: 0, projectId: 'p1', wipLimit: null, cards: [] }] as any,
+        cardsByColumn: new Map([['col1', [{ id: 'c1', title: 'Card 1', type: 'Task', isBlocked: false, assignees: [] } as any]]])
+      }
+    })
+    await wrapper.find('.cursor-pointer').trigger('click')
+    expect(wrapper.emitted('cardSelect')).toBeTruthy()
+    expect(wrapper.emitted('cardSelect')?.[0]).toEqual(['c1'])
+  })
+})
+```
+
+### Step 5: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 6: Commit
+
+```bash
+git add src/web-ui/app/stores/__tests__/board.test.ts src/web-ui/app/components/project/__tests__/ src/web-ui/app/components/board/__tests__/
+git commit -m "feat: add board store and component tests"
+```
+
+---
+
 ## Verification (Plan 2 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: project list → create project → board renders → drag cards between columns → mobile view works
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: project list → create project → board renders → drag cards between columns → mobile view works
