@@ -873,13 +873,208 @@ git commit -m "feat: add PWA manifest and installable support"
 
 ---
 
+## Task 28: Polish & Hardening Component Tests
+
+**Files:**
+- Create: `src/web-ui/app/composables/__tests__/useKeyboard.test.ts`
+- Create: `src/web-ui/app/composables/__tests__/useErrorToast.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/BlockedMoveWarning.test.ts`
+- Create: `src/web-ui/app/components/card/__tests__/ArchiveCardWarning.test.ts`
+- Create: `src/web-ui/app/components/shared/__tests__/KeyboardShortcutOverlay.test.ts`
+
+### Step 1: Write useKeyboard composable test
+
+Create `src/web-ui/app/composables/__tests__/useKeyboard.test.ts`:
+
+```ts
+import { describe, it, expect, vi } from 'vitest'
+import { useKeyboard } from '~/composables/useKeyboard'
+
+describe('useKeyboard', () => {
+  it('registers and retrieves shortcuts by scope', () => {
+    const kb = useKeyboard()
+    const handler = vi.fn()
+
+    kb.register('Board', 'j', handler, 'Next card')
+    kb.register('Board', 'k', handler, 'Previous card')
+    kb.register('Modal', 'Escape', handler, 'Close modal')
+
+    const boardShortcuts = kb.getShortcuts('Board')
+    expect(boardShortcuts.length).toBe(2)
+    expect(boardShortcuts[0].description).toBe('Next card')
+    expect(boardShortcuts[1].description).toBe('Previous card')
+  })
+
+  it('unregister removes all shortcuts for scope', () => {
+    const kb = useKeyboard()
+    kb.register('Board', 'j', vi.fn(), 'Next card')
+    kb.register('Modal', 'Escape', vi.fn(), 'Close')
+
+    kb.unregister('Board')
+    expect(kb.getShortcuts('Board').length).toBe(0)
+    expect(kb.getShortcuts('Modal').length).toBe(1)
+  })
+
+  it('getAllShortcuts returns all registered shortcuts', () => {
+    const kb = useKeyboard()
+    kb.register('Board', 'j', vi.fn(), 'Next')
+    kb.register('Modal', 'Escape', vi.fn(), 'Close')
+
+    expect(kb.getAllShortcuts().length).toBe(2)
+  })
+})
+```
+
+### Step 2: Write useErrorToast composable test
+
+Create `src/web-ui/app/composables/__tests__/useErrorToast.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { useErrorToast } from '~/composables/useErrorToast'
+
+describe('useErrorToast', () => {
+  it('returns showError, showWarning, and showSuccess functions', () => {
+    const toast = useErrorToast()
+    expect(typeof toast.showError).toBe('function')
+    expect(typeof toast.showWarning).toBe('function')
+    expect(typeof toast.showSuccess).toBe('function')
+  })
+})
+```
+
+### Step 3: Write BlockedMoveWarning component test
+
+Create `src/web-ui/app/components/card/__tests__/BlockedMoveWarning.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import BlockedMoveWarning from '~/components/card/BlockedMoveWarning.vue'
+
+describe('BlockedMoveWarning', () => {
+  it('renders blocked card warning', async () => {
+    const wrapper = await mountSuspended(BlockedMoveWarning, {
+      props: {
+        blockedByCards: [
+          { id: 'c1', title: 'Blocker Card' }
+        ]
+      }
+    })
+    expect(wrapper.text()).toContain('Blocked Card')
+    expect(wrapper.text()).toContain('Blocker Card')
+    expect(wrapper.text()).toContain('Move Anyway')
+  })
+
+  it('emits confirm on Move Anyway click', async () => {
+    const wrapper = await mountSuspended(BlockedMoveWarning, {
+      props: { blockedByCards: [{ id: 'c1', title: 'Blocker' }] }
+    })
+    const buttons = wrapper.findAll('button')
+    const moveButton = buttons.find(b => b.text().includes('Move Anyway'))
+    await moveButton?.trigger('click')
+    expect(wrapper.emitted('confirm')).toBeTruthy()
+  })
+
+  it('emits cancel on Cancel click', async () => {
+    const wrapper = await mountSuspended(BlockedMoveWarning, {
+      props: { blockedByCards: [{ id: 'c1', title: 'Blocker' }] }
+    })
+    const buttons = wrapper.findAll('button')
+    const cancelButton = buttons.find(b => b.text().includes('Cancel'))
+    await cancelButton?.trigger('click')
+    expect(wrapper.emitted('cancel')).toBeTruthy()
+  })
+})
+```
+
+### Step 4: Write ArchiveCardWarning component test
+
+Create `src/web-ui/app/components/card/__tests__/ArchiveCardWarning.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import ArchiveCardWarning from '~/components/card/ArchiveCardWarning.vue'
+
+describe('ArchiveCardWarning', () => {
+  it('renders archive warning with dependents', async () => {
+    const wrapper = await mountSuspended(ArchiveCardWarning, {
+      props: {
+        dependents: [
+          { id: 'c1', title: 'Child Card', type: 'BlockedBy' },
+          { id: 'c2', title: 'Related Card', type: 'Precedes' }
+        ]
+      }
+    })
+    expect(wrapper.text()).toContain('Archive Card')
+    expect(wrapper.text()).toContain('Child Card')
+    expect(wrapper.text()).toContain('Related Card')
+    expect(wrapper.text()).toContain('Archive')
+  })
+
+  it('emits confirm on Archive click', async () => {
+    const wrapper = await mountSuspended(ArchiveCardWarning, {
+      props: { dependents: [{ id: 'c1', title: 'Child', type: 'BlockedBy' }] }
+    })
+    const buttons = wrapper.findAll('button')
+    const archiveButton = buttons.find(b => b.text().includes('Archive'))
+    await archiveButton?.trigger('click')
+    expect(wrapper.emitted('confirm')).toBeTruthy()
+  })
+
+  it('emits cancel on Cancel click', async () => {
+    const wrapper = await mountSuspended(ArchiveCardWarning, {
+      props: { dependents: [] }
+    })
+    const buttons = wrapper.findAll('button')
+    const cancelButton = buttons.find(b => b.text().includes('Cancel'))
+    await cancelButton?.trigger('click')
+    expect(wrapper.emitted('cancel')).toBeTruthy()
+  })
+})
+```
+
+### Step 5: Write KeyboardShortcutOverlay component test
+
+Create `src/web-ui/app/components/shared/__tests__/KeyboardShortcutOverlay.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
+
+describe('KeyboardShortcutOverlay', () => {
+  it('renders keyboard shortcuts title', async () => {
+    const wrapper = await mountSuspended(KeyboardShortcutOverlay)
+    expect(wrapper.text()).toContain('Keyboard Shortcuts')
+  })
+})
+```
+
+### Step 6: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 7: Commit
+
+```bash
+git add src/web-ui/app/composables/__tests__/useKeyboard.test.ts src/web-ui/app/composables/__tests__/useErrorToast.test.ts src/web-ui/app/components/card/__tests__/BlockedMoveWarning.test.ts src/web-ui/app/components/card/__tests__/ArchiveCardWarning.test.ts src/web-ui/app/components/shared/__tests__/KeyboardShortcutOverlay.test.ts
+git commit -m "feat: add polish and hardening component tests (keyboard, error toast, warnings)"
+```
+
+---
+
 ## Verification (Plan 6 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: keyboard shortcuts work. Error toasts show. Blocked card warning. Archive warning. ARIA labels present. Tablet responsive. PWA installable.
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: keyboard shortcuts work. Error toasts show. Blocked card warning. Archive warning. ARIA labels present. Tablet responsive. PWA installable.
 
 ---
 
@@ -890,8 +1085,9 @@ After all 6 plans complete:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual full flow: login → create project → add columns → create cards → move cards → open card → edit description → add checklist → comment → upload attachment → add dependency → archive card → verify real-time sync across two browser tabs
-5. Mobile: all above on <768px viewport
-6. Tablet: all above on 768-1199px viewport
-7. Keyboard: navigate board, open card, close modal, move card — all via keyboard only
-8. WCAG AA: color contrast audit on all components
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual full flow: login → create project → add columns → create cards → move cards → open card → edit description → add checklist → comment → upload attachment → add dependency → archive card → verify real-time sync across two browser tabs
+6. Mobile: all above on <768px viewport
+7. Tablet: all above on 768-1199px viewport
+8. Keyboard: navigate board, open card, close modal, move card — all via keyboard only
+9. WCAG AA: color contrast audit on all components

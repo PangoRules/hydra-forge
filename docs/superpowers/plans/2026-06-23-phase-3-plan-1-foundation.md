@@ -5,11 +5,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Establish CORS on backend, generate typed API client, wire auth (login/setup/middleware), and replace starter boilerplate with HydraForge layouts.
+**Goal:** Establish CORS on backend, generate typed API client, wire auth (login/setup/middleware), replace starter boilerplate with HydraForge layouts, and add Vitest test infrastructure for all frontend code.
 
-**Architecture:** Backend gets CORS middleware for `localhost:3000`. Frontend gets `openapi-fetch` client with typed `api.d.ts`, cookie-backed JWT storage, Pinia auth store, login/setup pages, auth middleware, and two layouts (default with sidebar shell, auth minimal).
+**Architecture:** Backend gets CORS middleware for `localhost:3000`. Frontend gets `openapi-fetch` client with typed `api.d.ts`, cookie-backed JWT storage, Pinia auth store, login/setup pages, auth middleware, two layouts (default with header, auth minimal), and Vitest test suite covering composables, stores, pages, and middleware.
 
-**Tech Stack:** .NET 10 CORS middleware, openapi-fetch, openapi-typescript, Pinia, Nuxt middleware, Nuxt layouts
+**Tech Stack:** .NET 10 CORS middleware, openapi-fetch, openapi-typescript, Pinia, Nuxt middleware, Nuxt layouts, Vitest, @nuxt/test-utils, @vue/test-utils, happy-dom
 
 **Depends on:** Nothing (this is the first plan)
 
@@ -25,13 +25,24 @@
 
 ### Step 1: Add CORS to backend
 
+In `src/HydraForge.Server/appsettings.json`, add the `Cors` section:
+
+```json
+"Cors": {
+  "AllowedOrigins": "http://localhost:3000"
+}
+```
+
 In `src/HydraForge.Server/Program.cs`, add CORS registration before `builder.Services.AddOpenApi()`:
 
 ```csharp
+var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000";
+var corsOriginList = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(corsOriginList)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -447,6 +458,8 @@ async function handleSubmit() {
     // TODO: Backend needs a change-password endpoint.
     // For now, show success and redirect to login.
     // The actual password change will be implemented when the backend endpoint exists.
+    // TRACKED: Add POST /api/Auth/change-password endpoint to backend.
+    //          See docs/functional-spec.md Phase 3 checklist.
     success.value = true
     setTimeout(() => navigateTo('/login'), 2000)
   }
@@ -652,11 +665,295 @@ git commit -m "feat: add default and auth layouts, simplify app.vue"
 
 ---
 
+## Task 5: Frontend Testing Infrastructure — Vitest + @nuxt/test-utils + Tests
+
+**Files:**
+- Create: `src/web-ui/vitest.config.ts`
+- Create: `src/web-ui/app/composables/__tests__/useAuthToken.test.ts`
+- Create: `src/web-ui/app/stores/__tests__/auth.test.ts`
+- Create: `src/web-ui/app/composables/__tests__/useApi.test.ts`
+- Create: `src/web-ui/app/composables/__tests__/useAuth.test.ts`
+- Create: `src/web-ui/app/pages/__tests__/login.test.ts`
+- Create: `src/web-ui/app/middleware/__tests__/auth.test.ts`
+- Modify: `src/web-ui/package.json` (add test script + deps)
+- Modify: `src/web-ui/eslint.config.mjs` (ignore test files)
+
+### Step 1: Install dependencies
+
+```bash
+cd src/web-ui && pnpm add -D vitest @nuxt/test-utils @vue/test-utils happy-dom
+```
+
+### Step 2: Add test script to package.json
+
+Add to `"scripts"` in `src/web-ui/package.json`:
+
+```json
+"test": "vitest run",
+"test:watch": "vitest"
+```
+
+### Step 3: Create vitest.config.ts
+
+Create `src/web-ui/vitest.config.ts`:
+
+```ts
+import { defineVitestConfig } from '@nuxt/test-utils/config'
+
+export default defineVitestConfig({
+  test: {
+    environment: 'nuxt',
+    environmentOptions: {
+      nuxt: {
+        domEnvironment: 'happy-dom'
+      }
+    },
+    globals: true
+  }
+})
+```
+
+### Step 4: Exclude test files from ESLint stylistic rules
+
+In `src/web-ui/eslint.config.mjs`, add test files to ignores:
+
+```js
+export default withNuxt(
+  {
+    ignores: ['app/types/api.d.ts', '**/__tests__/**']
+  }
+)
+```
+
+### Step 5: Write useAuthToken tests
+
+Create `src/web-ui/app/composables/__tests__/useAuthToken.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useAuthToken } from '~/composables/useAuthToken'
+
+describe('useAuthToken', () => {
+  beforeEach(() => {
+    const { clearToken } = useAuthToken()
+    clearToken()
+  })
+
+  it('hasToken returns false when no token set', () => {
+    const { hasToken } = useAuthToken()
+    expect(hasToken()).toBe(false)
+  })
+
+  it('setToken and getToken round-trip', () => {
+    const { setToken, getToken, hasToken } = useAuthToken()
+    setToken('test-jwt-token')
+    expect(getToken()).toBe('test-jwt-token')
+    expect(hasToken()).toBe(true)
+  })
+
+  it('clearToken removes token', () => {
+    const { setToken, clearToken, hasToken } = useAuthToken()
+    setToken('test-jwt-token')
+    clearToken()
+    expect(hasToken()).toBe(false)
+  })
+
+  it('getToken returns null when no token', () => {
+    const { getToken } = useAuthToken()
+    expect(getToken()).toBeNull()
+  })
+})
+```
+
+### Step 6: Write useAuthStore tests
+
+Create `src/web-ui/app/stores/__tests__/auth.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { useAuthStore } from '~/stores/auth'
+
+describe('useAuthStore', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('starts unauthenticated', () => {
+    const store = useAuthStore()
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+  })
+
+  it('setAuth sets token and user', () => {
+    const store = useAuthStore()
+    store.setAuth('jwt-token', { userId: 'u1', username: 'test', isAdmin: false })
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.token).toBe('jwt-token')
+    expect(store.user?.username).toBe('test')
+  })
+
+  it('clearAuth resets state', () => {
+    const store = useAuthStore()
+    store.setAuth('jwt-token', { userId: 'u1', username: 'test', isAdmin: false })
+    store.clearAuth()
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+  })
+
+  it('isAuthenticated false when only token set', () => {
+    const store = useAuthStore()
+    store.token = 'jwt-token'
+    expect(store.isAuthenticated).toBe(false)
+  })
+
+  it('isAuthenticated false when only user set', () => {
+    const store = useAuthStore()
+    store.user = { userId: 'u1', username: 'test', isAdmin: false }
+    expect(store.isAuthenticated).toBe(false)
+  })
+})
+```
+
+### Step 7: Write useApi tests
+
+Create `src/web-ui/app/composables/__tests__/useApi.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { useApi } from '~/composables/useApi'
+
+describe('useApi', () => {
+  it('returns openapi-fetch client with all HTTP methods', () => {
+    const client = useApi()
+    expect(client).toBeDefined()
+    expect(typeof client.GET).toBe('function')
+    expect(typeof client.POST).toBe('function')
+    expect(typeof client.PUT).toBe('function')
+    expect(typeof client.DELETE).toBe('function')
+  })
+
+  it('client is created without throwing', () => {
+    const client = useApi()
+    expect(client).toBeTruthy()
+  })
+})
+```
+
+### Step 8: Write useAuth tests
+
+Create `src/web-ui/app/composables/__tests__/useAuth.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { useAuth } from '~/composables/useAuth'
+import { useAuthStore } from '~/stores/auth'
+
+describe('useAuth', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('isAuthenticated reflects store state', () => {
+    const { isAuthenticated } = useAuth()
+    expect(isAuthenticated.value).toBe(false)
+
+    const store = useAuthStore()
+    store.setAuth('token', { userId: 'u1', username: 'test', isAdmin: false })
+    expect(isAuthenticated.value).toBe(true)
+  })
+
+  it('logout clears auth and token', () => {
+    const store = useAuthStore()
+    store.setAuth('token', { userId: 'u1', username: 'test', isAdmin: false })
+
+    const { logout } = useAuth()
+    logout()
+
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+  })
+
+  it('checkAuth returns false when no token', async () => {
+    const { checkAuth } = useAuth()
+    const result = await checkAuth()
+    expect(result).toBe(false)
+  })
+})
+```
+
+### Step 9: Write login page component test
+
+Create `src/web-ui/app/pages/__tests__/login.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import LoginPage from '~/pages/login.vue'
+
+describe('LoginPage', () => {
+  it('renders login form with title, inputs, and submit button', async () => {
+    const wrapper = await mountSuspended(LoginPage)
+    expect(wrapper.find('h1').text()).toBe('HydraForge')
+    expect(wrapper.find('input[autocomplete="username"]').exists()).toBe(true)
+    expect(wrapper.find('input[type="password"]').exists()).toBe(true)
+    expect(wrapper.find('button[type="submit"]').exists()).toBe(true)
+  })
+})
+```
+
+### Step 10: Write auth middleware test
+
+Create `src/web-ui/app/middleware/__tests__/auth.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import authMiddleware from '~/middleware/auth'
+
+describe('auth middleware', () => {
+  it('allows access to /login without token', () => {
+    const result = authMiddleware(
+      { path: '/login', fullPath: '/login' } as any,
+      { path: '/login', fullPath: '/login' } as any
+    )
+    expect(result).toBeUndefined()
+  })
+
+  it('allows access to /setup without token', () => {
+    const result = authMiddleware(
+      { path: '/setup', fullPath: '/setup' } as any,
+      { path: '/setup', fullPath: '/setup' } as any
+    )
+    expect(result).toBeUndefined()
+  })
+})
+```
+
+### Step 11: Verify
+
+- `cd src/web-ui && pnpm test` — all tests pass
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+
+### Step 12: Commit
+
+```bash
+git add src/web-ui/vitest.config.ts src/web-ui/package.json src/web-ui/pnpm-lock.yaml src/web-ui/eslint.config.mjs src/web-ui/app/composables/__tests__/ src/web-ui/app/stores/__tests__/ src/web-ui/app/pages/__tests__/ src/web-ui/app/middleware/__tests__/
+git commit -m "feat: add vitest test infrastructure with auth composable/store/component/middleware tests"
+```
+
+---
+
 ## Verification (Plan 1 Complete)
 
 Reference `nuxt-verification` skill:
 1. `cd src/web-ui && pnpm typecheck` — zero errors
 2. `cd src/web-ui && pnpm lint` — zero errors
 3. `cd src/web-ui && pnpm build` — successful production build
-4. Manual: CORS works (fetch API from frontend origin)
-5. Manual: login flow works end-to-end
+4. `cd src/web-ui && pnpm test` — all tests pass
+5. Manual: CORS works (fetch API from frontend origin)
+6. Manual: login flow works end-to-end

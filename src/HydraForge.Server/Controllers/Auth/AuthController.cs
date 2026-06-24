@@ -9,6 +9,8 @@ namespace HydraForge.Server.Controllers.Auth;
 public class AuthController(LoginUserHandler loginUserHandler) : ControllerBase
 {
     [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await loginUserHandler.HandleAsync(request);
