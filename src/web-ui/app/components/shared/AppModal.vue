@@ -94,7 +94,7 @@ function onKeydown(e: KeyboardEvent) {
     <template #footer>
       <div
         v-if="$slots.footer"
-        class="flex justify-end gap-3"
+        class="w-full flex justify-end gap-3"
       >
         <slot name="footer" />
       </div>
