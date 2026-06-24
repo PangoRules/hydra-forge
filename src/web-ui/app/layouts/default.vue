@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Toaster from '@nuxt/ui'
+
 const { logout, isAuthenticated } = useAuth()
 </script>
 
