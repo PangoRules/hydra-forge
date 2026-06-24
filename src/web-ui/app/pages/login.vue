@@ -42,7 +42,10 @@ async function handleSubmit() {
         class="space-y-4"
         @submit.prevent="handleSubmit"
       >
-        <UFormField label="Username" class="w-full">
+        <UFormField
+          label="Username"
+          class="w-full"
+        >
           <UInput
             v-model="username"
             autocomplete="username"
@@ -51,7 +54,10 @@ async function handleSubmit() {
           />
         </UFormField>
 
-        <UFormField label="Password" class="w-full">
+        <UFormField
+          label="Password"
+          class="w-full"
+        >
           <UInput
             v-model="password"
             type="password"
