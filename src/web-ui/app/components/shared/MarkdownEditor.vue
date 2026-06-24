@@ -289,7 +289,7 @@ function toggleSource() {
     <textarea
       v-if="sourceMode"
       v-model="sourceText"
-      class="w-full p-3 font-mono text-sm leading-relaxed resize-none focus:outline-none bg-transparent"
+      class="w-full p-3 font-mono text-sm leading-loose resize-none focus:outline-none bg-transparent"
       :class="{ 'min-h-[150px] max-h-[400px]': true }"
       :placeholder="props.placeholder"
     />
