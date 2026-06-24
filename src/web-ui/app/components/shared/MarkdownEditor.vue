@@ -23,6 +23,11 @@ const editor = useEditor({
     StarterKit,
     Placeholder.configure({ placeholder: props.placeholder })
   ],
+  editorProps: {
+    attributes: {
+      class: 'prose prose-sm max-w-none focus:outline-none p-3 min-h-[150px] max-h-[400px] overflow-y-auto'
+    }
+  },
   onUpdate({ editor }) {
     emit('update:modelValue', editor.getHTML())
   }
@@ -46,8 +51,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     v-if="editor"
-    class="prose prose-sm max-w-none"
-    :class="{ 'border rounded-md p-3 min-h-[100px]': editable }"
+    :class="{ 'border rounded-md': editable }"
   >
     <EditorContent :editor="editor" />
   </div>

@@ -30,7 +30,14 @@ async function saveDescription() {
   saveError.value = null
   try {
     const { error } = await api.PUT(ApiRoutes.Cards.update(props.projectId, props.card.id), {
-      body: { description: description.value }
+      body: {
+        title: props.card.title,
+        description: description.value,
+        type: props.card.type,
+        version: props.card.version,
+        parentCardId: props.card.parentCardId,
+        dueAt: props.card.dueAt
+      }
     })
     if (error) throw error
     board.updateCard(props.card.id, { description: description.value })
