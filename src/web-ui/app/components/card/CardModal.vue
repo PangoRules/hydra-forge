@@ -127,13 +127,39 @@ onMounted(() => fetchCard())
 
     <template #body>
       <template v-if="card">
-        <!-- Desktop: two-column -->
+        <!-- Desktop: two-column with tabs in left pane -->
         <div class="hidden md:flex max-h-[70vh] overflow-hidden">
-          <div class="flex-1 overflow-y-auto p-4 space-y-6">
-            <CardDescription
-              :card="card"
-              :project-id="projectId"
+          <div class="flex-1 flex flex-col overflow-hidden">
+            <UTabs
+              v-model="activeTab"
+              :items="tabs"
+              class="border-b flex-shrink-0"
             />
+            <div class="flex-1 overflow-y-auto p-4">
+              <div v-if="activeTab === 'details'">
+                <CardDescription
+                  :card="card"
+                  :project-id="projectId"
+                />
+              </div>
+              <div v-else-if="activeTab === 'checklist'">
+                <p class="text-sm text-muted">
+                  Checklist coming soon
+                </p>
+              </div>
+              <div v-else-if="activeTab === 'comments'">
+                <p class="text-sm text-muted">
+                  Comments coming soon
+                </p>
+              </div>
+              <div v-else-if="activeTab === 'related'">
+                <div class="space-y-4">
+                  <p class="text-sm text-muted">
+                    Attachments, dependencies, specs, plans coming soon
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4">
