@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import ColumnHeader from '~/components/board/ColumnHeader.vue'
+import BoardCard from '~/components/board/BoardCard.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 type ColumnResponse = components['schemas']['ColumnResponse']
