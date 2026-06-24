@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
