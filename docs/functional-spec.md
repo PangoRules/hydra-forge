@@ -486,6 +486,9 @@
 - [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
 - [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
 - [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
+- [ ] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
+- [ ] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
+- [ ] Archive card with dependents: warning modal listing affected cards
 - [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
 - [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [ ] Blocked card lock icon + badge on board (always visible)
