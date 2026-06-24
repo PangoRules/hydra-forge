@@ -299,6 +299,92 @@ public class CardRelationshipServiceTests
         Assert.Equal(RelationshipType.Precedes, result.Value.Type);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("CardRelationship", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesAuditLog()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var createResult = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        Assert.True(createResult.IsSuccess);
+        var relId = createResult.Value.Id;
+        auditWriter.Clear();
+
+        var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, cardA, relId, actorId));
+        Assert.True(deleteResult.IsSuccess);
+
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("CardRelationship", req.EntityType);
+        Assert.Equal(relId, req.EntityId);
+        Assert.Equal("Deleted", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ArchiveCardWithRelationshipsAsync_WritesAuditLog()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+        var colId = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, Title = "Card A", CardNumber = 1, Position = 0 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, Title = "Card B", CardNumber = 2, Position = 1 });
+        cardRepo.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+
+        var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, true, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = auditWriter.Writes.Single(r => r.Action == "ArchivedWithRelationships");
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardA, req.EntityId);
+        Assert.Equal("ArchivedWithRelationships", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     // ─── In-memory repositories ─────────────────────────────────────────────
 
     private class InMemoryCardRelationshipRepository2 : ICardRelationshipRepository
@@ -421,6 +507,14 @@ public class CardRelationshipServiceTests
 
     private class InMemoryAuditLogWriter : IAuditLogWriter
     {
-        public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+        public List<AuditLogRequest> Writes { get; } = [];
+
+        public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+        {
+            Writes.Add(request);
+            return Task.FromResult(Result.Success());
+        }
+
+        public void Clear() => Writes.Clear();
     }
 }

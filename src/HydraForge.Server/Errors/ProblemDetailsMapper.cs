@@ -28,6 +28,7 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Projects.MemberDuplicate => (409, "User is already a member"),
             DomainErrorCodes.Membership.NotFound => (404, "Member not found"),
             DomainErrorCodes.Membership.RoleDenied => (403, "Role denied"),
+            DomainErrorCodes.Mentions.UserNotFound => (404, "User not found"),
             DomainErrorCodes.Columns.NotFound => (404, "Column not found"),
             DomainErrorCodes.Columns.InvalidPosition => (400, "Invalid column positions"),
             DomainErrorCodes.Columns.DeleteNonEmpty => (409, "Cannot delete column with cards"),

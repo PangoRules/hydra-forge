@@ -207,7 +207,7 @@ This is a multi-task milestone. Each task below should ship on its own implement
 - [X] Task 7: CardRelationship CRUD, same-project validation, cycle detection, archive impact/confirm flow
 - [X] Task 8: ProjectContextSnapshot template regeneration on board mutations
 - [X] Task 9: BoardHub mutation broadcasts and ephemeral PresenceHub
-- [ ] Task 10: Cross-cutting audit/error/test hardening for Phase 2 completeness
+- [x] Task 10: Cross-cutting audit/error/test hardening for Phase 2 completeness
 
 ## Acceptance Criteria
 

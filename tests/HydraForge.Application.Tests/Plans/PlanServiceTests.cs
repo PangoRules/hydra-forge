@@ -105,6 +105,84 @@ public class PlanServiceTests
         Assert.Equal(DomainErrorCodes.Plans.MarkdownPayloadTooLarge, result.Error.Code);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreatePlanCommand(projectId, cardId, null, actorId, "Plan Title", "Desc", "# Plan"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Plan", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = actorId };
+        planRepo.Add(plan);
+        planRepo.AddVersion(new PlanVersion { Id = NewId(), PlanId = planId, Version = 1, Content = "V1", CreatedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UpdateAsync(new UpdatePlanCommand(projectId, planId, actorId, "Updated", null, "V2"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Plan", req.EntityType);
+        Assert.Equal(planId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task RestoreVersionAsync_WritesAuditLog()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, ProjectId = projectId, Title = "Plan", Content = "V2", Version = 2, CreatedByUserId = actorId };
+        planRepo.Add(plan);
+        planRepo.AddVersion(new PlanVersion { Id = NewId(), PlanId = planId, Version = 1, Content = "V1", CreatedByUserId = actorId });
+        planRepo.AddVersion(new PlanVersion { Id = NewId(), PlanId = planId, Version = 2, Content = "V2", CreatedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreVersionAsync(new RestorePlanVersionCommand(projectId, planId, 1, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Plan", req.EntityType);
+        Assert.Equal(planId, req.EntityId);
+        Assert.Equal("Restored", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (
         InMemoryPlanRepository planRepo,
         InMemoryProjectMemberRepository memberRepo,
@@ -185,5 +263,13 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Writes.Clear();
 }

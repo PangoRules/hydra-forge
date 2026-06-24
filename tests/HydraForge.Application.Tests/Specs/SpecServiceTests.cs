@@ -105,6 +105,84 @@ public class SpecServiceTests
         Assert.Equal(DomainErrorCodes.Specs.MarkdownPayloadTooLarge, result.Error.Code);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Spec Title", "Desc", "# Hello"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Spec", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var specId = NewId();
+
+        var spec = new Spec { Id = specId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = actorId };
+        specRepo.Add(spec);
+        specRepo.AddVersion(new SpecVersion { Id = NewId(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UpdateAsync(new UpdateSpecCommand(projectId, specId, actorId, "Updated", null, "V2"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Spec", req.EntityType);
+        Assert.Equal(specId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task RestoreVersionAsync_WritesAuditLog()
+    {
+        var (specRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var specId = NewId();
+
+        var spec = new Spec { Id = specId, ProjectId = projectId, Title = "Spec", Content = "V2", Version = 2, CreatedByUserId = actorId };
+        specRepo.Add(spec);
+        specRepo.AddVersion(new SpecVersion { Id = NewId(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = actorId });
+        specRepo.AddVersion(new SpecVersion { Id = NewId(), SpecId = specId, Version = 2, Content = "V2", CreatedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreVersionAsync(new RestoreSpecVersionCommand(projectId, specId, 1, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Spec", req.EntityType);
+        Assert.Equal(specId, req.EntityId);
+        Assert.Equal("Restored", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (
         InMemorySpecRepository specRepo,
         InMemoryProjectMemberRepository memberRepo,
@@ -185,5 +263,13 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Writes.Clear();
 }

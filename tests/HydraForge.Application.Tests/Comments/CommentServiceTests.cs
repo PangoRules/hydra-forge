@@ -255,6 +255,87 @@ public class CommentServiceTests
         Assert.Contains(mentionedId, result.Value[0].MentionedUserIds);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+
+        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Comment", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var commentId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old" });
+
+        var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated"));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Comment", req.EntityType);
+        Assert.Equal(commentId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ArchiveAsync_WritesAuditLog()
+    {
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var commentId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "To archive" });
+
+        var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Comment", req.EntityType);
+        Assert.Equal(commentId, req.EntityId);
+        Assert.Equal("Archived", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
     {
         var commentRepo = new InMemoryCommentRepository();
@@ -406,5 +487,13 @@ internal class InMemoryUserRepository : IUserRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Writes.Clear();
 }

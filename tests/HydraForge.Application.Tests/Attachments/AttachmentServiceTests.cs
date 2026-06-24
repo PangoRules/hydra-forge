@@ -17,7 +17,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_ValidFile_ReturnsAttachmentDto()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo) = CreateService();
+        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -38,7 +38,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (service, _, _, _, _) = CreateService();
+        var (service, _, _, _, _, _) = CreateService();
         var result = await service.CreateAsync(new CreateAttachmentCommand(
             NewId(), NewId(), NewId(), "test.png", "image/png", 3, new MemoryStream()));
 
@@ -49,7 +49,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_MissingCard_ReturnsCardNotFound()
     {
-        var (service, _, _, cardRepo, memberRepo) = CreateService();
+        var (service, _, _, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
@@ -64,7 +64,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_FileTooLarge_ReturnsFileTooLarge()
     {
-        var (service, _, _, cardRepo, memberRepo) = CreateService(maxBytes: 5);
+        var (service, _, _, cardRepo, memberRepo, _) = CreateService(maxBytes: 5);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -80,7 +80,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_UnsupportedContentType_ReturnsUnsupportedContentType()
     {
-        var (service, _, _, cardRepo, memberRepo) = CreateService();
+        var (service, _, _, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -96,7 +96,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_FileStoreFails_ReturnsFileStoreUnavailable()
     {
-        var (service, fileStore, _, _, _) = CreateService();
+        var (service, fileStore, _, _, _, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -119,7 +119,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_SanitizesDisplayFileName()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo) = CreateService();
+        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -136,7 +136,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_GeneratesOpaqueStorageKey()
     {
-        var (service, fileStore, _, cardRepo, memberRepo) = CreateService();
+        var (service, fileStore, _, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -158,7 +158,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_StoresMetadataOnlyAfterFileStoreSuccess()
     {
-        var (service, _, attachmentRepo, cardRepo, memberRepo) = CreateService();
+        var (service, _, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -174,7 +174,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task DeleteAsync_RemovesMetadataThenAttemptsFileDelete()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo) = CreateService();
+        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -202,7 +202,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task DeleteAsync_FileDeleteFails_IsNonFatal()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo) = CreateService();
+        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -228,7 +228,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task ListAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (service, _, _, _, _) = CreateService();
+        var (service, _, _, _, _, _) = CreateService();
         var result = await service.ListAsync(NewId(), NewId(), NewId());
 
         Assert.True(result.IsFailure);
@@ -238,7 +238,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task ListAsync_MissingCard_ReturnsCardNotFound()
     {
-        var (service, _, _, _, memberRepo) = CreateService();
+        var (service, _, _, _, memberRepo, _) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
@@ -252,7 +252,7 @@ public class AttachmentServiceTests
     [Fact]
     public async Task DownloadAsync_NotFound_ReturnsNotFound()
     {
-        var (service, _, _, cardRepo, memberRepo) = CreateService();
+        var (service, _, _, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -264,7 +264,63 @@ public class AttachmentServiceTests
         Assert.Equal(DomainErrorCodes.Attachments.NotFound, result.Error.Code);
     }
 
-    private static (AttachmentService service, FakeFileStore fileStore, InMemoryAttachmentRepository attachmentRepo, InMemoryCardRepository cardRepo, InMemoryProjectMemberRepository memberRepo) CreateService(
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (service, fileStore, _, cardRepo, memberRepo, auditWriter) = CreateService();
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
+        fileStore.NextStoreResult = Result<string>.Success("project/x/card/y/date/2026-01-01/guid");
+
+        var result = await service.CreateAsync(new CreateAttachmentCommand(
+            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Attachment", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesAuditLog()
+    {
+        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, auditWriter) = CreateService();
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var attachmentId = NewId();
+        SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
+        attachmentRepo.Attachments.Add(new Attachment
+        {
+            Id = attachmentId,
+            CardId = cardId,
+            FileName = "test.png",
+            ContentType = "image/png",
+            Size = 3,
+            StoragePath = "some/path/key"
+        });
+
+        var result = await service.DeleteAsync(projectId, cardId, attachmentId, actorId);
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Attachment", req.EntityType);
+        Assert.Equal(attachmentId, req.EntityId);
+        Assert.Equal("Deleted", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    private static (AttachmentService service, FakeFileStore fileStore, InMemoryAttachmentRepository attachmentRepo, InMemoryCardRepository cardRepo, InMemoryProjectMemberRepository memberRepo, InMemoryAuditLogWriter auditWriter) CreateService(
         long maxBytes = 10_000_000)
     {
         var attachmentRepo = new InMemoryAttachmentRepository();
@@ -279,7 +335,7 @@ public class AttachmentServiceTests
         var service = new AttachmentService(
             attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
 
-        return (service, fileStore, attachmentRepo, cardRepo, memberRepo);
+        return (service, fileStore, attachmentRepo, cardRepo, memberRepo, auditWriter);
     }
 
     private static void SetupMemberAndCard(Guid projectId, Guid cardId, Guid userId, InMemoryCardRepository cardRepo, InMemoryProjectMemberRepository memberRepo)
@@ -411,6 +467,14 @@ public class AttachmentServiceTests
 
     private sealed class InMemoryAuditLogWriter : IAuditLogWriter
     {
-        public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+        public List<AuditLogRequest> Writes { get; } = [];
+
+        public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+        {
+            Writes.Add(request);
+            return Task.FromResult(Result.Success());
+        }
+
+        public void Clear() => Writes.Clear();
     }
 }
