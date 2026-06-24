@@ -478,10 +478,14 @@
 ### Phase 3: Project Space — Web UI 🌐
 > Goal: full project board usable in browser. Feature-complete project workspace.
 
+- [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
 - [ ] Auth pages: login, first-run admin setup
 - [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page)
-- [ ] Project list + create project flow
-- [ ] Board view: columns + cards, drag-and-drop move, column reorder
+- [x] Project list + create project flow (`app/pages/projects.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`)
+- [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
+- [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
+- [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
+- [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
 - [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
 - [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [ ] Blocked card lock icon + badge on board (always visible)
