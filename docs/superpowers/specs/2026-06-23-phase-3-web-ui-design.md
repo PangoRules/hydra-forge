@@ -11,8 +11,8 @@
 ## Tasks
 
 - [x] Task 1: Foundation — CORS, API Client, Auth, Layouts
-- [ ] Task 2: Project List & Board View
-- [ ] Task 3: Card Modal Core — Desktop Split + Mobile Tabs + Tiptap Description
+- [x] Task 2: Project List & Board View
+- [x] Task 3: Card Modal Core — Desktop Split + Mobile Tabs + Tiptap Description
 - [ ] Task 4: Card Modal Panels — Checklist, Comments, Attachments, Dependencies, Metadata
 - [ ] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
 - [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
