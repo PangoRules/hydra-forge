@@ -6,22 +6,44 @@ type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
 type CardListResponse = components['schemas']['CardListResponse']
 
+export interface BoardFilters {
+  search: string
+  type: number | null
+  includeArchived: boolean
+  hideEmptyColumns: boolean
+}
+
 export const useBoardStore = defineStore('board', () => {
   const project = ref<{ id: string, name: string } | null>(null)
   const columns = ref<ColumnResponse[]>([])
   const cardsByColumn = ref<Map<string, CardResponse[]>>(new Map())
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const boardFilters = ref<BoardFilters>({
+    search: '',
+    type: null,
+    includeArchived: false,
+    hideEmptyColumns: false
+  })
 
   const api = useApi()
 
-  async function fetchBoard(projectId: string) {
+  async function fetchBoard(projectId: string, filters?: Partial<BoardFilters>) {
     loading.value = true
     error.value = null
+    if (filters) {
+      Object.assign(boardFilters.value, filters)
+    }
     try {
+      const cardsUrl = ApiRoutes.Cards.list(projectId)
+      const searchParams = new URLSearchParams()
+      if (boardFilters.value.includeArchived) searchParams.set('includeArchived', 'true')
+      if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
+      const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl
+
       const [columnsResult, cardsResult] = await Promise.all([
         api.GET(ApiRoutes.Columns.list(projectId)),
-        api.GET(ApiRoutes.Cards.list(projectId))
+        api.GET(cardsUrlWithParams)
       ])
 
       if (columnsResult.error) throw columnsResult.error
@@ -97,8 +119,18 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
+  const visibleColumns = computed(() => {
+    if (!boardFilters.value.hideEmptyColumns) return columns.value
+    const colIdsWithCards = new Set<string>()
+    for (const [colId, cards] of cardsByColumn.value) {
+      if (cards.length > 0) colIdsWithCards.add(colId)
+    }
+    return columns.value.filter(c => colIdsWithCards.has(c.id))
+  })
+
   return {
     project, columns, cardsByColumn, loading, error,
-    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard
+    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard,
+    boardFilters, visibleColumns
   }
 })
