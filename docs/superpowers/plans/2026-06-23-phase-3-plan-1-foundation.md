@@ -5,11 +5,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Establish CORS on backend, generate typed API client, wire auth (login/setup/middleware), and replace starter boilerplate with HydraForge layouts.
+**Goal:** Establish CORS on backend, generate typed API client, wire auth (login/setup/middleware), replace starter boilerplate with HydraForge layouts, and add Vitest test infrastructure for all frontend code.
 
-**Architecture:** Backend gets CORS middleware for `localhost:3000`. Frontend gets `openapi-fetch` client with typed `api.d.ts`, cookie-backed JWT storage, Pinia auth store, login/setup pages, auth middleware, and two layouts (default with sidebar shell, auth minimal).
+**Architecture:** Backend gets CORS middleware for `localhost:3000`. Frontend gets `openapi-fetch` client with typed `api.d.ts`, cookie-backed JWT storage, Pinia auth store, login/setup pages, auth middleware, two layouts (default with header, auth minimal), and Vitest test suite covering composables, stores, pages, and middleware.
 
-**Tech Stack:** .NET 10 CORS middleware, openapi-fetch, openapi-typescript, Pinia, Nuxt middleware, Nuxt layouts
+**Tech Stack:** .NET 10 CORS middleware, openapi-fetch, openapi-typescript, Pinia, Nuxt middleware, Nuxt layouts, Vitest, @nuxt/test-utils, @vue/test-utils, happy-dom
 
 **Depends on:** Nothing (this is the first plan)
 
