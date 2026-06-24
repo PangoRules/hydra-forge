@@ -25,13 +25,24 @@
 
 ### Step 1: Add CORS to backend
 
+In `src/HydraForge.Server/appsettings.json`, add the `Cors` section:
+
+```json
+"Cors": {
+  "AllowedOrigins": "http://localhost:3000"
+}
+```
+
 In `src/HydraForge.Server/Program.cs`, add CORS registration before `builder.Services.AddOpenApi()`:
 
 ```csharp
+var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000";
+var corsOriginList = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(corsOriginList)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
