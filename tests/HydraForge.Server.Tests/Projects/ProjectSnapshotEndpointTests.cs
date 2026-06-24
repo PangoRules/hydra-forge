@@ -1,6 +1,7 @@
 namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
+using HydraForge.Application.Audit;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -98,6 +99,7 @@ internal class SnapshotTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IProjectMemberRepository>(_ => new SnapTestMemberRepository(_members));
             services.AddScoped<IProjectContextSnapshotRepository>(_ => new SnapTestSnapshotRepository(_snapshots));
             services.AddScoped<IProjectSnapshotRefresher>(_ => new SnapTestSnapshotRefresher(_snapshots));
+            services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
         });
     }
 

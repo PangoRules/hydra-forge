@@ -2,6 +2,7 @@ namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
 using System.Text;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Projects;
@@ -374,6 +375,7 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IChatArchiveService>(_ => new ColTestColumnChatArchiveService());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
             services.AddScoped<ProjectService>();
             services.AddScoped<ColumnService>();
             services.AddScoped<ProjectMemberService>();

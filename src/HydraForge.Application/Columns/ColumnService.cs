@@ -1,9 +1,11 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Columns;
 
@@ -12,10 +14,12 @@ public class ColumnService(
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    IAuditLogWriter auditLogWriter
 )
 {
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default
@@ -45,6 +49,20 @@ public class ColumnService(
         await columnRepo.AddAsync(column, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Created, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Column",
+                column.Id,
+                "Created",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<ColumnDto>.Success(MapToDto(column));
     }
@@ -110,6 +128,20 @@ public class ColumnService(
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Updated, ct);
 
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Column",
+                column.Id,
+                "Updated",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
+
         return Result<ColumnDto>.Success(MapToDto(column));
     }
 
@@ -148,6 +180,20 @@ public class ColumnService(
 
         await PublishAsync(cmd.ProjectId, BoardEntityType.Column, cmd.ColumnId, BoardAction.Deleted, ct);
 
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Column",
+                cmd.ColumnId,
+                "Deleted",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
+
         return Result.Success();
     }
 
@@ -181,6 +227,20 @@ public class ColumnService(
         await columnRepo.ReorderAsync(cmd.ProjectId, cmd.ColumnIds, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, BoardEntityType.Column, Guid.Empty, BoardAction.Moved, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Column",
+                Guid.Empty,
+                "Reordered",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result.Success();
     }

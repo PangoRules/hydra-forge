@@ -2,6 +2,7 @@ namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
 using System.Text;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -228,6 +229,7 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IChatArchiveService>(_ => new TestChatArchiveService());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
             services.AddScoped<ProjectService>();
             services.AddScoped<ProjectMemberService>();
         });

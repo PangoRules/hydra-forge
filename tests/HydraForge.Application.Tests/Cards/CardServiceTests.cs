@@ -411,6 +411,183 @@ public class CardServiceTests
         Assert.Empty(cardRepo.Cards);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var columnId = NewId();
+
+        columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Original", Version = 1 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UpdateAsync(new UpdateCardCommand(projectId, cardId, actorId, "Updated", "", CardType.Task, null, null, 1));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task MoveAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var oldColumnId = NewId();
+        var newColumnId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = oldColumnId, CardNumber = 1, Position = 0, Version = 1 });
+        columnRepo.Add(new Column { Id = newColumnId, ProjectId = projectId, Name = "Done", Position = 1 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.MoveAsync(new MoveCardCommand(projectId, cardId, newColumnId, 0, actorId, false, 1));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Moved", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task AssignAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var assigneeUserId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        userRepo.Add(new User { Id = assigneeUserId, Username = "assignee" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.AssignAsync(new AssignCardCommand(projectId, cardId, assigneeUserId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Assigned", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UnassignAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var assigneeUserId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        assigneeRepo.Add(new CardAssignee { CardId = cardId, UserId = assigneeUserId, AssignedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UnassignAsync(new UnassignCardCommand(projectId, cardId, assigneeUserId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Unassigned", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ArchiveAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.ArchiveAsync(new ArchiveCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Archived", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.DeleteAsync(new DeleteCardCommand(projectId, cardId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Deleted", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (
         InMemoryCardRepository cardRepo,
         InMemoryCardAssigneeRepository assigneeRepo,
@@ -640,7 +817,17 @@ internal class InMemoryUserRepository : IUserRepository
     public void Add(User user) => CreateAsync(user).GetAwaiter().GetResult();
 }
 
+// ─── Audit assertion helpers ──────────────────────────────────────────────────
+
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+    public List<AuditLogRequest> Requests { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Requests.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Requests.Clear();
 }

@@ -59,7 +59,10 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Test projects are xUnit with plain `Assert.*`; do not add FluentAssertions.
 - Domain/Application tests are pure logic. Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, params string[])` — these run without a database because they inspect `context.Model`, not `context.Database`.
 - Most tests run without PostgreSQL. Optional PostgreSQL-backed tests use `HYDRAFORGE_TEST_CONNECTION_STRING`; the architecture requires real PostgreSQL for DB behavior tests, not SQLite or mocked DB behavior.
-- When adding a new Application-layer port (e.g. `IProjectSnapshotRefresher`) that gets injected into existing services, **all 8+ Server test factories** must be updated to strip and mock the new dependency — otherwise the real Infrastructure impl gets resolved in tests and fails with 500. Create a shared `TestSnapshotRefresher` stub in `tests/HydraForge.Server.Tests/` and register it in every factory's `ConfigureServices`.
+- **New Application-layer port checklist** — required whenever a new port (e.g. `IProjectSnapshotRefresher`) gets injected into an existing service's constructor:
+  1. `grep -rl "ConfigureServices" tests/HydraForge.Server.Tests/` — list every factory.
+  2. Create a shared `Test<PortName>` stub in `tests/HydraForge.Server.Tests/` and register it in every factory's `ConfigureServices`.
+  3. Skipping this resolves the real Infrastructure implementation in tests — it fails as a `500` from the endpoint, not a DI exception, so it's easy to misdiagnose as an application bug instead of missing test wiring.
 - HTTP `.http` smoke test files must be self-contained: auth → setup (create project, add members, add data) → test cases → cleanup. Never depend on variable values from other `.http` files. Each `.http` file runs in isolation.
 
 ## API Documentation

@@ -339,6 +339,140 @@ public class ChecklistServiceTests
         Assert.Equal("B", result.Value[1].Text);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreateChecklistItemCommand(projectId, cardId, actorId, "New item", null, null));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("ChecklistItem", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var itemId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Items.Add(new ChecklistItem { Id = itemId, CardId = cardId, Text = "Old", Position = 0 });
+
+        var result = await service.UpdateAsync(new UpdateChecklistItemCommand(projectId, cardId, itemId, actorId, "Updated", null));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("ChecklistItem", req.EntityType);
+        Assert.Equal(itemId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ToggleAsync_WritesAuditLog_Completed()
+    {
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var itemId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Items.Add(new ChecklistItem { Id = itemId, CardId = cardId, Text = "Task", Position = 0, IsCompleted = false });
+
+        var result = await service.ToggleAsync(new ToggleChecklistItemCommand(projectId, cardId, itemId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("ChecklistItem", req.EntityType);
+        Assert.Equal(itemId, req.EntityId);
+        Assert.Equal("Completed", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ReorderAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var item0 = new ChecklistItem { Id = NewId(), CardId = cardId, Text = "A", Position = 0 };
+        var item1 = new ChecklistItem { Id = NewId(), CardId = cardId, Text = "B", Position = 1 };
+        var item2 = new ChecklistItem { Id = NewId(), CardId = cardId, Text = "C", Position = 2 };
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Items.Add(item0);
+        repo.Items.Add(item1);
+        repo.Items.Add(item2);
+
+        var result = await service.ReorderAsync(new ReorderChecklistItemCommand(projectId, cardId, item0.Id, actorId, 2));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("ChecklistItem", req.EntityType);
+        Assert.Equal(item0.Id, req.EntityId);
+        Assert.Equal("Reordered", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        var itemId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Items.Add(new ChecklistItem { Id = itemId, CardId = cardId, Text = "DeleteMe", Position = 0 });
+
+        var result = await service.DeleteAsync(new DeleteChecklistItemCommand(projectId, cardId, itemId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Requests);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("ChecklistItem", req.EntityType);
+        Assert.Equal(itemId, req.EntityId);
+        Assert.Equal("Deleted", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (InMemoryChecklistItemRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
     {
         var repo = new InMemoryChecklistItemRepository();
@@ -491,5 +625,13 @@ internal class InMemoryUserRepository : IUserRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) => Task.FromResult(Result.Success());
+    public List<AuditLogRequest> Requests { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Requests.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Requests.Clear();
 }

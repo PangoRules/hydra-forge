@@ -1,3 +1,4 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Projects;
@@ -14,8 +15,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_AppendsAtMaxPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -32,8 +33,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -46,8 +47,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_ExistingColumn_ReturnsColumn()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -64,8 +65,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistent_ReturnsNotFound()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -80,8 +81,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_ChangesNameColorWip()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -100,8 +101,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_EmptyColumn_CompactsPositions()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId1 = NewId();
@@ -125,8 +126,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_NonEmptyColumn_ReturnsDeleteNonEmpty()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -144,8 +145,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_ArchivedCard_DoesNotBlockDelete()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -162,8 +163,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_ValidColumnIds_RewritesDensePositions()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -189,8 +190,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_InvalidColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -206,8 +207,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WrongProjectColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var otherProjectId = NewId();
@@ -227,8 +228,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_MissingColumn_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -244,8 +245,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -255,12 +256,110 @@ public class ColumnServiceTests
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
     }
 
+    // ─── Audit tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+
+        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "New Column", null, null, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Column", req.EntityType);
+        Assert.Equal(result.Value.Id, req.EntityId);
+        Assert.Equal("Created", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+        var columnId = NewId();
+
+        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UpdateAsync(new UpdateColumnCommand(projectId, columnId, "Updated", "#FF0000", 5, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Column", req.EntityType);
+        Assert.Equal(columnId, req.EntityId);
+        Assert.Equal("Updated", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+        var columnId = NewId();
+
+        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+
+        var result = await service.DeleteAsync(new DeleteColumnCommand(projectId, columnId, actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Column", req.EntityType);
+        Assert.Equal(columnId, req.EntityId);
+        Assert.Equal("Deleted", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
+    public async Task ReorderAsync_WritesAuditLog()
+    {
+        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
+        var col2 = new Column { Id = NewId(), ProjectId = projectId, Name = "Done", Position = 1 };
+        repo.Columns.Add(col1);
+        repo.Columns.Add(col2);
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+
+        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col2.Id, col1.Id], actorId));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Column", req.EntityType);
+        Assert.Equal(Guid.Empty, req.EntityId);
+        Assert.Equal("Reordered", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
     private static (
         InMemoryColumnRepository repo,
         InMemoryCardRepository cardRepo,
         InMemoryProjectMemberRepository memberRepo,
         NullSnapshotRefresher snapshotRefresher,
-        FakeProjectBoardEventPublisher publisher
+        FakeProjectBoardEventPublisher publisher,
+        InMemoryAuditLogWriter auditWriter
     ) CreateMocks()
     {
         return (
@@ -268,7 +367,8 @@ public class ColumnServiceTests
             new InMemoryCardRepository(),
             new InMemoryProjectMemberRepository(),
             new NullSnapshotRefresher(),
-            new FakeProjectBoardEventPublisher()
+            new FakeProjectBoardEventPublisher(),
+            new InMemoryAuditLogWriter()
         );
     }
 }
@@ -397,4 +497,17 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
         Members.RemoveAll(m => m.Id == id);
         return Task.CompletedTask;
     }
+}
+
+internal class InMemoryAuditLogWriter : IAuditLogWriter
+{
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
+
+    public void Clear() => Writes.Clear();
 }

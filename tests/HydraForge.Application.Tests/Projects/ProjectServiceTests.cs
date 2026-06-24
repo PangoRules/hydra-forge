@@ -1,3 +1,4 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -13,8 +14,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_ValidCommand_ReturnsProjectWithOwnerMember()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -28,8 +29,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_InsertsSixDefaultColumns()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -43,8 +44,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_CreatesSnapshot()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         await handler.CreateAsync(cmd);
@@ -56,8 +57,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task CreateAsync_CreatesProjectChatFolder()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var cmd = DefaultCreateCmd(Guid.NewGuid());
 
         var result = await handler.CreateAsync(cmd);
@@ -68,8 +69,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var projectId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Private Project" });
         var nonMemberUserId = Guid.NewGuid();
@@ -83,8 +84,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistentProject_ReturnsNotFound()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
 
         var result = await handler.GetByIdAsync(Guid.NewGuid(), Guid.NewGuid());
 
@@ -95,8 +96,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task GetByIdAsync_ArchivedProject_ReturnsArchived()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var projectId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Archived Project", ArchivedAt = DateTime.UtcNow });
@@ -111,8 +112,8 @@ public class ProjectServiceTests
     [Fact]
     public async Task ArchiveAsync_OwnerArchives_CallsChatArchiveService()
     {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher);
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
@@ -132,7 +133,8 @@ public class ProjectServiceTests
         InMemorySnapshotRepository snapshotRepo,
         InMemoryChatArchiveService chatService,
         NullSnapshotRefresher snapshotRefresher,
-        FakeProjectBoardEventPublisher publisher
+        FakeProjectBoardEventPublisher publisher,
+        InMemoryAuditLogWriter auditWriter
     ) CreateMocks()
     {
         return (
@@ -142,7 +144,8 @@ public class ProjectServiceTests
             new InMemorySnapshotRepository(),
             new InMemoryChatArchiveService(),
             new NullSnapshotRefresher(),
-            new FakeProjectBoardEventPublisher()
+            new FakeProjectBoardEventPublisher(),
+            new InMemoryAuditLogWriter()
         );
     }
 }
@@ -319,5 +322,18 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
         => Task.FromResult(false);
 
     public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user)
-        => Task.CompletedTask;
+    {
+        return Task.CompletedTask;
+    }
+}
+
+internal class InMemoryAuditLogWriter : IAuditLogWriter
+{
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
 }

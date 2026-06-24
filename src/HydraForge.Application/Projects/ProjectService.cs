@@ -1,3 +1,4 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -13,11 +14,13 @@ public class ProjectService(
     IProjectContextSnapshotRepository snapshotRepo,
     IChatArchiveService chatArchiveService,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    IAuditLogWriter auditLogWriter
 )
 {
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private static readonly string[] DefaultColumnNames =
     [
         "Backlog",
@@ -83,6 +86,20 @@ public class ProjectService(
         await snapshotRepo.AddAsync(snapshot, ct);
         await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
             Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Created, 1, DateTime.UtcNow, null!), ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.OwnerId,
+                AuditLogScope.Project,
+                "Project",
+                project.Id,
+                "Created",
+                project.Id,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result<ProjectDto>.Success(MapToDto(project, columns, [ownerMember]));
     }
@@ -187,6 +204,20 @@ public class ProjectService(
         await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
             Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Updated, 1, DateTime.UtcNow, null!), ct);
 
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Project",
+                project.Id,
+                "Updated",
+                project.Id,
+                null,
+                null
+            ),
+            ct
+        );
+
         var columns = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
 
@@ -229,6 +260,20 @@ public class ProjectService(
         await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
             Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Archived, 1, DateTime.UtcNow, null!), ct);
 
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Project",
+                project.Id,
+                "Archived",
+                project.Id,
+                null,
+                null
+            ),
+            ct
+        );
+
         return Result.Success();
     }
 
@@ -260,6 +305,20 @@ public class ProjectService(
         await projectRepo.UpdateAsync(project, ct);
         await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
             Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Deleted, 1, DateTime.UtcNow, null!), ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Project",
+                project.Id,
+                "Deleted",
+                project.Id,
+                null,
+                null
+            ),
+            ct
+        );
 
         return Result.Success();
     }
