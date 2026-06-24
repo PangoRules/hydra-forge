@@ -38,6 +38,28 @@ turndown.addRule('lineBreak', {
   replacement: () => '\n'
 })
 
+// Override listItem rule: strip <p> inside <li> extra newlines
+// Tiptap wraps <li> content in <p>, Turndown paragraph rule adds \n\n...\n\n
+// Default listItem keeps isParagraph trailing \n which gets indented → blank lines between items
+turndown.addRule('listItem', {
+  filter: 'li',
+  replacement: function (content, node, options) {
+    const prefix0 = options.bulletListMarker + '   '
+    const parent = node.parentNode as HTMLElement | null
+    let prefix = prefix0
+    if (parent?.nodeName === 'OL') {
+      const start = parent.getAttribute('start')
+      const index = Array.prototype.indexOf.call(parent.children, node)
+      prefix = (start ? Number(start) + index : index + 1) + '.  '
+    }
+    content = content
+      .replace(/^\n+/, '') // strip leading newlines
+      .replace(/\n+$/, '') // strip trailing newlines (no isParagraph branch)
+      .replace(/\n/g, '\n' + ' '.repeat(prefix.length))
+    return prefix + content + (node.nextSibling ? '\n' : '')
+  }
+})
+
 const editor = useEditor({
   content: props.modelValue,
   editable: props.editable,
