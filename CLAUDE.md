@@ -152,6 +152,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - No unnecessary abstractions — three similar lines beats a premature helper
 - Comments only when the WHY is non-obvious
 - No `var` where the type isn't obvious from the right-hand side
+- No `console.log`/`console.error`/`console.warn` in production code — use `useToast().add()` for user-facing feedback instead
 
 **Web UI API routes:**
 - All API endpoint paths are centralized in `src/web-ui/app/lib/routes.ts` — `UiRoutes` for page paths, `ApiRoutes` for HTTP endpoints.

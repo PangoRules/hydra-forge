@@ -501,7 +501,7 @@
 - [ ] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
 - [ ] Keyboard shortcut reference overlay (`?`)
 - [ ] ARIA labels, focus management, WCAG AA color contrast (built in from day one)
-- [ ] Error display: typed toast with `detail` + `correlationId` copy button
+- [x] Error display: toast on API failure (basic — `toast.add({ title, color: 'error' })`). Enhanced toast with `detail` + `correlationId` copy button in Plan 6 (`useErrorToast` composable).
 
 ### Phase 4: Project Space — TUI 🖥️
 > Goal: full project board usable in terminal. Feature parity with Web UI board.
