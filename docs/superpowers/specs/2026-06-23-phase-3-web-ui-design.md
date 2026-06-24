@@ -10,7 +10,7 @@
 
 ## Tasks
 
-- [ ] Task 1: Foundation — CORS, API Client, Auth, Layouts
+- [x] Task 1: Foundation — CORS, API Client, Auth, Layouts
 - [ ] Task 2: Project List & Board View
 - [ ] Task 3: Card Modal Core — Desktop Split + Mobile Tabs + Tiptap Description
 - [ ] Task 4: Card Modal Panels — Checklist, Comments, Attachments, Dependencies, Metadata
