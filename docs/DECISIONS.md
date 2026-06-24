@@ -2,8 +2,8 @@
 
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
-> **Date:** 2026-06-02 (updated 2026-06-02)
-> **Status:** 10 original questions resolved + 19 new decisions added (D-13–D-32). D-3, D-7 revised/rejected. Ready for Phase 1.
+> **Date:** 2026-06-02 (updated 2026-06-09)
+> **Status:** 10 original questions resolved + 21 new decisions added (D-13–D-34). D-3, D-7 revised/rejected. Ready for Phase 1.
 
 ---
 
@@ -83,7 +83,7 @@ Each entry has:
 | **Status** | ✅ Settled |
 | **Decision** | **CardType enum:** `Task`, `Bug`, `Epic`, `Spec`, `Idea`. Plans are a **separate entity**, not a card type. |
 | **Rationale** | Epics are cards that group other cards (parent-child). Specs and Plans are rich markdown documents, distinct from cards. Keeping them as separate entities with links is cleaner than overloading Card. |
-| **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are standalone project-level entities (with `Title` field). `Card` has optional `SpecId?` and `PlanId?` FKs — multiple cards can reference the same spec/plan. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) for history + restore. |
+| **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are project-level entities owned by cards via `Spec.CardId` and `Plan.CardId` FKs (ownership — one card creates and owns its spec/plan, other cards can read but not edit). `Plan.SpecId` is an optional FK linking a plan to its parent specification. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) storing full document state (title, description, content) for history + restore. |
 
 ---
 
@@ -181,6 +181,20 @@ Each entry has:
 
 ---
 
+## D-33: OpenAPI Documentation (Swagger Replacement)
+
+| Field | Value |
+|---|---|
+| **Topic** | How the REST API is documented and tested interactively |
+| **Date** | 2026-06-09 |
+| **Status** | ✅ Settled |
+| **Decision** | **Replace Swashbuckle/Swagger with built-in `Microsoft.AspNetCore.OpenApi` for doc generation + `Scalar.AspNetCore` for the interactive UI.** |
+| **Rationale** | Microsoft deprecated Swashbuckle in default templates starting .NET 9, and in .NET 10 the `Microsoft.OpenApi` library had a major v2 breaking change. Swashbuckle 10.x depends on `Microsoft.OpenApi` 2.x which removed the `Microsoft.OpenApi.Models` namespace, broke all type references (`OpenApiInfo`, `OpenApiSecurityScheme`, etc.), and restructured the public API. Rather than fight the breaking changes and maintain compatibility with a deprecated library, we switch to Microsoft's recommended path: `Microsoft.AspNetCore.OpenApi` (already in the project) generates the OpenAPI 3.1 document, and Scalar provides a modern dark-mode interactive reference UI. Scalar is actively maintained, has no legacy compatibility burden, and is the de-facto standard in the .NET ecosystem for replacing Swagger UI. |
+| **Alternatives considered** | 1. Fix Swashbuckle 10.x references to use root `Microsoft.OpenApi` namespace + new v2 API (rejected — the `Reference` property on security schemes was removed, security requirement API changed, and migration path is poorly documented / unstable). 2. Use `Microsoft.AspNetCore.OpenApi` for docs + `Swashbuckle.AspNetCore.SwaggerUI` for UI (rejected — adds complexity of mixing two systems with different transformer/filter models for no benefit over Scalar). |
+| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Removed `using Swashbuckle.AspNetCore.Annotations` and all `[SwaggerTag]`, `[SwaggerOperation]`, `[SwaggerResponse]` attributes from all 5 controllers. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. |
+
+---
+
 ## Summary
 
 | # | Topic | Decision | Status |
@@ -193,7 +207,7 @@ Each entry has:
 | D-6 | Auth | Basic auth, no SSO | ✅ |
 | D-7 | Conflict resolution | Rejected — no offline = no sync conflicts | ❌ |
 | D-8 | Multi-tenant | No — fresh install per team | ✅ |
-| D-9 | File attachments | Yes — local fs or S3 | ✅ |
+| D-9 | File attachments | `IFileStore` abstraction — Local (fallback) or S3-compatible (MinIO/AWS S3) | ✅ |
 | D-10 | Notifications | In-app (ntfy) + SignalR bell | ✅ |
 | D-11 | LLM providers | Pluggable, admin-configured only | ✅ |
 | D-12 | Data architecture | PostgreSQL per install, Docker Compose | ✅ |
@@ -209,7 +223,7 @@ Each entry has:
 | D-22 | Notification rules | Card move → assignees, comment → watchers, project events → all members | ✅ |
 | D-23 | LLM configuration | Admin-only, no personal provider by users | ✅ |
 | D-24 | AI agent personality | User-definable system prompt per account | ✅ |
-| D-25 | Presence indicators | SignalR green dot, Phase 2 | ✅ |
+| D-25 | Presence indicators | Ephemeral SignalR presence via PresenceHub (/hubs/presence) — UserJoined, UserLeft, CardFocused; ConcurrentDictionary in-memory, no DB writes | ✅ |
 | D-26 | Error handling | Air Force standard — global middleware, Result pattern, ProblemDetails, correlationId | ✅ |
 | D-27 | Card dependencies | Typed relationships (BlockedBy, Precedes, Relates), soft warnings, cycle detection | ✅ |
 | D-28 | Keyboard navigation | Both TUI and Web UI fully keyboard-navigable, shortcut reference overlay | ✅ |
@@ -217,6 +231,10 @@ Each entry has:
 | D-30 | Card human-readable number | Sequential `CardNumber` per project (1, 2, 3…) — like GitHub issues | ✅ |
 | D-31 | RAG pipeline | DocumentChunk + pgvector; IEmbeddingClient abstraction; chunks regenerated on doc change | ✅ |
 | D-32 | ProjectContextSnapshot strategy | TemplateContent instant on mutation; AiNarrative nightly scheduled job only | ✅ |
+| D-33 | OpenAPI docs (Swagger replacement) | `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` instead of Swashbuckle | ✅ |
+| D-34 | File storage architecture | `IFileStore` abstraction (Local fallback + MinIO/AWS S3), `{userId}/{sourceType}/{sourceId}/{guid}` key hierarchy, `InitializeAsync` for bucket creation | ✅ |
+| D-35 | ProjectContextSnapshot implementation | Pure deterministic renderer (`ProjectContextSnapshotRenderer`) — no LLM, no side effects; `IProjectSnapshotRefresher` port injected into 9 mutation services; `ProjectSnapshotRefresher` EF impl in Infrastructure; `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint | ✅ |
+| D-36 | Board event publishing | `IProjectBoardEventPublisher` port in Application layer; `SignalRProjectBoardEventPublisher` impl; `BoardHub` (/hubs/board) fans out to project groups; `ProjectBoardEventEnvelope` with `BoardEntityType` + `BoardAction`; `RealtimeServiceCollectionExtensions.AddRealtimeServices()` wires DI | ✅ |
 
 ---
 
@@ -462,11 +480,13 @@ Chats
 |---|---|
 | **Topic** | Can users see who else is active on a card/project |
 | **Date** | 2026-06-02 |
-| **Status** | ✅ Settled |
-| **Decision** | **Simple green dot presence via SignalR. Implemented in Phase 2 (alongside board real-time).** |
+| **Status** | ✅ Settled (implemented 2026-06-22) |
+| **Decision** | **Ephemeral presence via SignalR `PresenceHub`. Green dot on card/board. `FocusCard` for card-level presence.** |
 | **Rationale** | Cheap to implement with SignalR already in-stack. Prevents two people unknowingly editing the same card simultaneously. High value, low cost. |
-| **UX** | Green dot on card = someone else currently has it open. Board header shows online member avatars. |
-| **Impact** | SignalR `PresenceHub`: broadcast join/leave events. Client tracks `onlineUsers` map. No DB writes — ephemeral only. |
+| **Hub route** | `/hubs/presence` |
+| **Events** | `UserJoined`, `UserLeft`, `CardFocused` |
+| **Storage** | `ConcurrentDictionary` in-memory — no DB writes. Lost on server restart. |
+| **Impact** | `PresenceHub` in `HydraForge.Server.Hubs`. `FocusCard(projectId, cardId)` broadcasts to project group. `OnDisconnectedAsync` cleans up all group memberships. |
 
 ---
 
@@ -534,3 +554,59 @@ Chats
 | **TemplateContent** | Rendered on every board mutation. Format: structured markdown listing columns, cards (by `#CardNumber`), blocked cards, recent moves. No LLM call. Injected into project chat context at session start. |
 | **AiNarrative** | Generated by nightly scheduled job (configurable time, default: midnight server time). AI reads the `TemplateContent` diff since last narrative and writes a natural-language summary. Stored in `AiNarrative` field. Displayed on project dashboard as a digest. NOT injected into chat context (too narrative, less structured). Null until first nightly run. |
 | **Impact** | `ProjectContextSnapshot`: `TemplateContent`, `AiNarrative?`, `TemplateGeneratedAt`, `AiNarrativeGeneratedAt?`. Board mutation handler calls `ProjectContextSnapshotService.RegenerateTemplate()` synchronously (fast). Nightly job calls `ProjectContextSnapshotService.GenerateAiNarrative()` for all active projects. |
+
+---
+
+## D-34: File Storage Architecture
+
+| Field | Value |
+|---|---|
+| **Topic** | How file attachments are stored — provider choice, key hierarchy, initialization |
+| **Date** | 2026-06-09 |
+| **Status** | ✅ Settled |
+| **Decision** | **`IFileStore` abstraction in Application layer. Two implementations: `LocalFileStore` (bare-metal fallback) and `S3FileStore` (MinIO/AWS S3, recommended). MinIO is the default in `docker-compose.yml` as a co-equal service alongside Postgres. Storage key hierarchy: `{userId}/{sourceType}/{sourceId}/{guid}`.** |
+| **Rationale** | **Why `IFileStore` abstraction:** Controllers and services are decoupled from storage topology — swapping Local ↔ S3 is a config change, not a code change. **Why MinIO over Local as recommended path:** MinIO is 100% S3 API compatible, runs as a lightweight Docker container, provides a web console, and scales to cluster mode if needed. LocalFileStore remains for bare-metal dev where Docker isn't available. **Why `InitializeAsync` as default-interface-method:** S3/MinIO needs bucket creation on startup — `InitializeAsync` lets us do this without forcing every implementation to implement it. Default no-op keeps stubs/fakes simple. **Why `{userId}/{sourceType}/{sourceId}/{guid}` key hierarchy:** Single flat namespace is messy when multiple sources (cards, chat, notes) store files. User-prefix isolates data per-user, sourceType prefix (`cards/`, `chat/`, `notes/`) prevents collision between different subsystems, and the random guid prevents enumeration attacks (no sequential IDs, no filename in storage path). |
+| **Alternatives considered** | 1. Single flat bucket with sequential IDs (rejected — enumeration risk, harder to debug). 2. No MinIO, just LocalFileStore + S3 config (rejected — MinIO gives us local S3-compatible testing without cloud costs). 3. `IsArchived` flag for attachment meta (rejected — follows `ArchivedAt: DateTime?` pattern, handled by housekeeping service with same retention as cards). |
+| **Impact** | `docker-compose.yml` gains a `minio` service (ports 9000/9001, healthcheck, volume). Server `depends_on: minio` with Docker-prefilled S3 env vars. `.env.example` has commented MinIO section. `IFileStore` has `InitializeAsync()` with default no-op — `S3FileStore` creates bucket on startup. `LocalFileStore` unchanged. Storage keys are `{userId}/cards/{cardId}/{guid}` — no user filename in path, no date, no project. Supported content types: images (PNG/JPEG/GIF/WebP), PDF, text, JSON/XML/HTML/CSV, ZIP, Office docs. Default max size: 10 MB. |
+
+---
+
+## D-35: ProjectContextSnapshot Implementation
+
+| Field | Value |
+|---|---|
+| **Topic** | How the snapshot is rendered, refreshed on mutations, and exposed via API |
+| **Date** | 2026-06-22 |
+| **Status** | ✅ Settled |
+| **Decision** | **Pure deterministic renderer + `IProjectSnapshotRefresher` port injected into all 9 mutation services. `ProjectSnapshotRefresher` EF implementation. `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint.** |
+| **Renderer** | `ProjectContextSnapshotRenderer` (Application layer, `static`, no LLM, no side effects). Inputs: columns, cards, relationships. Output: structured JSON with column names, card index (`#CardNumber` + title + column + type), blockers list, recent-moved list. JSON serialized with `System.Text.Json`. |
+| **Port (`IProjectSnapshotRefresher`)** | `RefreshAsync(projectId)` — reads current board state from repos, renders, upserts snapshot. `GetSnapshotAsync(projectId)` — returns snapshot or null. Injected into: `ProjectService`, `ColumnService`, `CardService`, `ChecklistService`, `CommentService`, `AttachmentService`, `SpecService`, `PlanService`, `CardRelationshipService`. |
+| **Infrastructure impl** | `ProjectSnapshotRefresher` reads directly from `HydraForgeDbContext` (columns, active cards, active relationships), renders, upserts via EF. `IProjectContextSnapshotRepository.UpdateAsync` added for the upsert path. |
+| **API** | `GET /api/projects/{projectId}/ProjectSnapshot` — membership check via `IProjectMemberRepository`, returns `ProjectSnapshotResponse` (id, projectId, templateContent, templateGeneratedAt, aiNarrative, aiNarrativeGeneratedAt). |
+| **Repository additions** | `IProjectContextSnapshotRepository.UpdateAsync` (upsert existing snapshot), `ICardRelationshipRepository.ListActiveByProjectAsync` (active relationships only, used by renderer). |
+| **Why upsert not replace** | Snapshot row is created once per project on first mutation and updated thereafter. Avoids race conditions from concurrent mutation services trying to create duplicates. Unique constraint on `ProjectId` enforces singleton-per-project at DB level. |
+| **Alternatives considered** | 1. Snapshot as a cached view materialised in DB on mutation (rejected — same upsert logic needed, more complex). 2. Snapshot rendered lazily on first chat read (rejected — latency on first chat open; D-32 intent is instant template rendering). |
+| **Impact** | All board mutations (cards, columns, checklists, comments, attachments, specs, plans, relationships, project edits) now trigger snapshot refresh synchronously before returning. Snapshot is ready before the client receives the mutation response. |
+
+
+---
+
+## D-36: Board Event Publishing — IProjectBoardEventPublisher Port + SignalR Broadcast
+
+| Field | Value |
+|---|---|
+| **Topic** | How board mutations are broadcast to all connected project members in real-time |
+| **Date** | 2026-06-22 |
+| **Status** | ✅ Settled |
+| **Decision** | **IProjectBoardEventPublisher port in Application layer. SignalRProjectBoardEventPublisher impl in Infrastructure. Board mutations call publisher after DB commit. BoardHub (/hubs/board) fans out to project SignalR groups.** |
+| **Port** | IProjectBoardEventPublisher.PublishAsync(ProjectBoardEventEnvelope) — Application layer, injected into mutation services |
+| **Envelope model** | ProjectBoardEventEnvelope: EventId, ProjectId, BoardEntityType (Project/Column/Card/ChecklistItem/Comment/Attachment/Spec/Plan/CardRelationship), BoardAction (Created/Updated/Moved/Deleted/Archived/Restored/Assigned/Unassigned), Version, OccurredAt, Payload |
+| **Hub route** | /hubs/board |
+| **Client method** | IBoardHub.OnBoardEvent(ProjectBoardEventEnvelope) — strongly typed hub client interface |
+| **Grouping** | BoardHub.ProjectGroup(projectId) = project-{projectId} — clients join per-project groups |
+| **Auth** | JoinProject(projectId) checks membership (or admin role) before adding to group |
+| **Implementation** | SignalRProjectBoardEventPublisher uses IHubContext<BoardHub, IBoardHub> to fan out to the project group after mutation services commit to DB |
+| **DI** | RealtimeServiceCollectionExtensions.AddRealtimeServices() in Infrastructure registers IProjectBoardEventPublisher as SignalRProjectBoardEventPublisher |
+| **Alternatives considered** | 1. Each service publishes directly to SignalR internally (rejected — couples services to SignalR, breaks Clean Architecture). 2. Domain events with a separate subscriber (rejected — over-engineered for current scale). |
+| **Impact** | All board mutations (cards, columns, checklists, comments, attachments, specs, plans, relationships) call IProjectBoardEventPublisher.PublishAsync after successful commit. Clients receive typed OnBoardEvent with the full envelope. |
+

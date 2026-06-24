@@ -89,8 +89,17 @@ internal class InMemoryUserRepository : IUserRepository
 
     public InMemoryUserRepository(User? user) => _user = user;
 
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(_user);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(_user != null && ids.Contains(_user.Id) ? new Dictionary<Guid, User> { [_user.Id] = _user } : new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(_user);
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<string, User>>(_user != null && usernames.Contains(_user.Username, StringComparer.OrdinalIgnoreCase) ? new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase) { [_user.Username] = _user } : new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase));
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
         => Task.CompletedTask;

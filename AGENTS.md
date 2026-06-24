@@ -4,12 +4,9 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 
 ## Current State
 
-- Phase 1 foundation is closing on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
-- Archive + housekeeping schema foundation is committed: ownable/user-facing entities that currently carry `ArchivedAt?` include Card, CardRelationship, Comment, Document, Note, MemoryEntry, CalendarEvent, CalendarSource, PersonalTask, ChatSession, ChatFolder, CardChatLink, AgentPersonality, GalleryImage, Album, and AlbumImage. `Note.IsArchived` and `Document.IsArchived` were replaced with `ArchivedAt?`. `SystemSettings` singleton (id `00000000-0000-0000-0000-000000000001`) holds `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`. Explicit `OnDelete: Cascade` is configured for `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. The `HousekeepingBackgroundService` and per-entity archive services are deferred; design spec is at `docs/superpowers/specs/2026-06-03-archive-and-housekeeping-design.md`.
-- Persistence DI lives at `src/HydraForge.Infrastructure/Persistence/PersistenceServiceCollectionExtensions.cs` (method `AddPersistence`). It chains `o => o.UseVector()` on `UseNpgsql` so the runtime `Vector` CLR type resolves to a `vector(1536)` PostgreSQL column. `DesignTimeHydraForgeDbContextFactory` does the same for `dotnet ef`.
-- `docker-compose.yml` and `.env.example` are implemented (not empty as older AGENTS.md revisions claimed). Postgres is `pgvector/pgvector:pg16`, host port **5433** mapped to container 5432 (5433 was chosen to avoid colliding with any local Postgres install or Odysseus on the same host). `appsettings.Development.json` is ignored for local overrides; when running `dotnet run` against Compose Postgres, use `Host=localhost;Port=5433`.
-- Web UI still ships the Nuxt UI starter under `src/web-ui/app/app.vue` and `src/web-ui/app/pages/index.vue`; do not assume HydraForge screens or composables exist.
-- 60+ xUnit tests across Domain, Application, Infrastructure, and Server test projects. Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
+- Phase 1 foundation is complete on `feat/phase-1-foundation`. Docker Compose, EF Core + pgvector schema, auth, ProblemDetails/correlation, health, audit infrastructure, CI, and placeholder cleanup are implemented. All 50+ Domain entities are mapped by `HydraForgeDbContext`; pgvector `vector(1536)` columns are configured for `MemoryEntry.Embedding` and `DocumentChunk.Embedding`. Seven migrations are committed (latest `20260604050632_AddAuditLogScopeAndNullableProjectId`).
+- Phase 2 (Project Space API & Domain) is in progress on `feat/phase-2-project-space-api-domain`. Tasks 1-8 complete: Project CRUD/membership/archive, Column CRUD/reorder, Card CRUD/move/assignees/blocked-move-warning/parent-epic-linking, checklists, comments, attachments (with `IFileStore` + MinIO), specs and plans (versioned markdown with ownership FK model, full document state snapshots, restore), relationships (cycle detection, archive impact), ProjectContextSnapshot (deterministic renderer, `IProjectSnapshotRefresher` port injected into all 9 mutation services, `GET /api/projects/{projectId}/ProjectSnapshot` endpoint). Swashbuckle/Swagger replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore`. Tasks 9-10 (hubs, hardening) remain.
+- 369 xUnit tests across Domain (57), Application (138), Infrastructure (53), Server (96). Domain/Application are pure logic; Infrastructure tests assert EF model contract (`AssertProperties` on `IEntityType`).
 
 ## Read First
 
@@ -22,6 +19,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
   - `docs/glossary.md` — terminology
   - `docs/agent-platform-vision.md` — agent platform direction
+  - `docs/backlog.md` — uncommitted ideas and scope-creep candidates
 - Check manifests/config before trusting prose: `HydraForge.slnx`, `*.csproj`, `src/web-ui/package.json`, `src/web-ui/nuxt.config.ts`.
 
 ## Repo Shape
@@ -45,7 +43,10 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - Verify model is clean: `... dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server`
   - Apply migrations: `... dotnet ef database update --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server`
 - Docker (full stack): `docker compose up`
-- Docker (Postgres only): `docker compose up -d postgres` (host port 5433)
+- Docker (Postgres + MinIO only): `docker compose up -d postgres minio` (host ports 5433, 9000, 9001)
+- MinIO console: `http://localhost:9001` (default: minioadmin / minioadmin)
+- API docs (OpenAPI JSON): `http://localhost:5000/openapi/v1.json`
+- API reference (Scalar UI): `http://localhost:5000/scalar/v1`
 - Install web deps: `cd src/web-ui && pnpm install`
 - Web dev server: `cd src/web-ui && pnpm dev`
 - Web typecheck: `cd src/web-ui && pnpm typecheck`
@@ -58,6 +59,30 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Test projects are xUnit with plain `Assert.*`; do not add FluentAssertions.
 - Domain/Application tests are pure logic. Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, params string[])` — these run without a database because they inspect `context.Model`, not `context.Database`.
 - Most tests run without PostgreSQL. Optional PostgreSQL-backed tests use `HYDRAFORGE_TEST_CONNECTION_STRING`; the architecture requires real PostgreSQL for DB behavior tests, not SQLite or mocked DB behavior.
+- **New Application-layer port checklist** — required whenever a new port (e.g. `IProjectSnapshotRefresher`) gets injected into an existing service's constructor:
+  1. `grep -rl "ConfigureServices" tests/HydraForge.Server.Tests/` — list every factory.
+  2. Create a shared `Test<PortName>` stub in `tests/HydraForge.Server.Tests/` and register it in every factory's `ConfigureServices`.
+  3. Skipping this resolves the real Infrastructure implementation in tests — it fails as a `500` from the endpoint, not a DI exception, so it's easy to misdiagnose as an application bug instead of missing test wiring.
+- HTTP `.http` smoke test files must be self-contained: auth → setup (create project, add members, add data) → test cases → cleanup. Never depend on variable values from other `.http` files. Each `.http` file runs in isolation.
+
+## API Documentation
+
+- Swashbuckle/Swagger was replaced with built-in `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` (D-33).
+- OpenAPI doc at `/openapi/v1.json`; Scalar UI at `/scalar/v1` (dev only).
+- Do NOT add Swashbuckle back. Use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` for customizing the OpenAPI doc (e.g. adding Bearer auth scheme to Scalar's "Authorize" button).
+- Controller endpoint metadata comes from `[ProducesResponseType]`, `[ApiExplorerSettings]`, and return type inference. The `[SwaggerOperation]`, `[SwaggerResponse]`, `[SwaggerTag]` attributes from Swashbuckle are gone.
+- `Microsoft.OpenApi.Models` namespace DOES NOT EXIST in OpenAPI.NET v2.x. Types live in root `Microsoft.OpenApi` — don't try to add `using Microsoft.OpenApi.Models`.
+
+## File Storage
+
+- `IFileStore` abstraction in Application: `StoreAsync(Stream, contentType, storageKey)` → `Result<string>`, `OpenReadAsync(storageKey)` → `Result<Stream>`, `DeleteAsync(storageKey)` → `Result`. `InitializeAsync()` for bucket creation (default no-op).
+- Two implementations: `LocalFileStore` (bare-metal fallback) and `S3FileStore` (MinIO/AWS S3, recommended). Switch via `FileStorage:Provider` config.
+- MinIO runs as a core Docker Compose service alongside Postgres. Server `depends_on: minio`.
+- Storage key hierarchy: `{userId}/{sourceType}/{sourceId}/{guid}` — never include user filenames, dates, or project IDs in the key.
+- Metadata (filename, content-type, size) stored in `Attachment` entity — never extract from storage path.
+- Flow: validate membership → validate card → validate size/content-type → sanitize filename → generate key → store file → store metadata → audit log.
+- Delete: metadata first, then file (non-fatal if file-store delete fails).
+- `S3FileStore` auto-creates bucket on startup. `InitializeAsync` failure logged as warning, server continues.
 
 ## Architecture Constraints To Preserve
 
@@ -70,7 +95,11 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Card identifiers shown to users should be per-project `CardNumber` values, not raw GUIDs.
 - If implementing card relationships, validate acyclic dependencies before persisting them; circular relationships are rejected in Application logic.
 - `ProjectContextSnapshot.TemplateContent` is intended for instant board-mutation updates; `AiNarrative` is intended for nightly scheduled generation only.
-- Archive is `ArchivedAt: DateTime?`, not `IsArchived: bool`. Archived-by-default queries use manual `.Where(x => x.ArchivedAt == null)` filters (no global query filter), so admin and audit views can see archived rows.
+- Domain entities encapsulate state transitions via instance methods (e.g. `card.MoveTo(columnId, position)`, `project.Archive()`, `column.UpdateDetails(name, color, wipLimit)`, `member.ChangeRole(role)`). Services MUST call these methods — never set entity properties directly in Application layer. This keeps all mutation logic on the entity itself.
+- Spec/Plan ownership: `Spec.CardId` and `Plan.CardId` are ownership FKs (the card that created the document owns it). Other cards can read but not edit. No link/unlink endpoints — ownership is set at creation and immutable.
+- Controller route pattern for sub-resources: `[Route("api/projects/{projectId:guid}/[controller]")]` on class. Card-scoped actions use `[HttpPost("cards/{cardId:guid}")]` prefix. Standalone actions use `[HttpGet("{specId:guid}")]`. Never use `~/api/...` override routes.
+- Version snapshots (`SpecVersion`, `PlanVersion`) store full document state: `Title`, `Description`, `Content`. Restore reverts all three fields.
+- Blocked card move: API returns `409 Conflict` with warning payload when `confirmBlockedMove=false`. 200 OK must not be used for blocked moves — the move was not executed.
 - Housekeeping cascade: DbContext `OnDelete: Cascade` for Document→Version, Note→Reminder, Note→ImageAttachment, ChatSession→Message. `DocumentChunk` is polymorphic (`SourceType`+`SourceId`); its cascade must be handled manually in `HousekeepingBackgroundService`, not via FK.
 - One global admin-configurable retention period for all archived ownable content (via `SystemSettings.ArchivedItemRetentionDays`). Notifications and audit logs have their own (shorter) retention knobs.
 

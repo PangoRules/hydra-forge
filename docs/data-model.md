@@ -39,6 +39,7 @@ User (1) ──┬── (N) ProjectMember
 Project (1) ──┬── (N) Column
               ├── (N) Card
               ├── (N) Spec ──── (N) SpecVersion
+              │       └── (N) Plan (ownership via Plan.SpecId)
               ├── (N) Plan ──── (N) PlanVersion
               ├── (N) AuditLogEntry
               ├── (N) ProjectMember
@@ -56,8 +57,8 @@ Card (1) ──┬── (N) Comment
            ├── (N) CardWatcher
            ├── (N) CardRelationship (as source)
            ├── (N) CardRelationship (as target)
-           ├── (1) Spec? (optional link)
-           └── (1) Plan? (optional link)
+           ├── (N) Spec (ownership via Spec.CardId)
+           └── (N) Plan (ownership via Plan.CardId)
 
 ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
                  └── (N) ChatSession
@@ -115,8 +116,6 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ProjectId | Guid | FK to Project |
 | ColumnId | Guid | FK to Column |
 | ParentCardId | Guid? | FK to parent card (epic → child) |
-| SpecId | Guid? | FK to Spec (optional linked document) |
-| PlanId | Guid? | FK to Plan (optional linked document) |
 | Title | string | |
 | Description | string | Markdown content |
 | Type | CardType | Task / Bug / Epic / Spec / Idea |
@@ -196,7 +195,9 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
+| CardId | Guid | FK to Card — owning card (the card that created this spec) |
 | Title | string | Display name, e.g. "Auth Module Spec" |
+| Description | string? | Optional description |
 | Content | string | Current markdown content |
 | Version | int | Increments on each edit |
 | CreatedByUserId | Guid | |
@@ -209,6 +210,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | SpecId | Guid | FK to Spec |
+| Title | string | Title at time of snapshot |
+| Description | string? | Description at time of snapshot |
 | Content | string | Full markdown snapshot at this version |
 | Version | int | Matches Spec.Version at time of snapshot |
 | CreatedAt | DateTime | |
@@ -220,6 +223,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
+| CardId | Guid | FK to Card — owning card (the card that created this plan) |
+| SpecId | Guid? | FK to Spec — optional parent specification |
 | Title | string | Display name, e.g. "Auth Implementation Plan" |
 | Content | string | Current markdown (numbered steps) |
 | Version | int | Increments on each edit |
@@ -233,6 +238,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 |---|---|---|
 | Id | Guid | |
 | PlanId | Guid | FK to Plan |
+| Title | string | Title at time of snapshot |
+| Description | string? | Description at time of snapshot |
 | Content | string | Full markdown snapshot at this version |
 | Version | int | Matches Plan.Version at time of snapshot |
 | CreatedAt | DateTime | |
@@ -273,6 +280,8 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | AiNarrative | string? | AI-generated end-of-day summary: "5 cards moved, 2 blockers resolved, PR created for #42." Generated nightly by scheduled job. Nullable — null until first nightly run. |
 | TemplateGeneratedAt | DateTime | Set on every board mutation |
 | AiNarrativeGeneratedAt | DateTime? | Set by nightly job |
+
+> **Rendering:** `ProjectContextSnapshotRenderer` (Application layer, `static`, pure deterministic) — reads columns, cards, and active `CardRelationship`s, outputs JSON. No LLM, no DB writes, no side effects. **Refresh pipeline:** `IProjectSnapshotRefresher.RefreshAsync()` is called by all 9 mutation services (Project, Column, Card, Checklist, Comment, Attachment, Spec, Plan, CardRelationship) immediately after persisting changes. `IProjectSnapshotRefresher.GetSnapshotAsync()` serves the `GET /api/projects/{projectId}/ProjectSnapshot` endpoint (members-only).
 
 ### CardWatcher
 

@@ -456,24 +456,24 @@
 
 > ⚠️ **Pre-phase decision needed:** File storage default — local FS or S3? Define `IFileStore` abstraction (`LocalFileStore` + `S3FileStore` implementations) and add storage config to app settings (`FILE_STORAGE_PROVIDER`, `FILE_STORAGE_PATH` / S3 credentials). Decide before implementing `Attachment` upload. Recommendation: default to local FS, S3 is opt-in via env var.
 
-- [ ] Project CRUD + ProjectMember management (Owner / Member roles)
-- [ ] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
-- [ ] Column CRUD + reordering + per-project default columns
-- [ ] Card CRUD + move between columns + position ordering
-- [ ] Card types: Task / Bug / Epic / Spec / Idea
-- [ ] Epic → child card linking
-- [ ] Checklists on cards (items, completion, assignee per item)
-- [ ] Comments on cards + @mention extraction + CardWatcher auto-add
-- [ ] File attachments on cards (local FS storage, S3-compatible abstraction)
-- [ ] Specs: versioned markdown documents linked to cards
-- [ ] Plans: versioned numbered markdown documents linked to specs/cards
-- [ ] CardRelationship CRUD: BlockedBy, Precedes, Relates
-- [ ] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
-- [ ] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log
-- [ ] ProjectContextSnapshot: maintain + auto-regenerate on board mutations (card index: id, title, column, type)
-- [ ] SignalR hubs: board mutations broadcast to all connected project members
-- [ ] Presence: `PresenceHub` — join/leave events, ephemeral only (no DB writes)
-- [ ] All endpoints covered by xUnit tests (> 90% business logic coverage)
+- [x] Project CRUD + ProjectMember management (Owner / Member roles)
+- [x] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
+- [x] Column CRUD + reordering + per-project default columns
+- [x] Card CRUD + move between columns + position ordering
+- [x] Card types: Task / Bug / Epic / Spec / Idea
+- [x] Epic → child card linking
+- [x] Checklists on cards (items, completion, assignee per item)
+- [x] Comments on cards + @mention extraction + CardWatcher auto-add
+- [x] File attachments on cards (local FS storage, S3-compatible abstraction)
+- [x] Specs: versioned markdown documents linked to cards
+- [x] Plans: versioned numbered markdown documents linked to specs/cards
+- [x] CardRelationship CRUD: BlockedBy, Precedes, Relates
+- [x] Circular dependency detection: `CardDependencyService.ValidateAcyclic()` — reject on insert
+- [x] Archive card with dependents: warn payload → confirm → soft-delete relationships → audit log
+- [x] ProjectContextSnapshot: `IProjectSnapshotRefresher` port (`RefreshAsync`/`GetSnapshotAsync`) injected into all mutation services; `ProjectSnapshotRefresher` EF implementation; `ProjectContextSnapshotRenderer` (pure deterministic, no LLM); `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint
+- [x] SignalR hubs: board mutations broadcast to all connected project members
+- [x] Presence: `PresenceHub` — join/leave events, ephemeral only (no DB writes)
+- [x] All endpoints covered by xUnit tests (> 90% business logic coverage)
 
 ### Phase 3: Project Space — Web UI 🌐
 > Goal: full project board usable in browser. Feature-complete project workspace.

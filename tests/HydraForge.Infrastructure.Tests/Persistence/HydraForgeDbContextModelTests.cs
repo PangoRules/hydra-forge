@@ -8,7 +8,6 @@ using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using Pgvector.EntityFrameworkCore;
 using System.Linq;
 
 public class HydraForgeDbContextModelTests
@@ -170,7 +169,7 @@ public class HydraForgeDbContextModelTests
 
         var card = model.FindEntityType(typeof(Card));
         Assert.NotNull(card);
-        AssertProperties(card, "ParentCardId", "SpecId", "PlanId", "Type", "Position", "DueAt", "MovedAt", "ArchivedAt");
+        AssertProperties(card, "ParentCardId", "Type", "Position", "DueAt", "MovedAt", "ArchivedAt");
         Assert.Equal(typeof(int), card.FindProperty("CardNumber")?.ClrType);
         Assert.Equal(typeof(CardType), card.FindProperty("Type")?.ClrType);
 
@@ -409,5 +408,277 @@ public class HydraForgeDbContextModelTests
 
         Assert.NotNull(projectIdIndex);
         Assert.True(projectIdIndex.IsUnique);
+    }
+
+    [Fact]
+    public void GetIndexes_CardAssignee_CardIdUserId_IsUnique()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(CardAssignee));
+        Assert.NotNull(entity);
+
+        var index = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "CardId") &&
+                                  i.Properties.Any(p => p.Name == "UserId"));
+
+        Assert.NotNull(index);
+        Assert.True(index.IsUnique);
+    }
+
+    [Fact]
+    public void GetIndexes_CardWatcher_CardIdUserId_IsKey()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(CardWatcher));
+        Assert.NotNull(entity);
+
+        var key = entity.FindPrimaryKey();
+        Assert.NotNull(key);
+        Assert.Equal(2, key.Properties.Count);
+        Assert.Contains(key.Properties, p => p.Name == "CardId");
+        Assert.Contains(key.Properties, p => p.Name == "UserId");
+    }
+
+    [Fact]
+    public void GetIndexes_Card_ColumnIdPosition_NotConfigured()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Card));
+        Assert.NotNull(entity);
+
+        var columnPositionIndex = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ColumnId") &&
+                                  i.Properties.Any(p => p.Name == "Position"));
+
+        Assert.Null(columnPositionIndex);
+    }
+
+    [Fact]
+    public void FindEntityType_Project_HasArchivedAtProperty()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Project));
+        Assert.NotNull(entity);
+
+        var prop = entity.GetProperties().FirstOrDefault(p => p.Name == "ArchivedAt");
+        Assert.NotNull(prop);
+    }
+
+    [Fact]
+    public void GetIndexes_ProjectMember_ProjectIdUserId_IsUnique()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(ProjectMember));
+        Assert.NotNull(entity);
+
+        var index = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
+                                  i.Properties.Any(p => p.Name == "UserId"));
+
+        Assert.NotNull(index);
+        Assert.True(index.IsUnique);
+    }
+
+    [Fact]
+    public void GetIndexes_Column_ProjectIdPosition_IsNotUnique()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Column));
+        Assert.NotNull(entity);
+
+        var index = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
+                                  i.Properties.Any(p => p.Name == "Position"));
+
+        Assert.NotNull(index);
+        Assert.False(index.IsUnique);
+    }
+
+    [Fact]
+    public void GetIndexes_CardRelationship_SourceCardIdTargetCardId_IsUnique()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(CardRelationship));
+        Assert.NotNull(entity);
+
+        var index = entity.GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "SourceCardId") &&
+                                  i.Properties.Any(p => p.Name == "TargetCardId"));
+
+        Assert.NotNull(index);
+        Assert.True(index.IsUnique);
+    }
+
+    [Fact]
+    public void GetForeignKeys_Spec_CardId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Spec));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "CardId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_Plan_CardId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Plan));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "CardId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_Plan_SpecId_SetNullDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(Plan));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "SpecId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.SetNull, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_DocumentVersion_DocumentId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(DocumentVersion));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "DocumentId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_ChatMessage_SessionId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(ChatMessage));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "SessionId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_NoteReminder_NoteId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(NoteReminder));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "NoteId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetForeignKeys_NoteImageAttachment_NoteId_CascadeDelete()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(NoteImageAttachment));
+        Assert.NotNull(entity);
+
+        var fk = entity.GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "NoteId"));
+
+        Assert.NotNull(fk);
+        Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
+    }
+
+    [Fact]
+    public void GetProperty_MemoryEntry_Embedding_Vector1536()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(MemoryEntry));
+        Assert.NotNull(entity);
+
+        var prop = entity.GetProperties().FirstOrDefault(p => p.Name == "Embedding");
+        Assert.NotNull(prop);
+        Assert.Equal("vector(1536)", prop.GetColumnType());
+    }
+
+    [Fact]
+    public void GetProperty_DocumentChunk_Embedding_Vector1536()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(DocumentChunk));
+        Assert.NotNull(entity);
+
+        var prop = entity.GetProperties().FirstOrDefault(p => p.Name == "Embedding");
+        Assert.NotNull(prop);
+        Assert.Equal("vector(1536)", prop.GetColumnType());
+    }
+
+    [Fact]
+    public void Model_VectorExtension_Configured_ViaEmbeddingColumnType()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var memoryEntry = model.FindEntityType(typeof(MemoryEntry));
+        Assert.NotNull(memoryEntry);
+        var memoryEmbedding = memoryEntry.GetProperties().FirstOrDefault(p => p.Name == "Embedding");
+        Assert.NotNull(memoryEmbedding);
+        Assert.Contains("vector", memoryEmbedding.GetColumnType());
+
+        var docChunk = model.FindEntityType(typeof(DocumentChunk));
+        Assert.NotNull(docChunk);
+        var docEmbedding = docChunk.GetProperties().FirstOrDefault(p => p.Name == "Embedding");
+        Assert.NotNull(docEmbedding);
+        Assert.Contains("vector", docEmbedding.GetColumnType());
     }
 }

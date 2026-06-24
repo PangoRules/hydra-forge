@@ -38,7 +38,11 @@
 │  │  - ColumnService               │        │
 │  │  - SpecService / PlanService   │        │
 │  │  - CardDependencyService       │        │
-│  │  - ProjectContextSnapshot      │        │
+│  │  - ProjectContextSnapshotService│        │
+│  │    + ProjectContextSnapshotRenderer (pure, no LLM)│
+│  │    + IProjectSnapshotRefresher port│
+│  │  - IProjectBoardEventPublisher  │        │
+│  │    + ProjectBoardEventEnvelope  │        │
 │  │  - ChatService                 │        │
 │  │  - ModelRouter                 │        │
 │  │  - ContextCompressor           │        │
@@ -58,6 +62,11 @@
 │  │  - Git service                 │        │
 │  │  - LLM client (OpenAI/etc)     │        │
 │  │  - SignalR messaging           │        │
+│  │    + BoardHub, PresenceHub     │        │
+│  │    + SignalRProjectBoardEventPublisher│        │
+│  │    + RealtimeServiceCollectionExtensions│
+│  │  - File storage (IFileStore:   │        │
+│  │    LocalFileStore / S3FileStore)│        │
 │  └────────────────────────────────┘        │
 └────────────────────────────────────────────┘
 ```
@@ -70,7 +79,7 @@
 |---|---|---|
 | Domain | `HydraForge.Domain` | Entities, enums, interfaces, `Result<T,Error>`, error codes. No external dependencies. |
 | Application | `HydraForge.Application` | Use cases, services (CardService, ModelRouter, etc.), DTOs. Depends on Domain only. |
-| Infrastructure | `HydraForge.Infrastructure` | EF Core DbContext, migrations, LLM clients, file storage, SignalR. Implements Domain interfaces. |
+| Infrastructure | `HydraForge.Infrastructure` | EF Core DbContext, migrations, LLM clients, file storage (`IFileStore`: `LocalFileStore` fallback + `S3FileStore` for MinIO/AWS S3), SignalR. Implements Domain interfaces. |
 | Server | `HydraForge.Server` | ASP.NET Core controllers, SignalR hubs, middleware, `Program.cs`. |
 | TUI | `HydraForge.Tui` | Spectre.Console views, commands, screen rendering. |
 | Web UI | `src/web-ui` | Nuxt 4 app under `app/` (pages, components, composables). Talks only to Server via HTTP + SignalR. |
@@ -121,29 +130,55 @@ TUI / Web UI
 │          │                    │              └──────┬───────┘   │
 │          └────────────┬───────┴─────────────────────┘           │
 │                       │                                          │
-│              ┌────────▼────────┐  ┌──────────────┐              │
-│              │  Server         │  │  Git Remote  │              │
-│              │  .NET + SignalR  │  │  (GitHub/    │              │
-│              │  - REST API      │  │   GitLab/    │              │
-│              │  - SignalR hubs  │  │   self-host) │              │
-│              │  - LLM broker    │  └──────────────┘              │
-│              └────────┬────────┘                                 │
-│                       │                                          │
-│              ┌────────▼────────┐  ┌──────────────┐              │
-│              │  PostgreSQL 16  │  │  SearXNG     │              │
-│              │  (all state)    │  │  (optional   │              │
-│              └─────────────────┘  │   profile)   │              │
-│                                   └──────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
+  │              ┌────────▼────────┐  ┌──────────────┐              │
+  │              │  Server         │  │  Git Remote  │              │
+  │              │  .NET + SignalR  │  │  (GitHub/    │              │
+  │              │  - REST API      │  │   GitLab/    │              │
+  │              │  - SignalR hubs  │  │   self-host) │              │
+  │              │  - LLM broker    │  └──────────────┘              │
+  │              │  - IFileStore    │                                 │
+  │              └────────┬────────┘                                 │
+  │                       │                                          │
+  │              ┌────────▼────────┐  ┌──────────────┐  ┌──────────┐│
+  │              │  PostgreSQL 16  │  │  MinIO       │  │ SearXNG  ││
+  │              │  (all state)    │  │  (S3 storage) │  │ (optional│
+  │              └─────────────────┘  │  port 9000   │  │  profile)││
+  │                                   │  console 9001│  └──────────┘│
+  │                                   └──────────────┘              │
+  └─────────────────────────────────────────────────────────────────┘
 ```
 
-> All services run via `docker-compose up`. SearXNG enabled with `--profile search` or auto-detected if Deep Research is enabled.
+> All services run via `docker-compose up`. MinIO runs alongside Postgres as a core service. SearXNG enabled with `--profile search` or auto-detected if Deep Research is enabled.
 
 ### TUI Connectivity Behavior
 
 - **Online:** Normal operation. JWT auth on startup, stored in user config.
 - **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff.
 - **Reconnected:** Auto-resumes. Re-fetches board state. No manual refresh required.
+
+### SignalR Hubs
+
+Two hubs handle real-time communication:
+
+| Hub | Route | Purpose | Events |
+|---|---|---|---|
+| `BoardHub` | `/hubs/board` | Board mutation broadcasts | `OnBoardEvent(ProjectBoardEventEnvelope)` |
+| `PresenceHub` | `/hubs/presence` | Ephemeral presence | `UserJoined`, `UserLeft`, `CardFocused` |
+
+**Board mutation flow:**
+1. HTTP mutation request → controller → Application service
+2. Service applies to DB (via EF Core)
+3. Service calls `IProjectBoardEventPublisher.PublishAsync(envelope)`
+4. `SignalRProjectBoardEventPublisher` fans out to all clients in `BoardHub.ProjectGroup(projectId)`
+5. Clients receive typed `OnBoardEvent` with full `ProjectBoardEventEnvelope`
+
+**Presence flow:**
+- `JoinProject(projectId)` → adds client to project group, broadcasts `UserJoined` to others
+- `FocusCard(projectId, cardId)` → broadcasts `CardFocused` to project group
+- `LeaveProject(projectId)` or disconnect → removes from group, broadcasts `UserLeft`
+- All presence state is in-memory `ConcurrentDictionary` — no DB writes
+
+**DI wiring:** `RealtimeServiceCollectionExtensions.AddRealtimeServices()` in Infrastructure registers `IProjectBoardEventPublisher → SignalRProjectBoardEventPublisher`.
 
 ---
 
@@ -285,6 +320,19 @@ Every error response follows RFC 7807:
 
 Log levels: 4xx → `Warning`, 5xx → `Error`. Production default: errors and warnings only. Debug configurable.
 
+### File Storage Architecture
+
+File attachments are stored via `IFileStore` (Application layer interface) with two implementations:
+
+| Implementation | When used | Storage path |
+|---|---|---|
+| `LocalFileStore` | `FileStorage:Provider=Local` (default bare-metal fallback) | `{root}/{userId}/cards/{cardId}/{guid}` |
+| `S3FileStore` | `FileStorage:Provider=S3` (MinIO/AWS S3, recommended) | `{bucket}/{userId}/cards/{cardId}/{guid}` |
+
+**Key hierarchy:** `{userId}/{sourceType}/{sourceId}/{guid}` — user-prefixed, source-type namespaced (`cards/`, future `chat/`, `notes/`). No user filenames, dates, or project IDs in the storage path. GUID prevents enumeration and collisions.
+
+**MinIO** runs as a core Docker Compose service (ports 9000/9001) — the server depends on its health. Switch between Local and S3 via `FileStorage:Provider` in config. `InitializeAsync()` on `S3FileStore` creates the bucket automatically on startup.
+
 ### External Service Resilience
 
 Failures in these services must never bring down the core board:
@@ -295,6 +343,7 @@ Failures in these services must never bring down the core board:
 | Git remote | Surface error in agent output; board continues working |
 | ntfy | Log at Warning, skip notification; board continues working |
 | PostgreSQL | 503 response; server cannot function without DB — fail loudly |
+| MinIO / S3 | Upload returns 503 `FileStoreUnavailable`; download/delete also return 503. Board still functions read-only without file store — card metadata remains intact. |
 
 ---
 
@@ -308,6 +357,7 @@ Failures in these services must never bring down the core board:
 | **Database** | PostgreSQL 16 + pgvector | MVCC handles concurrent multi-user writes. pgvector powers RAG and Brain/Memory semantic search. Native full-text search. EF Core Npgsql provider. |
 | **Real-time** | SignalR (WebSocket + SSE fallback) | Built into ASP.NET Core. Battle-tested. Auto-fallback. |
 | **Tests** | xUnit | Default .NET testing. No FluentAssertions (prone to deprecation). Plain `Assert.*` only. |
+| **API documentation** | `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore` | Built-in OpenAPI 3.1 doc generation at `/openapi/v1.json`. Scalar UI at `/scalar/v1`. Replaces deprecated Swashbuckle/Swagger (see D-33). |
 | **Containerization** | Docker + docker-compose | Single-command setup. Portable. Reproducible. |
 | **Architecture pattern** | Clean Architecture (DI, SOLID) | Testable, maintainable, readable. |
 | **Web search** | SearXNG | Open-source, self-hosted metasearch. Bundled as optional Docker service. |
@@ -329,14 +379,21 @@ hydra-forge/
 ├── src/
 │   ├── HydraForge.Server/      # ASP.NET Core server
 │   │   ├── Controllers/
+│   │   │   └── Projects/
+│   │   │       └── ProjectSnapshotController.cs  # GET /api/projects/{projectId}/ProjectSnapshot
+│   │   ├── Hubs/              # PresenceHub (/hubs/presence)
 │   │   ├── Errors/           # ProblemDetails mapping
 │   │   ├── Middleware/
-│   │   └── Program.cs
+│   │   ├── HttpTests/        # *.http test files (Scalar-compatible)
+│   │   ├── Program.cs        # AddOpenApi() + MapOpenApi() + MapScalarApiReference()
+│   │   └── ...               # OpenAPI at /openapi/v1.json, Scalar UI at /scalar/v1
 │   │
 │   ├── HydraForge.Application/ # Use cases, services, DTOs
 │   │   ├── Cards/
 │   │   ├── Columns/
 │   │   ├── Projects/
+│   │   ├── ProjectSnapshots/   # IProjectSnapshotRefresher, ProjectContextSnapshotService, ProjectContextSnapshotRenderer
+│   │   ├── Realtime/            # IBoardHub, IProjectBoardEventPublisher, ProjectBoardEventEnvelope
 │   │   ├── Specs/
 │   │   ├── Plans/
 │   │   ├── Chat/
@@ -351,10 +408,13 @@ hydra-forge/
 │   │   ├── Enums/
 │   │   └── Interfaces/
 │   │
-│   ├── HydraForge.Infrastructure/  # EF Core, PostgreSQL, LLM client, git
+│   ├── HydraForge.Infrastructure/  # EF Core, PostgreSQL, LLM client, git, file storage
 │   │   ├── Persistence/
 │   │   ├── Auth/
 │   │   ├── Audit/
+│   │   ├── FileStorage/         # LocalFileStore, S3FileStore
+│   │   ├── Attachments/         # EfAttachmentRepository, DI extensions
+│   │   ├── Realtime/            # BoardHub, SignalRProjectBoardEventPublisher, RealtimeServiceCollectionExtensions
 │   │   └── Health/
 │   │
 │   ├── HydraForge.Tui/         # Spectre.Console TUI

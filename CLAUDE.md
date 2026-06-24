@@ -53,12 +53,30 @@ PATH="$PATH:/home/pango/.dotnet/tools" \
     --project src/HydraForge.Infrastructure \
     --startup-project src/HydraForge.Server
 
-# Docker — full stack (Postgres + Server)
+# API docs (OpenAPI JSON): http://localhost:5000/openapi/v1.json
+# API reference (Scalar UI): http://localhost:5000/scalar/v1
+
+# Docker — full stack (Postgres + MinIO + Server)
 docker compose up
 
-# Docker — Postgres only (port 5433 → 5432 in container)
-docker compose up -d postgres
+# Docker — Postgres + MinIO only (no server)
+docker compose up -d postgres minio
+
+# MinIO console: http://localhost:9001 (user: minioadmin / pass: minioadmin)
+
+# File storage toggle (Local ↔ S3):
+#   Set FILE_STORAGE_PROVIDER=S3 in .env to use MinIO instead of local FS
 ```
+
+### File storage
+
+- `IFileStore` in Application layer — `LocalFileStore` (bare-metal fallback) and `S3FileStore` (MinIO/AWS S3, recommended)
+- MinIO is a core Docker Compose service alongside Postgres — ports 9000 (S3 API) and 9001 (console)
+- Storage key hierarchy: `{userId}/{sourceType}/{sourceId}/{guid}` — e.g. `a1b2c3d4/cards/e5f6g7h8/abc123`
+- Switch provider by changing `FileStorage:Provider` in config (or env `FILE_STORAGE_PROVIDER`)
+- S3/MinIO bucket auto-created on startup via `IFileStore.InitializeAsync()`
+- Default max file size: 10 MB. Supported types: PNG/JPEG/GIF/WebP, PDF, text, JSON/XML/HTML/CSV, ZIP, Office docs
+- `.env.example` has commented MinIO config block — uncomment `FileStorage__Provider=S3` and related vars to enable
 
 ### Local dev database
 
@@ -83,12 +101,38 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 
 ## Critical conventions
 
+**File storage — key rules:**
+- `IFileStore.StoreAsync` returns `Result<string>` (the storage key), never throws for expected failures
+- Storage keys are opaque: `{userId}/{sourceType}/{sourceId}/{guid}` — no user filenames, dates, or projects
+- Metadata (filename, content-type, size) lives in DB `Attachment` entity, never in the storage path
+- Attachment metadata is committed **after** file-store success — if store fails, no orphaned DB rows
+- On delete: metadata removed first, then file-store delete attempted (non-fatal if file-store fails)
+- `S3FileStore.InitializeAsync()` auto-creates bucket — called from `Program.cs` during startup, logs warning on failure (doesn't crash)
+- `LocalFileStore` is bare-metal fallback only — MinIO is the recommended default
+
 **Error handling — non-negotiable:**
 - Business logic returns `Result<T, Error>` — never throw exceptions for expected failures
 - All errors have a typed error code (e.g. `CARD_NOT_FOUND`, `DEPENDENCY_CYCLE_DETECTED`)
 - Controllers map expected `Result<T, Error>` failures to ProblemDetails RFC 7807 with `correlationId` and named `code`; global exception middleware catches everything else
 - Stack traces never reach clients
 - External service failures (LLM, Git, ntfy) must never crash the board
+
+**Domain entity patterns — non-negotiable:**
+- Domain entities encapsulate state transitions via instance methods — services orchestrate but NEVER set entity properties directly
+- On Card: `UpdateDetails`, `MoveTo(columnId, position)`, `ShiftPosition(delta)`, `Archive()`
+- On Project: `UpdateDetails`, `Archive()`
+- On Column: `UpdateDetails`, `AssignPosition(position)`
+- On ProjectMember: `ChangeRole(role)`
+- Services call these methods instead of `entity.Property = value`
+- **Spec/Plan ownership:** `Spec.CardId` and `Plan.CardId` are ownership FKs — the card that created the doc owns it. Other cards read but don't edit. No link/unlink.
+- **Version snapshots:** `SpecVersion` and `PlanVersion` store `Title`, `Description`, `Content` — full document state at each snapshot. Restore reverts all three.
+
+**Controller routing:**
+- Resource sub-controllers use `[Route("api/projects/{projectId:guid}/[controller]")]` — no `~` overrides
+- `[controller]` token resolves to the controller class name minus "Controller" suffix — e.g. `ProjectSnapshotController` → `/ProjectSnapshot`. **Always verify the resolved URL when writing `.http` smoke tests.**
+- Card-scoped actions get `"cards/{cardId:guid}"` prefix: `[HttpPost("cards/{cardId:guid}")]`
+- Standalone actions by resource ID: `[HttpGet("{specId:guid}")]`, `[HttpPut("{specId:guid}")]`
+- Never use `~/api/...` absolute route overrides
 
 **Testing:**
 - `xUnit` only — no FluentAssertions (deprecation risk), use plain `Assert.*`
@@ -120,9 +164,16 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Admin configures providers — users cannot add personal API keys
 - `ILlmClient`, `IImageClient`, `IEmbeddingClient` — always code to the interface
 
+### API smoke tests
+
+- `.http` files in `src/HydraForge.Server/HttpTests/` — each resource has its own file (auth, setup, full flow, cleanup)
+- Requires dev server running with seeded users: `testadmin`/`TestAdmin123!` (admin), `nonmember`/`NonMember123!` (regular), `testuser1`/`TestUser123!` (regular)
+- Test users seeded only in `Development` environment — controlled by `TestUserSeeder`
+
 ## Key domain rules
 
 - `Card.CardNumber` is sequential per project — assigned at creation, never reused after deletion
+- Blocked card move: returns `409 Conflict` with warning payload when `confirmBlockedMove=false`. Client retries with `confirmBlockedMove=true` after user confirms. Never hard-blocked. 200 OK is wrong — the move was not executed.
 - `CardRelationship` forms a DAG — `CardDependencyService.ValidateAcyclic()` must be called on every insert
 - `ProjectContextSnapshot.TemplateContent` regenerated on every board mutation (instant, no LLM)
 - `ProjectContextSnapshot.AiNarrative` generated by nightly scheduled job only (never on mutation)
@@ -151,7 +202,7 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/architecture.md` — Clean Architecture, real-time, LLM, error handling, tech stack
 - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
 - `docs/glossary.md` — terminology
-- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-32)
+- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-34)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

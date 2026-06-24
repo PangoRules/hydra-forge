@@ -1,0 +1,261 @@
+### Card Checklist API Smoke Tests
+### Run against local development environment
+### Requires seeded admin user (testadmin / TestAdmin123!)
+
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-check-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-002
+
+{
+  "description": "Project for checklist smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Checklist Smoke Test Project"
+}
+
+
+###
+
+# List columns to get default column IDs (Backlog is first)
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-003
+
+
+###
+
+# ── Card Setup ──────────────────────────────────────────────
+
+# @name createCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Card for checklist smoke test",
+  "title": "Checklist Test Card",
+  "type": "Task"
+}
+
+
+###
+
+# ── Create Checklist Item ───────────────────────────────────
+
+# @name createItem
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-005
+
+{
+  "text": "Design the schema"
+}
+
+
+###
+
+# Verify response has the item details
+
+# @name createItemWithPosition
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-006
+
+{
+  "text": "Implement the feature",
+  "position": 1
+}
+
+
+###
+
+# ── List Checklist Items ────────────────────────────────────
+
+# @name listItems
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-007
+
+
+###
+
+# ── Update Checklist Item ───────────────────────────────────
+
+# @name updateItem
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItem.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-008
+
+{
+  "text": "Updated: Implement the feature with tests",
+  "assignedTo": "{{loginAdmin.response.body.$.userId}}"
+}
+
+
+###
+
+# ── Toggle Checklist Item ───────────────────────────────────
+
+PATCH {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItem.response.body.$.id}}/toggle HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-009
+
+
+###
+
+# Toggle back to incomplete
+
+PATCH {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItem.response.body.$.id}}/toggle HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-010
+
+
+###
+
+# ── Reorder Checklist Item ──────────────────────────────────
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItemWithPosition.response.body.$.id}}/reorder HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-011
+
+{
+  "newPosition": 0
+}
+
+
+###
+
+# ── List After Reorder ──────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-012
+
+
+###
+
+# ── Delete Checklist Item ───────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItem.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-013
+
+
+###
+
+# Verify deletion — should have 1 item remaining
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-014
+
+
+###
+
+# ── Error Cases ─────────────────────────────────────────────
+
+# Non-member access — expect 403
+# Login as a different user not in the project
+
+# @name loginNonMember
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-check-015
+
+{
+  "password": "NonMember123!",
+  "username": "nonmember"
+}
+
+
+###
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist HTTP/1.1
+Authorization: Bearer {{loginNonMember.response.body.$.accessToken}}
+X-Correlation-Id: smoke-check-016
+
+
+###
+
+# Reorder with invalid position (out of bounds)
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/{{createItemWithPosition.response.body.$.id}}/reorder HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-017
+
+{
+  "newPosition": 999
+}
+
+
+###
+
+# Update non-existent item — expect 404
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-018
+
+{
+  "text": "Won't work"
+}
+
+
+###
+
+# Delete non-existent item — expect 404
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardchecklist/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-019
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-check-020

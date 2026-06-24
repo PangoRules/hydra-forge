@@ -1,0 +1,332 @@
+### Column API Smoke Tests
+
+
+### Run against local development environment
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-test-col-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+# ── Project Setup ───────────────────────────────────────────
+# Create a project - it will have 6 default columns (Backlog, Spec-ing,
+# Planned, In Dev, In Review, Done) at positions 0-5
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-002
+
+{
+  "description": "Project for column smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Column Smoke Test Project"
+}
+
+
+###
+
+# List columns to see the 6 default column IDs
+# NOTE: After first run, replace the hardcoded default column IDs in the
+# reorder request below with the actual IDs from this response.
+# The order is: Backlog, Spec-ing, Planned, In Dev, In Review, Done.
+
+# @name listDefaultColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-003
+
+
+###
+
+# ── Create Additional Columns ──────────────────────────────
+# Create first additional column (appends at position 6)
+
+# @name createColumn1
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-004
+
+{
+  "color": "#336699",
+  "name": "Extra Column 1",
+  "wipLimit": null
+}
+
+
+###
+
+# Create second additional column (appends at position 7)
+
+# @name createColumn2
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-005
+
+{
+  "color": "#FF0000",
+  "name": "Extra Column 2",
+  "wipLimit": 5
+}
+
+
+###
+
+# Create third additional column (appends at position 8)
+
+# @name createColumn3
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-006
+
+{
+  "color": "#00FF00",
+  "name": "Extra Column 3",
+  "wipLimit": null
+}
+
+
+###
+
+# List all columns (should now be 9)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-007
+
+
+###
+
+# ── Column CRUD ────────────────────────────────────────────
+# Get column by ID
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn1.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-008
+
+
+###
+
+# Update column
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn1.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-009
+
+{
+  "color": "#0000FF",
+  "name": "Extra Column 1 - Updated",
+  "wipLimit": 10
+}
+
+
+###
+
+# ── Reorder ─────────────────────────────────────────────────
+# IMPORTANT: Reorder requires ALL 9 column IDs.
+# Replace the placeholder IDs below with the actual IDs from listDefaultColumns.response.body
+# The order in the array is: [Backlog, Spec-ing, Planned, In Dev, In Review, Done, Extra1, Extra2, Extra3]
+# After running listDefaultColumns, update these values.
+
+# @name reorderColumns
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/reorder HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-010
+
+{
+  "columnIds": [
+    "15e0cf1d-bc3d-466e-8bb8-c7e023c381d2",
+    "32e1241f-3b4a-4a16-8ae6-02db24b4a569",
+    "5387fb97-8331-46ae-becd-5fcc69b95cfe",
+    "b163b714-3a7a-4c29-8a8a-1df7bcce080a",
+    "1dd951fe-59bb-4e99-a4a8-584e97efd814",
+    "dc4cdac4-6d19-423d-a1f3-520d2c06b27b",
+    "{{createColumn3.response.body.$.id}}",
+    "{{createColumn2.response.body.$.id}}",
+    "{{createColumn1.response.body.$.id}}"
+  ]
+}
+
+
+###
+
+# NOTE: The above reorder will fail until you replace the default column IDs
+# with real values from listDefaultColumns.response.body.$.columns
+# After first run, uncomment and fill in all 9 IDs:
+# {
+# "columnIds": [
+# "REPLACE-WITH-BACKLOG-ID",
+# "REPLACE-WITH-SPEC-ING-ID",
+# "REPLACE-WITH-PLANNED-ID",
+# "REPLACE-WITH-IN-DEV-ID",
+# "REPLACE-WITH-IN-REVIEW-ID",
+# "REPLACE-WITH-DONE-ID",
+# "{{createColumn1.response.body.$.id}}",
+# "{{createColumn2.response.body.$.id}}",
+# "{{createColumn3.response.body.$.id}}"
+# ]
+# }
+
+
+###
+
+# Verify reorder worked - list columns again
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-011
+
+
+###
+
+# Reorder with invalid ID returns 400
+# Uses only 1 new column + a fake ID (count mismatch against 9 columns)
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/reorder HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-012
+
+{
+  "columnIds": [
+    "{{createColumn1.response.body.$.id}}",
+    "99999999-9999-9999-9999-999999999999"
+  ]
+}
+
+
+###
+
+# Reorder with wrong count (fewer than 9) returns 400
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/reorder HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-013
+
+{
+  "columnIds": [
+    "{{createColumn1.response.body.$.id}}"
+  ]
+}
+
+
+###
+
+# ── Delete ──────────────────────────────────────────────────
+# Delete empty column (Extra Column 3 has no cards)
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn3.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-014
+
+
+###
+
+# Delete non-empty column returns 409
+# TODO: Re-enable once CardsController exists (POST /api/projects/{projectId}/cards)
+# Create a card in Extra Column 2, then try to delete it
+# POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+# Content-Type: application/json
+# Authorization: Bearer {{adminToken}}
+# X-Correlation-Id: smoke-test-col-015
+# {
+#   "columnId": "{{createColumn2.response.body.$.id}}",
+#   "name": "Card in Extra Column 2",
+#   "description": "This card prevents column deletion"
+# }
+# DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/{{createColumn2.response.body.$.id}} HTTP/1.1
+# Authorization: Bearer {{adminToken}}
+# X-Correlation-Id: smoke-test-col-016
+
+
+###
+
+# ── Non-member / Invalid ID Examples ────────────────────────
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-test-col-017
+
+{
+  "password": "NonMember123!",
+  "username": "nonmember"
+}
+
+
+###
+
+# Get column with invalid column ID (should return 404)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-018
+
+
+###
+
+# Update column with invalid column ID (should return 404)
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-019
+
+{
+  "color": "#FF0000",
+  "name": "Updated Name",
+  "wipLimit": 1
+}
+
+
+###
+
+# Delete column with invalid column ID (should return 404)
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-020
+
+
+###
+
+# List columns without auth (should return 401)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+X-Correlation-Id: smoke-test-col-021
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-col-022

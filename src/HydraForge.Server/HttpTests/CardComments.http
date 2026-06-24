@@ -1,0 +1,231 @@
+### Card Comments API Smoke Tests
+### Run against local development environment
+### Requires seeded admin user (testadmin / TestAdmin123!)
+### and seeded non-member user (nonmember / NonMember123!)
+
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-comment-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@adminUserId = {{loginAdmin.response.body.$.userId}}
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-002
+
+{
+  "description": "Project for comment smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Comment Smoke Test Project"
+}
+
+
+###
+
+# List columns to get default column IDs
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-003
+
+
+###
+
+# ── Card Setup ──────────────────────────────────────────────
+
+# @name createCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Card for comment smoke test",
+  "title": "Comment Test Card",
+  "type": "Task"
+}
+
+
+###
+
+# ── Create Comment with Mention ─────────────────────────────
+# Mentions admin user by username. Response should include
+# mentionedUserIds with the admin's user ID.
+
+# @name createCommentWithMention
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-005
+
+{
+  "content": "Hey @testadmin can you review this card?"
+}
+
+
+###
+
+# ── Create Plain Comment ────────────────────────────────────
+# No mention — mentionedUserIds should be empty.
+
+# @name createPlainComment
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-006
+
+{
+  "content": "This looks good to me."
+}
+
+
+###
+
+# ── List Comments ───────────────────────────────────────────
+# Should return both comments in creation order.
+# First comment's mentionedUserIds should contain admin user ID.
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-007
+
+
+###
+
+# ── Update Comment ──────────────────────────────────────────
+# Update content and add a mention to verify re-resolution.
+
+# @name updateComment
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments/{{createPlainComment.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-008
+
+{
+  "content": "Updated: @testadmin I revised this comment"
+}
+
+
+###
+
+# ── Verify Update ───────────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-009
+
+
+###
+
+# ── Archive Comment ─────────────────────────────────────────
+# Archive soft-deletes the comment via ArchivedAt timestamp.
+
+# @name archiveComment
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments/{{createPlainComment.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-010
+
+
+###
+
+# Verify comment no longer appears in active list
+# (archived comments are excluded from default list)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-011
+
+
+###
+
+# ── Error Cases ─────────────────────────────────────────────
+
+# Non-member access — expect 403
+
+# @name loginNonMember
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-comment-012
+
+{
+  "password": "NonMember123!",
+  "username": "nonmember"
+}
+
+
+###
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments HTTP/1.1
+Authorization: Bearer {{loginNonMember.response.body.$.accessToken}}
+X-Correlation-Id: smoke-comment-013
+
+
+###
+
+# Update non-existent comment — expect 404
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-014
+
+{
+  "content": "Won't work"
+}
+
+
+###
+
+# Archive non-existent comment — expect 404
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-015
+
+
+###
+
+# Archive already-archived comment — expect 409
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCard.response.body.$.id}}/cardcomments/{{createPlainComment.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-016
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-comment-017

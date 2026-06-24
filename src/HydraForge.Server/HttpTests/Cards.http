@@ -1,0 +1,306 @@
+### Card API Smoke Tests
+
+
+### Run against local development environment
+
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+@baseUrl = http://localhost:5000
+
+# ── Auth ────────────────────────────────────────────────────
+
+# @name loginAdmin
+
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+Content-Type: application/json
+X-Correlation-Id: smoke-test-card-001
+
+{
+  "password": "TestAdmin123!",
+  "username": "testadmin"
+}
+
+
+###
+
+# ── Project Setup ───────────────────────────────────────────
+
+# @name createProject
+
+POST {{baseUrl}}/api/projects HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-002
+
+{
+  "description": "Project for card smoke test",
+  "gitProvider": "github",
+  "gitRemoteUrl": "https://github.com/test/test.git",
+  "name": "Card Smoke Test Project"
+}
+
+
+###
+
+# List columns to get default column IDs (Backlog is first)
+
+# @name listColumns
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/columns HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-003
+
+
+###
+
+# Extract Backlog column ID for card creation
+# NOTE: Backlog is typically the first column (position 0)
+
+
+###
+
+# ── Create Epic ──────────────────────────────────────────────
+
+# @name createEpic
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-004
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "This is an epic with child tasks",
+  "title": "Epic: User Authentication System",
+  "type": "Epic"
+}
+
+
+###
+
+# ── Create Task ─────────────────────────────────────────────
+
+# @name createTask
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-005
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "Implement login form",
+  "parentCardId": "{{createEpic.response.body.$.id}}",
+  "title": "Task: Login Form UI",
+  "type": "Task"
+}
+
+
+###
+
+# ── List Filters ────────────────────────────────────────────
+# List all cards (no filter)
+
+# @name listAllCards
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-006
+
+
+###
+
+# List cards by column (Backlog)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards?columnId={{listColumns.response.body.$[0].id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-007
+
+
+###
+
+# List cards by type (Task)
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards?type=Task HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-008
+
+
+###
+
+# List cards including archived
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards?includeArchived=true HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-009
+
+
+###
+
+# ── Get by Number ────────────────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.cardNumber}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-010
+
+
+###
+
+# ── Update ──────────────────────────────────────────────────
+
+# @name updateTask
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-011
+
+{
+  "description": "Updated: Implement login form with validation",
+  "title": "Task: Login Form UI - Updated",
+  "type": "Task",
+  "version": "{{createTask.response.body.$.version}}"
+}
+
+
+###
+
+# ── Assign ──────────────────────────────────────────────────
+# Get admin user ID from login response
+
+# @name assignCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/assignees HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-012
+
+{
+  "assigneeUserId": "{{loginAdmin.response.body.$.userId}}"
+}
+
+
+###
+
+# ── Unassign ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/assignees/{{loginAdmin.response.body.$.userId}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-013
+
+
+###
+
+# ── Blocked Move Preflight ───────────────────────────────────
+# Create a task that will block moving the epic
+
+# @name createBlockerTask
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-014
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "This task blocks the epic",
+  "title": "Blocker Task",
+  "type": "Task"
+}
+
+
+###
+
+# Create epic that depends on the blocker
+
+# @name createBlockedEpic
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-015
+
+{
+  "columnId": "{{listColumns.response.body.$[0].id}}",
+  "description": "This epic is blocked",
+  "title": "Blocked Epic",
+  "type": "Epic"
+}
+
+
+###
+
+# Add a "blocks" relationship (blocker task blocks blocked epic)
+# NOTE: This requires relationship creation - check if endpoint exists
+# For now, test a normal move to see the move flow
+
+
+###
+
+# ── Confirmed Move ───────────────────────────────────────────
+# Move task to next column (In Dev - typically position 1)
+
+# @name moveTask
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/move HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-016
+
+{
+  "targetColumnId": "{{listColumns.response.body.$[1].id}}",
+  "targetPosition": 0,
+  "version": "{{updateTask.response.body.$.version}}"
+}
+
+
+###
+
+# ── Archive ─────────────────────────────────────────────────
+
+# @name archiveCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/archive HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-017
+
+{
+  "version": "{{moveTask.response.body.$.version}}"
+}
+
+
+###
+
+# Verify archived card no longer appears in default list
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-018
+
+
+###
+
+# Verify archived card appears with includeArchived=true
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards?includeArchived=true HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-019
+
+
+###
+
+# ── Delete ──────────────────────────────────────────────────
+# Delete the blocker task (no children)
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createBlockerTask.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-020
+
+
+###
+
+# ── Cleanup ─────────────────────────────────────────────────
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-021

@@ -1293,16 +1293,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid?>("ParentCardId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("PlanId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("Position")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("SpecId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Title")
@@ -1323,10 +1317,6 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasIndex("ColumnId");
 
                     b.HasIndex("ParentCardId");
-
-                    b.HasIndex("PlanId");
-
-                    b.HasIndex("SpecId");
 
                     b.HasIndex("ProjectId", "CardNumber")
                         .IsUnique();
@@ -1515,6 +1505,10 @@ namespace HydraForge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1531,6 +1525,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SpecId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("spec_id");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1543,7 +1541,13 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CardId")
+                        .HasDatabaseName("ix_plans_card_id");
+
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("SpecId")
+                        .HasDatabaseName("ix_plans_spec_id");
 
                     b.ToTable("plans", (string)null);
                 });
@@ -1564,8 +1568,15 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
@@ -1573,6 +1584,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PlanId");
+
+                    b.HasIndex("PlanId", "Version")
+                        .IsUnique();
 
                     b.ToTable("plan_versions", (string)null);
                 });
@@ -1582,6 +1596,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1663,6 +1680,8 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.HasIndex("ProjectId", "UserId")
                         .IsUnique();
 
@@ -1674,6 +1693,10 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_id");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -1703,6 +1726,9 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CardId")
+                        .HasDatabaseName("ix_specs_card_id");
+
                     b.HasIndex("ProjectId");
 
                     b.ToTable("specs", (string)null);
@@ -1724,8 +1750,15 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("SpecId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
@@ -1733,6 +1766,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SpecId");
+
+                    b.HasIndex("SpecId", "Version")
+                        .IsUnique();
 
                     b.ToTable("spec_versions", (string)null);
                 });
@@ -1778,6 +1814,58 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Project", null)
                         .WithMany("Columns")
                         .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.Plan", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Card", null)
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Spec", null)
+                        .WithMany()
+                        .HasForeignKey("SpecId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.PlanVersion", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectMember", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.Auth.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.Spec", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Card", null)
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.SpecVersion", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Spec", null)
+                        .WithMany()
+                        .HasForeignKey("SpecId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

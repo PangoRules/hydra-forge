@@ -94,7 +94,15 @@ internal class AuthTestUserRepository(bool userDisabled) : IUserRepository
         IsDisabled = userDisabled,
     };
 
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(_user);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(ids.Contains(_user.Id) ? new Dictionary<Guid, User> { [_user.Id] = _user } : new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(_user);
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase) { [_user.Username] = _user });
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
 

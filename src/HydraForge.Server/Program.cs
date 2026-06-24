@@ -1,26 +1,57 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.Realtime;
+using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Auth;
+using HydraForge.Infrastructure.Cards;
+using HydraForge.Infrastructure.Checklist;
+using HydraForge.Infrastructure.Columns;
+using HydraForge.Infrastructure.Comments;
 using HydraForge.Infrastructure.Persistence;
+using HydraForge.Infrastructure.Plans;
+using HydraForge.Infrastructure.Projects;
+using HydraForge.Infrastructure.Specs;
+using HydraForge.Server.Auth;
+using HydraForge.Server.Hubs;
+using HydraForge.Infrastructure.Realtime;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, services, configuration) => configuration
-    .ReadFrom.Configuration(context.Configuration)
-    .ReadFrom.Services(services)
-    .Enrich.FromLogContext()
-    .Enrich.WithCorrelationId()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
+builder.Host.UseSerilog(
+    (context, services, configuration) =>
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .Enrich.WithCorrelationId()
+            .WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+            )
+);
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder
+    .Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
+    );
 builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddProjectServices();
+builder.Services.AddColumnServices();
+builder.Services.AddCardServices();
+builder.Services.AddChecklistServices();
+builder.Services.AddCommentServices();
+builder.Services.AddAttachmentServices(builder.Configuration);
+builder.Services.AddSpecServices();
+builder.Services.AddPlanServices();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
@@ -46,9 +77,35 @@ builder
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hubs/board") || path.StartsWithSegments("/hubs/presence")))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        AuthPolicies.UserIdRequired,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context => context.User.TryGetUserId(out _));
+        }
+    );
+});
+
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
@@ -60,14 +117,19 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 ));
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
-builder.Services.AddScoped<GetHealthHandler>(sp =>
-    new GetHealthHandler(sp.GetServices<IHealthProbe>()));
+builder.Services.AddScoped<TestUserSeeder>();
+builder.Services.AddScoped<GetHealthHandler>(sp => new GetHealthHandler(
+    sp.GetServices<IHealthProbe>()
+));
+
+builder.Services.AddRealtimeServices();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
@@ -82,6 +144,21 @@ if (applyMigrationsOnStartup)
 
     var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
     await adminSeeder.SeedIfNeededAsync();
+
+    if (app.Environment.IsDevelopment())
+    {
+        var testUserSeeder = scope.ServiceProvider.GetRequiredService<TestUserSeeder>();
+        await testUserSeeder.SeedIfNeededAsync();
+    }
+}
+
+// Initialize file store (bucket creation for S3/MinIO, no-op for Local)
+var fileStore = app.Services.GetRequiredService<HydraForge.Application.Attachments.IFileStore>();
+var initResult = await fileStore.InitializeAsync();
+if (initResult.IsFailure)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("File store initialization failed: {Error}", initResult.Error.Message);
 }
 
 app.UseSerilogRequestLogging(options =>
@@ -89,7 +166,10 @@ app.UseSerilogRequestLogging(options =>
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
     {
         diagnosticContext.Set("Endpoint", httpContext.Request.Path);
-        diagnosticContext.Set("CorrelationId", httpContext.Items["CorrelationId"] as string ?? "unknown");
+        diagnosticContext.Set(
+            "CorrelationId",
+            httpContext.Items["CorrelationId"] as string ?? "unknown"
+        );
     };
 });
 
@@ -100,7 +180,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapHub<BoardHub>("/hubs/board");
+app.MapHub<PresenceHub>("/hubs/presence");
+
 app.Run();
 
 public partial class Program { }
-
