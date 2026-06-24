@@ -54,9 +54,8 @@ onMounted(() => fetchProjects())
     />
 
     <ProjectCreateModal
-      v-if="showCreateModal"
+      v-model:open="showCreateModal"
       @created="onProjectCreated"
-      @close="showCreateModal = false"
     />
   </div>
 </template>

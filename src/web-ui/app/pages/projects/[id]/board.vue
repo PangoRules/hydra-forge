@@ -10,6 +10,8 @@ const projectId = route.params.id as string
 const board = useBoardStore()
 const api = useApi()
 
+const projectName = ref('')
+
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
 
@@ -48,25 +50,31 @@ function handleCardClick(card: CardResponse) {
   showCardModal.value = true
 }
 
-onMounted(() => {
+onMounted(async () => {
   board.fetchBoard(projectId)
+  const { data } = await api.GET('/api/Projects/{projectId}', {
+    params: { path: { projectId } }
+  })
+  if (data) {
+    projectName.value = (data as components['schemas']['ProjectResponse']).name
+  }
 })
 </script>
 
 <template>
   <div class="h-full flex flex-col">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h1 class="text-xl font-bold">
-        Board
+      <h1 class="text-xl font-bold truncate">
+        {{ projectName || 'Board' }}
       </h1>
       <UButton
         variant="ghost"
         size="sm"
         @click="board.fetchBoard(projectId)"
       >
-<UIcon
-        name="i-lucide-refresh-cw"
-        class="size-4"
+        <UIcon
+          name="i-lucide-refresh-cw"
+          class="size-4"
         />
       </UButton>
     </div>
