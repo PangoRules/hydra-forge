@@ -28,7 +28,7 @@ Self-contained REST smoke tests for HydraForge Phase 2 APIs. Each file authentic
 
 ## Phase 2 Endpoint Coverage
 
-All endpoints from `docs/superpowers/specs/2026-04-phase-2-project-space-api-domain-design.md` (lines 87–104) are covered:
+All endpoints from `docs/superpowers/specs/2026-06-04-phase-2-project-space-api-domain-design.md` (lines 87–104) are covered:
 
 - Project CRUD + membership + archive ✅
 - Column CRUD + reorder ✅

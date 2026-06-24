@@ -356,7 +356,7 @@ public class ChecklistServiceTests
         var result = await service.CreateAsync(new CreateChecklistItemCommand(projectId, cardId, actorId, "New item", null, null));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("ChecklistItem", req.EntityType);
@@ -382,7 +382,7 @@ public class ChecklistServiceTests
         var result = await service.UpdateAsync(new UpdateChecklistItemCommand(projectId, cardId, itemId, actorId, "Updated", null));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("ChecklistItem", req.EntityType);
@@ -408,7 +408,7 @@ public class ChecklistServiceTests
         var result = await service.ToggleAsync(new ToggleChecklistItemCommand(projectId, cardId, itemId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("ChecklistItem", req.EntityType);
@@ -438,7 +438,7 @@ public class ChecklistServiceTests
         var result = await service.ReorderAsync(new ReorderChecklistItemCommand(projectId, cardId, item0.Id, actorId, 2));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("ChecklistItem", req.EntityType);
@@ -464,7 +464,7 @@ public class ChecklistServiceTests
         var result = await service.DeleteAsync(new DeleteChecklistItemCommand(projectId, cardId, itemId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("ChecklistItem", req.EntityType);
@@ -625,13 +625,13 @@ internal class InMemoryUserRepository : IUserRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public List<AuditLogRequest> Requests { get; } = [];
+    public List<AuditLogRequest> Writes { get; } = [];
 
     public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
     {
-        Requests.Add(request);
+        Writes.Add(request);
         return Task.FromResult(Result.Success());
     }
 
-    public void Clear() => Requests.Clear();
+    public void Clear() => Writes.Clear();
 }

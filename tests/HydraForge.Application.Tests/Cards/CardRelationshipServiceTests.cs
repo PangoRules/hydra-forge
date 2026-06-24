@@ -317,7 +317,7 @@ public class CardRelationshipServiceTests
         var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("CardRelationship", req.EntityType);
@@ -347,7 +347,7 @@ public class CardRelationshipServiceTests
         var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, cardA, relId, actorId));
         Assert.True(deleteResult.IsSuccess);
 
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("CardRelationship", req.EntityType);
@@ -376,7 +376,7 @@ public class CardRelationshipServiceTests
         var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, true, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = auditWriter.Requests.Single(r => r.Action == "ArchivedWithRelationships");
+        var req = auditWriter.Writes.Single(r => r.Action == "ArchivedWithRelationships");
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -507,14 +507,14 @@ public class CardRelationshipServiceTests
 
     private class InMemoryAuditLogWriter : IAuditLogWriter
     {
-        public List<AuditLogRequest> Requests { get; } = [];
+        public List<AuditLogRequest> Writes { get; } = [];
 
         public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
         {
-            Requests.Add(request);
+            Writes.Add(request);
             return Task.FromResult(Result.Success());
         }
 
-        public void Clear() => Requests.Clear();
+        public void Clear() => Writes.Clear();
     }
 }

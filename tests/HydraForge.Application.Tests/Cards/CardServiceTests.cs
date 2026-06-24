@@ -428,7 +428,7 @@ public class CardServiceTests
         var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -452,7 +452,7 @@ public class CardServiceTests
         var result = await service.UpdateAsync(new UpdateCardCommand(projectId, cardId, actorId, "Updated", "", CardType.Task, null, null, 1));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -479,7 +479,7 @@ public class CardServiceTests
         var result = await service.MoveAsync(new MoveCardCommand(projectId, cardId, newColumnId, 0, actorId, false, 1));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -505,7 +505,7 @@ public class CardServiceTests
         var result = await service.AssignAsync(new AssignCardCommand(projectId, cardId, assigneeUserId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -531,7 +531,7 @@ public class CardServiceTests
         var result = await service.UnassignAsync(new UnassignCardCommand(projectId, cardId, assigneeUserId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -555,7 +555,7 @@ public class CardServiceTests
         var result = await service.ArchiveAsync(new ArchiveCardCommand(projectId, cardId, actorId, 1));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -579,7 +579,7 @@ public class CardServiceTests
         var result = await service.DeleteAsync(new DeleteCardCommand(projectId, cardId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Card", req.EntityType);
@@ -821,13 +821,13 @@ internal class InMemoryUserRepository : IUserRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public List<AuditLogRequest> Requests { get; } = [];
+    public List<AuditLogRequest> Writes { get; } = [];
 
     public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
     {
-        Requests.Add(request);
+        Writes.Add(request);
         return Task.FromResult(Result.Success());
     }
 
-    public void Clear() => Requests.Clear();
+    public void Clear() => Writes.Clear();
 }

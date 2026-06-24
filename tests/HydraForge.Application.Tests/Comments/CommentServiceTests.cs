@@ -273,7 +273,7 @@ public class CommentServiceTests
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Comment", req.EntityType);
@@ -300,7 +300,7 @@ public class CommentServiceTests
         var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated"));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Comment", req.EntityType);
@@ -327,7 +327,7 @@ public class CommentServiceTests
         var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Comment", req.EntityType);
@@ -487,13 +487,13 @@ internal class InMemoryUserRepository : IUserRepository
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
 {
-    public List<AuditLogRequest> Requests { get; } = [];
+    public List<AuditLogRequest> Writes { get; } = [];
 
     public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
     {
-        Requests.Add(request);
+        Writes.Add(request);
         return Task.FromResult(Result.Success());
     }
 
-    public void Clear() => Requests.Clear();
+    public void Clear() => Writes.Clear();
 }

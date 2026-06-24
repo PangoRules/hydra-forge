@@ -280,7 +280,7 @@ public class AttachmentServiceTests
             projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Attachment", req.EntityType);
@@ -311,7 +311,7 @@ public class AttachmentServiceTests
         var result = await service.DeleteAsync(projectId, cardId, attachmentId, actorId);
 
         Assert.True(result.IsSuccess);
-        var req = Assert.Single(auditWriter.Requests);
+        var req = Assert.Single(auditWriter.Writes);
         Assert.Equal(actorId, req.ActorId);
         Assert.Equal(AuditLogScope.Project, req.Scope);
         Assert.Equal("Attachment", req.EntityType);
@@ -467,14 +467,14 @@ public class AttachmentServiceTests
 
     private sealed class InMemoryAuditLogWriter : IAuditLogWriter
     {
-        public List<AuditLogRequest> Requests { get; } = [];
+        public List<AuditLogRequest> Writes { get; } = [];
 
         public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
         {
-            Requests.Add(request);
+            Writes.Add(request);
             return Task.FromResult(Result.Success());
         }
 
-        public void Clear() => Requests.Clear();
+        public void Clear() => Writes.Clear();
     }
 }
