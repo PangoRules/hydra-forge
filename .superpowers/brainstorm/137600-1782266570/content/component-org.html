@@ -1,0 +1,109 @@
+<h2>Component Organization: How to Structure the Tree</h2>
+<p class="subtitle">Phase 3 has 15+ components. Flat folder or feature-grouped?</p>
+
+<div class="options">
+  <div class="option" data-choice="a">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Feature-Grouped (Recommended)</h3>
+      <pre style="font-size:0.8rem;background:var(--surface);padding:0.5rem;border-radius:4px;overflow-x:auto">
+components/
+  auth/
+    LoginForm.vue
+    SetupForm.vue
+  project/
+    ProjectList.vue
+    ProjectCreateModal.vue
+    ProjectSidebar.vue
+  board/
+    BoardView.vue
+    BoardColumn.vue
+    BoardCard.vue
+    BoardMobileList.vue
+    ColumnHeader.vue
+  card/
+    CardModal.vue
+    CardDescription.vue
+    CardChecklist.vue
+    CardComments.vue
+    CardAttachments.vue
+    CardDependencies.vue
+    CardMetadata.vue
+  spec/
+    SpecEditor.vue
+    SpecVersionHistory.vue
+  plan/
+    PlanEditor.vue
+    PlanVersionHistory.vue
+  shared/
+    UserAvatar.vue
+    MarkdownEditor.vue
+    ConfirmDialog.vue
+    ErrorToast.vue
+    KeyboardShortcutOverlay.vue</pre>
+      <p style="font-size:0.85rem;color:var(--muted)">Clear ownership. Easy to find. Scales to Phase 4+ features.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Flat + Prefix</h3>
+      <pre style="font-size:0.8rem;background:var(--surface);padding:0.5rem;border-radius:4px;overflow-x:auto">
+components/
+  AuthLoginForm.vue
+  AuthSetupForm.vue
+  BoardView.vue
+  BoardColumn.vue
+  BoardCard.vue
+  CardModal.vue
+  CardChecklist.vue
+  ...</pre>
+      <p style="font-size:0.85rem;color:var(--muted)">Simpler. No nested folders. Gets messy past 20 components.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Atomic Design</h3>
+      <pre style="font-size:0.8rem;background:var(--surface);padding:0.5rem;border-radius:4px;overflow-x:auto">
+components/
+  atoms/   Button, Badge, Avatar
+  molecules/ CardRow, ColumnHeader
+  organisms/ BoardView, CardModal
+  templates/ ProjectLayout
+  pages/    (in pages/ dir)</pre>
+      <p style="font-size:0.85rem;color:var(--muted)">Overkill for Phase 3. Good for design systems. Adds friction.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Composables (app/composables/)</h3>
+  <pre style="font-size:0.8rem;background:var(--surface);padding:0.5rem;border-radius:4px">
+useApi.ts          — openapi-fetch client + middleware
+useAuth.ts         — login/logout/isAuthenticated
+useAuthToken.ts    — cookie token storage
+useBoard.ts        — Pinia board store (columns, cards, mutations)
+usePresence.ts     — SignalR PresenceHub connection
+useRealtime.ts     — SignalR BoardHub connection + event dispatch
+useKeyboard.ts     — keyboard shortcut registry
+useErrorToast.ts   — ProblemDetails → toast</pre>
+</div>
+
+<div class="section">
+  <h3>Pages (app/pages/)</h3>
+  <pre style="font-size:0.8rem;background:var(--surface);padding:0.5rem;border-radius:4px">
+pages/
+  index.vue         — redirect to /projects or /login
+  login.vue         — login form
+  setup.vue         — first-run admin setup
+  projects.vue      — project list
+  projects/
+    [id]/
+      board.vue     — board view (main workspace)</pre>
+</div>
+
+<div class="section">
+  <h3>Recommendation: A</h3>
+  <p>Feature-grouped. Scales naturally. Each folder = one domain concept. Matches the backend's Clean Architecture separation (Projects, Cards, Specs, Plans).</p>
+</div>

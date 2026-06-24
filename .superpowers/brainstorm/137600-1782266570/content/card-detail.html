@@ -1,0 +1,56 @@
+<h2>Card Detail Modal: Layout &amp; Sections</h2>
+<p class="subtitle">Card has 10+ sections. How to organize without overwhelming?</p>
+
+<div class="section">
+  <h3>What's in a card?</h3>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Title</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Description (markdown)</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Type (Task/Bug/Epic)</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Column</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Assignees</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Checklist</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Comments</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Attachments</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Specs</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Plans</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Dependencies</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Parent Epic</span>
+    <span style="background:var(--surface);padding:0.25rem 0.5rem;border-radius:4px;font-size:0.85rem">Due date</span>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Two-Column Split (Desktop) / Stacked Tabs (Mobile)</h3>
+      <p><strong>Desktop:</strong> Left 60% = description + comments. Right 40% = metadata sidebar (type, assignees, checklist, specs, plans, deps).</p>
+      <p><strong>Mobile:</strong> Tabs at top: "Details" | "Checklist" | "Comments" | "Related". Each tab = vertical scroll.</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Linear-style. Most common pattern. Metadata always visible on desktop.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Single Scroll + Collapsible Sections</h3>
+      <p>Everything in one vertical scroll. Sections are collapsible accordions (Description, Checklist, Comments, Attachments, Specs, Plans, Dependencies).</p>
+      <p>Same layout on all sizes — just narrower on mobile. No tabs, no sidebars.</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Simplest to build. Can get long. Collapse state = user preference.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Priority-Ordered Stack</h3>
+      <p>Top: title + type + column (always visible). Then: description (expanded). Then: checklist (if items exist). Then: comments (always). Below fold: specs, plans, attachments, deps — each as expandable section.</p>
+      <p>Mobile: same order, just full-width. "Quick actions" FAB for move/assign/archive.</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Content-first. Metadata pushed down. Good for reading. Harder to edit metadata.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation: A</h3>
+  <p>Two-column on desktop gives persistent metadata visibility — you can edit type/assignees while reading description. Tabs on mobile prevent endless scroll. This is what Linear, Jira, and Notion all converged on.</p>
+</div>

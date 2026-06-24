@@ -1,0 +1,48 @@
+<h2>State Management: How Does Board Data Flow?</h2>
+<p class="subtitle">Server is authoritative. SignalR pushes updates. How does the client hold and react to state?</p>
+
+<div class="section">
+  <h3>The data flow problem</h3>
+  <p>User moves card → POST to API → server broadcasts via SignalR → all clients update. But what happens between POST and SignalR arrival? Optimistic update? Wait for server? And where does the board state live — Pinia store, Nuxt useState, or just refs in components?</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Pinia Store + Optimistic Updates</h3>
+      <p>Single Pinia store holds board state (columns, cards). Mutations: optimistic local update → POST to API → on success, do nothing (SignalR will confirm). On error, rollback + toast.</p>
+      <p>SignalR events update the store directly. Components react via store getters.</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Snappy UX. Risk: brief flicker if optimistic state differs from server state. Pinia = extra dep but well-established.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Server-Confirmed Only (No Optimistic)</h3>
+      <p>POST to API → wait for 200 → update local state. SignalR events update state for other users' changes. No optimistic updates — UI shows loading indicator during mutation.</p>
+      <p>State lives in composables using Nuxt useState (no Pinia).</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Simpler. No rollback logic. Feels slower on high-latency connections. Always consistent.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Optimistic for Moves, Confirmed for Edits</h3>
+      <p>Card moves (drag-and-drop) = optimistic (instant feedback matters). Card edits (title, description) = server-confirmed (less urgency).</p>
+      <p>Pinia store. Moves: optimistic + rollback on 409. Edits: loading state → update on 200.</p>
+      <p style="font-size:0.85rem;color:var(--muted)">Best UX where it matters. More complex — two code paths for mutations.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>SignalR integration</h3>
+  <p>Regardless of option: <code>@microsoft/signalr</code> npm package. Connect on project page mount, disconnect on leave. BoardHub events → update store. PresenceHub → online users list.</p>
+  <p>Reconnection: SignalR auto-retry with backoff. Show "Reconnecting..." banner during disconnect.</p>
+</div>
+
+<div class="section">
+  <h3>Recommendation: A</h3>
+  <p>Pinia + optimistic updates. Drag-and-drop without instant feedback feels broken. Rollback on error is a well-understood pattern. Pinia is 2KB, worth the dep for structured state. SignalR events just call store actions — clean separation.</p>
+</div>

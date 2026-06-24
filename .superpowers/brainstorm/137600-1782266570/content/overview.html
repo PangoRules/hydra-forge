@@ -1,0 +1,56 @@
+<h2>Phase 3: Project Space Web UI — Starting Point</h2>
+<p class="subtitle">What we have, what we need, what we must decide</p>
+
+<div class="section">
+  <h3>Phase 2 Status: Done ✅</h3>
+  <p>145 tests pass. No EF model drift. 12 controller groups live. BoardHub + PresenceHub wired.</p>
+  <p><strong>Deferred:</strong> HousekeepingBackgroundService — per spec, postponed to later phase.</p>
+</div>
+
+<div class="section">
+  <h3>Web UI Now: Boilerplate Only</h3>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px;background:var(--surface);padding:0.75rem;border-radius:6px">
+      <span class="label">Have</span>
+      <ul style="margin-top:0.25rem">
+        <li>Nuxt 4 + Nuxt UI v4</li>
+        <li>Tailwind v4 + green theme</li>
+        <li>Lucide icons</li>
+        <li>Dark/light toggle</li>
+        <li>ESLint + TS 6.0.3</li>
+      </ul>
+    </div>
+    <div style="flex:1;min-width:200px;background:var(--surface);padding:0.75rem;border-radius:6px">
+      <span class="label">Need</span>
+      <ul style="margin-top:0.25rem">
+        <li>Auth (login + admin setup)</li>
+        <li>API client + SignalR client</li>
+        <li>Board + card detail + modals</li>
+        <li>Markdown editor (specs/plans)</li>
+        <li>Drag-and-drop</li>
+        <li>Keyboard shortcuts</li>
+      </ul>
+    </div>
+    <div style="flex:1;min-width:200px;background:var(--surface);padding:0.75rem;border-radius:6px">
+      <span class="label">API Surface Ready</span>
+      <ul style="margin-top:0.25rem">
+        <li>Projects + Members</li>
+        <li>Columns + Cards + Assignees</li>
+        <li>Comments + Checklists</li>
+        <li>Attachments (multipart)</li>
+        <li>Card Relationships</li>
+        <li>Specs + Plans + Versions</li>
+        <li>BoardHub + PresenceHub</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3 Key Library Decisions Ahead</h3>
+  <ol style="line-height:1.8">
+    <li><strong>API client:</strong> Raw <code>$fetch</code>/<code>useFetch</code> vs <code>openapi-fetch</code> (typed from OpenAPI) vs <code>ofetch</code> wrapper?</li>
+    <li><strong>Markdown editor:</strong> Nuxt UI has no rich edit. Need library for spec/plan editing + comment input.</li>
+    <li><strong>Drag-and-drop:</strong> @vueuse/core drag vs vue-draggable-plus vs native HTML5?</li>
+  </ol>
+</div>
