@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import AppModal from '~/components/shared/AppModal.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -23,27 +24,6 @@ const error = ref<string | null>(null)
 const isArchived = computed(() => !!card.value?.archivedAt)
 const toast = useToast()
 
-async function handleArchive() {
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
-    body: { version: card.value!.version }
-  })
-  if (!error) {
-    emit('archived')
-    emit('close')
-  } else {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
-  }
-}
-
-async function handleRestore() {
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {})
-  if (!error) {
-    emit('restored')
-  } else {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
-  }
-}
-
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
 
 const tabs = [
@@ -54,6 +34,31 @@ const tabs = [
 ]
 
 const api = useApi()
+
+function onClose() {
+  emit('close')
+}
+
+async function handleArchive() {
+  const { error: apiError } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
+    body: { version: card.value!.version }
+  })
+  if (!apiError) {
+    emit('archived')
+    emit('close')
+  } else {
+    toast.add({ title: 'Failed to archive card', color: 'error' })
+  }
+}
+
+async function handleRestore() {
+  const { error: apiError } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {})
+  if (!apiError) {
+    emit('restored')
+  } else {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
+  }
+}
 
 async function fetchCard() {
   loading.value = true
@@ -69,71 +74,45 @@ async function fetchCard() {
 }
 
 onMounted(() => fetchCard())
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
-}
 </script>
 
 <template>
-  <UModal
-    v-model:open="isOpen"
-    class="sm:max-w-4xl"
-    @close="emit('close')"
+  <AppModal
+    :open="isOpen"
+    :title="card?.title"
+    :loading="loading"
+    :error="error"
+    width="sm:max-w-4xl"
+    :show-close="!!card"
+    @update:open="isOpen = $event"
+    @close="onClose"
   >
-    <div
-      class="flex flex-col max-h-[85vh]"
-      @keydown="onKeydown"
-    >
-      <div
-        v-if="loading"
-        class="flex items-center justify-center p-8"
-      >
-        <UIcon
-          name="i-lucide-loader"
-          class="animate-spin size-8"
-        />
+    <template #header>
+      <div class="flex items-center gap-2">
+        <UButton
+          v-if="card && !isArchived"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-archive"
+          @click="handleArchive"
+        >
+          Archive
+        </UButton>
+        <UButton
+          v-else-if="card && isArchived"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-archive-restore"
+          @click="handleRestore"
+        >
+          Restore
+        </UButton>
       </div>
+    </template>
 
-      <UAlert
-        v-else-if="error"
-        color="error"
-        :title="error"
-      />
-
-      <template v-else-if="card">
-        <div class="flex items-center justify-between p-4 border-b">
-          <h2 class="text-lg font-semibold truncate">
-            {{ card.title }}
-          </h2>
-          <div class="flex items-center gap-2">
-            <UButton
-              icon="i-lucide-x"
-              variant="ghost"
-              size="sm"
-              @click="emit('close')"
-            />
-            <UButton
-              v-if="!isArchived"
-              variant="ghost"
-              size="sm"
-              icon="i-lucide-archive"
-              @click="handleArchive"
-            >
-              Archive
-            </UButton>
-            <UButton
-              v-else
-              variant="ghost"
-              size="sm"
-              icon="i-lucide-archive-restore"
-              @click="handleRestore"
-            >
-              Restore
-            </UButton>
-          </div>
-        </div>
-
+    <template #body>
+      <template v-if="card">
+        <!-- Desktop: two-column -->
         <div class="hidden md:flex flex-1 overflow-hidden">
           <div class="flex-1 overflow-y-auto p-4 space-y-6">
             <CardDescription
@@ -147,6 +126,7 @@ function onKeydown(e: KeyboardEvent) {
           </div>
         </div>
 
+        <!-- Mobile: tabbed -->
         <div class="md:hidden flex flex-col flex-1 overflow-hidden">
           <UTabs
             v-model="activeTab"
@@ -189,6 +169,6 @@ function onKeydown(e: KeyboardEvent) {
           </div>
         </div>
       </template>
-    </div>
-  </UModal>
+    </template>
+  </AppModal>
 </template>

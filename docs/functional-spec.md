@@ -487,15 +487,19 @@
 - [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
 - [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
 - [ ] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
-- [ ] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
+- [x] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
 - [ ] Archive card with dependents: warning modal listing affected cards
-- [x] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link (Plan 3 — CardModal, CardMetadata, CardDescription, MarkdownEditor, archive/restore, 53 component tests)
+- [x] Card detail modal: desktop two-column layout + mobile tabbed layout (Plan 3 — CardModal, CardMetadata, CardDescription with Tiptap editor, MarkdownEditor, archive/restore, 53 component tests)
+- [ ] Checklist panel in card detail modal (Plan 4)
+- [ ] Comments panel in card detail modal (Plan 4)
+- [ ] Attachments panel in card detail modal (Plan 4)
+- [ ] Spec link panel in card detail modal (Plan 4)
+- [ ] Plan link panel in card detail modal (Plan 4)
 - [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [ ] Blocked card lock icon + badge on board (always visible)
 - [ ] Soft warning modal on column move when blocked (points to blocking card)
 - [ ] Spec editor: versioned markdown, version history sidebar, restore
 - [ ] Plan editor: numbered steps markdown, version history
-- [ ] Archive card with dependents: warning modal listing affected cards
 - [ ] Real-time board updates via SignalR (no page refresh)
 - [ ] Presence dots on board and card detail
 - [ ] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
