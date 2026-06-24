@@ -70,19 +70,21 @@ async function handleSubmit() {
         class="space-y-4"
         @submit.prevent="handleSubmit"
       >
-        <UFormField label="New Password">
+        <UFormField label="New Password" class="w-full">
           <UInput
             v-model="password"
             type="password"
             required
+            class="w-full"
           />
         </UFormField>
 
-        <UFormField label="Confirm Password">
+        <UFormField label="Confirm Password" class="w-full">
           <UInput
             v-model="confirmPassword"
             type="password"
             required
+            class="w-full"
           />
         </UFormField>
 
