@@ -16,6 +16,7 @@ const projectName = ref('')
 
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
+const selectedCardId = ref<string | null>(null)
 
 async function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
   const card = findCard(cardId)
@@ -50,6 +51,7 @@ function findCard(cardId: string): CardResponse | undefined {
 
 function handleCardClick(card: CardResponse) {
   selectedCard.value = card
+  selectedCardId.value = card.id
   showCardModal.value = true
 }
 
@@ -127,5 +129,12 @@ onMounted(async () => {
         @card-click="handleCardClick"
       />
     </div>
+
+    <CardModal
+      v-if="selectedCardId"
+      :card-id="selectedCardId"
+      :project-id="projectId"
+      @close="selectedCardId = null"
+    />
   </div>
 </template>
