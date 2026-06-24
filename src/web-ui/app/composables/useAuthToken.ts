@@ -1,8 +1,10 @@
 export function useAuthToken() {
+  const config = useRuntimeConfig()
+
   const token = useCookie<string | null>('auth_token', {
-    maxAge: 60 * 60, // 1 hour
+    maxAge: config.public.authCookieMaxAge as number ?? 3600,
     sameSite: 'lax',
-    secure: false // true in production
+    secure: (config.public.authCookieSecure as boolean | undefined) ?? false
   })
 
   function getToken() {

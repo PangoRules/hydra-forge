@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
+
 definePageMeta({ layout: 'auth' })
 
 const password = ref('')
@@ -20,7 +22,7 @@ async function handleSubmit() {
     // First-run setup: login with default admin creds, then change password
     // The backend AdminSeeder creates default admin on first boot.
     // We attempt login with defaults; if it works, we're in first-run mode.
-    const { data: _loginData, error: loginError } = await api.POST('/api/Auth/login', {
+    const { data: _loginData, error: loginError } = await api.POST(ApiRoutes.Auth.Login, {
       body: { username: 'admin', password: 'Admin123!' }
     })
     if (loginError) {
@@ -33,7 +35,7 @@ async function handleSubmit() {
     // For now, show success and redirect to login.
     // The actual password change will be implemented when the backend endpoint exists.
     success.value = true
-    setTimeout(() => navigateTo('/login'), 2000)
+    setTimeout(() => navigateTo(UiRoutes.Login), 2000)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Setup failed'
   } finally {

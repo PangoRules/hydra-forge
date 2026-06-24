@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { UiRoutes } from '~/lib/routes'
+
 definePageMeta({ layout: 'auth' })
 
 const username = ref('')
@@ -13,7 +15,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     await login(username.value, password.value)
-    await navigateTo('/projects')
+    await navigateTo(UiRoutes.Projects)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Login failed'
   } finally {
