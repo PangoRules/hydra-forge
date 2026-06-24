@@ -68,8 +68,9 @@ export const useBoardStore = defineStore('board', () => {
     cardsByColumn.value.set(targetColumnId, targetCards)
   }
 
-  function rollbackMove(_cardId: string, _sourceColumnId: string, _sourcePosition: number) {
+  function rollbackMove(projectId: string) {
     // Re-fetch board on rollback
+    fetchBoard(projectId)
   }
 
   function addCard(columnId: string, card: CardResponse) {
