@@ -103,14 +103,16 @@ onMounted(() => {
       v-else
       class="flex-1 overflow-x-auto p-4"
     >
-      <BoardView
-        :columns="board.columns"
-        :cards-by-column="board.cardsByColumn"
-        :project-id="projectId"
-        class="hidden md:flex"
-        @card-move="handleCardMove"
-        @card-click="handleCardClick"
-      />
+      <ClientOnly>
+        <BoardView
+          :columns="board.columns"
+          :cards-by-column="board.cardsByColumn"
+          :project-id="projectId"
+          class="hidden md:flex"
+          @card-move="handleCardMove"
+          @card-click="handleCardClick"
+        />
+      </ClientOnly>
       <BoardMobileList
         :columns="board.columns"
         :cards-by-column="board.cardsByColumn"

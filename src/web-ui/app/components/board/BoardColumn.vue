@@ -17,7 +17,6 @@ const emit = defineEmits<{
   'card-click': [card: CardResponse]
 }>()
 
-const isClient = import.meta.client
 const localCards = ref([...props.cards])
 
 watch(() => props.cards, (newCards) => {
@@ -46,7 +45,6 @@ function onDragEnd(event: SortableEvent) {
     />
 
     <VueDraggable
-      v-if="isClient"
       v-model="localCards"
       class="flex-1 p-2 space-y-2 min-h-[100px]"
       group="cards"
@@ -63,16 +61,5 @@ function onDragEnd(event: SortableEvent) {
         />
       </template>
     </VueDraggable>
-    <div
-      v-else
-      class="flex-1 p-2 space-y-2 min-h-[100px]"
-    >
-      <BoardCard
-        v-for="card in localCards"
-        :key="card.id"
-        :card="card"
-        @click="emit('card-click', card)"
-      />
-    </div>
   </div>
 </template>
