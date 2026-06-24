@@ -8,7 +8,7 @@ describe('CardMetadata', () => {
     title: 'Test',
     type: 'Task',
     columnId: 'col1',
-    dueDate: null,
+    dueAt: null,
     assignees: [],
     parentEpicId: null
   } as any

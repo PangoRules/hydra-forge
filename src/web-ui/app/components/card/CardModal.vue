@@ -21,12 +21,17 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const isArchived = computed(() => !!card.value?.archivedAt)
+const toast = useToast()
 
 async function handleArchive() {
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {})
+  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
+    body: { version: card.value!.version }
+  })
   if (!error) {
     emit('archived')
     emit('close')
+  } else {
+    toast.add({ title: 'Failed to archive card', color: 'error' })
   }
 }
 
@@ -34,6 +39,8 @@ async function handleRestore() {
   const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {})
   if (!error) {
     emit('restored')
+  } else {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
   }
 }
 
@@ -99,30 +106,32 @@ function onKeydown(e: KeyboardEvent) {
           <h2 class="text-lg font-semibold truncate">
             {{ card.title }}
           </h2>
-          <UButton
-            icon="i-lucide-x"
-            variant="ghost"
-            size="sm"
-            @click="emit('close')"
-          />
-          <UButton
-            v-if="!isArchived"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-archive"
-            @click="handleArchive"
-          >
-            Archive
-          </UButton>
-          <UButton
-            v-else
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-archive-restore"
-            @click="handleRestore"
-          >
-            Restore
-          </UButton>
+          <div class="flex items-center gap-2">
+            <UButton
+              icon="i-lucide-x"
+              variant="ghost"
+              size="sm"
+              @click="emit('close')"
+            />
+            <UButton
+              v-if="!isArchived"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-archive"
+              @click="handleArchive"
+            >
+              Archive
+            </UButton>
+            <UButton
+              v-else
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-archive-restore"
+              @click="handleRestore"
+            >
+              Restore
+            </UButton>
+          </div>
         </div>
 
         <div class="hidden md:flex flex-1 overflow-hidden">

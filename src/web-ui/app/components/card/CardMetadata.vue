@@ -24,7 +24,7 @@ defineProps<{
         Column
       </p>
       <p class="text-sm">
-        {{ card.columnId }}
+        {{ card.columnId.slice(0, 8) }}
       </p>
     </div>
 
