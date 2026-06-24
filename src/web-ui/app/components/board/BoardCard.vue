@@ -30,6 +30,10 @@ const isOverdue = computed(() => {
   if (!props.card.dueAt) return false
   return new Date(props.card.dueAt) < new Date()
 })
+
+const plainDescription = computed(() =>
+  (props.card.description ?? '').replace(/<[^>]*>/g, '')
+)
 </script>
 
 <template>
@@ -56,10 +60,10 @@ const isOverdue = computed(() => {
           {{ card.title }}
         </h4>
         <p
-          v-if="card.description"
+          v-if="plainDescription"
           class="text-xs text-gray-500 mt-1 line-clamp-2"
         >
-          {{ card.description }}
+          {{ plainDescription }}
         </p>
       </div>
     </div>

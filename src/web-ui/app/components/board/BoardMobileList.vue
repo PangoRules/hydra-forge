@@ -20,6 +20,10 @@ const typeIcons: Record<number, string> = {
   3: 'i-lucide-file-text',
   4: 'i-lucide-lightbulb'
 }
+
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, '')
+}
 </script>
 
 <template>
@@ -73,7 +77,7 @@ const typeIcons: Record<number, string> = {
                 v-if="card.description"
                 class="text-xs text-gray-500 mt-1 line-clamp-2"
               >
-                {{ card.description }}
+                {{ stripHtml(card.description) }}
               </p>
             </div>
           </div>
