@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { ApiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -14,7 +15,7 @@ const api = useApi()
 async function fetchProjects() {
   loading.value = true
   try {
-    const { data, error } = await api.GET('/api/Projects')
+    const { data, error } = await api.GET(ApiRoutes.Projects.list())
     if (error) throw error
     projects.value = (data as ProjectListResponse[]) ?? []
   } catch (e: unknown) {

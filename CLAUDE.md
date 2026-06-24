@@ -153,6 +153,12 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Comments only when the WHY is non-obvious
 - No `var` where the type isn't obvious from the right-hand side
 
+**Web UI API routes:**
+- All API endpoint paths are centralized in `src/web-ui/app/lib/routes.ts` — `UiRoutes` for page paths, `ApiRoutes` for HTTP endpoints.
+- Use `ApiRoutes.<Resource>.<action>(id)` instead of inline strings: `api.GET(ApiRoutes.Projects.list())`, `api.POST(ApiRoutes.Cards.move(projectId, cardId), { body: {...} })`.
+- Never write inline API path strings in components, stores, or composables. If a route is not in `routes.ts`, add it there first.
+- `useApi()` wraps openapi-fetch with auth middleware (attaches JWT, handles 401 redirect). Always use `useApi()` instead of importing openapi-fetch directly.
+
 **Auth:**
 - JWT — admin seeded on first boot
 - No SSO, no OAuth, no external auth providers

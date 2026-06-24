@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { ApiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -21,8 +22,7 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
 
   board.moveCard(cardId, targetColumnId, targetPosition)
 
-  const result = await api.POST(`/api/projects/{projectId}/Cards/{cardId}/move`, {
-    params: { path: { projectId, cardId } },
+  const result = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
     body: {
       targetColumnId,
       targetPosition,
@@ -52,9 +52,7 @@ function handleCardClick(card: CardResponse) {
 
 onMounted(async () => {
   board.fetchBoard(projectId)
-  const { data } = await api.GET('/api/Projects/{projectId}', {
-    params: { path: { projectId } }
-  })
+  const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
     projectName.value = (data as components['schemas']['ProjectResponse']).name
   }

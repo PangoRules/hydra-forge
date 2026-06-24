@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ApiRoutes } from '~/lib/routes'
+
 const props = defineProps<{
   open: boolean
 }>()
@@ -50,7 +52,7 @@ async function handleSubmit() {
   error.value = null
   loading.value = true
   try {
-    const { error: apiError } = await api.POST('/api/Projects', {
+    const { error: apiError } = await api.POST(ApiRoutes.Projects.create(), {
       body: {
         name: name.value,
         description: description.value,

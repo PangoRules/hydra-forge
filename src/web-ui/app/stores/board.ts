@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { components } from '~/types/api'
+import { ApiRoutes } from '~/lib/routes'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -19,12 +20,8 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null
     try {
       const [columnsResult, cardsResult] = await Promise.all([
-        api.GET('/api/projects/{projectId}/Columns', {
-          params: { path: { projectId } }
-        }),
-        api.GET('/api/projects/{projectId}/Cards', {
-          params: { path: { projectId } }
-        })
+        api.GET(ApiRoutes.Columns.list(projectId)),
+        api.GET(ApiRoutes.Cards.list(projectId))
       ])
 
       if (columnsResult.error) throw columnsResult.error

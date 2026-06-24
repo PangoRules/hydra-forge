@@ -123,6 +123,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - **USelect** has no `clearable` prop in v4. For a clearable select, wrap in a relative container with an absolute-positioned ghost `UButton` (X icon) that sets the model to `undefined`.
 - **vue-draggable-plus** is removed — SSR-incompatible with Nuxt 4 (SortableJS requires browser APIs, component fails inside `ClientOnly`, hydration mismatches with `v-model`). Use plain `v-for` for card/column lists; native HTML5 drag-and-drop planned for re-implementation.
 - **`import.meta.client`** cannot be used in Vue template expressions — define it in `<script>` as `const isClient = import.meta.client` and use in template.
+- **API route constants** — all API paths live in `app/lib/routes.ts` as `ApiRoutes` constants. Never write inline path strings in components/stores/composables. Use `ApiRoutes.<Resource>.<action>(id)` from `~/lib/routes`.
 
 ## Commit/Docs Discipline
 
