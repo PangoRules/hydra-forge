@@ -41,7 +41,7 @@ function onKeydown(e: KeyboardEvent) {
     <template #header>
       <div
         v-if="title || $slots.header || showClose"
-        class="flex items-center justify-between gap-2"
+        class="flex items-center gap-2 w-full"
       >
         <h2
           v-if="title"
@@ -55,6 +55,7 @@ function onKeydown(e: KeyboardEvent) {
           icon="i-lucide-x"
           variant="ghost"
           size="sm"
+          class="ml-auto"
           @click="onClose"
         />
       </div>
@@ -91,7 +92,12 @@ function onKeydown(e: KeyboardEvent) {
 
     <!-- Footer — renders in UModal's #footer slot -->
     <template #footer>
-      <slot name="footer" />
+      <div
+        v-if="$slots.footer"
+        class="flex justify-end gap-3"
+      >
+        <slot name="footer" />
+      </div>
     </template>
   </UModal>
 </template>
