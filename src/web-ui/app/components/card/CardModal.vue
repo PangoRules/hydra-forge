@@ -11,12 +11,23 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
+  archived: []
+  restored: []
 }>()
 
 const isOpen = ref(true)
 const card = ref<CardResponse | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
+
+const tabs = [
+  { label: 'Details', value: 'details' as const },
+  { label: 'Checklist', value: 'checklist' as const },
+  { label: 'Comments', value: 'comments' as const },
+  { label: 'Related', value: 'related' as const }
+]
 
 const api = useApi()
 
@@ -92,10 +103,46 @@ function onKeydown(e: KeyboardEvent) {
           </div>
         </div>
 
-        <div class="md:hidden p-4">
-          <p class="text-sm text-muted">
-            Mobile card view coming in Task 10
-          </p>
+        <div class="md:hidden flex flex-col flex-1 overflow-hidden">
+          <UTabs
+            v-model="activeTab"
+            :items="tabs"
+            class="border-b"
+          />
+
+          <div class="flex-1 overflow-y-auto p-4">
+            <div
+              v-if="activeTab === 'details'"
+              class="space-y-4"
+            >
+              <CardDescription
+                :card="card"
+                :project-id="projectId"
+              />
+              <CardMetadata :card="card" />
+            </div>
+
+            <div v-else-if="activeTab === 'checklist'">
+              <p class="text-sm text-muted">
+                Checklist coming soon
+              </p>
+            </div>
+
+            <div v-else-if="activeTab === 'comments'">
+              <p class="text-sm text-muted">
+                Comments coming soon
+              </p>
+            </div>
+
+            <div
+              v-else-if="activeTab === 'related'"
+              class="space-y-4"
+            >
+              <p class="text-sm text-muted">
+                Attachments, dependencies, specs, plans coming soon
+              </p>
+            </div>
+          </div>
         </div>
       </template>
     </div>
