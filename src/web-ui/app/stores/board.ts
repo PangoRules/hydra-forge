@@ -6,6 +6,7 @@ type CardResponse = components['schemas']['CardResponse']
 type CardListResponse = components['schemas']['CardListResponse']
 
 export const useBoardStore = defineStore('board', () => {
+  const project = ref<{ id: string, name: string } | null>(null)
   const columns = ref<ColumnResponse[]>([])
   const cardsByColumn = ref<Map<string, CardResponse[]>>(new Map())
   const loading = ref(false)
@@ -100,7 +101,7 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   return {
-    columns, cardsByColumn, loading, error,
+    project, columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard
   }
 })

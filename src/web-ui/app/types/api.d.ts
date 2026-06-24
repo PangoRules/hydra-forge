@@ -2448,7 +2448,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            description: string;
+            description: null | string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */

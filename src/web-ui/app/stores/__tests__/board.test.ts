@@ -57,7 +57,7 @@ describe('useBoardStore', () => {
 
     expect(board.cardsByColumn.get('col1')?.length).toBe(0)
     expect(board.cardsByColumn.get('col2')?.length).toBe(1)
-    expect(board.cardsByColumn.get('col2')?.[0].id).toBe('c1')
+    expect(board.cardsByColumn.get('col2')?.[0]?.id).toBe('c1')
   })
 
   it('moveCard is no-op for unknown card', () => {
@@ -67,7 +67,7 @@ describe('useBoardStore', () => {
 
     board.moveCard('nonexistent', 'col1', 0)
 
-    expect(board.cardsByColumn.get('col1')?.length).toBe(1)
+    expect(board.cardsByColumn.get('col1')!.length).toBe(1)
   })
 
   it('addCard pushes card to correct column', () => {
@@ -78,7 +78,7 @@ describe('useBoardStore', () => {
     board.addCard('col1', makeCard('c1', 'col1', 'New Card'))
 
     expect(board.cardsByColumn.get('col1')?.length).toBe(1)
-    expect(board.cardsByColumn.get('col1')?.[0].id).toBe('c1')
+    expect(board.cardsByColumn.get('col1')?.[0]?.id).toBe('c1')
   })
 
   it('updateCard modifies card fields in place', () => {
@@ -88,7 +88,7 @@ describe('useBoardStore', () => {
 
     board.updateCard('c1', { title: 'New Title' })
 
-    expect(board.cardsByColumn.get('col1')?.[0].title).toBe('New Title')
+    expect(board.cardsByColumn.get('col1')?.[0]?.title).toBe('New Title')
   })
 
   it('removeCard deletes card from column', () => {
@@ -98,6 +98,6 @@ describe('useBoardStore', () => {
 
     board.removeCard('c1')
 
-    expect(board.cardsByColumn.get('col1')?.length).toBe(0)
+    expect(board.cardsByColumn.get('col1')!.length).toBe(0)
   })
 })

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import BoardMobileList from '~/components/board/BoardMobileList.vue'
 
-const makeColumn = (id: string, name: string, wipLimit = null) => ({
+const makeColumn = (id: string, name: string, wipLimit: number | null = null) => ({
   id,
   name,
   position: 0,

@@ -23,7 +23,9 @@ watch(() => props.columns, (newColumns) => {
   localColumns.value = [...newColumns]
 }, { deep: true })
 
-function onColumnDragEnd(event: SortableEvent) {
+const api = useApi()
+
+async function onColumnDragEnd(event: SortableEvent) {
   const oldIndex = event.oldIndex
   const newIndex = event.newIndex
   if (oldIndex === undefined || newIndex === undefined) return
@@ -31,6 +33,12 @@ function onColumnDragEnd(event: SortableEvent) {
   const moved = localColumns.value.splice(oldIndex, 1)[0]
   if (!moved) return
   localColumns.value.splice(newIndex, 0, moved)
+
+  // Persist column order
+  await api.PUT(`/api/projects/{projectId}/Columns/reorder`, {
+    params: { path: { projectId: props.projectId } },
+    body: { columnIds: localColumns.value.map(c => c.id) }
+  })
 }
 
 function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {

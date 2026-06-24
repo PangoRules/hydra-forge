@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import ProjectList from '~/components/project/ProjectList.vue'
 
-const makeProject = (id: string, name: string, description = 'A test project') => ({
+const makeProject = (id: string, name: string, description: string | null = 'A test project') => ({
   id,
   name,
   description,
