@@ -25,6 +25,7 @@ const emit = defineEmits<{
 const sourceMode = ref(false)
 const sourceText = ref('')
 const editorReady = ref(false)
+const savedOriginalHtml = ref('')
 
 const turndown = new TurndownService({
   codeBlockStyle: 'fenced',
@@ -98,9 +99,15 @@ watch(() => props.editable, (val) => {
 watch(sourceMode, (isSource) => {
   if (!editor.value) return
   if (isSource) {
-    sourceText.value = turndown.turndown(editor.value.getHTML())
+    savedOriginalHtml.value = editor.value.getHTML()
+    sourceText.value = turndown.turndown(savedOriginalHtml.value)
   } else {
-    // Switching back: convert markdown to HTML, set in editor, emit
+    // If source text unchanged, restore original HTML — no lossy round-trip
+    if (sourceText.value === turndown.turndown(savedOriginalHtml.value)) {
+      editor.value.commands.setContent(savedOriginalHtml.value, { emitUpdate: false })
+      return
+    }
+    // User edited source: convert markdown → HTML, emit to trigger save
     const html = marked.parse(sourceText.value, { async: false, breaks: true }) as string
     const clean = html.trim()
     editor.value.commands.setContent(clean, { emitUpdate: false })
