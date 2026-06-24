@@ -849,6 +849,92 @@ git commit -m "feat: add card panel component tests (checklist, comments, attach
 
 ---
 
+## Task 18: Archive/Restore Project
+
+**Files:**
+- Modify: `src/web-ui/app/pages/projects/index.vue` (add archive/restore + filter toggle)
+- Modify: `src/web-ui/app/components/project/ProjectList.vue` (add action buttons per row)
+
+### Step 1: Add toggle + API calls in projects/index.vue
+
+```vue
+<div class="flex items-center gap-2 mb-4">
+  <UToggle v-model="showArchived" />
+  <span class="text-sm">Show archived</span>
+</div>
+```
+
+```ts
+const showArchived = ref(false)
+
+async function fetchProjects() {
+  const url = showArchived.value
+    ? '/api/Projects?includeArchived=true'
+    : '/api/Projects'
+  const { data } = await api.GET(url)
+  // ...
+}
+
+async function handleArchive(projectId: string) {
+  await api.POST('/api/Projects/{projectId}/archive', { params: { path: { projectId } } })
+  fetchProjects()
+}
+
+async function handleRestore(projectId: string) {
+  await api.POST('/api/Projects/{projectId}/restore', { params: { path: { projectId } } })
+  fetchProjects()
+}
+```
+
+Wire to `ProjectList`:
+```vue
+<ProjectList
+  :projects="projects"
+  :loading="loading"
+  @select="onProjectSelect"
+  @archive="handleArchive"
+  @restore="handleRestore"
+/>
+```
+
+### Step 2: Add action buttons in ProjectList.vue
+
+```vue
+<UButton
+  v-if="!project.archivedAt"
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive"
+  @click="emit('archive', project.id)"
+>
+  Archive
+</UButton>
+<UButton
+  v-else
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive-restore"
+  @click="emit('restore', project.id)"
+>
+  Restore
+</UButton>
+```
+
+### Step 3: Verify
+
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+- Manual: open project list → archive a project → it disappears → toggle "show archived" → project appears with restore
+
+### Step 4: Commit
+
+```bash
+git add src/web-ui/app/pages/projects/index.vue src/web-ui/app/components/project/ProjectList.vue
+git commit -m "feat: add archive/restore project with filter toggle"
+```
+
+---
+
 ## Verification (Plan 4 Complete)
 
 Reference `nuxt-verification` skill:
