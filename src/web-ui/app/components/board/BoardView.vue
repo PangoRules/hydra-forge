@@ -52,6 +52,7 @@ function handleCardClick(card: CardResponse) {
 
 <template>
   <VueDraggable
+    v-if="import.meta.client"
     v-model="localColumns"
     class="flex gap-4 overflow-x-auto pb-4 h-full"
     group="columns"
@@ -70,4 +71,18 @@ function handleCardClick(card: CardResponse) {
       />
     </template>
   </VueDraggable>
+  <div
+    v-else
+    class="flex gap-4 overflow-x-auto pb-4 h-full"
+  >
+    <BoardColumn
+      v-for="col in localColumns"
+      :key="col.id"
+      :column="col"
+      :cards="cardsByColumn.get(col.id) ?? []"
+      :project-id="projectId"
+      @card-move="handleCardMove"
+      @card-click="handleCardClick"
+    />
+  </div>
 </template>
