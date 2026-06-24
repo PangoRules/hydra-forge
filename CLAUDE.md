@@ -152,6 +152,13 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - No unnecessary abstractions — three similar lines beats a premature helper
 - Comments only when the WHY is non-obvious
 - No `var` where the type isn't obvious from the right-hand side
+- No `console.log`/`console.error`/`console.warn` in production code — use `useToast().add()` for user-facing feedback instead
+
+**Web UI API routes:**
+- All API endpoint paths are centralized in `src/web-ui/app/lib/routes.ts` — `UiRoutes` for page paths, `ApiRoutes` for HTTP endpoints.
+- Use `ApiRoutes.<Resource>.<action>(id)` instead of inline strings: `api.GET(ApiRoutes.Projects.list())`, `api.POST(ApiRoutes.Cards.move(projectId, cardId), { body: {...} })`.
+- Never write inline API path strings in components, stores, or composables. If a route is not in `routes.ts`, add it there first.
+- `useApi()` wraps openapi-fetch with auth middleware (attaches JWT, handles 401 redirect). Always use `useApi()` instead of importing openapi-fetch directly.
 
 **Auth:**
 - JWT — admin seeded on first boot
@@ -185,6 +192,22 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Project space** — shared, members-only visibility (`ProjectMember` table gates access)
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
+
+## Current Phase — Phase 3: Web UI (in progress)
+
+- **Branch:** `feat/phase-3-web-ui`
+- **Plan 1** (auth + scaffold) ✅ — login page, auth middleware, JWT token management
+- **Plan 2** (project list + board) ✅ — Pinia board store, project list, create modal (with git fields), board view (desktop kanban + mobile list), project name in header
+- **Plans 3-6** 🔲 — card modal, specs/plans, SignalR realtime, polish/hardening
+- **Card creation UI** not built yet — use curl for card CRUD testing
+- **43 vitest tests** across 11 test files (stores, composables, components, middleware, pages)
+
+### Nuxt UI v4 patterns
+
+- **UModal:** `v-model:open` for two-way binding. Content in named slots (`#body`, `#header`, `#footer`). Default slot is `DialogTrigger`, not modal content. No `UOverlay` component — overlay built into `UModal` via `overlay` prop (default `true`).
+- **USelect:** No `clearable` prop. Wrap in relative container with absolute ghost `UButton` (X icon) to clear.
+- **vue-draggable-plus** removed — SSR-incompatible with Nuxt 4. Use plain `v-for`; native HTML5 drag-and-drop planned.
+- **`import.meta.client`** not usable in Vue template expressions — define as `const isClient = import.meta.client` in `<script>`.
 
 ## Housekeeping & archive
 

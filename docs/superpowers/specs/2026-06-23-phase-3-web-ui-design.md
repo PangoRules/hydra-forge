@@ -68,11 +68,12 @@ Lock in **port 5000** as the canonical API URL. Docker Compose exposes 5000. `nu
 - **Company-backed** (Tiptap GmbH) — security posture beats single-maintainer alternatives
 - **Used in:** Card description, comment input, spec editor, plan editor
 
-### 3.3 Drag-and-Drop: `vue-draggable-plus` + `@vueuse/core`
+### 3.3 Drag-and-Drop: Plain `v-for` (vue-draggable-plus removed)
 
-- **`vue-draggable-plus`** (SortableJS-based) — list reordering: columns, cards within column, checklist items
+- **`vue-draggable-plus`** (SortableJS-based) was removed during Plan 2 implementation — SSR-incompatible with Nuxt 4 (SortableJS requires browser APIs, component fails inside `ClientOnly`, hydration mismatches with `v-model`). See D-37.
+- **Current:** Plain `v-for` for column and card lists. Card moves and column reorder work via API only (curl).
+- **Planned:** Native HTML5 drag-and-drop for re-implementation (no library dependency, touch support via pointer events).
 - **`@vueuse/core` `useDraggable`** — free positioning if needed (unlikely in Phase 3)
-- **No native HTML5 DnD** — no touch support, finicky ghost elements
 
 ### 3.4 State Management: Pinia
 

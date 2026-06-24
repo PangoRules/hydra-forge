@@ -16,6 +16,8 @@ public class ProjectsController(
 ) : ControllerBase
 {
     [HttpPost]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -67,6 +69,7 @@ public class ProjectsController(
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(List<ProjectListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List()
     {
         var userId = User.GetRequiredUserId();
@@ -92,6 +95,8 @@ public class ProjectsController(
     }
 
     [HttpGet("{projectId:guid}")]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -136,6 +141,8 @@ public class ProjectsController(
     }
 
     [HttpPut("{projectId:guid}")]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid projectId, [FromBody] UpdateProjectRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -188,6 +195,8 @@ public class ProjectsController(
     }
 
     [HttpDelete("{projectId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -204,6 +213,8 @@ public class ProjectsController(
     }
 
     [HttpGet("{projectId:guid}/members")]
+    [ProducesResponseType(typeof(List<MemberResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListMembers(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -221,6 +232,8 @@ public class ProjectsController(
     }
 
     [HttpPost("{projectId:guid}/members")]
+    [ProducesResponseType(typeof(MemberResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMember(Guid projectId, [FromBody] AddMemberRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -244,6 +257,8 @@ public class ProjectsController(
     }
 
     [HttpPut("{projectId:guid}/members/{memberId:guid}")]
+    [ProducesResponseType(typeof(MemberResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMember(
         Guid projectId,
         Guid memberId,
@@ -271,6 +286,8 @@ public class ProjectsController(
     }
 
     [HttpDelete("{projectId:guid}/members/{memberId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMember(Guid projectId, Guid memberId)
     {
         var userId = User.GetRequiredUserId();

@@ -478,10 +478,17 @@
 ### Phase 3: Project Space — Web UI 🌐
 > Goal: full project board usable in browser. Feature-complete project workspace.
 
-- [ ] Auth pages: login, first-run admin setup
+- [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
+- [x] Auth pages: login, first-run admin setup
 - [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page)
-- [ ] Project list + create project flow
-- [ ] Board view: columns + cards, drag-and-drop move, column reorder
+- [x] Project list + create project flow (`app/pages/projects/index.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`) — includes optional git remote URL + provider fields in advanced expander
+- [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
+- [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
+- [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
+- [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
+- [ ] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
+- [ ] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
+- [ ] Archive card with dependents: warning modal listing affected cards
 - [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
 - [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [ ] Blocked card lock icon + badge on board (always visible)
@@ -494,7 +501,7 @@
 - [ ] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
 - [ ] Keyboard shortcut reference overlay (`?`)
 - [ ] ARIA labels, focus management, WCAG AA color contrast (built in from day one)
-- [ ] Error display: typed toast with `detail` + `correlationId` copy button
+- [x] Error display: toast on API failure (basic — `toast.add({ title, color: 'error' })`). Enhanced toast with `detail` + `correlationId` copy button in Plan 6 (`useErrorToast` composable).
 
 ### Phase 4: Project Space — TUI 🖥️
 > Goal: full project board usable in terminal. Feature parity with Web UI board.

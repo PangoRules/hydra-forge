@@ -3,7 +3,7 @@ const { logout, isAuthenticated } = useAuth()
 </script>
 
 <template>
-  <UApp>
+  <UApp :toaster="{ position: 'bottom-right' }">
     <UHeader>
       <template #left>
         <NuxtLink

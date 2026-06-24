@@ -7,7 +7,7 @@
 
 **Goal:** Pinia board store, project list page with create modal, desktop kanban board with drag-and-drop columns/cards, mobile card list view.
 
-**Architecture:** `useBoardStore` holds project, columns, cards. Project list page fetches from `GET /api/Projects`. Board page fetches snapshot from `GET /api/projects/{id}/ProjectSnapshot`. Desktop uses `vue-draggable-plus` for column reorder and card drag between columns. Mobile renders cards grouped by column in a scrollable list.
+**Architecture:** `useBoardStore` holds project, columns, cards. Project list page fetches from `GET /api/Projects`. Board page fetches board state via `GET /api/projects/{id}/Columns` + `GET /api/projects/{id}/Cards` (not `ProjectSnapshot` — those endpoints return structured card/column data, not the snapshot template). `useBoardStore.fetchBoard` calls both in parallel via `Promise.all`. Desktop uses `vue-draggable-plus` for column reorder and card drag between columns. Mobile renders cards grouped by column in a scrollable list.
 
 **Tech Stack:** Pinia, vue-draggable-plus, @vueuse/core, Nuxt UI v4
 
@@ -66,17 +66,31 @@ export const useBoardStore = defineStore('board', () => {
     loading.value = true
     error.value = null
     try {
-      const { data, error: apiError } = await api.GET('/api/projects/{projectId}/ProjectSnapshot', {
-        params: { path: { projectId } }
-      })
-      if (apiError) throw apiError
+      const [columnsResult, cardsResult] = await Promise.all([
+        api.GET('/api/projects/{projectId}/Columns', {
+          params: { path: { projectId } }
+        }),
+        api.GET('/api/projects/{projectId}/Cards', {
+          params: { path: { projectId } }
+        })
+      ])
 
-      project.value = data.project as ProjectResponse
-      columns.value = (data.columns as ColumnResponse[]) ?? []
+      if (columnsResult.error) throw columnsResult.error
+      if (cardsResult.error) throw cardsResult.error
+
+      columns.value = (columnsResult.data as ColumnResponse[]) ?? []
+
+      const cardList = cardsResult.data as CardListResponse
+      const cards = cardList?.cards ?? []
 
       const map = new Map<string, CardResponse[]>()
       for (const col of columns.value) {
-        map.set(col.id, (col.cards as CardResponse[]) ?? [])
+        map.set(col.id, [])
+      }
+      for (const card of cards) {
+        const colCards = map.get(card.columnId) ?? []
+        colCards.push(card)
+        map.set(card.columnId, colCards)
       }
       cardsByColumn.value = map
     }
@@ -106,12 +120,9 @@ export const useBoardStore = defineStore('board', () => {
     cardsByColumn.value.set(targetColumnId, targetCards)
   }
 
-  function rollbackMove(cardId: string, sourceColumnId: string, sourcePosition: number) {
-    // Rollback after failed API call — handled by caller
-    // Re-fetch board as simplest rollback
-    if (project.value) {
-      fetchBoard(project.value.id)
-    }
+  function rollbackMove(projectId: string) {
+    // Re-fetch board as simplest rollback after failed move
+    fetchBoard(projectId)
   }
 
   function addCard(columnId: string, card: CardResponse) {

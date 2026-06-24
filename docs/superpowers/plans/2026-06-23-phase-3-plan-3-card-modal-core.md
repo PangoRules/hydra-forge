@@ -465,7 +465,94 @@ git commit -m "feat: add Tiptap markdown editor and card description with auto-s
 
 ---
 
-## Task 12: Card Modal + Editor Component Tests
+## Task 13: Archive/Restore Card
+
+**Files:**
+- Modify: `src/web-ui/app/components/card/CardModal.vue` (add archive/restore button in header)
+
+### Step 1: Add archive/restore button to CardModal header
+
+In `CardModal.vue`, add archive and restore buttons to the modal header:
+
+```ts
+// In CardModal.vue script
+const isArchived = computed(() => !!props.card.archivedAt)
+
+async function handleArchive() {
+  const { error } = await api.POST('/api/projects/{projectId}/Cards/{cardId}/archive', {
+    params: { path: { projectId, cardId: props.card.id } }
+  })
+  if (!error) {
+    emit('archived')
+    emit('close')
+  }
+}
+
+async function handleRestore() {
+  const { error } = await api.POST('/api/projects/{projectId}/Cards/{cardId}/restore', {
+    params: { path: { projectId, cardId: props.card.id } }
+  })
+  if (!error) {
+    emit('restored')
+  }
+}
+```
+
+In the modal header template:
+```vue
+<!-- Archive button (shown when card is NOT archived) -->
+<UButton
+  v-if="!isArchived"
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive"
+  @click="handleArchive"
+>
+  Archive
+</UButton>
+
+<!-- Restore button (shown when card IS archived) -->
+<UButton
+  v-else
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive-restore"
+  @click="handleRestore"
+>
+  Restore
+</UButton>
+```
+
+### Step 2: Wire emits in board.vue
+
+In `board.vue`, handle the `archived` and `restored` emits:
+```ts
+function handleCardArchived() {
+  board.fetchBoard(projectId)
+}
+
+function handleCardRestored() {
+  board.fetchBoard(projectId)
+}
+```
+
+### Step 3: Verify
+
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+- Manual: open non-archived card → click Archive → card disappears from board
+- Manual: open archived card (via includeArchived filter, later) → click Restore → card returns to board
+
+### Step 4: Commit
+
+```bash
+git add src/web-ui/app/components/card/CardModal.vue src/web-ui/app/pages/projects/[id]/board.vue
+git commit -m "feat: add archive/restore card from modal"
+```
+
+---
+
+## Task 14: Card Modal + Editor Component Tests
 
 **Files:**
 - Create: `src/web-ui/app/components/card/__tests__/CardModal.test.ts`

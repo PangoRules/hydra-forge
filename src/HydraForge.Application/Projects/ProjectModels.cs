@@ -61,7 +61,7 @@ public record MemberResponse(
 public record ProjectListResponse(
     Guid Id,
     string Name,
-    string Description,
+    string? Description,
     DateTime CreatedAt,
     DateTime? ArchivedAt,
     int MemberCount

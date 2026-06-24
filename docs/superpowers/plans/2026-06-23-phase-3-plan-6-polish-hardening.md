@@ -418,7 +418,7 @@ git commit -m "feat: add blocked card indicators and move warning modal"
 
 ---
 
-## Task 24: Archive Card with Dependents Warning
+## Task 24: Archive Card with Dependents Warning (Restore in Plan 3 Task 13)
 
 **Files:**
 - Create: `src/web-ui/app/components/card/ArchiveCardWarning.vue`
@@ -1075,6 +1075,89 @@ Reference `nuxt-verification` skill:
 3. `cd src/web-ui && pnpm build` — successful production build
 4. `cd src/web-ui && pnpm test` — all tests pass
 5. Manual: keyboard shortcuts work. Error toasts show. Blocked card warning. Archive warning. ARIA labels present. Tablet responsive. PWA installable.
+
+---
+
+## Task 29: Archive/Restore Project
+
+**Files:**
+- Modify: `src/web-ui/app/pages/projects/index.vue` (add archive/restore actions + filter toggle)
+- Modify: `src/web-ui/app/components/project/ProjectList.vue` (add action buttons)
+
+### Step 1: Add archive/restore to project list page
+
+In `projects/index.vue`, add a toggle to show/hide archived projects:
+
+```vue
+<div class="flex items-center gap-2 mb-4">
+  <UToggle v-model="showArchived" />
+  <span class="text-sm">Show archived</span>
+</div>
+```
+
+API call with filter:
+```ts
+const showArchived = ref(false)
+
+async function fetchProjects() {
+  const url = showArchived.value
+    ? '/api/Projects?includeArchived=true'
+    : '/api/Projects'
+  const { data } = await api.GET(url)
+  // ...
+}
+```
+
+### Step 2: Add archive/restore buttons to ProjectList rows
+
+In `ProjectList.vue`, add per-row actions:
+
+```vue
+<UButton
+  v-if="!project.archivedAt"
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive"
+  @click="emit('archive', project.id)"
+>
+  Archive
+</UButton>
+<UButton
+  v-else
+  variant="ghost"
+  size="sm"
+  icon="i-lucide-archive-restore"
+  @click="emit('restore', project.id)"
+>
+  Restore
+</UButton>
+```
+
+Wire in `projects/index.vue`:
+```ts
+async function handleArchive(projectId: string) {
+  await api.POST('/api/Projects/{projectId}/archive', { params: { path: { projectId } } })
+  fetchProjects()
+}
+
+async function handleRestore(projectId: string) {
+  await api.POST('/api/Projects/{projectId}/restore', { params: { path: { projectId } } })
+  fetchProjects()
+}
+```
+
+### Step 3: Verify
+
+- `cd src/web-ui && pnpm typecheck` — zero errors
+- `cd src/web-ui && pnpm lint` — zero errors
+- Manual: open project list → archive a project → it disappears from default view → enable "show archived" → project appears with restore option
+
+### Step 4: Commit
+
+```bash
+git add src/web-ui/app/pages/projects/index.vue src/web-ui/app/components/project/ProjectList.vue
+git commit -m "feat: add archive/restore project with filter toggle"
+```
 
 ---
 

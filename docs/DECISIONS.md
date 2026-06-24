@@ -2,8 +2,8 @@
 
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
-> **Date:** 2026-06-02 (updated 2026-06-09)
-> **Status:** 10 original questions resolved + 21 new decisions added (D-13–D-34). D-3, D-7 revised/rejected. Ready for Phase 1.
+> **Date:** 2026-06-02 (updated 2026-06-24)
+> **Status:** 10 original questions resolved + 24 new decisions added (D-13–D-39). D-3, D-7 revised/rejected. Ready for Phase 3 Web UI.
 
 ---
 
@@ -191,7 +191,7 @@ Each entry has:
 | **Decision** | **Replace Swashbuckle/Swagger with built-in `Microsoft.AspNetCore.OpenApi` for doc generation + `Scalar.AspNetCore` for the interactive UI.** |
 | **Rationale** | Microsoft deprecated Swashbuckle in default templates starting .NET 9, and in .NET 10 the `Microsoft.OpenApi` library had a major v2 breaking change. Swashbuckle 10.x depends on `Microsoft.OpenApi` 2.x which removed the `Microsoft.OpenApi.Models` namespace, broke all type references (`OpenApiInfo`, `OpenApiSecurityScheme`, etc.), and restructured the public API. Rather than fight the breaking changes and maintain compatibility with a deprecated library, we switch to Microsoft's recommended path: `Microsoft.AspNetCore.OpenApi` (already in the project) generates the OpenAPI 3.1 document, and Scalar provides a modern dark-mode interactive reference UI. Scalar is actively maintained, has no legacy compatibility burden, and is the de-facto standard in the .NET ecosystem for replacing Swagger UI. |
 | **Alternatives considered** | 1. Fix Swashbuckle 10.x references to use root `Microsoft.OpenApi` namespace + new v2 API (rejected — the `Reference` property on security schemes was removed, security requirement API changed, and migration path is poorly documented / unstable). 2. Use `Microsoft.AspNetCore.OpenApi` for docs + `Swashbuckle.AspNetCore.SwaggerUI` for UI (rejected — adds complexity of mixing two systems with different transformer/filter models for no benefit over Scalar). |
-| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Removed `using Swashbuckle.AspNetCore.Annotations` and all `[SwaggerTag]`, `[SwaggerOperation]`, `[SwaggerResponse]` attributes from all 5 controllers. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. |
+| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. **Note:** `[ProducesResponseType]` attributes (built-in ASP.NET Core, distinct from Swashbuckle's `[SwaggerResponse]`) were later added to all controller actions to improve OpenAPI spec accuracy — these are standard MVC attributes and do not reintroduce Swashbuckle dependency. |
 
 ---
 
@@ -609,4 +609,47 @@ Chats
 | **DI** | RealtimeServiceCollectionExtensions.AddRealtimeServices() in Infrastructure registers IProjectBoardEventPublisher as SignalRProjectBoardEventPublisher |
 | **Alternatives considered** | 1. Each service publishes directly to SignalR internally (rejected — couples services to SignalR, breaks Clean Architecture). 2. Domain events with a separate subscriber (rejected — over-engineered for current scale). |
 | **Impact** | All board mutations (cards, columns, checklists, comments, attachments, specs, plans, relationships) call IProjectBoardEventPublisher.PublishAsync after successful commit. Clients receive typed OnBoardEvent with the full envelope. |
+
+
+---
+
+## D-37: vue-draggable-plus Removal — Plain v-for for Board Lists
+
+| Field | Value |
+|---|---|
+| **Topic** | Drag-and-drop library for board columns and cards in the Web UI |
+| **Date** | 2026-06-23 |
+| **Status** | ✅ Settled |
+| **Decision** | **Remove `vue-draggable-plus` (SortableJS wrapper). Use plain `v-for` for column and card lists. Re-implement with native HTML5 drag-and-drop later.** |
+| **Rationale** | `vue-draggable-plus` is SSR-incompatible with Nuxt 4. SortableJS requires browser APIs (DOM measurements, event listeners) that fail during SSR. Wrapping in `ClientOnly` causes hydration mismatches because the server-rendered static list differs from the client-rendered draggable list. The `v-model` reactivity pattern also causes hydration warnings. Plain `v-for` is stable, SSR-safe, and sufficient for the current board view. Native HTML5 drag-and-drop (no library dependency) is planned for re-implementation in a follow-up task. |
+| **Alternatives considered** | 1. `@vueuse/core` `useDraggable` (rejected — free positioning, not list reordering). 2. `vue-smooth-dnd` (rejected — unmaintained, no Nuxt 4 support). 3. `sortablejs` directly with manual Vue integration (rejected — same SSR issues, more boilerplate). |
+| **Impact** | Board columns and cards render as static `v-for` lists. Card moves between columns are not yet implemented via drag-and-drop — they work via curl/API only. Column reorder also not yet implemented via drag. Both will be re-added with native HTML5 drag-and-drop. |
+
+---
+
+## D-38: Nuxt UI v4 UModal Usage Patterns
+
+| Field | Value |
+|---|---|
+| **Topic** | How to use UModal in Nuxt UI v4 for dialogs and overlays |
+| **Date** | 2026-06-24 |
+| **Status** | ✅ Settled |
+| **Decision** | **UModal uses `v-model:open` for two-way binding. Content goes in named slots (`#body`, `#header`, `#footer`). The default slot is a `DialogTrigger`, not modal content. No `UOverlay` component exists — the overlay is built into `UModal` via the `overlay` prop (defaults to `true`).** |
+| **Rationale** | Nuxt UI v4's `UModal` is built on `reka-ui` (Radix Vue) `DialogRoot`. The default slot renders as a `DialogTrigger` with `as-child` — putting content directly inside `<UModal>` makes it a trigger button rendered in-page, not an overlay modal. Named slots (`#body`, `#header`, `#footer`) are the correct way to provide modal content. The `overlay` prop (default `true`) controls the backdrop. `dismissible` (default `true`) controls ESC/click-outside close. `portal` (default `true`) renders content at the document root via `DialogPortal`. |
+| **Alternatives considered** | 1. `UOverlay` component (rejected — does not exist in Nuxt UI v4). 2. Custom overlay with Tailwind fixed positioning (rejected — `UModal` already handles portal, backdrop, focus trap, and accessibility). |
+| **Impact** | All modals in the Web UI must use `v-model:open` + named slots. The `close` prop enables the built-in X button. `dismissible` controls ESC/backdrop behavior. `transition` controls open/close animation. Component tests using `@vue/test-utils` `mount` cannot assert on portal-rendered content — use TypeScript compilation and lint to verify prop contracts instead. |
+
+---
+
+## D-39: USelect Clearable Workaround in Nuxt UI v4
+
+| Field | Value |
+|---|---|
+| **Topic** | How to provide a clear/reset button for USelect since v4 has no `clearable` prop |
+| **Date** | 2026-06-24 |
+| **Status** | ✅ Settled |
+| **Decision** | **USelect in Nuxt UI v4 has no `clearable` prop. Wrap the select in a `relative` container with an absolute-positioned ghost `UButton` (X icon, `right-6` to avoid overlapping the chevron) that sets the model to `undefined`. Only show the button when the model has a value.** |
+| **Rationale** | The `clearable` prop exists in some UI libraries but was not included in Nuxt UI v4's `USelect` component (built on `reka-ui` `SelectRoot`). The component's props list (lines 23-60 of `Select.vue`) does not include `clearable`. The trailing slot renders the chevron icon only. A custom clear button is the simplest workaround without forking the component. |
+| **Alternatives considered** | 1. Fork `USelect` to add `clearable` (rejected — maintenance burden). 2. Use a different select component (rejected — `USelect` is the standard Nuxt UI v4 select). 3. Require users to close and reopen the modal to clear (rejected — poor UX). |
+| **Impact** | Any `USelect` that needs a clear/reset option must use the wrapper pattern. The button uses `v-if="model"` to only appear when a value is selected. `right-6` positioning avoids overlapping the built-in chevron-down icon.
 
