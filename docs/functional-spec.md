@@ -473,7 +473,7 @@
 - [x] ProjectContextSnapshot: `IProjectSnapshotRefresher` port (`RefreshAsync`/`GetSnapshotAsync`) injected into all mutation services; `ProjectSnapshotRefresher` EF implementation; `ProjectContextSnapshotRenderer` (pure deterministic, no LLM); `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint
 - [x] SignalR hubs: board mutations broadcast to all connected project members
 - [x] Presence: `PresenceHub` — join/leave events, ephemeral only (no DB writes)
-- [ ] All endpoints covered by xUnit tests (> 90% business logic coverage)
+- [x] All endpoints covered by xUnit tests (> 90% business logic coverage)
 
 ### Phase 3: Project Space — Web UI 🌐
 > Goal: full project board usable in browser. Feature-complete project workspace.
