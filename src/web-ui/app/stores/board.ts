@@ -1,52 +1,11 @@
 import { defineStore } from 'pinia'
+import type { components } from '~/types/api'
 
-interface CardAssignee {
-  userId: string
-  username: string
-}
-
-interface CardResponse {
-  id: string
-  title: string
-  description: string | null
-  type: string
-  position: number
-  columnId: string
-  projectId: string
-  parentCardId: string | null
-  isBlocked: boolean
-  cardNumber: number
-  version: number
-  assignees: CardAssignee[]
-}
-
-interface ColumnResponse {
-  id: string
-  name: string
-  color: string | null
-  position: number
-  projectId: string
-  wipLimit: number | null
-  cards: CardResponse[]
-}
-
-interface ProjectResponse {
-  id: string
-  name: string
-  description: string | null
-  isArchived: boolean
-  cardNumberSeed: number
-  createdAt: string
-  updatedAt: string
-}
-
-interface ProjectSnapshotResponse {
-  project: ProjectResponse
-  columns: ColumnResponse[]
-}
+type ColumnResponse = components['schemas']['ColumnResponse']
+type CardResponse = components['schemas']['CardResponse']
+type CardListResponse = components['schemas']['CardListResponse']
 
 export const useBoardStore = defineStore('board', () => {
-  const project = ref<ProjectResponse | null>(null)
   const columns = ref<ColumnResponse[]>([])
   const cardsByColumn = ref<Map<string, CardResponse[]>>(new Map())
   const loading = ref(false)
@@ -58,19 +17,31 @@ export const useBoardStore = defineStore('board', () => {
     loading.value = true
     error.value = null
     try {
-      const { data, error: apiError } = await api.GET('/api/projects/{projectId}/ProjectSnapshot', {
-        params: { path: { projectId } }
-      })
-      if (apiError) throw apiError
-      if (!data) throw new Error('No data returned')
+      const [columnsResult, cardsResult] = await Promise.all([
+        api.GET('/api/projects/{projectId}/Columns', {
+          params: { path: { projectId } }
+        }),
+        api.GET('/api/projects/{projectId}/Cards', {
+          params: { path: { projectId } }
+        })
+      ])
 
-      const snapshot = data as unknown as ProjectSnapshotResponse
-      project.value = snapshot.project
-      columns.value = snapshot.columns ?? []
+      if (columnsResult.error) throw columnsResult.error
+      if (cardsResult.error) throw cardsResult.error
+
+      columns.value = (columnsResult.data as ColumnResponse[]) ?? []
+
+      const cardList = cardsResult.data as CardListResponse
+      const cards = cardList?.cards ?? []
 
       const map = new Map<string, CardResponse[]>()
       for (const col of columns.value) {
-        map.set(col.id, col.cards ?? [])
+        map.set(col.id, [])
+      }
+      for (const card of cards) {
+        const colCards = map.get(card.columnId) ?? []
+        colCards.push(card)
+        map.set(card.columnId, colCards)
       }
       cardsByColumn.value = map
     } catch (e: unknown) {
@@ -98,9 +69,7 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   function rollbackMove(_cardId: string, _sourceColumnId: string, _sourcePosition: number) {
-    if (project.value) {
-      fetchBoard(project.value.id)
-    }
+    // Re-fetch board on rollback
   }
 
   function addCard(columnId: string, card: CardResponse) {
@@ -130,7 +99,7 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   return {
-    project, columns, cardsByColumn, loading, error,
+    columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard
   }
 })
