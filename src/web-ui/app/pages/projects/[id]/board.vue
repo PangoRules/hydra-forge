@@ -105,6 +105,7 @@ onMounted(() => {
     >
       <ClientOnly>
         <BoardView
+          v-if="board.columns.length > 0"
           :columns="board.columns"
           :cards-by-column="board.cardsByColumn"
           :project-id="projectId"
