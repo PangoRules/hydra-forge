@@ -3,9 +3,15 @@ import type { components } from '~/types/api'
 
 type CardResponse = components['schemas']['CardResponse']
 
-defineProps<{
+const props = defineProps<{
   card: CardResponse
 }>()
+
+const board = useBoardStore()
+const columnName = computed(() => {
+  const col = board.columns.find(c => c.id === props.card.columnId)
+  return col?.name ?? props.card.columnId.slice(0, 8)
+})
 </script>
 
 <template>
@@ -24,7 +30,7 @@ defineProps<{
         Column
       </p>
       <p class="text-sm">
-        {{ card.columnId.slice(0, 8) }}
+        {{ columnName }}
       </p>
     </div>
 
