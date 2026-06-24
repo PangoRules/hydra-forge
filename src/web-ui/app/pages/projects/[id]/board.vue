@@ -64,9 +64,9 @@ onMounted(() => {
         size="sm"
         @click="board.fetchBoard(projectId)"
       >
-        <UIcon
-          name="i-lucide-refresh"
-          class="size-4"
+<UIcon
+        name="i-lucide-refresh-cw"
+        class="size-4"
         />
       </UButton>
     </div>
