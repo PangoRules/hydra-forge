@@ -1896,7 +1896,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["LoginResponse"];
+                        "application/json": components["schemas"]["LoginResponse"];
+                        "text/json": components["schemas"]["LoginResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -1979,6 +1994,15 @@ export interface components {
             username: string;
             password: string;
         };
+        LoginResponse: {
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            userId: string;
+            username: string;
+            isAdmin: boolean;
+        };
         MemberRole: number;
         MoveCardRequest: {
             /** Format: uuid */
@@ -1988,6 +2012,14 @@ export interface components {
             confirmBlockedMove: boolean;
             /** Format: int32 */
             version: number | string;
+        };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
         };
         RelationshipType: number;
         ReorderChecklistItemRequest: {

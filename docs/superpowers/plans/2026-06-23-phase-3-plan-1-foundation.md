@@ -458,6 +458,8 @@ async function handleSubmit() {
     // TODO: Backend needs a change-password endpoint.
     // For now, show success and redirect to login.
     // The actual password change will be implemented when the backend endpoint exists.
+    // TRACKED: Add POST /api/Auth/change-password endpoint to backend.
+    //          See docs/functional-spec.md Phase 3 checklist.
     success.value = true
     setTimeout(() => navigateTo('/login'), 2000)
   }

@@ -479,6 +479,7 @@
 > Goal: full project board usable in browser. Feature-complete project workspace.
 
 - [ ] Auth pages: login, first-run admin setup
+- [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page)
 - [ ] Project list + create project flow
 - [ ] Board view: columns + cards, drag-and-drop move, column reorder
 - [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
