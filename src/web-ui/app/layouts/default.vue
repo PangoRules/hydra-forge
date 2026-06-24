@@ -4,6 +4,7 @@ const { logout, isAuthenticated } = useAuth()
 
 <template>
   <UApp>
+    <Toaster />
     <UHeader>
       <template #left>
         <NuxtLink

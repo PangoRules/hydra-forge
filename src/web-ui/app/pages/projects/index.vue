@@ -11,6 +11,7 @@ const loading = ref(true)
 const showCreateModal = ref(false)
 
 const api = useApi()
+const toast = useToast()
 
 async function fetchProjects() {
   loading.value = true
@@ -19,7 +20,8 @@ async function fetchProjects() {
     if (error) throw error
     projects.value = (data as ProjectListResponse[]) ?? []
   } catch (e: unknown) {
-    console.error('Failed to fetch projects', e)
+    const message = e instanceof Error ? e.message : 'Failed to load projects'
+    toast.add({ title: message, color: 'error' })
   } finally {
     loading.value = false
   }

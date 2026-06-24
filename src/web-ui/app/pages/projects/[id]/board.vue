@@ -10,6 +10,7 @@ const route = useRoute()
 const projectId = route.params.id as string
 const board = useBoardStore()
 const api = useApi()
+const toast = useToast()
 
 const projectName = ref('')
 
@@ -33,6 +34,8 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
 
   if (result.error) {
     board.rollbackMove(projectId)
+    const message = result.error instanceof Error ? result.error.message : 'Failed to move card'
+    toast.add({ title: message, color: 'error' })
     return
   }
 }
