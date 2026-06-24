@@ -39,7 +39,7 @@ const editor = useEditor({
   ],
   editorProps: {
     attributes: {
-      class: 'prose prose-sm max-w-none focus:outline-none p-3 min-h-[150px] max-h-[400px] overflow-y-auto'
+      class: 'focus:outline-none p-3 min-h-[150px] max-h-[400px] overflow-y-auto'
     }
   },
   onUpdate({ editor: ed }) {
@@ -122,6 +122,7 @@ function toggleSource() {
         icon="i-lucide-bold"
         variant="ghost"
         size="xs"
+        title="Bold"
         :color="isActive('bold') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('bold') }"
         @click="toggleBold"
@@ -130,6 +131,7 @@ function toggleSource() {
         icon="i-lucide-italic"
         variant="ghost"
         size="xs"
+        title="Italic"
         :color="isActive('italic') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('italic') }"
         @click="toggleItalic"
@@ -141,6 +143,7 @@ function toggleSource() {
         icon="i-lucide-heading-1"
         variant="ghost"
         size="xs"
+        title="Heading 1"
         :color="isActive('heading', { level: 1 }) ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('heading', { level: 1 }) }"
         @click="toggleHeading(1)"
@@ -149,6 +152,7 @@ function toggleSource() {
         icon="i-lucide-heading-2"
         variant="ghost"
         size="xs"
+        title="Heading 2"
         :color="isActive('heading', { level: 2 }) ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('heading', { level: 2 }) }"
         @click="toggleHeading(2)"
@@ -157,6 +161,7 @@ function toggleSource() {
         icon="i-lucide-heading-3"
         variant="ghost"
         size="xs"
+        title="Heading 3"
         :color="isActive('heading', { level: 3 }) ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('heading', { level: 3 }) }"
         @click="toggleHeading(3)"
@@ -168,6 +173,7 @@ function toggleSource() {
         icon="i-lucide-list"
         variant="ghost"
         size="xs"
+        title="Bullet List"
         :color="isActive('bulletList') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('bulletList') }"
         @click="toggleBulletList"
@@ -176,6 +182,7 @@ function toggleSource() {
         icon="i-lucide-list-ordered"
         variant="ghost"
         size="xs"
+        title="Ordered List"
         :color="isActive('orderedList') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('orderedList') }"
         @click="toggleOrderedList"
@@ -187,6 +194,7 @@ function toggleSource() {
         icon="i-lucide-code"
         variant="ghost"
         size="xs"
+        title="Code Block"
         :color="isActive('codeBlock') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('codeBlock') }"
         @click="toggleCodeBlock"
@@ -195,6 +203,7 @@ function toggleSource() {
         icon="i-lucide-quote"
         variant="ghost"
         size="xs"
+        title="Blockquote"
         :color="isActive('blockquote') ? 'primary' : 'neutral'"
         :class="{ 'bg-primary/10': isActive('blockquote') }"
         @click="toggleBlockquote"
@@ -207,6 +216,7 @@ function toggleSource() {
         icon="i-lucide-code-xml"
         variant="ghost"
         size="xs"
+        title="Toggle Markdown Source"
         label="Source"
         @click="toggleSource"
       />
@@ -232,6 +242,7 @@ function toggleSource() {
     <EditorContent
       v-show="!sourceMode"
       :editor="editor"
+      class="markdown-editor-content"
     />
 
     <!-- Source textarea -->
@@ -244,3 +255,69 @@ function toggleSource() {
     />
   </div>
 </template>
+
+<style>
+/* Editor content typography — replaces broken prose plugin */
+.markdown-editor-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 1rem 0 0.5rem;
+}
+.markdown-editor-content h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.75rem 0 0.4rem;
+}
+.markdown-editor-content h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.5rem 0 0.3rem;
+}
+.markdown-editor-content ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.25rem 0;
+}
+.markdown-editor-content ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.25rem 0;
+}
+.markdown-editor-content li {
+  margin: 0.15rem 0;
+}
+.markdown-editor-content p {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+.markdown-editor-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  opacity: 0.8;
+}
+.dark .markdown-editor-content blockquote {
+  border-left-color: #4b5563;
+}
+.markdown-editor-content pre {
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.dark .markdown-editor-content pre {
+  background: #1f2937;
+}
+.markdown-editor-content code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875rem;
+}
+.markdown-editor-content pre code {
+  background: none;
+  padding: 0;
+}
+</style>
