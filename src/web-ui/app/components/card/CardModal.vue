@@ -35,8 +35,23 @@ const tabs = [
 
 const api = useApi()
 
+/** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
+function closeWithAnimation() {
+  if (!isOpen.value) return
+  isOpen.value = false
+  setTimeout(() => emit('close'), 200)
+}
+
 function onClose() {
-  emit('close')
+  closeWithAnimation()
+}
+
+function handleOpenChange(val: boolean) {
+  if (!val && isOpen.value) {
+    closeWithAnimation()
+  } else {
+    isOpen.value = val
+  }
 }
 
 async function handleArchive() {
@@ -45,7 +60,7 @@ async function handleArchive() {
   })
   if (!apiError) {
     emit('archived')
-    emit('close')
+    closeWithAnimation()
   } else {
     toast.add({ title: 'Failed to archive card', color: 'error' })
   }
@@ -84,7 +99,7 @@ onMounted(() => fetchCard())
     :error="error"
     width="sm:max-w-4xl"
     :show-close="!!card"
-    @update:open="isOpen = $event"
+    @update:open="handleOpenChange"
     @close="onClose"
   >
     <template #header>
