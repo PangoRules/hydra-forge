@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch'
 import type { paths } from '~/types/api'
 import { ApiError } from '~/lib/api-error'
+import { UiRoutes } from '~/lib/routes'
 
 export function useApi() {
   const config = useRuntimeConfig()
@@ -25,7 +26,7 @@ export function useApi() {
     async onResponse({ response }) {
       if (response.status === 401) {
         clearToken()
-        await navigateTo('/login')
+        await navigateTo(UiRoutes.Login)
         return response
       }
 

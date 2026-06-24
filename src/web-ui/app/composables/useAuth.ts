@@ -1,3 +1,5 @@
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
+
 interface LoginResponse {
   accessToken: string
   expiresAt: string
@@ -12,7 +14,7 @@ export function useAuth() {
   const api = useApi()
 
   async function login(username: string, password: string) {
-    const { data, error } = await api.POST('/api/Auth/login', {
+    const { data, error } = await api.POST(ApiRoutes.Auth.Login, {
       body: { username, password }
     })
     if (error) throw error
@@ -30,7 +32,7 @@ export function useAuth() {
   function logout() {
     store.clearAuth()
     clearToken()
-    navigateTo('/login')
+    navigateTo(UiRoutes.Login)
   }
 
   async function checkAuth() {

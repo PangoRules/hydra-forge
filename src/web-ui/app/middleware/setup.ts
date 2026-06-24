@@ -1,6 +1,8 @@
+import { UiRoutes } from '~/lib/routes'
+
 export default defineNuxtRouteMiddleware(async (to) => {
   // Skip on setup page itself and login page
-  if (to.path === '/setup' || to.path === '/login') return
+  if (to.path === UiRoutes.Setup || to.path === UiRoutes.Login) return
 
   const { hasToken } = useAuthToken()
   if (!hasToken()) return

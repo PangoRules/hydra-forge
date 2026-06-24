@@ -1,9 +1,11 @@
+import { UiRoutes } from '~/lib/routes'
+
 export default defineNuxtRouteMiddleware((to) => {
   const { hasToken } = useAuthToken()
 
-  if (to.path === '/login' || to.path === '/setup') return
+  if (to.path === UiRoutes.Login || to.path === UiRoutes.Setup) return
 
   if (!hasToken()) {
-    return navigateTo('/login')
+    return navigateTo(UiRoutes.Login)
   }
 })
