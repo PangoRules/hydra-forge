@@ -68,6 +68,7 @@ desktop.ini
 *.swo
 *~
 .idea/
+.superpowers/
 
 # ─── Test results ────────────────────────────────────────────────────────────
 TestResults/
