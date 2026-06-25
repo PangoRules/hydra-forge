@@ -14,10 +14,19 @@ export function useAuthToken() {
     token.value = value
   }
   function clearToken() {
+    // Nuxt's useCookie: setting to null should delete, but has edge cases.
+    // Force-delete the cookie directly as a fallback.
     token.value = null
+    try {
+      document.cookie = 'auth_token=; Path=/; Max-Age=0; SameSite=Lax'
+    } catch {
+      // Not running in browser (SSR) — ignore
+    }
   }
   function hasToken() {
-    return !!token.value
+    // Guard against Nuxt's useCookie leaving a truthy string like "null"
+    // when setting the value to null.
+    return !!token.value && token.value !== 'null'
   }
 
   return { getToken, setToken, clearToken, hasToken }

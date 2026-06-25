@@ -33,7 +33,15 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
       if (response.status === 401) {
         store.clearAuth()
         clearToken()
-        await navigateTo(UiRoutes.Login)
+        try {
+          await navigateTo(UiRoutes.Login)
+        } catch {
+          // navigateTo can throw outside middleware context.
+          // Fall back to hard navigation (client-side only).
+          if (typeof window !== 'undefined') {
+            window.location.href = UiRoutes.Login
+          }
+        }
         return response
       }
 
