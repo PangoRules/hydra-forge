@@ -33,6 +33,11 @@ const archiveTargetCard = ref<CardResponse | null>(null)
 const menuOpenFor = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 
+// Function ref instead of string ref — avoids Vue 3 array-ref issue when ref is inside v-for
+function setMenuRef(el: Element | null) {
+  menuRef.value = el as HTMLElement | null
+}
+
 function openMenu(cardId: string, event: Event) {
   event.stopPropagation()
   menuOpenFor.value = menuOpenFor.value === cardId ? null : cardId
@@ -276,6 +281,21 @@ function stripHtml(text: string): string {
           @click="toggleColumn(column.id)"
         >
           <div class="flex items-center gap-2">
+            <!-- Type filter for this column -->
+            <select
+              :value="columnTypeFilters[column.id] ?? null"
+              class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              @click.stop
+              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
+            >
+              <option
+                v-for="opt in CARD_TYPE_OPTIONS"
+                :key="opt.label"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
             <div
               v-if="column.color"
               class="size-3 rounded-full shrink-0"
@@ -302,37 +322,6 @@ function stripHtml(text: string): string {
           v-if="expandedColumns[column.id]"
           class="px-3 pb-3 space-y-3"
         >
-          <!-- Per-column filters -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs text-gray-500 shrink-0">Type:</span>
-            <select
-              :value="columnTypeFilters[column.id] ?? null"
-              class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
-            >
-              <option
-                v-for="opt in CARD_TYPE_OPTIONS"
-                :key="opt.label"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <label
-              v-if="board.boardFilters.includeArchived"
-              class="flex items-center gap-1 text-xs cursor-pointer"
-            >
-              <input
-                :checked="columnArchivedFilters[column.id] === true"
-                type="checkbox"
-                class="rounded"
-                @change="columnArchivedFilters[column.id] = ($event.target as HTMLInputElement).checked ? true : null"
-              >
-              <span class="text-gray-500">Archived only</span>
-            </label>
-          </div>
-
-          <!-- Cards -->
           <div
             v-for="card in filteredCardsByColumn.get(column.id) ?? []"
             :key="card.id"
@@ -368,7 +357,7 @@ function stripHtml(text: string): string {
               <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
               <div
                 v-if="menuOpenFor === card.id"
-                ref="menuRef"
+                :ref="setMenuRef"
                 class="absolute z-20 mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-[120px]"
                 style="position: absolute;"
               >
