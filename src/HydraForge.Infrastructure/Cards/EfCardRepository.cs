@@ -37,7 +37,7 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
             query = query.Where(c => c.Type == filter.Type.Value);
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
-            query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
+            query = query.Where(c => EF.Functions.ILike(c.Title, $"%{filter.Search}%"));
 
         if (filter.ArchivedLimit.HasValue)
             query = query.OrderByDescending(c => c.ArchivedAt ?? c.CreatedAt).Take(filter.ArchivedLimit.Value);
