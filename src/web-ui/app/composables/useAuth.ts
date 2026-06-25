@@ -35,7 +35,7 @@ export function useAuth() {
     navigateTo(UiRoutes.Login)
   }
 
-  async function checkAuth() {
+  function checkAuth() {
     if (!hasToken()) return false
     const token = getToken()
     if (token) {
