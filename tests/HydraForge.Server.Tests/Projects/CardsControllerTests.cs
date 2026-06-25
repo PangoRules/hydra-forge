@@ -487,6 +487,8 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
             query = query.Where(c => c.ArchivedAt == null);
         if (filter.Type.HasValue)
             query = query.Where(c => c.Type == filter.Type.Value);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+            query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
         return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
     }
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)

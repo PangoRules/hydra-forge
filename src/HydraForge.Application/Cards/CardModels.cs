@@ -99,7 +99,8 @@ public record CardListFilter(
     Guid? ColumnId = null,
     bool IncludeArchived = false,
     Guid? AssigneeUserId = null,
-    CardType? Type = null
+    CardType? Type = null,
+    string? Search = null
 );
 
 public record BlockedMoveWarningDto(

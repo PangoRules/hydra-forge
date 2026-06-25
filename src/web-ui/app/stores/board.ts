@@ -39,6 +39,7 @@ export const useBoardStore = defineStore('board', () => {
       const searchParams = new URLSearchParams()
       if (boardFilters.value.includeArchived) searchParams.set('includeArchived', 'true')
       if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
+      if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
       const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl
 
       const [columnsResult, cardsResult] = await Promise.all([

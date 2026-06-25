@@ -86,6 +86,19 @@ watch(
     if (newArchived !== oldArchived) board.fetchBoard(projectId)
   }
 )
+
+// Debounced search — 300ms after user stops typing, fetch with search param
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => board.boardFilters.search,
+  () => {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+      board.fetchBoard(projectId)
+      searchTimer = null
+    }, 300)
+  }
+)
 </script>
 
 <template>
