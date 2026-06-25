@@ -300,7 +300,6 @@ function stripHtml(text: string): string {
             </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <span class="text-xs text-gray-300">-</span>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
             <select
