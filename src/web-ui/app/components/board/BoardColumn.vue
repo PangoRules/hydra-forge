@@ -19,9 +19,10 @@ const emit = defineEmits<{
 }>()
 
 // Per-column filter state
+// columnArchived: null = show all (respect server fetch), false = non-archived only, true = archived only
 const columnSearch = ref('')
 const columnType = ref<number | null>(null)
-const columnArchived = ref(false)
+const columnArchived = ref<boolean | null>(null)
 
 const filteredCards = computed(() => {
   let result = props.cards
@@ -40,11 +41,11 @@ const filteredCards = computed(() => {
     result = result.filter(c => c.type === columnType.value)
   }
 
-  // Column archived filter: unchecked = show non-archived only; checked = show archived only
-  if (columnArchived.value) {
-    result = result.filter(c => c.archivedAt)
-  } else {
+  // Column archived filter: null = show all, false = non-archived, true = archived only
+  if (columnArchived.value === false) {
     result = result.filter(c => !c.archivedAt)
+  } else if (columnArchived.value === true) {
+    result = result.filter(c => c.archivedAt)
   }
 
   return result
@@ -55,7 +56,8 @@ function handleFilterType(value: number | null) {
 }
 
 function handleFilterArchived(value: boolean) {
-  columnArchived.value = value
+  // false = reset to show all (respect server fetch); true = show archived only
+  columnArchived.value = value ? true : null
 }
 </script>
 
