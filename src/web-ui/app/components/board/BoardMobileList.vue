@@ -14,6 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'card-click': [card: CardResponse]
+  'add-card': []
 }>()
 
 const api = useApi()
@@ -23,6 +24,48 @@ const toast = useToast()
 const selectedMenuCardId = ref<string | null>(null)
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
+
+// Accordion state
+const expandedColumns = ref<Record<string, boolean>>({})
+
+function toggleColumn(colId: string) {
+  expandedColumns.value[colId] = !expandedColumns.value[colId]
+}
+
+// Filter panel state
+const showFilters = ref(false)
+const mobileSearch = ref('')
+const mobileType = ref<number | null>(null)
+const mobileArchived = ref(false)
+const mobileHideEmpty = ref(false)
+
+// Filtered cards for mobile
+const filteredCardsByColumn = computed(() => {
+  const result = new Map<string, CardResponse[]>()
+  for (const [colId, cards] of props.cardsByColumn) {
+    let filtered = cards
+    if (mobileSearch.value) {
+      const q = mobileSearch.value.toLowerCase()
+      filtered = filtered.filter(c =>
+        c.title.toLowerCase().includes(q) ||
+        String(c.cardNumber).includes(q)
+      )
+    }
+    if (mobileType.value !== null) {
+      filtered = filtered.filter(c => c.type === mobileType.value)
+    }
+    if (!mobileArchived.value) {
+      filtered = filtered.filter(c => !c.archivedAt)
+    }
+    result.set(colId, filtered)
+  }
+  return result
+})
+
+const filteredColumns = computed(() => {
+  if (!mobileHideEmpty.value) return props.columns
+  return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
+})
 
 function toggleMenu(cardId: string) {
   selectedMenuCardId.value = selectedMenuCardId.value === cardId ? null : cardId
@@ -81,112 +124,71 @@ function stripHtml(text: string): string {
 
 <template>
   <div>
-    <div class="p-4 space-y-6">
-      <div
-        v-for="column in columns"
-        :key="column.id"
-      >
-        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <h3 class="font-semibold text-sm">
-            {{ column.name }}
-          </h3>
-          <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
-            {{ cardsByColumn.get(column.id)?.length ?? 0 }}
-          </span>
-          <span
-            v-if="column.wipLimit"
-            class="text-xs"
-            :class="Number(column.wipLimit) < (cardsByColumn.get(column.id)?.length ?? 0) ? 'text-red-500 font-medium' : 'text-gray-400'"
-          >
-            WIP {{ column.wipLimit }}
-          </span>
-        </div>
+    <!-- Global mobile bar -->
+    <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <input
+        v-model="mobileSearch"
+        placeholder="Search cards..."
+        class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+      />
+      <UButton variant="ghost" size="sm" @click="showFilters = !showFilters">
+        Filter
+      </UButton>
+      <UButton size="sm" icon="i-lucide-plus" @click="emit('add-card')" />
+    </div>
 
-        <div class="space-y-2">
+    <!-- Filter slide-out -->
+    <div v-if="showFilters" class="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <select v-model="mobileType" class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600">
+        <option :value="null">All types</option>
+        <option :value="0">Task</option>
+        <option :value="1">Bug</option>
+        <option :value="2">Epic</option>
+        <option :value="3">Spec</option>
+        <option :value="4">Idea</option>
+      </select>
+      <label class="flex items-center gap-1 text-xs">
+        <input v-model="mobileArchived" type="checkbox" class="rounded" />
+        Archived
+      </label>
+      <label class="flex items-center gap-1 text-xs">
+        <input v-model="mobileHideEmpty" type="checkbox" class="rounded" />
+        Hide empty
+      </label>
+    </div>
+
+    <!-- Columns as accordion -->
+    <div class="p-4 space-y-2">
+      <div v-for="column in filteredColumns" :key="column.id" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div
+          class="flex items-center justify-between px-3 py-2 cursor-pointer"
+          @click="toggleColumn(column.id)"
+        >
+          <div class="flex items-center gap-2">
+            <div v-if="column.color" class="size-3 rounded-full shrink-0" :style="{ backgroundColor: column.color }" />
+            <h3 class="text-sm font-semibold">{{ column.name }}</h3>
+            <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
+              {{ filteredCardsByColumn.get(column.id)?.length ?? 0 }}
+            </span>
+          </div>
+          <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
+        </div>
+        <div v-if="expandedColumns[column.id]" class="px-3 pb-3 space-y-2">
           <div
-            v-for="card in cardsByColumn.get(column.id) ?? []"
+            v-for="card in filteredCardsByColumn.get(column.id) ?? []"
             :key="card.id"
-            class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-sm transition-shadow"
+            class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
             @click="emit('card-click', card)"
           >
-            <div class="flex items-start gap-2">
-              <UIcon
-                :name="typeIcons[card.type] ?? 'i-lucide-square'"
-                class="size-4 mt-0.5 shrink-0 text-gray-400"
-              />
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
-                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {{ card.title }}
-                  </p>
-                  <span
-                    v-if="card.archivedAt"
-                    class="text-xs text-gray-400 shrink-0"
-                  >
-                    archived
-                  </span>
-                </div>
-                <p
-                  v-if="card.description"
-                  class="text-xs text-gray-500 mt-1 line-clamp-2"
-                >
-                  {{ stripHtml(card.description) }}
-                </p>
-              </div>
-
-              <!-- Three-dot menu -->
-              <div class="relative shrink-0">
-                <span data-menu-btn>
-                  <UButton
-                    icon="i-lucide-ellipsis-vertical"
-                    variant="ghost"
-                    size="xs"
-                    @click.stop="toggleMenu(card.id)"
-                  />
-                </span>
-                <div
-                  v-if="selectedMenuCardId === card.id"
-                  data-menu-id
-                  class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-[140px]"
-                  @click.stop
-                >
-                  <button
-                    class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
-                    @click="handleArchive(card)"
-                  >
-                    <UIcon
-                      name="i-lucide-archive"
-                      class="size-4"
-                    />
-                    Archive
-                  </button>
-                </div>
-              </div>
+            <div class="flex items-center gap-2">
+              <UIcon :name="typeIcons[card.type] ?? 'i-lucide-square'" class="size-4 shrink-0 text-gray-400" />
+              <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
+              <p class="text-sm font-medium truncate">{{ card.title }}</p>
+              <span v-if="card.archivedAt" class="text-xs text-gray-400 shrink-0">archived</span>
             </div>
-
-            <div
-              v-if="card.assignees.length > 0"
-              class="flex items-center justify-between mt-2"
-            >
-              <div class="flex -space-x-1">
-                <div
-                  v-for="assignee in card.assignees.slice(0, 3)"
-                  :key="assignee.userId"
-                  class="size-5 rounded-full bg-primary text-white flex items-center justify-center text-xs"
-                  :title="assignee.username"
-                >
-                  {{ (assignee.username[0] ?? '?').toUpperCase() }}
-                </div>
-              </div>
-              <div
-                v-if="card.dueAt"
-                class="text-xs"
-                :class="new Date(card.dueAt) < new Date() ? 'text-red-500 font-medium' : 'text-gray-400'"
-              >
-                {{ new Date(card.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
-              </div>
-            </div>
+            <p v-if="card.description" class="text-xs text-gray-500 mt-1 line-clamp-2">
+              {{ card.description ? stripHtml(card.description) : '' }}
+            </p>
           </div>
         </div>
       </div>
