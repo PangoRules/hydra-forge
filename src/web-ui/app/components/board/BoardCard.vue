@@ -70,7 +70,7 @@ async function confirmArchive() {
   if (error) {
     toast.add({ title: 'Failed to archive card', color: 'error' })
   } else {
-    board.removeCard(props.card.id)
+    board.fetchBoard(props.projectId)
     toast.add({ title: 'Card archived', color: 'success' })
   }
 }
