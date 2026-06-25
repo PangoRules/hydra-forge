@@ -108,38 +108,49 @@ public class CardService(
             ct
         );
 
-        // Assign requested users after card creation
-        if (cmd.AssigneeUserIds != null && cmd.AssigneeUserIds.Count > 0)
+        // Assign requested users after card creation (batch flow — no N+1)
+        if (cmd.AssigneeUserIds is { Count: > 0 })
         {
-            foreach (var assigneeUserId in cmd.AssigneeUserIds)
+            var usersById = await _userRepo.FindByIdsAsync(cmd.AssigneeUserIds, ct);
+            if (usersById.Count > 0)
             {
-                var assigneeUser = await _userRepo.FindByIdAsync(assigneeUserId, ct);
-                if (assigneeUser == null) continue;
+                var existingAssignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
+                var existingWatchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+                var existingAssigneeUserIds = existingAssignees.Select(a => a.UserId).ToHashSet();
+                var existingWatcherUserIds = existingWatchers.Select(w => w.UserId).ToHashSet();
 
-                var existingAssignee = await _assigneeRepo.GetByCardAndUserAsync(card.Id, assigneeUserId, ct);
-                if (existingAssignee != null) continue;
+                var newAssignees = new List<CardAssignee>(usersById.Count);
+                var newWatchers = new List<CardWatcher>(usersById.Count);
 
-                var assignee = new CardAssignee
+                foreach (var userId in usersById.Keys)
                 {
-                    Id = Guid.NewGuid(),
-                    CardId = card.Id,
-                    UserId = assigneeUserId,
-                    AssignedAt = DateTime.UtcNow,
-                    AssignedByUserId = cmd.ActorId,
-                };
-                await _assigneeRepo.AddAsync(assignee, ct);
+                    if (existingAssigneeUserIds.Contains(userId))
+                        continue;
 
-                var watcher = await _watcherRepo.GetByCardAndUserAsync(card.Id, assigneeUserId, ct);
-                if (watcher == null)
-                {
-                    var newWatcher = new CardWatcher
+                    newAssignees.Add(new CardAssignee
                     {
+                        Id = Guid.NewGuid(),
                         CardId = card.Id,
-                        UserId = assigneeUserId,
-                        AddedAt = DateTime.UtcNow,
-                    };
-                    await _watcherRepo.AddAsync(newWatcher, ct);
+                        UserId = userId,
+                        AssignedAt = DateTime.UtcNow,
+                        AssignedByUserId = cmd.ActorId,
+                    });
+
+                    if (!existingWatcherUserIds.Contains(userId))
+                    {
+                        newWatchers.Add(new CardWatcher
+                        {
+                            CardId = card.Id,
+                            UserId = userId,
+                            AddedAt = DateTime.UtcNow,
+                        });
+                    }
                 }
+
+                if (newAssignees.Count > 0)
+                    await _assigneeRepo.AddRangeAsync(newAssignees, ct);
+                if (newWatchers.Count > 0)
+                    await _watcherRepo.AddRangeAsync(newWatchers, ct);
             }
         }
 
@@ -794,24 +805,34 @@ public class CardService(
     private async Task<CardDto> MapToDtoAsync(Card card, CancellationToken ct)
     {
         var assignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
-        var assigneeDtos = new List<CardAssigneeDto>();
-        foreach (var a in assignees)
-        {
-            var user = await _userRepo.FindByIdAsync(a.UserId, ct);
-            assigneeDtos.Add(
-                new CardAssigneeDto(a.Id, a.UserId, user?.Username ?? string.Empty, a.AssignedAt)
-            );
-        }
-
         var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
-        var watcherDtos = new List<CardWatcherDto>();
-        foreach (var w in watchers)
-        {
-            var user = await _userRepo.FindByIdAsync(w.UserId, ct);
-            watcherDtos.Add(
-                new CardWatcherDto(w.UserId, user?.Username ?? string.Empty, w.AddedAt)
-            );
-        }
+
+        var allUserIds = assignees
+            .Select(a => a.UserId)
+            .Concat(watchers.Select(w => w.UserId))
+            .Distinct()
+            .ToList();
+
+        var usersById = allUserIds.Count > 0
+            ? await _userRepo.FindByIdsAsync(allUserIds, ct)
+            : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+
+        var assigneeDtos = assignees
+            .Select(a => new CardAssigneeDto(
+                a.Id,
+                a.UserId,
+                usersById.TryGetValue(a.UserId, out var u) ? u.Username : string.Empty,
+                a.AssignedAt
+            ))
+            .ToList();
+
+        var watcherDtos = watchers
+            .Select(w => new CardWatcherDto(
+                w.UserId,
+                usersById.TryGetValue(w.UserId, out var u) ? u.Username : string.Empty,
+                w.AddedAt
+            ))
+            .ToList();
 
         return new CardDto(
             card.Id,

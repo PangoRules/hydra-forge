@@ -742,6 +742,7 @@ internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository
         => Task.FromResult<IReadOnlyList<CardAssignee>>(Assignees.Where(a => a.CardId == cardId).ToList());
 
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { Assignees.Add(assignee); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { Assignees.AddRange(assignees); return Task.CompletedTask; }
     public void Add(CardAssignee assignee) => AddAsync(assignee).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
 }
@@ -760,6 +761,7 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
         => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
 
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { Watchers.Add(watcher); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { Watchers.AddRange(watchers); return Task.CompletedTask; }
     public void Add(CardWatcher watcher) => AddAsync(watcher).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }

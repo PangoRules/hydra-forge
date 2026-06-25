@@ -34,6 +34,12 @@ public class EfCardWatcherRepository(HydraForgeDbContext context) : ICardWatcher
         await context.SaveChangesAsync(ct);
     }
 
+    public async Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default)
+    {
+        context.CardWatchers.AddRange(watchers);
+        await context.SaveChangesAsync(ct);
+    }
+
     public async Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default)
     {
         var watcher = await context.CardWatchers

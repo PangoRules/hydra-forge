@@ -446,6 +446,7 @@ internal class AttachmentsTestCardAssigneeRepository : HydraForge.Application.Ca
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>([]);
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { return Task.CompletedTask; }
 }
 
@@ -458,6 +459,7 @@ internal class AttachmentsTestCardWatcherRepository : HydraForge.Application.Car
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardWatcher>>([]);
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { return Task.CompletedTask; }
 }
 

@@ -119,6 +119,7 @@ internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository
     public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default) => Task.FromResult<ILookup<Guid, CardAssignee>>(Assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CardAssignee>>(Assignees.Where(a => a.CardId == cardId).ToList());
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { Assignees.Add(assignee); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { Assignees.AddRange(assignees); return Task.CompletedTask; }
     public void Add(CardAssignee assignee) => AddAsync(assignee).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
 }
@@ -130,6 +131,7 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
     public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default) => Task.FromResult<ILookup<Guid, CardWatcher>>(Watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { Watchers.Add(watcher); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { Watchers.AddRange(watchers); return Task.CompletedTask; }
     public void Add(CardWatcher watcher) => AddAsync(watcher).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }
