@@ -3,7 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { onClickOutside } from '@vueuse/core'
-import { CARD_TYPE_ICONS } from '~/lib/card-type'
+import { CARD_TYPE_ICONS, CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -211,23 +211,12 @@ function stripHtml(text: string): string {
         v-model="mobileType"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
       >
-        <option :value="null">
-          All types
-        </option>
-        <option :value="0">
-          Task
-        </option>
-        <option :value="1">
-          Bug
-        </option>
-        <option :value="2">
-          Epic
-        </option>
-        <option :value="3">
-          Spec
-        </option>
-        <option :value="4">
-          Idea
+        <option
+          v-for="opt in CARD_TYPE_OPTIONS"
+          :key="opt.label"
+          :value="opt.value"
+        >
+          {{ opt.label }}
         </option>
       </select>
       <select
@@ -321,23 +310,12 @@ function stripHtml(text: string): string {
               class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
               @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
             >
-              <option :value="undefined">
-                All
-              </option>
-              <option :value="0">
-                Task
-              </option>
-              <option :value="1">
-                Bug
-              </option>
-              <option :value="2">
-                Epic
-              </option>
-              <option :value="3">
-                Spec
-              </option>
-              <option :value="4">
-                Idea
+              <option
+                v-for="opt in CARD_TYPE_OPTIONS"
+                :key="opt.label"
+                :value="opt.value"
+              >
+                {{ opt.label }}
               </option>
             </select>
             <label
