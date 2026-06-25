@@ -63,7 +63,7 @@ function handleFilterArchived(value: boolean) {
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[280px] max-w-[320px] w-[300px] shrink-0">
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] shrink-0">
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
