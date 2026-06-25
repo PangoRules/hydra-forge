@@ -185,6 +185,7 @@ watch(
           :columns="board.visibleColumns"
           :cards-by-column="board.cardsByColumn"
           :project-id="projectId"
+          :members="board.members"
           class="md:hidden"
           @card-click="handleCardClick"
           @add-card="handleAddCard"

@@ -5,11 +5,13 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
+type MemberResponse = components['schemas']['MemberResponse']
 
 const props = defineProps<{
   columns: ColumnResponse[]
   cardsByColumn: Map<string, CardResponse[]>
   projectId: string
+  members?: MemberResponse[]
 }>()
 
 const emit = defineEmits<{
@@ -37,6 +39,7 @@ const mobileSearch = ref('')
 const mobileType = ref<number | null>(null)
 const mobileArchived = ref(false)
 const mobileHideEmpty = ref(false)
+const mobileAssignee = ref<string | null>(null)
 
 // Filtered cards for mobile
 const filteredCardsByColumn = computed(() => {
@@ -55,6 +58,9 @@ const filteredCardsByColumn = computed(() => {
     }
     if (!mobileArchived.value) {
       filtered = filtered.filter(c => !c.archivedAt)
+    }
+    if (mobileAssignee.value) {
+      filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
     }
     result.set(colId, filtered)
   }
@@ -120,7 +126,7 @@ function stripHtml(text: string): string {
     <!-- Filter slide-out -->
     <div
       v-if="showFilters"
-      class="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+      class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
       <select
         v-model="mobileType"
@@ -143,6 +149,21 @@ function stripHtml(text: string): string {
         </option>
         <option :value="4">
           Idea
+        </option>
+      </select>
+      <select
+        v-model="mobileAssignee"
+        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+      >
+        <option :value="null">
+          All assignees
+        </option>
+        <option
+          v-for="m in members"
+          :key="m.userId"
+          :value="m.userId"
+        >
+          {{ m.username }}
         </option>
       </select>
       <label class="flex items-center gap-1 text-xs">
