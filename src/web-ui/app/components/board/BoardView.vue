@@ -28,7 +28,7 @@ function handleCardClick(card: CardResponse) {
 </script>
 
 <template>
-  <div class="flex gap-4 overflow-x-auto pb-4 h-full">
+  <div class="flex gap-4 pb-4 h-full">
     <BoardColumn
       v-for="col in columns"
       :key="col.id"
