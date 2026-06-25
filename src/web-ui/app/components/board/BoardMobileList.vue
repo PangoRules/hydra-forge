@@ -281,21 +281,6 @@ function stripHtml(text: string): string {
           @click="toggleColumn(column.id)"
         >
           <div class="flex items-center gap-2">
-            <!-- Type filter for this column -->
-            <select
-              :value="columnTypeFilters[column.id] ?? null"
-              class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-              @click.stop
-              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
-            >
-              <option
-                v-for="opt in CARD_TYPE_OPTIONS"
-                :key="opt.label"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
             <div
               v-if="column.color"
               class="size-3 rounded-full shrink-0"
@@ -313,6 +298,22 @@ function stripHtml(text: string): string {
             >
               WIP {{ column.wipLimit }}
             </span>
+            <!-- Type filter for this column -->
+            <span class="text-xs text-gray-500 shrink-0">Type:</span>
+            <select
+              :value="columnTypeFilters[column.id] ?? null"
+              class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              @click.stop
+              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
+            >
+              <option
+                v-for="opt in CARD_TYPE_OPTIONS"
+                :key="opt.label"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
           </div>
           <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
         </div>
