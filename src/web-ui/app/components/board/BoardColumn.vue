@@ -63,7 +63,7 @@ function handleFilterArchived(value: boolean) {
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] shrink-0">
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] h-full shrink-0">
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
@@ -81,7 +81,7 @@ function handleFilterArchived(value: boolean) {
       </template>
     </ColumnHeader>
 
-    <div class="flex-1 p-2 space-y-2 min-h-[100px]">
+    <div class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]">
       <BoardCard
         v-for="card in filteredCards"
         :key="card.id"
