@@ -40,8 +40,10 @@ const filteredCards = computed(() => {
     result = result.filter(c => c.type === columnType.value)
   }
 
-  // Column archived filter
-  if (!columnArchived.value) {
+  // Column archived filter: unchecked = show non-archived only; checked = show archived only
+  if (columnArchived.value) {
+    result = result.filter(c => c.archivedAt)
+  } else {
     result = result.filter(c => !c.archivedAt)
   }
 
