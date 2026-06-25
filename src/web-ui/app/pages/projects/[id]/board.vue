@@ -72,9 +72,20 @@ onMounted(async () => {
   }
 })
 
-watch(() => [board.boardFilters.type, board.boardFilters.includeArchived], () => {
-  board.fetchBoard(projectId)
-}, { deep: false })
+// Only re-fetch when type or includeArchived actually change — not when search changes
+watch(
+  () => board.boardFilters.type,
+  (newType, oldType) => {
+    if (newType !== oldType) board.fetchBoard(projectId)
+  }
+)
+
+watch(
+  () => board.boardFilters.includeArchived,
+  (newArchived, oldArchived) => {
+    if (newArchived !== oldArchived) board.fetchBoard(projectId)
+  }
+)
 </script>
 
 <template>

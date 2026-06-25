@@ -49,8 +49,11 @@ function onClose() {
 }
 
 function handleOpenChange(val: boolean) {
-  if (!val && isOpen.value) {
-    closeWithAnimation()
+  if (!val) {
+    // UModal requesting close — always trigger animation if not already closing
+    if (isOpen.value) {
+      closeWithAnimation()
+    }
   } else {
     isOpen.value = val
   }
