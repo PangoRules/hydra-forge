@@ -298,7 +298,9 @@ function stripHtml(text: string): string {
             >
               WIP {{ column.wipLimit }}
             </span>
-            <span class="text-xs text-gray-300 mx-1">-</span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs text-gray-300">-</span>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
             <select
@@ -315,8 +317,8 @@ function stripHtml(text: string): string {
                 {{ opt.label }}
               </option>
             </select>
+            <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
           </div>
-          <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
         </div>
 
         <!-- Expanded accordion content -->
