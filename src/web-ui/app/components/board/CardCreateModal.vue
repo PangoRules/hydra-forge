@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
+import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -98,10 +99,11 @@ function closeWithAnimation() {
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Description</label>
-          <textarea
-            v-model="description"
-            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+          <MarkdownEditor
+            :model-value="description"
             placeholder="Optional description"
+            class="min-h-[100px]"
+            @update:model-value="description = $event"
           />
         </div>
         <!-- Assignees -->
