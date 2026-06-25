@@ -176,10 +176,11 @@ function closeWithAnimation() {
             >
           </div>
           <div class="flex-1">
-            <label class="block text-sm font-medium mb-1">Column *</label>
+            <label class="block text-sm font-medium mb-1">{{ preselectedColumnId ? 'Column' : 'Column *' }}</label>
             <select
               v-model="columnId"
-              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+              class="w-full px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+              :class="preselectedColumnId ? 'border-gray-300 dark:border-gray-600' : 'border-gray-300 dark:border-gray-600'"
               :disabled="!!preselectedColumnId"
             >
               <option
@@ -190,6 +191,12 @@ function closeWithAnimation() {
                 {{ col.name }}
               </option>
             </select>
+            <p
+              v-if="preselectedColumnId"
+              class="mt-1 text-xs text-gray-500"
+            >
+              Locked to {{ columns.find(c => c.id === preselectedColumnId)?.name }}
+            </p>
           </div>
         </div>
       </div>

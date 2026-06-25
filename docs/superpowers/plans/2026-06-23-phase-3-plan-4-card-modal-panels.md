@@ -17,6 +17,16 @@
 
 ---
 
+> **Pre-execution note (added 2026-06-25, see `docs/DECISIONS.md` D-40/D-41):** This plan was drafted before three conventions settled on `feat/phase-3-web-ui`. Whoever executes a task below must adapt the snippet to current code, not copy it verbatim:
+>
+> 1. **API calls use the pre-`ApiRoutes` style.** Every `api.GET/POST/PUT/DELETE(...)` call in this document uses openapi-fetch's raw `params: { path: {...} }` form against a literal path template. The settled convention (`CLAUDE.md` → Web UI Conventions) is `ApiRoutes.<Resource>.<action>(...)` from `app/lib/routes.ts` — add any missing route helper to `routes.ts` rather than inlining a path string.
+> 2. **`useApi()` throws — it does not resolve `{ error }`.** Every snippet below that does `const { error } = await api.X(...); if (error) throw error` inside a `try { ... } catch { /* toast */ }` happens to work by accident (the `await` itself throws and lands in the `catch`), but the `if (error) throw error` line is dead code and the `/* toast */` placeholder comments are not real implementations — replace them with an actual `toast.add({ title: '...', color: 'error' })` call. See D-40.
+> 3. **`vue-draggable-plus` (the Tech Stack line and Task 12's `useDraggable` import) was removed project-wide in D-37**, the same day this plan was drafted — it is SSR-incompatible with Nuxt 4. Use plain `v-for` for checklist item rendering; reorder can ship without drag-and-drop (e.g. up/down buttons) until native HTML5 drag-and-drop lands per D-37's follow-up.
+> 4. **Task 16 (Card Metadata Editor) below has been rewritten** to fix three additional issues found when `task/phase-3-card-modal-hardening` was scoped: stale field names (`card.dueDate`/`card.parentEpicId` do not exist — the real `CardResponse` fields are `dueAt`/`parentCardId`), a `PUT` body missing the required `title`/`description`/`version` fields (`UpdateCardRequest` is a full replace, not a partial patch), and a stale "assignee management deferred" note (the member-list endpoint it was waiting on already exists — see `ApiRoutes.Projects.members`, used by `CardCreateModal.vue`). Execute Task 16 as written below, not as a fresh design.
+> 5. **Card version ownership lives on `CardModal.vue`'s `card` ref** (D-41, implemented in `2026-06-25-phase-3-card-modal-hardening.md` Task 2). Every panel below that mutates a `Card` field (Task 16 only — Checklist/Comments/Attachments/Dependencies mutate their own sub-resources, not `Card.Version`) must emit `update:card` with the server's response and let `CardModal.vue` update `card.value`, exactly like `CardDescription.vue` does after that hardening plan lands. Do not reintroduce a locally-cached version.
+
+---
+
 ## Task 12: Card Checklist
 
 **Files:**
@@ -568,62 +578,135 @@ git commit -m "feat: add card dependencies panel with relationship badges"
 
 ---
 
-## Task 16: Card Metadata Editor — Type, Column, Assignees, Due Date, Parent Epic
+## Task 16: Card Metadata Editor — Type, Column, Assignees, Due Date
 
 **Files:**
-- Modify: `src/web-ui/app/components/card/CardMetadata.vue` (replace placeholder with full editor)
+- Modify: `src/web-ui/app/components/card/CardMetadata.vue` (replace the read-only placeholder with an editor)
+- Modify: `src/web-ui/app/components/card/CardModal.vue` (wire `@update:card` for `CardMetadata`, same as `CardDescription`)
+- Modify: `src/web-ui/app/components/card/__tests__/CardMetadata.test.ts`
 
-### Step 1: Rewrite CardMetadata with full editor
+**Depends on:**
+- `2026-06-25-phase-3-card-modal-hardening.md` Task 2 (`CardModal.vue` owns `card`/`version`, children emit `update:card`) — run that plan's Task 2 before this task, or `applyCardUpdate` will not exist on `CardModal.vue` yet.
+- `2026-06-25-phase-3-card-modal-hardening.md` Task 3 (`lib/card-type.ts`, `lib/date.ts`) — gives this task `CARD_TYPE_OPTIONS`, `cardTypeOption`, `cardTypeToApiString`, `formatDueDate`, `isOverdue`.
+
+**Interfaces:**
+- Consumes: `CARD_TYPE_OPTIONS`, `cardTypeOption(type)`, `cardTypeToApiString(type)` from `~/lib/card-type`; `formatDueDate(dueAt)`, `isOverdue(dueAt)` from `~/lib/date`; `board.members` (`useBoardStore()`, already populated by `board.vue`'s `fetchMembers` call from Plan 2).
+- Produces: `CardMetadata` emits `'update:card': [card: CardResponse]`, same contract as `CardDescription`.
+
+There is no Column or Parent Epic editor in this task — column changes already happen via drag-and-drop on the board (`BoardCard`/`BoardColumn`, Plan 2), and `parentCardId` (Epic linking) has no dedicated UI anywhere yet; introducing one here would be new scope, not a fix. Both stay as the existing read-only "Column" row; "Parent Epic" is dropped from this task entirely (it was never wired to a real field — `card.parentEpicId` does not exist on `CardResponse`).
+
+### Step 1: Rewrite `CardMetadata.vue`
 
 Replace `src/web-ui/app/components/card/CardMetadata.vue`:
 
 ```vue
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { ApiRoutes } from '~/lib/routes'
+import { CARD_TYPE_OPTIONS, cardTypeOption, cardTypeToApiString } from '~/lib/card-type'
+import { formatDueDate, isOverdue } from '~/lib/date'
 
 type CardResponse = components['schemas']['CardResponse']
-type ColumnResponse = components['schemas']['ColumnResponse']
 
 const props = defineProps<{
   card: CardResponse
   projectId: string
+  isArchived?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:card': [card: CardResponse]
 }>()
 
 const api = useApi()
 const board = useBoardStore()
+const toast = useToast()
 
-const cardTypes = ['Task', 'Bug', 'Epic'] as const
+const columnName = computed(() => {
+  const col = board.columns.find(c => c.id === props.card.columnId)
+  return col?.name ?? props.card.columnId.slice(0, 8)
+})
 
-async function updateField(field: string, value: unknown) {
+const typeOption = computed(() => cardTypeOption(props.card.type))
+const savingType = ref(false)
+
+const editingDueDate = ref(false)
+const savingDueDate = ref(false)
+const dueDateInput = ref(toDateInputValue(props.card.dueAt))
+
+function toDateInputValue(dueAt: string | null): string {
+  return dueAt ? dueAt.slice(0, 10) : ''
+}
+
+watch(() => props.card.dueAt, (val) => {
+  if (!editingDueDate.value) dueDateInput.value = toDateInputValue(val)
+})
+
+const availableMembers = computed(() =>
+  board.members.filter(m => !props.card.assignees.some(a => a.userId === m.userId))
+)
+
+async function persistCardFields(fields: { type?: string, dueAt?: string | null }) {
   try {
-    const { error } = await api.PUT('/api/projects/{projectId}/Cards/{cardId}', {
-      params: { path: { projectId: props.projectId, cardId: props.card.id } },
-      body: { [field]: value }
+    const { data } = await api.PUT(ApiRoutes.Cards.update(props.projectId, props.card.id), {
+      body: {
+        title: props.card.title,
+        description: props.card.description,
+        type: fields.type ?? cardTypeToApiString(props.card.type),
+        version: props.card.version,
+        parentCardId: props.card.parentCardId,
+        dueAt: fields.dueAt !== undefined ? fields.dueAt : props.card.dueAt
+      }
     })
-    if (error) throw error
-    board.updateCard(props.card.id, { [field]: value })
+    if (data) emit('update:card', data as CardResponse)
+    return true
+  } catch {
+    toast.add({ title: 'Failed to update card', color: 'error' })
+    return false
   }
-  catch { /* toast */ }
 }
 
-async function updateType(type: string) {
-  await updateField('type', type)
+async function handleTypeChange(value: string) {
+  if (props.isArchived || value === cardTypeToApiString(props.card.type)) return
+  savingType.value = true
+  await persistCardFields({ type: value })
+  savingType.value = false
 }
 
-async function updateDueDate(date: string | null) {
-  await updateField('dueDate', date)
+async function saveDueDate() {
+  if (props.isArchived) return
+  savingDueDate.value = true
+  const dueAt = dueDateInput.value ? `${dueDateInput.value}T00:00:00Z` : null
+  const ok = await persistCardFields({ dueAt })
+  savingDueDate.value = false
+  if (ok) editingDueDate.value = false
 }
 
-async function moveToColumn(columnId: string) {
+function cancelDueDateEdit() {
+  dueDateInput.value = toDateInputValue(props.card.dueAt)
+  editingDueDate.value = false
+}
+
+async function handleAssign(userId: string) {
+  if (!userId || props.isArchived) return
   try {
-    const { error } = await api.POST('/api/projects/{projectId}/Cards/{cardId}/move', {
-      params: { path: { projectId: props.projectId, cardId: props.card.id } },
-      body: { targetColumnId: columnId, targetPosition: 0 }
+    const { data } = await api.POST(ApiRoutes.Cards.assignees(props.projectId, props.card.id), {
+      body: { assigneeUserId: userId }
     })
-    if (error) throw error
-    board.moveCard(props.card.id, columnId, 0)
+    if (data) emit('update:card', data as CardResponse)
+  } catch {
+    toast.add({ title: 'Failed to assign member', color: 'error' })
   }
-  catch { /* toast */ }
+}
+
+async function handleUnassign(userId: string) {
+  if (props.isArchived) return
+  try {
+    const { data } = await api.DELETE(ApiRoutes.Cards.removeAssignee(props.projectId, props.card.id, userId))
+    if (data) emit('update:card', data as CardResponse)
+  } catch {
+    toast.add({ title: 'Failed to remove assignee', color: 'error' })
+  }
 }
 </script>
 
@@ -633,70 +716,192 @@ async function moveToColumn(columnId: string) {
     <div>
       <p class="text-xs font-medium text-muted uppercase mb-1">Type</p>
       <USelect
-        :model-value="card.type"
-        :items="cardTypes.map(t => ({ label: t, value: t }))"
+        v-if="!isArchived"
+        :model-value="typeOption.apiValue"
+        :items="CARD_TYPE_OPTIONS.map(o => ({ label: o.label, value: o.apiValue }))"
+        :loading="savingType"
         size="xs"
-        @update:model-value="updateType"
+        class="w-32"
+        @update:model-value="handleTypeChange"
       />
+      <UBadge v-else :color="typeOption.color" :icon="typeOption.icon" variant="subtle">
+        {{ typeOption.label }}
+      </UBadge>
     </div>
 
-    <!-- Column -->
+    <!-- Column (read-only — moved via drag-and-drop on the board) -->
     <div>
       <p class="text-xs font-medium text-muted uppercase mb-1">Column</p>
-      <USelect
-        :model-value="card.columnId"
-        :items="board.columns.map(c => ({ label: c.name, value: c.id }))"
-        size="xs"
-        @update:model-value="moveToColumn"
-      />
+      <p class="text-sm">{{ columnName }}</p>
     </div>
 
     <!-- Assignees -->
     <div>
-      <p class="text-xs font-medium text-muted uppercase mb-1">Assignees</p>
-      <div v-if="card.assignees?.length" class="flex flex-wrap gap-1 mb-1">
-        <UAvatar
+      <p class="text-xs font-medium text-muted uppercase mb-1.5">Assignees</p>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <span
           v-for="a in card.assignees"
           :key="a.userId"
-          :alt="a.username"
-          size="sm"
-        />
+          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+        >
+          {{ a.username }}
+          <button v-if="!isArchived" class="hover:text-red-500 leading-none" @click="handleUnassign(a.userId)">×</button>
+        </span>
+        <span v-if="!card.assignees?.length" class="text-xs text-muted">None</span>
       </div>
-      <p v-else class="text-xs text-muted mb-1">None assigned</p>
-      <!-- Assignee management deferred to future task (needs member list endpoint) -->
+      <select
+        v-if="!isArchived && availableMembers.length > 0"
+        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+        @change="(e: Event) => { const s = e.target as HTMLSelectElement; if (s.value) handleAssign(s.value); s.value = '' }"
+      >
+        <option value="">+ Add assignee</option>
+        <option v-for="m in availableMembers" :key="m.userId" :value="m.userId">{{ m.username }}</option>
+      </select>
     </div>
 
     <!-- Due Date -->
     <div>
       <p class="text-xs font-medium text-muted uppercase mb-1">Due Date</p>
-      <input
-        type="date"
-        :value="card.dueDate?.split('T')[0] ?? ''"
-        class="text-sm border rounded px-2 py-1 w-full"
-        @change="updateDueDate(($event.target as HTMLInputElement).value || null)"
-      />
-    </div>
-
-    <!-- Parent Epic -->
-    <div>
-      <p class="text-xs font-medium text-muted uppercase mb-1">Parent Epic</p>
-      <p class="text-sm text-muted">{{ card.parentEpicId ?? 'None' }}</p>
+      <div v-if="!isArchived && editingDueDate" class="flex items-center gap-1">
+        <input
+          v-model="dueDateInput"
+          type="date"
+          class="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+        >
+        <UButton icon="i-lucide-check" size="xs" variant="soft" :loading="savingDueDate" @click="saveDueDate" />
+        <UButton icon="i-lucide-x" size="xs" variant="ghost" @click="cancelDueDateEdit" />
+      </div>
+      <button
+        v-else
+        type="button"
+        class="text-sm text-left"
+        :class="[isOverdue(card.dueAt) ? 'text-red-500 font-medium' : '', isArchived ? 'cursor-default' : 'hover:underline']"
+        :disabled="isArchived"
+        @click="editingDueDate = true"
+      >
+        {{ formatDueDate(card.dueAt) ?? 'None' }}
+      </button>
     </div>
   </div>
 </template>
 ```
 
-### Step 2: Verify
+### Step 2: Wire `CardModal.vue` to consume `CardMetadata`'s `update:card`
 
-- `cd src/web-ui && pnpm typecheck` — zero errors
-- `cd src/web-ui && pnpm lint` — zero errors
-- Manual: open card → change type → change column → set due date → all persist
+In `src/web-ui/app/components/card/CardModal.vue`, add `:is-archived="isArchived"` and `@update:card="applyCardUpdate"` to both `<CardMetadata>` instances (desktop sidebar and the mobile "Details" tab):
 
-### Step 3: Commit
+```vue
+<CardMetadata
+  :card="card"
+  :project-id="projectId"
+  :is-archived="isArchived"
+  @update:card="applyCardUpdate"
+/>
+```
+
+(`applyCardUpdate` already exists on `CardModal.vue` from the hardening plan's Task 2 — this task only adds the listener to the second consumer.)
+
+### Step 3: Update the component test
+
+Replace `src/web-ui/app/components/card/__tests__/CardMetadata.test.ts`:
+
+```ts
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
+import CardMetadata from '~/components/card/CardMetadata.vue'
+import { ApiRoutes } from '~/lib/routes'
+import type { components } from '~/types/api'
+
+type CardResponse = components['schemas']['CardResponse']
+
+const mockPUT = vi.fn()
+const mockPOST = vi.fn()
+const mockDELETE = vi.fn()
+
+mockNuxtImport('useApi', () => () => ({
+  GET: vi.fn(),
+  POST: mockPOST,
+  PUT: mockPUT,
+  DELETE: mockDELETE
+}))
+
+function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
+  return {
+    id: 'c1', projectId: 'p1', columnId: 'col1', cardNumber: 1,
+    title: 'Test', description: '', type: 0, position: 0,
+    dueAt: null, version: 1,
+    createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+    movedAt: '2024-01-01T00:00:00Z', archivedAt: null, parentCardId: null,
+    assignees: [], watchers: [],
+    ...overrides
+  }
+}
+
+describe('CardMetadata', () => {
+  beforeEach(() => {
+    mockPUT.mockReset()
+    mockPOST.mockReset()
+    mockDELETE.mockReset()
+  })
+
+  it('renders the type badge label for an archived card', async () => {
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: { card: makeCard({ archivedAt: '2024-02-01T00:00:00Z' }), projectId: 'p1', isArchived: true }
+    })
+    expect(wrapper.text()).toContain('Task')
+  })
+
+  it('shows None for missing due date', async () => {
+    const wrapper = await mountSuspended(CardMetadata, { props: { card: makeCard(), projectId: 'p1' } })
+    expect(wrapper.text()).toContain('None')
+  })
+
+  it('sends the full update body including the current version on a type change', async () => {
+    mockPUT.mockResolvedValue({ data: makeCard({ type: 'Bug', version: 2 }), error: undefined })
+    const wrapper = await mountSuspended(CardMetadata, {
+      props: { card: makeCard({ version: 5 }), projectId: 'p1' }
+    })
+
+    await wrapper.findComponent({ name: 'USelect' }).vm.$emit('update:model-value', 'Bug')
+    await flushPromises()
+
+    expect(mockPUT).toHaveBeenCalledWith(
+      ApiRoutes.Cards.update('p1', 'c1'),
+      expect.objectContaining({ body: expect.objectContaining({ title: 'Test', version: 5, type: 'Bug' }) })
+    )
+    expect(wrapper.emitted('update:card')![0]).toEqual([makeCard({ type: 'Bug', version: 2 })])
+  })
+
+  it('assigns a member and emits the updated card', async () => {
+    mockPOST.mockResolvedValue({ data: makeCard({ assignees: [{ id: 'a1', userId: 'u1', username: 'Alice', assignedAt: '2024-01-01T00:00:00Z' }] }), error: undefined })
+    const wrapper = await mountSuspended(CardMetadata, { props: { card: makeCard(), projectId: 'p1' } })
+
+    await wrapper.find('select').setValue('u1')
+    await flushPromises()
+
+    expect(mockPOST).toHaveBeenCalledWith(ApiRoutes.Cards.assignees('p1', 'c1'), { body: { assigneeUserId: 'u1' } })
+    expect(wrapper.emitted('update:card')).toBeTruthy()
+  })
+})
+```
+
+This test mounts the real `useBoardStore()` (not mocked) — `board.members`/`board.columns` default to empty arrays, which is exactly what makes the "Add assignee" `<select>` disappear when `availableMembers.length === 0`. The assignment test above needs at least one member in the store; add a `beforeEach` that does `useBoardStore().members = [{ userId: 'u1', username: 'Alice', role: 'Member', joinedAt: '2024-01-01T00:00:00Z' }]` (adjust to `MemberResponse`'s actual shape) before mounting, using `setActivePinia(createPinia())` first the same way `stores/__tests__/board.test.ts` does.
+
+### Step 4: Verify
 
 ```bash
-git add src/web-ui/app/components/card/CardMetadata.vue
-git commit -m "feat: add full card metadata editor with type, column, due date"
+cd src/web-ui && pnpm typecheck && pnpm lint && pnpm test
+```
+Expected: zero errors, all tests pass.
+Manual: open a card → change type → set a due date → assign/unassign a member → all persist after closing and reopening the modal; open the same card in two tabs and confirm editing type in one tab doesn't desync the other tab's due-date save (this is what Task 2 of the hardening plan fixes — exercise it here).
+
+### Step 5: Commit
+
+```bash
+git add src/web-ui/app/components/card/CardMetadata.vue src/web-ui/app/components/card/CardModal.vue \
+  src/web-ui/app/components/card/__tests__/CardMetadata.test.ts
+git commit -m "feat: add card metadata editor for type, due date, and assignees"
 ```
 
 ---
