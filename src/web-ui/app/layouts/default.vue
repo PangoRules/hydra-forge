@@ -30,7 +30,7 @@ onMounted(() => {
       </template>
     </UHeader>
 
-    <UMain>
+    <UMain class="h-full flex flex-col overflow-hidden">
       <slot />
     </UMain>
   </UApp>
