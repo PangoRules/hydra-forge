@@ -397,7 +397,10 @@ function stripHtml(text: string): string {
                 class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                 @click="openMenu(card.id, $event)"
               >
-                <UIcon name="i-lucide-more-horizontal" class="size-4" />
+                <UIcon
+                  name="i-lucide-more-horizontal"
+                  class="size-4"
+                />
               </button>
 
               <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
@@ -412,7 +415,10 @@ function stripHtml(text: string): string {
                     class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
                     @click="handleRestore(card)"
                   >
-                    <UIcon name="i-lucide-archive-restore" class="size-4" />
+                    <UIcon
+                      name="i-lucide-archive-restore"
+                      class="size-4"
+                    />
                     Restore
                   </button>
                 </template>
@@ -421,7 +427,10 @@ function stripHtml(text: string): string {
                     class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     @click="handleArchive(card)"
                   >
-                    <UIcon name="i-lucide-archive" class="size-4" />
+                    <UIcon
+                      name="i-lucide-archive"
+                      class="size-4"
+                    />
                     Archive
                   </button>
                 </template>

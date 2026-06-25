@@ -30,7 +30,10 @@ const cardTypes = [
     <!-- Row 1: title + metadata only -->
     <div class="flex items-center gap-2 mb-2">
       <span class="column-drag-handle cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
-        <UIcon name="i-lucide-grip-vertical" class="size-4" />
+        <UIcon
+          name="i-lucide-grip-vertical"
+          class="size-4"
+        />
       </span>
       <div
         v-if="column.color"
@@ -67,7 +70,11 @@ const cardTypes = [
           )
         "
       >
-        <option v-for="t in cardTypes" :key="t.label" :value="t.value ?? ''">
+        <option
+          v-for="t in cardTypes"
+          :key="t.label"
+          :value="t.value ?? ''"
+        >
           {{ t.label }}
         </option>
       </select>
@@ -79,7 +86,7 @@ const cardTypes = [
           type="checkbox"
           class="size-3"
           @change="emit('filter-archived', ($event.target as HTMLInputElement).checked)"
-        />
+        >
         <span class="text-gray-500">Archived only</span>
       </label>
       <button
