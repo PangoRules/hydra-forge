@@ -10,6 +10,7 @@ const props = defineProps<{
   column: ColumnResponse
   cards: CardResponse[]
   projectId: string
+  includeArchived: boolean
 }>()
 
 const emit = defineEmits<{
@@ -66,6 +67,7 @@ function handleFilterArchived(value: boolean) {
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
+      :include-archived="includeArchived"
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"

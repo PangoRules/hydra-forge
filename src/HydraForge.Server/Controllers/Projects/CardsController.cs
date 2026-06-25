@@ -24,12 +24,13 @@ public class CardsController(CardService cardService) : ControllerBase
         [FromQuery] bool includeArchived = false,
         [FromQuery] Guid? assigneeUserId = null,
         [FromQuery] CardType? type = null,
-        [FromQuery] string? search = null
+        [FromQuery] string? search = null,
+        [FromQuery] int? archivedLimit = null
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type, search);
+        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type, search, archivedLimit);
         var result = await cardService.ListAsync(projectId, filter, userId);
 
         if (result.IsFailure)

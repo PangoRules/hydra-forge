@@ -42,7 +42,12 @@ export const useBoardStore = defineStore('board', () => {
     try {
       const cardsUrl = ApiRoutes.Cards.list(projectId)
       const searchParams = new URLSearchParams()
-      if (boardFilters.value.includeArchived) searchParams.set('includeArchived', 'true')
+      // When includeArchived is true, fetch archived (up to 200) so per-column
+      // "archived only" filtering works. When false, skip archived entirely.
+      if (boardFilters.value.includeArchived) {
+        searchParams.set('includeArchived', 'true')
+        searchParams.set('archivedLimit', '200')
+      }
       if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
       if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
       if (boardFilters.value.assigneeUserId) searchParams.set('assigneeUserId', boardFilters.value.assigneeUserId)

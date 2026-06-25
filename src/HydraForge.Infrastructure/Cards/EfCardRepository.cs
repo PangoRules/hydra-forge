@@ -39,6 +39,9 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         if (!string.IsNullOrWhiteSpace(filter.Search))
             query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
 
+        if (filter.ArchivedLimit.HasValue)
+            query = query.OrderByDescending(c => c.ArchivedAt ?? c.CreatedAt).Take(filter.ArchivedLimit.Value);
+
         return await query.OrderBy(c => c.Position).ToListAsync(ct);
     }
 

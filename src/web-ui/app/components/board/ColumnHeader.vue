@@ -6,6 +6,7 @@ type ColumnResponse = components['schemas']['ColumnResponse']
 defineProps<{
   column: ColumnResponse
   cardCount: number
+  includeArchived: boolean
 }>()
 
 const emit = defineEmits<{
@@ -67,7 +68,10 @@ const cardTypes = [
           {{ t.label }}
         </option>
       </select>
-      <label class="flex items-center gap-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded">
+      <label
+        v-if="includeArchived"
+        class="flex items-center gap-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded"
+      >
         <input
           type="checkbox"
           class="size-3"

@@ -12,6 +12,7 @@ const props = defineProps<{
   cardsByColumn: Map<string, CardResponse[]>
   projectId: string
   members?: MemberResponse[]
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -33,15 +34,52 @@ function toggleColumn(colId: string) {
   expandedColumns.value[colId] = !expandedColumns.value[colId]
 }
 
-// Filter panel state
+// Filter panel state — mirrors boardFilters so mobile changes can trigger refetch
 const showFilters = ref(false)
 const mobileSearch = ref('')
 const mobileType = ref<number | null>(null)
-const mobileArchived = ref(false)
 const mobileHideEmpty = ref(false)
 const mobileAssignee = ref<string | null>(null)
 
-// Filtered cards for mobile
+// Type filter maps numeric dropdown values to API string values
+const CARD_TYPE_MAP: Record<number, string> = {
+  0: 'Task',
+  1: 'Bug',
+  2: 'Epic',
+  3: 'Spec',
+  4: 'Idea'
+}
+
+// Watch boardFilters.type and boardFilters.assigneeUserId to keep local refs in sync
+// when server updates come back (avoids stale local state overriding server data).
+watch(
+  () => board.boardFilters.type,
+  (newType) => {
+    if (newType !== mobileType.value) mobileType.value = newType
+  }
+)
+
+watch(
+  () => board.boardFilters.assigneeUserId,
+  (newAssignee) => {
+    if (newAssignee !== mobileAssignee.value) mobileAssignee.value = newAssignee
+  }
+)
+
+watch(mobileType, (val) => {
+  board.boardFilters.type = val
+  board.fetchBoard(props.projectId)
+})
+
+watch(mobileAssignee, (val) => {
+  board.boardFilters.assigneeUserId = val
+  board.fetchBoard(props.projectId)
+})
+
+watch(mobileHideEmpty, (val) => {
+  board.boardFilters.hideEmptyColumns = val
+})
+
 const filteredCardsByColumn = computed(() => {
   const result = new Map<string, CardResponse[]>()
   for (const [colId, cards] of props.cardsByColumn) {
@@ -54,10 +92,8 @@ const filteredCardsByColumn = computed(() => {
       )
     }
     if (mobileType.value !== null) {
-      filtered = filtered.filter(c => c.type === mobileType.value)
-    }
-    if (!mobileArchived.value) {
-      filtered = filtered.filter(c => !c.archivedAt)
+      const t = mobileType.value
+      filtered = filtered.filter(c => String(c.type) === CARD_TYPE_MAP[t])
     }
     if (mobileAssignee.value) {
       filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
@@ -68,7 +104,7 @@ const filteredCardsByColumn = computed(() => {
 })
 
 const filteredColumns = computed(() => {
-  if (!mobileHideEmpty.value) return props.columns
+  if (!board.boardFilters.hideEmptyColumns) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
 
@@ -168,11 +204,12 @@ function stripHtml(text: string): string {
       </select>
       <label class="flex items-center gap-1 text-xs">
         <input
-          v-model="mobileArchived"
+          :checked="board.boardFilters.includeArchived"
           type="checkbox"
           class="rounded"
+          @change="board.boardFilters.includeArchived = ($event.target as HTMLInputElement).checked; board.fetchBoard(props.projectId)"
         >
-        Archived
+        Include archived
       </label>
       <label class="flex items-center gap-1 text-xs">
         <input
@@ -185,7 +222,17 @@ function stripHtml(text: string): string {
     </div>
 
     <!-- Columns as accordion -->
-    <div class="p-4 space-y-2">
+    <div class="relative p-4 space-y-2">
+      <!-- Loading spinner — only covers the columns area, not the filter bar -->
+      <div
+        v-if="loading"
+        class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60 rounded-lg z-10"
+      >
+        <UIcon
+          name="i-lucide-loader"
+          class="size-6 animate-spin"
+        />
+      </div>
       <div
         v-for="column in filteredColumns"
         :key="column.id"

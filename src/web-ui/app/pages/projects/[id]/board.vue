@@ -137,20 +137,9 @@ watch(
 
     <!-- Board area — takes remaining height with its own scroll context -->
     <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Full-height loading -->
+      <!-- Error state — shown above all board content when present -->
       <div
-        v-if="board.loading"
-        class="h-full flex items-center justify-center"
-      >
-        <UIcon
-          name="i-lucide-loader"
-          class="size-8 animate-spin"
-        />
-      </div>
-
-      <!-- Error state -->
-      <div
-        v-else-if="board.error"
+        v-if="board.error"
         class="h-full flex items-center justify-center"
       >
         <div class="text-center">
@@ -167,26 +156,44 @@ watch(
         </div>
       </div>
 
-      <!-- Board content -->
+      <!-- Desktop board content — hidden during loading (desktop uses full-height spinner) -->
       <div
-        v-else
-        class="flex-1 overflow-x-auto p-4"
+        v-else-if="!board.loading"
+        class="hidden md:flex flex-1 overflow-x-auto p-4"
       >
         <BoardView
           :columns="board.visibleColumns"
           :cards-by-column="board.cardsByColumn"
           :project-id="projectId"
-          class="hidden md:flex"
+          :include-archived="board.boardFilters.includeArchived"
           @card-move="handleCardMove"
           @card-click="handleCardClick"
           @add-card="handleAddCard"
         />
+      </div>
+
+      <!-- Desktop: full-height loading spinner (only when loading) -->
+      <div
+        v-else
+        class="hidden md:flex h-full items-center justify-center"
+      >
+        <UIcon
+          name="i-lucide-loader"
+          class="size-8 animate-spin"
+        />
+      </div>
+
+      <!-- Mobile board content — always rendered so its inline spinner works -->
+      <div
+        v-if="!board.error"
+        class="md:hidden flex-1 overflow-x-auto"
+      >
         <BoardMobileList
           :columns="board.visibleColumns"
           :cards-by-column="board.cardsByColumn"
           :project-id="projectId"
           :members="board.members"
-          class="md:hidden"
+          :loading="board.loading"
           @card-click="handleCardClick"
           @add-card="handleAddCard"
         />
