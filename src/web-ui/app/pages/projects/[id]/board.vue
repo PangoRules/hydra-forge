@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
+import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -70,6 +71,10 @@ onMounted(async () => {
     projectName.value = (data as components['schemas']['ProjectResponse']).name
   }
 })
+
+watch(() => [board.boardFilters.type, board.boardFilters.includeArchived], () => {
+  board.fetchBoard(projectId)
+}, { deep: false })
 </script>
 
 <template>
@@ -122,8 +127,13 @@ onMounted(async () => {
       v-else
       class="flex-1 overflow-x-auto p-4"
     >
+      <BoardFilterBar
+        v-model="board.boardFilters"
+        class="hidden md:flex"
+        @add-card="handleAddCard()"
+      />
       <BoardView
-        :columns="board.columns"
+        :columns="board.visibleColumns"
         :cards-by-column="board.cardsByColumn"
         :project-id="projectId"
         class="hidden md:flex"
@@ -132,7 +142,7 @@ onMounted(async () => {
         @add-card="handleAddCard"
       />
       <BoardMobileList
-        :columns="board.columns"
+        :columns="board.visibleColumns"
         :cards-by-column="board.cardsByColumn"
         :project-id="projectId"
         class="md:hidden"
