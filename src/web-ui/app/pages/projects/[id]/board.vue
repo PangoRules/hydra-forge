@@ -66,6 +66,7 @@ function handleCardClick(card: CardResponse) {
 
 onMounted(async () => {
   board.fetchBoard(projectId)
+  board.fetchMembers(projectId)
   const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
     projectName.value = (data as components['schemas']['ProjectResponse']).name
@@ -99,6 +100,13 @@ watch(
     }, 300)
   }
 )
+
+watch(
+  () => board.boardFilters.assigneeUserId,
+  (newAssignee, oldAssignee) => {
+    if (newAssignee !== oldAssignee) board.fetchBoard(projectId)
+  }
+)
 </script>
 
 <template>
@@ -119,60 +127,69 @@ watch(
       </UButton>
     </div>
 
-    <div
-      v-if="board.loading"
-      class="flex-1 flex items-center justify-center"
-    >
-      <UIcon
-        name="i-lucide-loader"
-        class="size-8 animate-spin"
-      />
-    </div>
+    <!-- Filter bar — always visible above the board area -->
+    <BoardFilterBar
+      v-model="board.boardFilters"
+      :members="board.members"
+      class="hidden md:flex"
+      @add-card="handleAddCard()"
+    />
 
-    <div
-      v-else-if="board.error"
-      class="flex-1 flex items-center justify-center"
-    >
-      <div class="text-center">
-        <p class="text-red-500 mb-2">
-          {{ board.error }}
-        </p>
-        <UButton
-          variant="outline"
-          size="sm"
-          @click="board.fetchBoard(projectId)"
-        >
-          Retry
-        </UButton>
+    <!-- Board area — takes remaining height with its own scroll context -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Full-height loading -->
+      <div
+        v-if="board.loading"
+        class="h-full flex items-center justify-center"
+      >
+        <UIcon
+          name="i-lucide-loader"
+          class="size-8 animate-spin"
+        />
       </div>
-    </div>
 
-    <div
-      v-else
-      class="flex-1 overflow-x-auto p-4"
-    >
-      <BoardFilterBar
-        v-model="board.boardFilters"
-        class="hidden md:flex"
-        @add-card="handleAddCard()"
-      />
-      <BoardView
-        :columns="board.visibleColumns"
-        :cards-by-column="board.cardsByColumn"
-        :project-id="projectId"
-        class="hidden md:flex"
-        @card-move="handleCardMove"
-        @card-click="handleCardClick"
-        @add-card="handleAddCard"
-      />
-      <BoardMobileList
-        :columns="board.visibleColumns"
-        :cards-by-column="board.cardsByColumn"
-        :project-id="projectId"
-        class="md:hidden"
-        @card-click="handleCardClick"
-        @add-card="handleAddCard"
-      />
+      <!-- Error state -->
+      <div
+        v-else-if="board.error"
+        class="h-full flex items-center justify-center"
+      >
+        <div class="text-center">
+          <p class="text-red-500 mb-2">
+            {{ board.error }}
+          </p>
+          <UButton
+            variant="outline"
+            size="sm"
+            @click="board.fetchBoard(projectId)"
+          >
+            Retry
+          </UButton>
+        </div>
+      </div>
+
+      <!-- Board content -->
+      <div
+        v-else
+        class="flex-1 overflow-x-auto p-4"
+      >
+        <BoardView
+          :columns="board.visibleColumns"
+          :cards-by-column="board.cardsByColumn"
+          :project-id="projectId"
+          class="hidden md:flex"
+          @card-move="handleCardMove"
+          @card-click="handleCardClick"
+          @add-card="handleAddCard"
+        />
+        <BoardMobileList
+          :columns="board.visibleColumns"
+          :cards-by-column="board.cardsByColumn"
+          :project-id="projectId"
+          class="md:hidden"
+          @card-click="handleCardClick"
+          @add-card="handleAddCard"
+        />
+      </div>
     </div>
 
     <CardModal

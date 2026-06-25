@@ -7,7 +7,8 @@ const defaultFilters: BoardFilters = {
   search: '',
   type: null,
   includeArchived: false,
-  hideEmptyColumns: false
+  hideEmptyColumns: false,
+  assigneeUserId: null
 }
 
 describe('BoardFilterBar', () => {

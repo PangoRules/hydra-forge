@@ -5,12 +5,14 @@ import { ApiRoutes } from '~/lib/routes'
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
 type CardListResponse = components['schemas']['CardListResponse']
+type MemberResponse = components['schemas']['MemberResponse']
 
 export interface BoardFilters {
   search: string
   type: number | null
   includeArchived: boolean
   hideEmptyColumns: boolean
+  assigneeUserId: string | null
 }
 
 export const useBoardStore = defineStore('board', () => {
@@ -23,8 +25,11 @@ export const useBoardStore = defineStore('board', () => {
     search: '',
     type: null,
     includeArchived: false,
-    hideEmptyColumns: false
+    hideEmptyColumns: false,
+    assigneeUserId: null
   })
+
+  const members = ref<MemberResponse[]>([])
 
   const api = useApi()
 
@@ -40,6 +45,7 @@ export const useBoardStore = defineStore('board', () => {
       if (boardFilters.value.includeArchived) searchParams.set('includeArchived', 'true')
       if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
       if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
+      if (boardFilters.value.assigneeUserId) searchParams.set('assigneeUserId', boardFilters.value.assigneeUserId)
       const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl
 
       const [columnsResult, cardsResult] = await Promise.all([
@@ -129,9 +135,17 @@ export const useBoardStore = defineStore('board', () => {
     return columns.value.filter(c => colIdsWithCards.has(c.id))
   })
 
+  async function fetchMembers(projectId: string) {
+    const { data, error } = await api.GET(ApiRoutes.Projects.members(projectId))
+    if (!error && data) {
+      members.value = (data as MemberResponse[]) ?? []
+    }
+  }
+
   return {
     project, columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard,
-    boardFilters, visibleColumns
+    boardFilters, visibleColumns,
+    members, fetchMembers
   }
 })
