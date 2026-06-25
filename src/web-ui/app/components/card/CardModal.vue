@@ -78,7 +78,9 @@ async function confirmArchive() {
 async function handleRestore() {
   const { error: apiError } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {})
   if (!apiError) {
+    toast.add({ title: 'Card restored', color: 'success' })
     emit('restored')
+    closeWithAnimation()
   } else {
     toast.add({ title: 'Failed to restore card', color: 'error' })
   }
@@ -147,6 +149,7 @@ onMounted(() => fetchCard())
                 <CardDescription
                   :card="card"
                   :project-id="projectId"
+                  :is-archived="isArchived"
                 />
               </div>
               <div v-else-if="activeTab === 'checklist'">
@@ -190,6 +193,7 @@ onMounted(() => fetchCard())
               <CardDescription
                 :card="card"
                 :project-id="projectId"
+                :is-archived="isArchived"
               />
               <CardMetadata :card="card" />
             </div>

@@ -8,6 +8,7 @@ type CardResponse = components['schemas']['CardResponse']
 const props = defineProps<{
   card: CardResponse
   projectId: string
+  isArchived?: boolean
 }>()
 
 const description = ref(props.card.description ?? '')
@@ -22,6 +23,7 @@ const board = useBoardStore()
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 function onDescriptionChange(value: string) {
+  if (props.isArchived) return
   description.value = value
   dirty.value = true
   if (saveTimer) clearTimeout(saveTimer)
@@ -29,7 +31,7 @@ function onDescriptionChange(value: string) {
 }
 
 async function saveDescription() {
-  if (!dirty.value) return
+  if (!dirty.value || props.isArchived) return
   saving.value = true
   saveError.value = null
   try {
@@ -75,6 +77,7 @@ function onKeydown(e: KeyboardEvent) {
         Description
       </p>
       <UButton
+        v-if="!isArchived"
         label="Save"
         size="xs"
         variant="soft"
@@ -82,10 +85,15 @@ function onKeydown(e: KeyboardEvent) {
         :disabled="!dirty || saving"
         @click="handleSaveClick"
       />
+      <span
+        v-else
+        class="text-xs text-gray-400"
+      >Archived</span>
     </div>
 
     <MarkdownEditor
       :model-value="description"
+      :editable="!isArchived"
       placeholder="Add a description..."
       @update:model-value="onDescriptionChange"
     />

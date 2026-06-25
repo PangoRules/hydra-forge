@@ -74,6 +74,16 @@ async function confirmArchive() {
     toast.add({ title: 'Card archived', color: 'success' })
   }
 }
+
+async function handleRestore() {
+  closeMenu()
+  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {})
+  if (error) {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
+  } else {
+    toast.add({ title: 'Card restored', color: 'success' })
+  }
+}
 </script>
 
 <template>
@@ -124,6 +134,18 @@ async function confirmArchive() {
           @click.stop
         >
           <button
+            v-if="card.archivedAt"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+            @click="handleRestore"
+          >
+            <UIcon
+              name="i-lucide-archive-restore"
+              class="size-4"
+            />
+            Restore
+          </button>
+          <button
+            v-else
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
             @click="handleArchive"
           >
