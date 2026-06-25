@@ -7,7 +7,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <UApp :toaster="{ position: 'bottom-right' }">
+  <UApp
+    :toaster="{ position: 'bottom-right' }"
+    class="h-full flex flex-col overflow-hidden"
+  >
     <UHeader>
       <template #left>
         <NuxtLink
@@ -30,7 +33,7 @@ onMounted(() => {
       </template>
     </UHeader>
 
-    <UMain class="h-full flex flex-col overflow-hidden">
+    <UMain class="flex-1 flex flex-col overflow-hidden">
       <slot />
     </UMain>
   </UApp>
