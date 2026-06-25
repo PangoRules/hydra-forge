@@ -21,7 +21,6 @@ const api = useApi()
 const board = useBoardStore()
 const toast = useToast()
 
-const selectedMenuCardId = ref<string | null>(null)
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
 
@@ -47,8 +46,8 @@ const filteredCardsByColumn = computed(() => {
     if (mobileSearch.value) {
       const q = mobileSearch.value.toLowerCase()
       filtered = filtered.filter(c =>
-        c.title.toLowerCase().includes(q) ||
-        String(c.cardNumber).includes(q)
+        c.title.toLowerCase().includes(q)
+        || String(c.cardNumber).includes(q)
       )
     }
     if (mobileType.value !== null) {
@@ -66,33 +65,6 @@ const filteredColumns = computed(() => {
   if (!mobileHideEmpty.value) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
-
-function toggleMenu(cardId: string) {
-  selectedMenuCardId.value = selectedMenuCardId.value === cardId ? null : cardId
-}
-
-function closeMenu() {
-  selectedMenuCardId.value = null
-}
-
-// Close menu on outside click
-function onWindowClick(e: MouseEvent) {
-  if (selectedMenuCardId.value) {
-    const target = (e.target as HTMLElement).closest('[data-menu-id], [data-menu-btn]')
-    if (!target) {
-      closeMenu()
-    }
-  }
-}
-
-onMounted(() => window.addEventListener('click', onWindowClick))
-onUnmounted(() => window.removeEventListener('click', onWindowClick))
-
-async function handleArchive(card: CardResponse) {
-  closeMenu()
-  archiveTargetCard.value = card
-  showArchiveConfirm.value = true
-}
 
 async function confirmArchive() {
   const card = archiveTargetCard.value
@@ -130,48 +102,92 @@ function stripHtml(text: string): string {
         v-model="mobileSearch"
         placeholder="Search cards..."
         class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-      />
-      <UButton variant="ghost" size="sm" @click="showFilters = !showFilters">
+      >
+      <UButton
+        variant="ghost"
+        size="sm"
+        @click="showFilters = !showFilters"
+      >
         Filter
       </UButton>
-      <UButton size="sm" icon="i-lucide-plus" @click="emit('add-card')" />
+      <UButton
+        size="sm"
+        icon="i-lucide-plus"
+        @click="emit('add-card')"
+      />
     </div>
 
     <!-- Filter slide-out -->
-    <div v-if="showFilters" class="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <select v-model="mobileType" class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600">
-        <option :value="null">All types</option>
-        <option :value="0">Task</option>
-        <option :value="1">Bug</option>
-        <option :value="2">Epic</option>
-        <option :value="3">Spec</option>
-        <option :value="4">Idea</option>
+    <div
+      v-if="showFilters"
+      class="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+    >
+      <select
+        v-model="mobileType"
+        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+      >
+        <option :value="null">
+          All types
+        </option>
+        <option :value="0">
+          Task
+        </option>
+        <option :value="1">
+          Bug
+        </option>
+        <option :value="2">
+          Epic
+        </option>
+        <option :value="3">
+          Spec
+        </option>
+        <option :value="4">
+          Idea
+        </option>
       </select>
       <label class="flex items-center gap-1 text-xs">
-        <input v-model="mobileArchived" type="checkbox" class="rounded" />
+        <input
+          v-model="mobileArchived"
+          type="checkbox"
+          class="rounded"
+        >
         Archived
       </label>
       <label class="flex items-center gap-1 text-xs">
-        <input v-model="mobileHideEmpty" type="checkbox" class="rounded" />
+        <input
+          v-model="mobileHideEmpty"
+          type="checkbox"
+          class="rounded"
+        >
         Hide empty
       </label>
     </div>
 
     <!-- Columns as accordion -->
     <div class="p-4 space-y-2">
-      <div v-for="column in filteredColumns" :key="column.id" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div
+        v-for="column in filteredColumns"
+        :key="column.id"
+        class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+      >
         <div
           class="flex items-center justify-between px-3 py-2 cursor-pointer"
           @click="toggleColumn(column.id)"
         >
           <div class="flex items-center gap-2">
-            <div v-if="column.color" class="size-3 rounded-full shrink-0" :style="{ backgroundColor: column.color }" />
-            <h3 class="text-sm font-semibold">{{ column.name }}</h3>
+            <div
+              v-if="column.color"
+              class="size-3 rounded-full shrink-0"
+              :style="{ backgroundColor: column.color }"
+            />
+            <h3 class="text-sm font-semibold">
+              {{ column.name }}
+            </h3>
             <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
               {{ filteredCardsByColumn.get(column.id)?.length ?? 0 }}
             </span>
             <span
-              v-if="column.wipLimit && filteredCardsByColumn.get(column.id)?.length >= Number(column.wipLimit)"
+              v-if="column.wipLimit && (filteredCardsByColumn.get(column.id)?.length ?? 0) >= Number(column.wipLimit)"
               class="text-xs text-red-500 font-medium"
             >
               WIP {{ column.wipLimit }}
@@ -179,7 +195,10 @@ function stripHtml(text: string): string {
           </div>
           <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
         </div>
-        <div v-if="expandedColumns[column.id]" class="px-3 pb-3 space-y-2">
+        <div
+          v-if="expandedColumns[column.id]"
+          class="px-3 pb-3 space-y-2"
+        >
           <div
             v-for="card in filteredCardsByColumn.get(column.id) ?? []"
             :key="card.id"
@@ -187,12 +206,23 @@ function stripHtml(text: string): string {
             @click="emit('card-click', card)"
           >
             <div class="flex items-center gap-2">
-              <UIcon :name="typeIcons[card.type] ?? 'i-lucide-square'" class="size-4 shrink-0 text-gray-400" />
+              <UIcon
+                :name="typeIcons[card.type] ?? 'i-lucide-square'"
+                class="size-4 shrink-0 text-gray-400"
+              />
               <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
-              <p class="text-sm font-medium truncate">{{ card.title }}</p>
-              <span v-if="card.archivedAt" class="text-xs text-gray-400 shrink-0">archived</span>
+              <p class="text-sm font-medium truncate">
+                {{ card.title }}
+              </p>
+              <span
+                v-if="card.archivedAt"
+                class="text-xs text-gray-400 shrink-0"
+              >archived</span>
             </div>
-            <p v-if="card.description" class="text-xs text-gray-500 mt-1 line-clamp-2">
+            <p
+              v-if="card.description"
+              class="text-xs text-gray-500 mt-1 line-clamp-2"
+            >
               {{ card.description ? stripHtml(card.description) : '' }}
             </p>
           </div>

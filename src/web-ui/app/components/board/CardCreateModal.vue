@@ -73,7 +73,7 @@ function closeWithAnimation() {
             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Card title"
             @keydown.enter="handleCreate"
-          />
+          >
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Description</label>
@@ -90,11 +90,21 @@ function closeWithAnimation() {
               v-model="cardType"
               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
             >
-              <option :value="0">Task</option>
-              <option :value="1">Bug</option>
-              <option :value="2">Epic</option>
-              <option :value="3">Spec</option>
-              <option :value="4">Idea</option>
+              <option :value="0">
+                Task
+              </option>
+              <option :value="1">
+                Bug
+              </option>
+              <option :value="2">
+                Epic
+              </option>
+              <option :value="3">
+                Spec
+              </option>
+              <option :value="4">
+                Idea
+              </option>
             </select>
           </div>
           <div class="flex-1">
@@ -118,7 +128,10 @@ function closeWithAnimation() {
     </template>
     <template #footer>
       <div class="flex justify-end gap-3 w-full">
-        <UButton variant="ghost" @click="closeWithAnimation">
+        <UButton
+          variant="ghost"
+          @click="closeWithAnimation"
+        >
           Cancel
         </UButton>
         <UButton

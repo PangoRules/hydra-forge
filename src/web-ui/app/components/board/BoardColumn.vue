@@ -30,8 +30,8 @@ const filteredCards = computed(() => {
   if (columnSearch.value) {
     const q = columnSearch.value.toLowerCase()
     result = result.filter(c =>
-      c.title.toLowerCase().includes(q) ||
-      String(c.cardNumber).includes(q)
+      c.title.toLowerCase().includes(q)
+      || String(c.cardNumber).includes(q)
     )
   }
 
@@ -71,7 +71,7 @@ function handleFilterArchived(value: boolean) {
           v-model="columnSearch"
           placeholder="Filter cards in this column..."
           class="w-full mt-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+        >
       </template>
     </ColumnHeader>
 

@@ -40,7 +40,7 @@ function toggleHideEmpty() {
       placeholder="Search cards across board..."
       class="flex-1 min-w-0 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
       @input="updateSearch(($event.target as HTMLInputElement).value)"
-    />
+    >
 
     <select
       :value="filters.type ?? ''"
@@ -62,7 +62,7 @@ function toggleHideEmpty() {
         :checked="filters.includeArchived"
         class="rounded"
         @change="toggleArchived"
-      />
+      >
       Archived
     </label>
 
@@ -72,7 +72,7 @@ function toggleHideEmpty() {
         :checked="filters.hideEmptyColumns"
         class="rounded"
         @change="toggleHideEmpty"
-      />
+      >
       Hide empty
     </label>
 

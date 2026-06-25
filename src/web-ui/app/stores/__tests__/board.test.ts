@@ -140,6 +140,6 @@ describe('BoardStore filters', () => {
     ])
     store.boardFilters.hideEmptyColumns = true
     expect(store.visibleColumns.length).toBe(1)
-    expect(store.visibleColumns[0].id).toBe('c1')
+    expect(store.visibleColumns.at(0)?.id).toBe('c1')
   })
 })

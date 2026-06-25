@@ -31,7 +31,10 @@ const cardTypes = [
     <div class="flex items-center justify-between mb-1">
       <div class="flex items-center gap-2 min-w-0">
         <span class="column-drag-handle cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
-          <UIcon name="i-lucide-grip-vertical" class="size-4" />
+          <UIcon
+            name="i-lucide-grip-vertical"
+            class="size-4"
+          />
         </span>
         <div
           v-if="column.color"
@@ -69,7 +72,7 @@ const cardTypes = [
             type="checkbox"
             class="size-3"
             @change="emit('filter-archived', ($event.target as HTMLInputElement).checked)"
-          />
+          >
           <span class="text-gray-500">Arch</span>
         </label>
         <button
