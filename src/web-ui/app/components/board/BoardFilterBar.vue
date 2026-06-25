@@ -120,7 +120,7 @@ function toggleHideEmpty() {
       color="primary"
       @click="emit('add-card')"
     >
-      Card
+      + Add card
     </UButton>
   </div>
 </template>
