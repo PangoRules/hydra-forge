@@ -110,7 +110,7 @@ watch(
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="flex-1 flex flex-col">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <h1 class="text-xl font-bold truncate">
         {{ projectName || 'Board' }}
