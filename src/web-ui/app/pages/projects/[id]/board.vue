@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import CardCreateModal from '~/components/board/CardCreateModal.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -17,6 +18,13 @@ const projectName = ref('')
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
 const selectedCardId = ref<string | null>(null)
+const showCreateModal = ref(false)
+const createColumnId = ref<string | null>(null)
+
+function handleAddCard(columnId?: string) {
+  createColumnId.value = columnId ?? null
+  showCreateModal.value = true
+}
 
 async function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
   const card = findCard(cardId)
@@ -121,6 +129,7 @@ onMounted(async () => {
         class="hidden md:flex"
         @card-move="handleCardMove"
         @card-click="handleCardClick"
+        @add-card="handleAddCard"
       />
       <BoardMobileList
         :columns="board.columns"
@@ -128,6 +137,7 @@ onMounted(async () => {
         :project-id="projectId"
         class="md:hidden"
         @card-click="handleCardClick"
+        @add-card="handleAddCard"
       />
     </div>
 
@@ -138,6 +148,14 @@ onMounted(async () => {
       @close="selectedCardId = null"
       @archived="board.fetchBoard(projectId)"
       @restored="board.fetchBoard(projectId)"
+    />
+    <CardCreateModal
+      v-if="showCreateModal"
+      :project-id="projectId"
+      :columns="board.columns"
+      :preselected-column-id="createColumnId ?? undefined"
+      @close="showCreateModal = false"
+      @created="board.fetchBoard(projectId)"
     />
   </div>
 </template>
