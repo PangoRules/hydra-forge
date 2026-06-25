@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 
@@ -14,15 +15,6 @@ const emit = defineEmits<{
   'filter-type': [value: number | null]
   'filter-archived': [value: boolean]
 }>()
-
-const cardTypes = [
-  { label: 'All', value: null },
-  { label: 'Task', value: 0 },
-  { label: 'Bug', value: 1 },
-  { label: 'Epic', value: 2 },
-  { label: 'Spec', value: 3 },
-  { label: 'Idea', value: 4 }
-]
 </script>
 
 <template>
@@ -71,7 +63,7 @@ const cardTypes = [
         "
       >
         <option
-          v-for="t in cardTypes"
+          v-for="t in CARD_TYPE_OPTIONS"
           :key="t.label"
           :value="t.value ?? ''"
         >

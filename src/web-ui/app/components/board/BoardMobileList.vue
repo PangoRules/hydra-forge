@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { onClickOutside } from '@vueuse/core'
+import { CARD_TYPE_ICONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -62,14 +63,6 @@ const columnTypeFilters = ref<Record<string, number | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
 const columnArchivedFilters = ref<Record<string, boolean | null>>({})
 
-const CARD_TYPE_MAP: Record<number, string> = {
-  0: 'Task',
-  1: 'Bug',
-  2: 'Epic',
-  3: 'Spec',
-  4: 'Idea'
-}
-
 watch(
   () => board.boardFilters.type,
   (newType) => {
@@ -109,8 +102,7 @@ function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
     )
   }
   if (mobileType.value !== null) {
-    const t = mobileType.value
-    filtered = filtered.filter(c => String(c.type) === CARD_TYPE_MAP[t])
+    filtered = filtered.filter(c => c.type === mobileType.value)
   }
   if (mobileAssignee.value) {
     filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
@@ -179,14 +171,6 @@ function handleArchive(card: CardResponse) {
   menuOpenFor.value = null
   archiveTargetCard.value = card
   showArchiveConfirm.value = true
-}
-
-const typeIcons: Record<number, string> = {
-  0: 'i-lucide-square',
-  1: 'i-lucide-bug',
-  2: 'i-lucide-layers',
-  3: 'i-lucide-file-text',
-  4: 'i-lucide-lightbulb'
 }
 
 function stripHtml(text: string): string {
@@ -380,7 +364,7 @@ function stripHtml(text: string): string {
             <!-- Card header row -->
             <div class="flex items-center gap-2">
               <UIcon
-                :name="typeIcons[card.type] ?? 'i-lucide-square'"
+                :name="CARD_TYPE_ICONS[card.type] ?? 'i-lucide-square'"
                 class="size-4 shrink-0 text-gray-400"
               />
               <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>

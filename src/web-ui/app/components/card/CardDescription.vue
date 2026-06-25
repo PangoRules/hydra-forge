@@ -2,17 +2,9 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
+import { toTypeString } from '~/lib/card-type'
 
 type CardResponse = components['schemas']['CardResponse']
-
-// Maps numeric enum values to API string enum values
-const CARD_TYPE_MAP: Record<number, string> = {
-  0: 'Task',
-  1: 'Bug',
-  2: 'Epic',
-  3: 'Spec',
-  4: 'Idea'
-}
 
 const props = defineProps<{
   card: CardResponse
@@ -30,12 +22,6 @@ const api = useApi()
 const board = useBoardStore()
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
-
-/** Normalize card.type to API string enum value — handles both number (legacy)
- *  and string (post-fix) values from the server. */
-function toTypeString(type: CardResponse['type']): string {
-  return typeof type === 'string' ? type : (CARD_TYPE_MAP[type as number] ?? 'Task')
-}
 
 function onDescriptionChange(value: string) {
   if (props.isArchived) return

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import type { BoardFilters } from '~/stores/board'
+import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -13,15 +14,6 @@ const filters = defineModel<BoardFilters>({ required: true })
 const emit = defineEmits<{
   'add-card': []
 }>()
-
-const cardTypes = [
-  { label: 'All', value: null },
-  { label: 'Task', value: 0 },
-  { label: 'Bug', value: 1 },
-  { label: 'Epic', value: 2 },
-  { label: 'Spec', value: 3 },
-  { label: 'Idea', value: 4 }
-]
 
 function updateSearch(val: string) {
   filters.value = { ...filters.value, search: val }
@@ -65,7 +57,7 @@ function toggleHideEmpty() {
         @change="updateType(($event.target as HTMLSelectElement).value)"
       >
         <option
-          v-for="t in cardTypes"
+          v-for="t in CARD_TYPE_OPTIONS"
           :key="t.label"
           :value="t.value ?? ''"
         >

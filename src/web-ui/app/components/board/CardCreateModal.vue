@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
+import { CARD_TYPE_MAP, toTypeString } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -25,15 +26,6 @@ const toast = useToast()
 
 const CARD_TYPE_DEFAULT = 0
 
-// Maps numeric dropdown values to API string enum values
-const CARD_TYPE_MAP: Record<number, string> = {
-  0: 'Task',
-  1: 'Bug',
-  2: 'Epic',
-  3: 'Spec',
-  4: 'Idea'
-}
-
 const title = ref('')
 const description = ref('')
 const cardType = ref(CARD_TYPE_DEFAULT)
@@ -51,7 +43,7 @@ async function handleCreate() {
     columnId: columnId.value,
     title: title.value.trim(),
     description: description.value,
-    type: CARD_TYPE_MAP[cardType.value] ?? 'Task'
+    type: toTypeString(cardType.value)
   }
   // HTML date input gives YYYY-MM-DD; convert to ISO 8601 datetime or null
   if (dueAt.value) {
@@ -150,20 +142,12 @@ function closeWithAnimation() {
               v-model="cardType"
               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
             >
-              <option :value="0">
-                Task
-              </option>
-              <option :value="1">
-                Bug
-              </option>
-              <option :value="2">
-                Epic
-              </option>
-              <option :value="3">
-                Spec
-              </option>
-              <option :value="4">
-                Idea
+              <option
+                v-for="[value, label] in Object.entries(CARD_TYPE_MAP)"
+                :key="value"
+                :value="Number(value)"
+              >
+                {{ label }}
               </option>
             </select>
           </div>
