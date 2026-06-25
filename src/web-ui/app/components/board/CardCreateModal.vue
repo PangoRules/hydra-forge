@@ -20,9 +20,11 @@ const isOpen = ref(true)
 const api = useApi()
 const toast = useToast()
 
+const CARD_TYPE_DEFAULT = 0
+
 const title = ref('')
 const description = ref('')
-const cardType = ref(0)
+const cardType = ref(CARD_TYPE_DEFAULT)
 const columnId = ref(props.preselectedColumnId ?? '')
 const saving = ref(false)
 
@@ -41,7 +43,7 @@ async function handleCreate() {
   })
   saving.value = false
   if (error) {
-    toast.add({ title: 'Failed to create card', color: 'error' })
+    toast.add({ title: error?.message ?? 'Failed to create card', color: 'error' })
   } else {
     toast.add({ title: 'Card created', color: 'success' })
     emit('created')
@@ -61,7 +63,6 @@ function closeWithAnimation() {
     title="Create card"
     width="sm:max-w-lg"
     @update:open="closeWithAnimation"
-    @close="closeWithAnimation"
   >
     <template #body>
       <div class="space-y-4 p-1">
