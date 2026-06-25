@@ -33,14 +33,10 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
       if (response.status === 401) {
         store.clearAuth()
         clearToken()
-        try {
-          await navigateTo(UiRoutes.Login)
-        } catch {
-          // navigateTo can throw outside middleware context.
-          // Fall back to hard navigation (client-side only).
-          if (typeof window !== 'undefined') {
-            window.location.href = UiRoutes.Login
-          }
+        // Hard redirect — navigateTo is unreliable in fetch interceptor context.
+        // clearToken() deletes the cookie synchronously before navigation starts.
+        if (typeof window !== 'undefined') {
+          window.location.href = UiRoutes.Login
         }
         return response
       }
