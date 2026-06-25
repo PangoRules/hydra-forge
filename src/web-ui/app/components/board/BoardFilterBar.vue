@@ -44,7 +44,7 @@ function toggleHideEmpty() {
     <input
       :value="filters.search"
       placeholder="Search cards..."
-      class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+      class="w-48 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
       @input="updateSearch(($event.target as HTMLInputElement).value)"
     >
 
