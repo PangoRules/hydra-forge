@@ -306,7 +306,7 @@ function stripHtml(text: string): string {
               :value="columnTypeFilters[column.id] ?? null"
               class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
               @click.stop
-              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
+              @change="columnTypeFilters[column.id] = ['', 'null'].includes(($event.target as HTMLSelectElement).value) ? null : Number(($event.target as HTMLSelectElement).value)"
             >
               <option
                 v-for="opt in CARD_TYPE_OPTIONS"
