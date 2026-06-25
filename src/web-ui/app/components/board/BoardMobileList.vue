@@ -298,6 +298,7 @@ function stripHtml(text: string): string {
             >
               WIP {{ column.wipLimit }}
             </span>
+            <span class="text-xs text-gray-300 mx-1">-</span>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
             <select
