@@ -34,6 +34,9 @@ dotnet run --project src/HydraForge.Tui
 # Web UI dev server
 cd src/web-ui && pnpm dev
 
+# Web UI E2E tests (Playwright) — requires the API server (Development env) and `pnpm dev` already running
+cd src/web-ui && pnpm test:e2e
+
 # Add a migration (from repo root)
 # NOTE: dotnet ef must be on PATH on this box.
 PATH="$PATH:/home/pango/.dotnet/tools" \
@@ -159,6 +162,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Use `ApiRoutes.<Resource>.<action>(id)` instead of inline strings: `api.GET(ApiRoutes.Projects.list())`, `api.POST(ApiRoutes.Cards.move(projectId, cardId), { body: {...} })`.
 - Never write inline API path strings in components, stores, or composables. If a route is not in `routes.ts`, add it there first.
 - `useApi()` wraps openapi-fetch with auth middleware (attaches JWT, handles 401 redirect). Always use `useApi()` instead of importing openapi-fetch directly.
+- **`useApi()` throws — it never resolves with a populated `error` field.** Every call site MUST wrap `await api.X(...)` in try/catch. `const { error } = await api.X(...); if (error) { ... }` with no surrounding try/catch is a bug: the `await` itself throws first, the destructuring never runs, and the function's promise rejects unhandled — silently skipping whatever the `if (error)` branch was supposed to do (see D-40). This broke archive/restore/create error toasts in three components before being caught.
 
 **Auth:**
 - JWT — admin seeded on first boot
@@ -208,6 +212,9 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **USelect:** No `clearable` prop. Wrap in relative container with absolute ghost `UButton` (X icon) to clear.
 - **vue-draggable-plus** removed — SSR-incompatible with Nuxt 4. Use plain `v-for`; native HTML5 drag-and-drop planned.
 - **`import.meta.client`** not usable in Vue template expressions — define as `const isClient = import.meta.client` in `<script>`.
+- **Card detail panel version ownership** — `CardModal.vue` owns the single `card` ref (and `card.value.version`) for the lifetime of the open modal. Panels under it that mutate a `Card` field (`CardDescription`, `CardMetadata`) read `props.card.version` at call time and emit `'update:card': [CardResponse]` with the server's response on success — never cache `version` locally inside a panel (D-41).
+- **Shared card-type / due-date utilities** — `app/lib/card-type.ts` (`CARD_TYPE_OPTIONS`, `cardTypeToApiString`, `cardTypeOption`) and `app/lib/date.ts` (`formatDueDate`, `isOverdue`) are the single source of truth for the numeric-`CardType` → API-string-enum map and due-date formatting. These were hand-copied into three components before being consolidated — import from `~/lib/card-type` / `~/lib/date`, never redefine the map.
+- **E2E tests** — `src/web-ui/e2e/` (Playwright, D-42). Specs drive a real browser against the real running stack (`pnpm dev` + the .NET API in `Development`) and seed their own data via the API with random-suffixed titles — there is no per-test database reset. Run with `pnpm test:e2e`.
 
 ## Housekeeping & archive
 
@@ -225,7 +232,7 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/architecture.md` — Clean Architecture, real-time, LLM, error handling, tech stack
 - `docs/data-model.md` — entity tables and enums (authoritative for schema intent)
 - `docs/glossary.md` — terminology
-- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-34)
+- `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-42)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

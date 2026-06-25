@@ -2,7 +2,7 @@
 
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
-> **Date:** 2026-06-02 (updated 2026-06-24)
+> **Date:** 2026-06-02 (updated 2026-06-25)
 > **Status:** 10 original questions resolved + 24 new decisions added (D-13–D-39). D-3, D-7 revised/rejected. Ready for Phase 3 Web UI.
 
 ---
@@ -651,5 +651,47 @@ Chats
 | **Decision** | **USelect in Nuxt UI v4 has no `clearable` prop. Wrap the select in a `relative` container with an absolute-positioned ghost `UButton` (X icon, `right-6` to avoid overlapping the chevron) that sets the model to `undefined`. Only show the button when the model has a value.** |
 | **Rationale** | The `clearable` prop exists in some UI libraries but was not included in Nuxt UI v4's `USelect` component (built on `reka-ui` `SelectRoot`). The component's props list (lines 23-60 of `Select.vue`) does not include `clearable`. The trailing slot renders the chevron icon only. A custom clear button is the simplest workaround without forking the component. |
 | **Alternatives considered** | 1. Fork `USelect` to add `clearable` (rejected — maintenance burden). 2. Use a different select component (rejected — `USelect` is the standard Nuxt UI v4 select). 3. Require users to close and reopen the modal to clear (rejected — poor UX). |
-| **Impact** | Any `USelect` that needs a clear/reset option must use the wrapper pattern. The button uses `v-if="model"` to only appear when a value is selected. `right-6` positioning avoids overlapping the built-in chevron-down icon.
+| **Impact** | Any `USelect` that needs a clear/reset option must use the wrapper pattern. The button uses `v-if="model"` to only appear when a value is selected. `right-6` positioning avoids overlapping the built-in chevron-down icon. |
+
+---
+
+## D-40: `useApi()` Throws — Call Sites Must try/catch, Never Destructure `{ error }` From an Unguarded Call
+
+| Field | Value |
+|---|---|
+| **Topic** | Why several "Failed to X" error toasts in the Web UI never fired on real API failures |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`useApi()`'s `onResponse` middleware (`app/composables/useApi.ts`) throws `ApiError` for any non-2xx, non-401 response — it never resolves with a populated `error` field. Every call site must wrap `await api.X(...)` in try/catch. Writing `const { error } = await api.X(...); if (error) { ... }` with no surrounding try/catch is a bug: the `await` throws before that line's destructuring runs, the function's promise rejects unhandled, and the `else`/`if (error)` branch (and its toast) is dead code.** |
+| **Rationale** | `CardModal.vue`'s `confirmArchive`/`handleRestore`, `BoardCard.vue`'s `confirmArchive`/`handleRestore`, and `CardCreateModal.vue`'s `handleCreate` were all written assuming a Result-style resolve (`{ data, error }`) — the pattern openapi-fetch uses by default. This project's `useApi()` deliberately overrides that with a throw-based middleware (so `ApiError` carries `status`/`code`/`detail`/`correlationId` from the RFC 7807 body) — documented in `CLAUDE.md`'s "Error types" bullet, but not enforced anywhere, so five call sites silently regressed to "click Archive, nothing happens, no toast, no error" on real failures. Found and fixed in `2026-06-25-phase-3-card-modal-hardening.md` Task 1. `CardDescription.vue` happened to handle this correctly already, because its `if (error) throw error` line is inside a `try { ... } catch (e) { saveError.value = e.message }` — the outer `await`'s rejection lands in that `catch` regardless of the dead `if` line. |
+| **Alternatives considered** | 1. Change `useApi()` to resolve with `{ error }` instead of throwing, matching openapi-fetch's default and every call site's assumption (rejected — `CLAUDE.md` already documents throw-based error handling as intentional, and `ApiError`'s richer shape, e.g. `correlationId`, is more useful caught at the call site than buried in a generic `error` field). 2. Add a global Vue error handler to catch unhandled rejections from template event handlers and toast generically (rejected — loses the specific "Failed to archive card" vs. "Failed to restore card" messaging the manual test matrix expects per action). |
+| **Impact** | Any new component that calls `useApi()` and wants to show a failure toast MUST wrap the call in try/catch — destructuring `{ error }` without one will compile and pass code review but silently does nothing on a real failure. Code review for new `useApi()` call sites should specifically check for this. |
+
+---
+
+## D-41: Card Detail Panel Version Ownership Lives on `CardModal`, Not on Each Panel
+
+| Field | Value |
+|---|---|
+| **Topic** | Where the optimistic-concurrency `version` for a `Card` is cached while its detail modal is open across multiple editable panels |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`CardModal.vue` owns the single `card` ref (and therefore `card.value.version`) for the lifetime of the open modal. Every panel below it that mutates a `Card` field (`CardDescription`, and `CardMetadata` once Plan 4's Task 16 lands) reads `props.card.version` at call time and emits `'update:card': [CardResponse]` with the server's response on success — it never keeps its own cached copy of `version`.** |
+| **Rationale** | `CardDescription.vue` originally seeded a local `currentVersion` ref from `props.card.version` once at mount and only updated it from its own save responses. Plan 4 adds a second panel (`CardMetadata`'s type/due-date/assignee editor) that also calls `PUT Cards/{cardId}` with a version. Two independently-cached copies of the same token desync the moment a user edits the description and then the type (or vice versa) in one modal session — the second save sends a stale version and gets a spurious `409 CARD_CONCURRENCY_MISMATCH` even though no other user or tab touched the card. Centralizing on `CardModal.vue`'s `card` ref, with children emitting `update:card` instead of caching, makes this structurally impossible: there is exactly one `version` in memory per open modal. |
+| **Alternatives considered** | 1. Have each panel re-fetch the full card before every save (rejected — extra round-trip per save, and still racy between the fetch and the save). 2. Pass `version` down as a separate prop, updated by the parent on every child's success (rejected — `update:card` replacing the whole `card.value` is simpler and also keeps `description`/`assignees`/etc. in sync for sibling panels, e.g. the metadata sidebar reflecting a description-triggered `updatedAt` change). |
+| **Impact** | Implemented in `2026-06-25-phase-3-card-modal-hardening.md` Task 2 for `CardDescription`; Plan 4's Task 16 (rewritten in `2026-06-23-phase-3-plan-4-card-modal-panels.md`) wires `CardMetadata` onto the same `update:card` contract. Any future card-detail panel that edits a `Card` field (not a sub-resource like checklist items or comments, which have their own concurrency tokens) must follow this pattern. |
+
+---
+
+## D-42: Playwright Adopted for End-to-End Testing
+
+| Field | Value |
+|---|---|
+| **Topic** | Which framework drives automated end-to-end tests against the real Web UI + API + Postgres stack |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`@playwright/test` (MIT license), paired with the project's existing `@nuxt/test-utils` devDependency family. No E2E framework existed before this — `docs/superpowers/manual-validation/*.md` matrices were 100% manual checkbox lists.** |
+| **Rationale** | Open-source-only constraint ruled out paid tiers, but Playwright's free local tier already covers everything needed here: multi-browser (matters less today, useful later), first-class network interception/waiting (needed to assert on the description editor's debounced auto-save and the two-tab version-conflict scenario), and a free trace viewer for diagnosing flaky CI runs without a paid dashboard. Cypress's strongest free-tier differentiator (component testing DX) is not a gap here — Vitest + `@nuxt/test-utils` already covers component tests; what was missing was real-browser, real-stack flows, which is Playwright's core strength. `@nuxt/test-utils` is already a devDependency, so no new framework family was introduced, only a sibling package. |
+| **Alternatives considered** | 1. Cypress (rejected — Chromium-first, WebKit support experimental; richer replay/debugging is behind the paid Cypress Cloud tier, while Playwright's trace viewer is free). 2. `@nuxt/test-utils/e2e`'s own `setup()` helper alone, without Playwright (rejected — `setup()` boots an isolated Nuxt instance per test file; this project's E2E goal is to exercise the real running API + Postgres + MinIO stack, which `setup()` does not model). |
+| **Impact** | `src/web-ui/e2e/` holds Playwright specs; `playwright.config.ts` lives alongside `vitest.config.ts`. New end-to-end coverage goes here, not into Vitest component tests. CI runs E2E specs in a dedicated `pull_request`-only job (slower than unit tests) per `2026-06-25-phase-3-e2e-testing-foundation.md` Task 6. There is no per-test database reset yet — specs seed their own randomly-suffixed data via the API and run serially (`workers: 1`) until that exists.
 
