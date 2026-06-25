@@ -57,7 +57,7 @@ function onKeydown(e: KeyboardEvent) {
             icon="i-lucide-x"
             variant="ghost"
             size="sm"
-            @click="onClose"
+            @click="emit('update:open', false)"
           />
         </div>
       </div>
