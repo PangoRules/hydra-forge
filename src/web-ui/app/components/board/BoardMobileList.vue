@@ -25,6 +25,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useToast()
+const { search, type: filterType, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -56,61 +57,29 @@ function toggleColumn(colId: string) {
   expandedColumns.value[colId] = !expandedColumns.value[colId]
 }
 
-// Global filter panel state
+// Global filter panel visibility
 const showFilters = ref(false)
-const mobileSearch = ref('')
-const mobileType = ref<number | null>(null)
-const mobileHideEmpty = ref(false)
-const mobileAssignee = ref<string | null>(null)
 
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, number | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
 const columnArchivedFilters = ref<Record<string, boolean | null>>({})
 
-watch(
-  () => board.boardFilters.type,
-  (newType) => {
-    if (newType !== mobileType.value) mobileType.value = newType
-  }
-)
-
-watch(
-  () => board.boardFilters.assigneeUserId,
-  (newAssignee) => {
-    if (newAssignee !== mobileAssignee.value) mobileAssignee.value = newAssignee
-  }
-)
-
-watch(mobileType, (val) => {
-  board.boardFilters.type = val
-  board.fetchBoard(props.projectId)
-})
-
-watch(mobileAssignee, (val) => {
-  board.boardFilters.assigneeUserId = val
-  board.fetchBoard(props.projectId)
-})
-
-watch(mobileHideEmpty, (val) => {
-  board.boardFilters.hideEmptyColumns = val
-})
-
 function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
   let filtered = cards
 
-  if (mobileSearch.value) {
-    const q = mobileSearch.value.toLowerCase()
+  if (search.value) {
+    const q = search.value.toLowerCase()
     filtered = filtered.filter(c =>
       c.title.toLowerCase().includes(q)
       || String(c.cardNumber).includes(q)
     )
   }
-  if (mobileType.value !== null) {
-    filtered = filtered.filter(c => c.type === mobileType.value)
+  if (filterType.value !== null) {
+    filtered = filtered.filter(c => c.type === filterType.value)
   }
-  if (mobileAssignee.value) {
-    filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
+  if (filterAssignee.value) {
+    filtered = filtered.filter(c => c.assignees.some(a => a.userId === filterAssignee.value))
   }
 
   // Per-column type filter
@@ -139,7 +108,7 @@ const filteredCardsByColumn = computed(() => {
 })
 
 const filteredColumns = computed(() => {
-  if (!board.boardFilters.hideEmptyColumns) return props.columns
+  if (!hideEmptyColumns.value) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
 
@@ -188,7 +157,7 @@ function stripHtml(text: string): string {
     <!-- Global mobile bar -->
     <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       <input
-        v-model="mobileSearch"
+        v-model="search"
         placeholder="Search cards..."
         class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
       >
@@ -213,7 +182,7 @@ function stripHtml(text: string): string {
     >
       <span class="text-xs text-gray-500 self-center">Type:</span>
       <select
-        v-model="mobileType"
+        v-model="filterType"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
       >
         <option
@@ -225,7 +194,7 @@ function stripHtml(text: string): string {
         </option>
       </select>
       <select
-        v-model="mobileAssignee"
+        v-model="filterAssignee"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
       >
         <option :value="null">
@@ -241,16 +210,15 @@ function stripHtml(text: string): string {
       </select>
       <label class="flex items-center gap-1 text-xs">
         <input
-          :checked="board.boardFilters.includeArchived"
+          v-model="includeArchived"
           type="checkbox"
           class="rounded"
-          @change="board.boardFilters.includeArchived = ($event.target as HTMLInputElement).checked; board.fetchBoard(props.projectId)"
         >
         Include archived
       </label>
       <label class="flex items-center gap-1 text-xs">
         <input
-          v-model="mobileHideEmpty"
+          v-model="hideEmptyColumns"
           type="checkbox"
           class="rounded"
         >
@@ -303,15 +271,15 @@ function stripHtml(text: string): string {
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
             <select
-              :value="columnTypeFilters[column.id] ?? null"
+              :value="columnTypeFilters[column.id] ?? ''"
               class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
               @click.stop
-              @change="columnTypeFilters[column.id] = ['', 'null'].includes(($event.target as HTMLSelectElement).value) ? null : Number(($event.target as HTMLSelectElement).value)"
+              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value !== '' ? Number(($event.target as HTMLSelectElement).value) : null"
             >
               <option
                 v-for="opt in CARD_TYPE_OPTIONS"
                 :key="opt.label"
-                :value="opt.value"
+                :value="opt.value ?? ''"
               >
                 {{ opt.label }}
               </option>

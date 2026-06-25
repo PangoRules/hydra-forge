@@ -1,86 +1,65 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
-import type { BoardFilters } from '~/stores/board'
-
-const defaultFilters: BoardFilters = {
-  search: '',
-  type: null,
-  includeArchived: false,
-  hideEmptyColumns: false,
-  assigneeUserId: null
-}
 
 describe('BoardFilterBar', () => {
+  beforeEach(() => {
+    const board = useBoardStore()
+    board.boardFilters = { search: '', type: null, includeArchived: false, hideEmptyColumns: false, assigneeUserId: null }
+  })
+
   it('renders search input', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+    const wrapper = await mountSuspended(BoardFilterBar)
     expect(wrapper.find('input[placeholder*="Search"]').exists()).toBe(true)
   })
 
   it('renders type dropdown with All option', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+    const wrapper = await mountSuspended(BoardFilterBar)
     const select = wrapper.find('select')
     expect(select.exists()).toBe(true)
     expect(select.text()).toContain('All')
   })
 
   it('renders archived checkbox', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+    const wrapper = await mountSuspended(BoardFilterBar)
     expect(wrapper.text()).toContain('Archived')
   })
 
   it('emits add-card on button click', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+    const wrapper = await mountSuspended(BoardFilterBar)
     await wrapper.find('button').trigger('click')
     expect(wrapper.emitted('add-card')).toBeTruthy()
   })
 
-  it('emits update:modelValue when search changes', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+  it('updates board store when search changes', async () => {
+    const board = useBoardStore()
+    const wrapper = await mountSuspended(BoardFilterBar)
     const input = wrapper.find('input[placeholder*="Search"]')
     await input.setValue('test query')
-    expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-    const emitted = wrapper.emitted('update:modelValue')?.at(0)?.at(0) as BoardFilters
-    expect(emitted?.search).toBe('test query')
+    expect(board.boardFilters.search).toBe('test query')
   })
 
-  it('emits update:modelValue when type changes', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+  it('updates board store when type changes', async () => {
+    const board = useBoardStore()
+    const wrapper = await mountSuspended(BoardFilterBar)
     const select = wrapper.find('select')
     await select.setValue('1')
-    const emitted = wrapper.emitted('update:modelValue')?.at(0)?.at(0) as BoardFilters
-    expect(emitted?.type).toBe(1)
+    expect(board.boardFilters.type).toBe(1)
   })
 
-  it('emits update:modelValue when archived toggles', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+  it('updates board store when archived toggles', async () => {
+    const board = useBoardStore()
+    const wrapper = await mountSuspended(BoardFilterBar)
     const checkbox = wrapper.find('input[type="checkbox"]')
     await checkbox.setValue(true)
-    const emitted = wrapper.emitted('update:modelValue')?.at(0)?.at(0) as BoardFilters
-    expect(emitted?.includeArchived).toBe(true)
+    expect(board.boardFilters.includeArchived).toBe(true)
   })
 
-  it('emits update:modelValue when hide empty toggles', async () => {
-    const wrapper = await mountSuspended(BoardFilterBar, {
-      props: { modelValue: defaultFilters }
-    })
+  it('updates board store when hide empty toggles', async () => {
+    const board = useBoardStore()
+    const wrapper = await mountSuspended(BoardFilterBar)
     const checkboxes = wrapper.findAll('input[type="checkbox"]')
     await checkboxes.at(1)!.setValue(true)
-    const emitted = wrapper.emitted('update:modelValue')?.at(0)?.at(0) as BoardFilters
-    expect(emitted?.hideEmptyColumns).toBe(true)
+    expect(board.boardFilters.hideEmptyColumns).toBe(true)
   })
 })

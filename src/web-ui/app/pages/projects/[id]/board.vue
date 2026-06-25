@@ -129,7 +129,6 @@ watch(
 
     <!-- Filter bar — always visible above the board area -->
     <BoardFilterBar
-      v-model="board.boardFilters"
       :members="board.members"
       class="hidden md:flex"
       @add-card="handleAddCard()"
