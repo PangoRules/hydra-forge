@@ -136,7 +136,7 @@ watch(
     />
 
     <!-- Board area — takes remaining height with its own scroll context -->
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col">
       <!-- Error state — shown above all board content when present -->
       <div
         v-if="board.error"
