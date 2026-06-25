@@ -4,10 +4,12 @@ import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
+type MemberResponse = components['schemas']['MemberResponse']
 
 const props = defineProps<{
   projectId: string
   columns: ColumnResponse[]
+  members?: MemberResponse[]
   preselectedColumnId?: string
 }>()
 
@@ -27,6 +29,7 @@ const description = ref('')
 const cardType = ref(CARD_TYPE_DEFAULT)
 const columnId = ref(props.preselectedColumnId ?? '')
 const dueAt = ref('')
+const selectedAssignees = ref<string[]>([])
 const saving = ref(false)
 
 const canSave = computed(() => title.value.trim().length > 0 && columnId.value.length > 0)
@@ -43,6 +46,9 @@ async function handleCreate() {
   // HTML date input gives YYYY-MM-DD; convert to ISO 8601 datetime or null
   if (dueAt.value) {
     body.dueAt = `${dueAt.value}T00:00:00Z`
+  }
+  if (selectedAssignees.value.length > 0) {
+    body.assigneeUserIds = selectedAssignees.value.map(id => id)
   }
   const { error } = await api.POST(ApiRoutes.Cards.create(props.projectId), {
     body
@@ -88,6 +94,43 @@ function closeWithAnimation() {
             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
             placeholder="Optional description"
           />
+        </div>
+        <!-- Assignees -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">Assignees</label>
+          <div class="flex flex-wrap gap-1.5 mb-2">
+            <span
+              v-for="userId in selectedAssignees"
+              :key="userId"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+              {{ props.members?.find(m => m.userId === userId)?.username ?? userId }}
+              <button
+                class="hover:text-red-500 leading-none"
+                @click="selectedAssignees = selectedAssignees.filter(id => id !== userId)"
+              >×</button>
+            </span>
+            <span
+              v-if="selectedAssignees.length === 0"
+              class="text-xs text-gray-400"
+            >None</span>
+          </div>
+          <select
+            v-if="props.members && props.members.length > 0"
+            class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+            @change="(e: Event) => { const s = e.target as HTMLSelectElement; if (s.value && !selectedAssignees.includes(s.value)) selectedAssignees.push(s.value); s.value = '' }"
+          >
+            <option value="">
+              + Add assignee
+            </option>
+            <option
+              v-for="m in props.members.filter(m => !selectedAssignees.includes(m.userId))"
+              :key="m.userId"
+              :value="m.userId"
+            >
+              {{ m.username }}
+            </option>
+          </select>
         </div>
         <div class="flex gap-4 items-end">
           <div class="flex-1">

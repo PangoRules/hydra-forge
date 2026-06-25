@@ -90,7 +90,8 @@ public class CardsController(CardService cardService) : ControllerBase
             request.Description,
             request.Type,
             request.ParentCardId,
-            request.DueAt
+            request.DueAt,
+            request.AssigneeUserIds
         );
         var result = await cardService.CreateAsync(cmd);
 

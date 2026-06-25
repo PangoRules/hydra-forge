@@ -10,7 +10,8 @@ public record CreateCardCommand(
     string Description,
     CardType Type,
     Guid? ParentCardId,
-    DateTime? DueAt
+    DateTime? DueAt,
+    IReadOnlyList<Guid>? AssigneeUserIds
 );
 
 public record UpdateCardCommand(
@@ -128,7 +129,8 @@ public record CreateCardRequest(
     string Description,
     CardType Type,
     Guid? ParentCardId,
-    DateTime? DueAt
+    DateTime? DueAt,
+    IReadOnlyList<Guid>? AssigneeUserIds
 );
 
 public record UpdateCardRequest(

@@ -643,6 +643,8 @@ export interface paths {
                     includeArchived?: boolean;
                     assigneeUserId?: string;
                     type?: components["schemas"]["CardType"];
+                    search?: string;
+                    archivedLimit?: number | string;
                 };
                 header?: never;
                 path: {
@@ -2365,6 +2367,8 @@ export interface components {
             parentCardId: null | string;
             /** Format: date-time */
             dueAt: null | string;
+            /** Format: uuid */
+            assigneeUserIds?: string[];
         };
         CreateChecklistItemRequest: {
             text: string;

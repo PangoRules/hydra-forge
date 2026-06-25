@@ -28,7 +28,7 @@ public class CardServiceTests
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(4, result.Value.CardNumber);
@@ -48,7 +48,7 @@ public class CardServiceTests
         cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Title = "Second" });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "Third Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "Third Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.Position);
@@ -67,7 +67,7 @@ public class CardServiceTests
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.CardNumber);
@@ -425,7 +425,7 @@ public class CardServiceTests
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);

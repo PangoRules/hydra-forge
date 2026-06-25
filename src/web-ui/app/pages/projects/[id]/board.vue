@@ -212,6 +212,7 @@ watch(
       v-if="showCreateModal"
       :project-id="projectId"
       :columns="board.columns"
+      :members="board.members"
       :preselected-column-id="createColumnId ?? undefined"
       @close="showCreateModal = false"
       @created="board.fetchBoard(projectId)"

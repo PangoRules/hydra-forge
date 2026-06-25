@@ -108,6 +108,41 @@ public class CardService(
             ct
         );
 
+        // Assign requested users after card creation
+        if (cmd.AssigneeUserIds != null && cmd.AssigneeUserIds.Count > 0)
+        {
+            foreach (var assigneeUserId in cmd.AssigneeUserIds)
+            {
+                var assigneeUser = await _userRepo.FindByIdAsync(assigneeUserId, ct);
+                if (assigneeUser == null) continue;
+
+                var existingAssignee = await _assigneeRepo.GetByCardAndUserAsync(card.Id, assigneeUserId, ct);
+                if (existingAssignee != null) continue;
+
+                var assignee = new CardAssignee
+                {
+                    Id = Guid.NewGuid(),
+                    CardId = card.Id,
+                    UserId = assigneeUserId,
+                    AssignedAt = DateTime.UtcNow,
+                    AssignedByUserId = cmd.ActorId,
+                };
+                await _assigneeRepo.AddAsync(assignee, ct);
+
+                var watcher = await _watcherRepo.GetByCardAndUserAsync(card.Id, assigneeUserId, ct);
+                if (watcher == null)
+                {
+                    var newWatcher = new CardWatcher
+                    {
+                        CardId = card.Id,
+                        UserId = assigneeUserId,
+                        AddedAt = DateTime.UtcNow,
+                    };
+                    await _watcherRepo.AddAsync(newWatcher, ct);
+                }
+            }
+        }
+
         await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
