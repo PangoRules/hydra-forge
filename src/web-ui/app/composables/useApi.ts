@@ -10,7 +10,7 @@ export interface ApiResponse<T> {
   response: Response
 }
 
-function createApiClient() {
+function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const config = useRuntimeConfig()
   const { getToken, clearToken } = useAuthToken()
 
@@ -31,6 +31,7 @@ function createApiClient() {
     },
     async onResponse({ response }) {
       if (response.status === 401) {
+        store.clearAuth()
         clearToken()
         await navigateTo(UiRoutes.Login)
         return response
@@ -66,12 +67,15 @@ function createApiClient() {
   return client
 }
 
-// Module-level singleton
+// Module-level singleton — initialized lazily on first use so the
+// auth store (which must be called in setup context) is available.
 let _api: ReturnType<typeof createApiClient> | undefined
+let _store: ReturnType<typeof useAuthStore> | undefined
 
 function getApi() {
   if (!_api) {
-    _api = createApiClient()
+    _store = useAuthStore()
+    _api = createApiClient(_store)
   }
   return _api
 }
