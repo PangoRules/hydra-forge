@@ -701,6 +701,60 @@ public class CardService(
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
+    public async Task<Result<CardDto>> RestoreAsync(
+        RestoreCardCommand cmd,
+        CancellationToken ct = default
+    )
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        if (card.Version != cmd.Version)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.ConcurrencyMismatch, "Card has been modified.")
+            );
+
+        if (card.ArchivedAt == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.Archived, "Card is not archived.")
+            );
+
+        var maxPosition = await _cardRepo.CountByColumnIdAsync(card.ColumnId, ct);
+
+        card.Restore();
+        card.Position = maxPosition + 1;
+
+        await _cardRepo.UpdateAsync(card, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Restored",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
+
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Restored, ct);
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+    }
+
     public async Task<Result> DeleteAsync(DeleteCardCommand cmd, CancellationToken ct = default)
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);

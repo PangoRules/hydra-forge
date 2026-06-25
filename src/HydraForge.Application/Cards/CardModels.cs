@@ -57,6 +57,13 @@ public record ArchiveCardCommand(
     int Version
 );
 
+public record RestoreCardCommand(
+    Guid ProjectId,
+    Guid CardId,
+    Guid ActorId,
+    int Version
+);
+
 public record DeleteCardCommand(
     Guid ProjectId,
     Guid CardId,
@@ -154,6 +161,10 @@ public record AssignCardRequest(
 );
 
 public record ArchiveCardRequest(
+    int Version
+);
+
+public record RestoreCardRequest(
     int Version
 );
 

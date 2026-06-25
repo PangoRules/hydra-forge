@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import { onClickOutside } from '@vueuse/core'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -27,6 +28,21 @@ const toast = useToast()
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
 
+// Card three-dot menu state
+const menuOpenFor = ref<string | null>(null)
+const menuRef = ref<HTMLElement | null>(null)
+
+function openMenu(cardId: string, event: Event) {
+  event.stopPropagation()
+  menuOpenFor.value = menuOpenFor.value === cardId ? null : cardId
+}
+
+onClickOutside(
+  menuRef,
+  () => { menuOpenFor.value = null },
+  { ignore: [] }
+)
+
 // Accordion state
 const expandedColumns = ref<Record<string, boolean>>({})
 
@@ -34,14 +50,18 @@ function toggleColumn(colId: string) {
   expandedColumns.value[colId] = !expandedColumns.value[colId]
 }
 
-// Filter panel state — mirrors boardFilters so mobile changes can trigger refetch
+// Global filter panel state
 const showFilters = ref(false)
 const mobileSearch = ref('')
 const mobileType = ref<number | null>(null)
 const mobileHideEmpty = ref(false)
 const mobileAssignee = ref<string | null>(null)
 
-// Type filter maps numeric dropdown values to API string values
+// Per-column type filter state
+const columnTypeFilters = ref<Record<string, number | null>>({})
+// Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
+const columnArchivedFilters = ref<Record<string, boolean | null>>({})
+
 const CARD_TYPE_MAP: Record<number, string> = {
   0: 'Task',
   1: 'Bug',
@@ -50,8 +70,6 @@ const CARD_TYPE_MAP: Record<number, string> = {
   4: 'Idea'
 }
 
-// Watch boardFilters.type and boardFilters.assigneeUserId to keep local refs in sync
-// when server updates come back (avoids stale local state overriding server data).
 watch(
   () => board.boardFilters.type,
   (newType) => {
@@ -80,25 +98,45 @@ watch(mobileHideEmpty, (val) => {
   board.boardFilters.hideEmptyColumns = val
 })
 
+function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
+  let filtered = cards
+
+  if (mobileSearch.value) {
+    const q = mobileSearch.value.toLowerCase()
+    filtered = filtered.filter(c =>
+      c.title.toLowerCase().includes(q)
+      || String(c.cardNumber).includes(q)
+    )
+  }
+  if (mobileType.value !== null) {
+    const t = mobileType.value
+    filtered = filtered.filter(c => String(c.type) === CARD_TYPE_MAP[t])
+  }
+  if (mobileAssignee.value) {
+    filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
+  }
+
+  // Per-column type filter
+  const colType = columnTypeFilters.value[colId]
+  if (colType !== undefined && colType !== null) {
+    filtered = filtered.filter(c => c.type === colType)
+  }
+
+  // Per-column archived filter
+  const colArchived = columnArchivedFilters.value[colId]
+  if (colArchived === false) {
+    filtered = filtered.filter(c => !c.archivedAt)
+  } else if (colArchived === true) {
+    filtered = filtered.filter(c => c.archivedAt)
+  }
+
+  return filtered
+}
+
 const filteredCardsByColumn = computed(() => {
   const result = new Map<string, CardResponse[]>()
   for (const [colId, cards] of props.cardsByColumn) {
-    let filtered = cards
-    if (mobileSearch.value) {
-      const q = mobileSearch.value.toLowerCase()
-      filtered = filtered.filter(c =>
-        c.title.toLowerCase().includes(q)
-        || String(c.cardNumber).includes(q)
-      )
-    }
-    if (mobileType.value !== null) {
-      const t = mobileType.value
-      filtered = filtered.filter(c => String(c.type) === CARD_TYPE_MAP[t])
-    }
-    if (mobileAssignee.value) {
-      filtered = filtered.filter(c => c.assignees.some(a => a.userId === mobileAssignee.value))
-    }
-    result.set(colId, filtered)
+    result.set(colId, getColumnFilteredCards(colId, cards))
   }
   return result
 })
@@ -121,6 +159,26 @@ async function confirmArchive() {
     toast.add({ title: 'Card archived', color: 'success' })
   }
   archiveTargetCard.value = null
+  menuOpenFor.value = null
+}
+
+async function handleRestore(card: CardResponse) {
+  menuOpenFor.value = null
+  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.id), {
+    body: { version: card.version }
+  })
+  if (error) {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
+  } else {
+    board.fetchBoard(props.projectId)
+    toast.add({ title: 'Card restored', color: 'success' })
+  }
+}
+
+function handleArchive(card: CardResponse) {
+  menuOpenFor.value = null
+  archiveTargetCard.value = card
+  showArchiveConfirm.value = true
 }
 
 const typeIcons: Record<number, string> = {
@@ -164,6 +222,7 @@ function stripHtml(text: string): string {
       v-if="showFilters"
       class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
+      <span class="text-xs text-gray-500 self-center">Type:</span>
       <select
         v-model="mobileType"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
@@ -223,7 +282,7 @@ function stripHtml(text: string): string {
 
     <!-- Columns as accordion -->
     <div class="relative p-4 space-y-2">
-      <!-- Loading spinner — only covers the columns area, not the filter bar -->
+      <!-- Loading spinner -->
       <div
         v-if="loading"
         class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60 rounded-lg z-10"
@@ -238,6 +297,7 @@ function stripHtml(text: string): string {
         :key="column.id"
         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
       >
+        <!-- Column header (accordion toggle) -->
         <div
           class="flex items-center justify-between px-3 py-2 cursor-pointer"
           @click="toggleColumn(column.id)"
@@ -263,30 +323,111 @@ function stripHtml(text: string): string {
           </div>
           <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
         </div>
+
+        <!-- Expanded accordion content -->
         <div
           v-if="expandedColumns[column.id]"
-          class="px-3 pb-3 space-y-2"
+          class="px-3 pb-3 space-y-3"
         >
+          <!-- Per-column filters -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-500 shrink-0">Type:</span>
+            <select
+              :value="columnTypeFilters[column.id] ?? null"
+              class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
+            >
+              <option :value="undefined">
+                All
+              </option>
+              <option :value="0">
+                Task
+              </option>
+              <option :value="1">
+                Bug
+              </option>
+              <option :value="2">
+                Epic
+              </option>
+              <option :value="3">
+                Spec
+              </option>
+              <option :value="4">
+                Idea
+              </option>
+            </select>
+            <label
+              v-if="board.boardFilters.includeArchived"
+              class="flex items-center gap-1 text-xs cursor-pointer"
+            >
+              <input
+                :checked="columnArchivedFilters[column.id] === true"
+                type="checkbox"
+                class="rounded"
+                @change="columnArchivedFilters[column.id] = ($event.target as HTMLInputElement).checked ? true : null"
+              >
+              <span class="text-gray-500">Archived only</span>
+            </label>
+          </div>
+
+          <!-- Cards -->
           <div
             v-for="card in filteredCardsByColumn.get(column.id) ?? []"
             :key="card.id"
             class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
             @click="emit('card-click', card)"
           >
+            <!-- Card header row -->
             <div class="flex items-center gap-2">
               <UIcon
                 :name="typeIcons[card.type] ?? 'i-lucide-square'"
                 class="size-4 shrink-0 text-gray-400"
               />
               <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
-              <p class="text-sm font-medium truncate">
+              <p class="text-sm font-medium truncate flex-1 min-w-0">
                 {{ card.title }}
               </p>
               <span
                 v-if="card.archivedAt"
                 class="text-xs text-gray-400 shrink-0"
               >archived</span>
+
+              <!-- Three-dot menu button -->
+              <button
+                class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                @click="openMenu(card.id, $event)"
+              >
+                <UIcon name="i-lucide-more-horizontal" class="size-4" />
+              </button>
+
+              <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
+              <div
+                v-if="menuOpenFor === card.id"
+                ref="menuRef"
+                class="absolute z-20 mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-[120px]"
+                style="position: absolute;"
+              >
+                <template v-if="card.archivedAt">
+                  <button
+                    class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+                    @click="handleRestore(card)"
+                  >
+                    <UIcon name="i-lucide-archive-restore" class="size-4" />
+                    Restore
+                  </button>
+                </template>
+                <template v-else>
+                  <button
+                    class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    @click="handleArchive(card)"
+                  >
+                    <UIcon name="i-lucide-archive" class="size-4" />
+                    Archive
+                  </button>
+                </template>
+              </div>
             </div>
+
             <p
               v-if="card.description"
               class="text-xs text-gray-500 mt-1 line-clamp-2"

@@ -45,14 +45,16 @@ function toggleHideEmpty() {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-wrap">
+  <div
+    class="flex items-center gap-3 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-wrap"
+  >
     <!-- Search -->
     <input
       :value="filters.search"
       placeholder="Search cards..."
       class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
       @input="updateSearch(($event.target as HTMLInputElement).value)"
-    >
+    />
 
     <!-- Type filter -->
     <div class="flex items-center gap-1.5">
@@ -62,11 +64,7 @@ function toggleHideEmpty() {
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
         @change="updateType(($event.target as HTMLSelectElement).value)"
       >
-        <option
-          v-for="t in cardTypes"
-          :key="t.label"
-          :value="t.value ?? ''"
-        >
+        <option v-for="t in cardTypes" :key="t.label" :value="t.value ?? ''">
           {{ t.label }}
         </option>
       </select>
@@ -80,14 +78,8 @@ function toggleHideEmpty() {
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
         @change="updateAssignee(($event.target as HTMLSelectElement).value)"
       >
-        <option value="">
-          All
-        </option>
-        <option
-          v-for="m in members"
-          :key="m.userId"
-          :value="m.userId"
-        >
+        <option value="">All</option>
+        <option v-for="m in members" :key="m.userId" :value="m.userId">
           {{ m.username }}
         </option>
       </select>
@@ -100,7 +92,7 @@ function toggleHideEmpty() {
         :checked="filters.includeArchived"
         class="rounded"
         @change="toggleArchived"
-      >
+      />
       Archived
     </label>
 
@@ -110,17 +102,12 @@ function toggleHideEmpty() {
         :checked="filters.hideEmptyColumns"
         class="rounded"
         @change="toggleHideEmpty"
-      >
+      />
       Hide empty
     </label>
 
-    <UButton
-      size="sm"
-      icon="i-lucide-plus"
-      color="primary"
-      @click="emit('add-card')"
-    >
-      + Add card
+    <UButton size="sm" icon="i-lucide-plus" color="primary" @click="emit('add-card')">
+      Add card
     </UButton>
   </div>
 </template>

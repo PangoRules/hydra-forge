@@ -393,6 +393,70 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task RestoreAsync_ClearsArchivedAtAndRestoresToEndOfColumn()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var columnId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 0, Version = 1, ArchivedAt = DateTime.UtcNow });
+        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Title = "Active card" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value.ArchivedAt);
+        var restoredCard = cardRepo.Cards.First(c => c.Id == cardId);
+        Assert.Null(restoredCard.ArchivedAt);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_NotArchived_ReturnsFailure()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1, ArchivedAt = null });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DomainErrorCodes.Cards.Archived, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1, ArchivedAt = DateTime.UtcNow });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Restored", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
     public async Task DeleteAsync_HardDeletesOnlyIfAllowed()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();

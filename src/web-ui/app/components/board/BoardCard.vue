@@ -77,10 +77,13 @@ async function confirmArchive() {
 
 async function handleRestore() {
   closeMenu()
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {})
+  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
+    body: { version: props.card.version }
+  })
   if (error) {
     toast.add({ title: 'Failed to restore card', color: 'error' })
   } else {
+    board.fetchBoard(props.projectId)
     toast.add({ title: 'Card restored', color: 'success' })
   }
 }

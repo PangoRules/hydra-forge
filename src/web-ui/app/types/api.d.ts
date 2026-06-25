@@ -1099,6 +1099,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{projectId}/Cards/{cardId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    cardId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreCardRequest"];
+                    "text/json": components["schemas"]["RestoreCardRequest"];
+                    "application/*+json": components["schemas"]["RestoreCardRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardResponse"];
+                        "application/json": components["schemas"]["CardResponse"];
+                        "text/json": components["schemas"]["CardResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}/Columns": {
         parameters: {
             query?: never;
@@ -2273,6 +2330,10 @@ export interface components {
             role: components["schemas"]["MemberRole"];
         };
         ArchiveCardRequest: {
+            /** Format: int32 */
+            version: number | string;
+        };
+        RestoreCardRequest: {
             /** Format: int32 */
             version: number | string;
         };

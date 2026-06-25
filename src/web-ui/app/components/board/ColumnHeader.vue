@@ -30,10 +30,7 @@ const cardTypes = [
     <!-- Row 1: title + metadata only -->
     <div class="flex items-center gap-2 mb-2">
       <span class="column-drag-handle cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
-        <UIcon
-          name="i-lucide-grip-vertical"
-          class="size-4"
-        />
+        <UIcon name="i-lucide-grip-vertical" class="size-4" />
       </span>
       <div
         v-if="column.color"
@@ -43,7 +40,9 @@ const cardTypes = [
       <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
         {{ column.name }}
       </h3>
-      <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5 shrink-0">
+      <span
+        class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5 shrink-0"
+      >
         {{ cardCount }}
       </span>
       <span
@@ -56,15 +55,19 @@ const cardTypes = [
 
     <!-- Row 2: filter controls -->
     <div class="flex items-center gap-2 mb-1">
+      <span class="text-xs text-gray-500 shrink-0">Type:</span>
       <select
         class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-        @change="emit('filter-type', ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+        @change="
+          emit(
+            'filter-type',
+            ($event.target as HTMLSelectElement).value
+              ? Number(($event.target as HTMLSelectElement).value)
+              : null
+          )
+        "
       >
-        <option
-          v-for="t in cardTypes"
-          :key="t.label"
-          :value="t.value ?? ''"
-        >
+        <option v-for="t in cardTypes" :key="t.label" :value="t.value ?? ''">
           {{ t.label }}
         </option>
       </select>
@@ -76,7 +79,7 @@ const cardTypes = [
           type="checkbox"
           class="size-3"
           @change="emit('filter-archived', ($event.target as HTMLInputElement).checked)"
-        >
+        />
         <span class="text-gray-500">Archived only</span>
       </label>
       <button

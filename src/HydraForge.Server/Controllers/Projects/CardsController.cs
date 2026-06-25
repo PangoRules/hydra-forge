@@ -258,6 +258,28 @@ public class CardsController(CardService cardService) : ControllerBase
         return Ok(MapToResponse(result.Value));
     }
 
+    [HttpPost("{cardId:guid}/restore")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] AppCards.RestoreCardRequest request
+    )
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new AppCards.RestoreCardCommand(projectId, cardId, userId, request.Version);
+        var result = await cardService.RestoreAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return Ok(MapToResponse(result.Value));
+    }
+
     [HttpDelete("{cardId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
