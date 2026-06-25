@@ -101,3 +101,45 @@ describe('useBoardStore', () => {
     expect(board.cardsByColumn.get('col1')!.length).toBe(0)
   })
 })
+
+describe('BoardStore filters', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('has default filter state', () => {
+    const store = useBoardStore()
+    expect(store.boardFilters.search).toBe('')
+    expect(store.boardFilters.type).toBe(null)
+    expect(store.boardFilters.includeArchived).toBe(false)
+    expect(store.boardFilters.hideEmptyColumns).toBe(false)
+  })
+
+  it('visibleColumns returns all columns by default', () => {
+    const store = useBoardStore()
+    store.columns = [
+      { id: 'c1', name: 'Todo', position: 0, wipLimit: null, color: null },
+      { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
+    ]
+    store.cardsByColumn = new Map([
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c2', []]
+    ])
+    expect(store.visibleColumns.length).toBe(2)
+  })
+
+  it('visibleColumns hides empty columns when set', () => {
+    const store = useBoardStore()
+    store.columns = [
+      { id: 'c1', name: 'Todo', position: 0, wipLimit: null, color: null },
+      { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
+    ]
+    store.cardsByColumn = new Map([
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c2', []]
+    ])
+    store.boardFilters.hideEmptyColumns = true
+    expect(store.visibleColumns.length).toBe(1)
+    expect(store.visibleColumns[0].id).toBe('c1')
+  })
+})

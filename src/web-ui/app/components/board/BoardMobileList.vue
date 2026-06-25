@@ -170,6 +170,12 @@ function stripHtml(text: string): string {
             <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
               {{ filteredCardsByColumn.get(column.id)?.length ?? 0 }}
             </span>
+            <span
+              v-if="column.wipLimit && filteredCardsByColumn.get(column.id)?.length >= Number(column.wipLimit)"
+              class="text-xs text-red-500 font-medium"
+            >
+              WIP {{ column.wipLimit }}
+            </span>
           </div>
           <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
         </div>
