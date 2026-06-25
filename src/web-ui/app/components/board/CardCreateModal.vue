@@ -24,6 +24,15 @@ const toast = useToast()
 
 const CARD_TYPE_DEFAULT = 0
 
+// Maps numeric dropdown values to API string enum values
+const CARD_TYPE_MAP: Record<number, string> = {
+  0: 'Task',
+  1: 'Bug',
+  2: 'Epic',
+  3: 'Spec',
+  4: 'Idea'
+}
+
 const title = ref('')
 const description = ref('')
 const cardType = ref(CARD_TYPE_DEFAULT)
@@ -41,7 +50,7 @@ async function handleCreate() {
     columnId: columnId.value,
     title: title.value.trim(),
     description: description.value,
-    type: cardType.value
+    type: CARD_TYPE_MAP[cardType.value] ?? 'Task'
   }
   // HTML date input gives YYYY-MM-DD; convert to ISO 8601 datetime or null
   if (dueAt.value) {

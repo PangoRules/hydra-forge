@@ -5,6 +5,15 @@ import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
+// Maps numeric enum values to API string enum values
+const CARD_TYPE_MAP: Record<number, string> = {
+  0: 'Task',
+  1: 'Bug',
+  2: 'Epic',
+  3: 'Spec',
+  4: 'Idea'
+}
+
 const props = defineProps<{
   card: CardResponse
   projectId: string
@@ -21,6 +30,12 @@ const api = useApi()
 const board = useBoardStore()
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Normalize card.type to API string enum value — handles both number (legacy)
+ *  and string (post-fix) values from the server. */
+function toTypeString(type: CardResponse['type']): string {
+  return typeof type === 'string' ? type : (CARD_TYPE_MAP[type as number] ?? 'Task')
+}
 
 function onDescriptionChange(value: string) {
   if (props.isArchived) return
@@ -39,7 +54,7 @@ async function saveDescription() {
       body: {
         title: props.card.title,
         description: description.value,
-        type: props.card.type,
+        type: toTypeString(props.card.type),
         version: currentVersion.value,
         parentCardId: props.card.parentCardId,
         dueAt: props.card.dueAt
