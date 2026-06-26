@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
+import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -21,6 +22,7 @@ const selectedCard = ref<CardResponse | null>(null)
 const selectedCardId = ref<string | null>(null)
 const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
+const bulkTargetColumnId = ref<string | null>(null)
 
 function handleAddCard(columnId?: string) {
   createColumnId.value = columnId ?? null
@@ -62,6 +64,51 @@ function handleCardClick(card: CardResponse) {
   selectedCard.value = card
   selectedCardId.value = card.id
   showCardModal.value = true
+}
+
+// Bulk handlers for desktop
+async function handleBulkMove() {
+  if (!bulkTargetColumnId.value) return
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  for (const cardId of ids) {
+    const card = findCard(cardId)
+    if (!card) continue
+    const targetPosition = 0
+    // Optimistic update
+    board.moveCard(cardId, bulkTargetColumnId.value, targetPosition)
+    const result = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
+      body: {
+        targetColumnId: bulkTargetColumnId.value,
+        targetPosition,
+        confirmBlockedMove: false,
+        version: card.version
+      }
+    })
+    if (result.error) {
+      board.rollbackMove(projectId)
+      toast.add({ title: `Failed to move card #${card.cardNumber}`, color: 'error' })
+    }
+  }
+  board.clearSelection()
+  toast.add({ title: `Moved ${ids.length} card(s)`, color: 'success' })
+}
+
+async function handleBulkArchive() {
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  for (const cardId of ids) {
+    const card = findCard(cardId)
+    if (!card) continue
+    const { error } = await api.POST(ApiRoutes.Cards.archive(projectId, cardId), {
+      body: { version: card.version }
+    })
+    if (error) {
+      toast.add({ title: `Failed to archive #${card.cardNumber}`, color: 'error' })
+    } else {
+      board.removeCard(cardId)
+    }
+  }
+  board.clearSelection()
+  toast.add({ title: `Archived ${ids.length} card(s)`, color: 'success' })
 }
 
 onMounted(async () => {
@@ -158,17 +205,29 @@ watch(
       <!-- Desktop board content — hidden during loading (desktop uses full-height spinner) -->
       <div
         v-else-if="!board.loading"
-        class="hidden md:flex flex-1 overflow-x-auto p-4"
+        class="hidden md:flex flex-1 flex-col"
       >
-        <BoardView
-          :columns="board.visibleColumns"
-          :cards-by-column="board.cardsByColumn"
-          :project-id="projectId"
-          :include-archived="board.boardFilters.includeArchived"
-          @card-move="handleCardMove"
-          @card-click="handleCardClick"
-          @add-card="handleAddCard"
+        <!-- Bulk action bar for desktop (above board) -->
+        <BulkActionBar
+          :selected-count="board.selectedCount"
+          :bulk-target-column-id="bulkTargetColumnId"
+          :columns="board.columns"
+          @update:bulk-target-column-id="val => bulkTargetColumnId = val"
+          @move="handleBulkMove"
+          @archive="handleBulkArchive"
+          @clear="board.clearSelection()"
         />
+        <div class="flex-1 overflow-x-auto p-4">
+          <BoardView
+            :columns="board.visibleColumns"
+            :cards-by-column="board.cardsByColumn"
+            :project-id="projectId"
+            :include-archived="board.boardFilters.includeArchived"
+            @card-move="handleCardMove"
+            @card-click="handleCardClick"
+            @add-card="handleAddCard"
+          />
+        </div>
       </div>
 
       <!-- Desktop: full-height loading spinner (only when loading) -->
