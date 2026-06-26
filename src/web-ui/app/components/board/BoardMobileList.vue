@@ -4,7 +4,7 @@ import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
-import { CARD_TYPE_ICONS, CARD_TYPE_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -35,6 +35,7 @@ const selectedCards = ref<Record<string, boolean>>({})
 const showBulkArchiveConfirm = ref(false)
 
 const selectedCount = computed(() => Object.values(selectedCards.value).filter(Boolean).length)
+const bulkTargetColumnId = ref<string | null>(null)
 
 function toggleCardSelect(cardId: string, event?: Event) {
   event?.stopPropagation()
@@ -56,6 +57,41 @@ function findCardById(cardId: string): CardResponse | undefined {
 function confirmBulkArchive() {
   // open confirm dialog
   showBulkArchiveConfirm.value = true
+}
+
+async function moveSelectedToColumn() {
+  const ids = Object.entries(selectedCards.value).filter(([, v]) => v).map(([k]) => k)
+  if (ids.length === 0 || !bulkTargetColumnId.value) {
+    toast.add({ title: 'Select target column', color: 'error' })
+    return
+  }
+
+  // perform moves sequentially to keep server happy and reduce race
+  const results: Array<{ id: string, ok: boolean }> = []
+  for (const id of ids) {
+    const card = findCardById(id)
+    if (!card) {
+      results.push({ id, ok: false })
+      continue
+    }
+    const { error } = await api.POST(ApiRoutes.Cards.move(props.projectId, id), {
+      body: {
+        targetColumnId: bulkTargetColumnId.value,
+        targetPosition: 0,
+        confirmBlockedMove: false,
+        version: card.version
+      }
+    })
+    results.push({ id, ok: !error })
+  }
+
+  const ok = results.filter(r => r.ok).length
+  const fail = results.length - ok
+  if (ok) toast.add({ title: `${ok} card(s) moved`, color: 'success' })
+  if (fail) toast.add({ title: `${fail} failed`, color: 'error' })
+  // refresh board and clear selection
+  await board.fetchBoard(props.projectId)
+  clearSelection()
 }
 
 async function archiveSelectedConfirmed() {
@@ -249,7 +285,10 @@ function stripHtml(text: string): string {
         type="button"
         @click="emit('add-card')"
       >
-        <UIcon name="i-lucide-plus" class="mr-2 hidden sm:inline-block" />
+        <UIcon
+          name="i-lucide-plus"
+          class="mr-2 hidden sm:inline-block"
+        />
         <span>Add card</span>
       </UButton>
     </div>
@@ -317,6 +356,28 @@ function stripHtml(text: string): string {
         @click="confirmBulkArchive"
       >
         Archive selected
+      </UButton>
+      <select
+        v-model="bulkTargetColumnId"
+        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+      >
+        <option :value="null">
+          Move to...
+        </option>
+        <option
+          v-for="col in props.columns"
+          :key="col.id"
+          :value="col.id"
+        >
+          {{ col.name }}
+        </option>
+      </select>
+      <UButton
+        size="sm"
+        variant="ghost"
+        @click="moveSelectedToColumn"
+      >
+        Move selected
       </UButton>
       <UButton
         size="sm"
@@ -431,10 +492,6 @@ function stripHtml(text: string): string {
                   @click.stop="toggleCardSelect(card.id, $event)"
                   @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
                 >
-                <UIcon
-                  :name="CARD_TYPE_ICONS[card.type] ?? 'i-lucide-square'"
-                  class="size-4 shrink-0 text-gray-400"
-                />
                 <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}
