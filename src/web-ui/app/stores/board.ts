@@ -35,7 +35,8 @@ export const useBoardStore = defineStore('board', () => {
   const selectedCount = computed(() => Object.values(selectedCardIds.value).filter(Boolean).length)
 
   function toggleSelectCard(cardId: string) {
-    selectedCardIds.value[cardId] = !selectedCardIds.value[cardId]
+    // assign new object so Vue reactivity detects property change
+    selectedCardIds.value = { ...selectedCardIds.value, [cardId]: !selectedCardIds.value[cardId] }
   }
 
   function clearSelection() {

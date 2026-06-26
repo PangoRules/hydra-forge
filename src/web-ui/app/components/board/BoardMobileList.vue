@@ -34,7 +34,7 @@ const archiveTargetCard = ref<CardResponse | null>(null)
 // Bulk selection (use board store)
 const showBulkArchiveConfirm = ref(false)
 const bulkTargetColumnId = ref<string | null>(null)
-const selectedCount = board.selectedCount
+const selectedCount = computed(() => board.selectedCount)
 
 function toggleCardSelect(cardId: string, event?: Event) {
   event?.stopPropagation()
@@ -46,7 +46,7 @@ function clearSelection() {
 }
 
 // Auto-select first column as default target when user selects cards
-watch(selectedCount, (n) => {
+watch(selectedCount, (n: number) => {
   if (n > 0 && !bulkTargetColumnId.value) {
     bulkTargetColumnId.value = board.columns[0]?.id ?? null
   }
@@ -68,14 +68,14 @@ function confirmBulkArchive() {
 
 async function moveSelectedToColumn() {
   // UI-only stub for bulk move. TODO: implement server-side batch move endpoint
-  const ids = Object.entries(board.selectedCardIds.value).filter(([, v]) => v).map(([k]) => k)
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   console.log('[TODO bulk-move] projectId=', props.projectId, 'targetColumnId=', bulkTargetColumnId, 'cardIds=', ids)
   toast.add({ title: 'Bulk move logged (TODO)', color: 'info' })
 }
 
 async function archiveSelectedConfirmed() {
   // UI-only stub for bulk archive. TODO: implement server-side batch archive endpoint
-  const ids = Object.entries(board.selectedCardIds.value).filter(([, v]) => v).map(([k]) => k)
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   console.log('[TODO bulk-archive] projectId=', props.projectId, 'cardIds=', ids)
   toast.add({ title: 'Bulk archive logged (TODO)', color: 'info' })
   showBulkArchiveConfirm.value = false
@@ -419,14 +419,14 @@ function stripHtml(text: string): string {
             >
               <!-- Card header row -->
               <div class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              class="mr-2 shrink-0"
-              :checked="!!board.selectedCardIds[card.id]"
-              aria-label="Select card"
-              @click.stop="toggleCardSelect(card.id, $event)"
-              @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
-            >
+                <input
+                  type="checkbox"
+                  class="mr-2 shrink-0"
+                  :checked="!!board.selectedCardIds[card.id]"
+                  aria-label="Select card"
+                  @click.stop="toggleCardSelect(card.id, $event)"
+                  @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
+                >
                 <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}

@@ -35,8 +35,8 @@ function onChange(e: Event) {
 
       <select
         :value="bulkTargetColumnId"
-        @change="onChange"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+        @change="onChange"
       >
         <option :value="null">
           Move to...
