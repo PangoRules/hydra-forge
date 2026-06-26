@@ -5,6 +5,15 @@ import { ApiRoutes } from '~/lib/routes'
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
 type CardListResponse = components['schemas']['CardListResponse']
+type MemberResponse = components['schemas']['MemberResponse']
+
+export interface BoardFilters {
+  search: string
+  type: number | null
+  includeArchived: boolean
+  hideEmptyColumns: boolean
+  assigneeUserId: string | null
+}
 
 export const useBoardStore = defineStore('board', () => {
   const project = ref<{ id: string, name: string } | null>(null)
@@ -12,16 +21,53 @@ export const useBoardStore = defineStore('board', () => {
   const cardsByColumn = ref<Map<string, CardResponse[]>>(new Map())
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const boardFilters = ref<BoardFilters>({
+    search: '',
+    type: null,
+    includeArchived: false,
+    hideEmptyColumns: false,
+    assigneeUserId: null
+  })
+
+  const members = ref<MemberResponse[]>([])
+  const selectedCardIds = ref<Record<string, boolean>>({})
+
+  const selectedCount = computed(() => Object.values(selectedCardIds.value).filter(Boolean).length)
+
+  function toggleSelectCard(cardId: string) {
+    // assign new object so Vue reactivity detects property change
+    selectedCardIds.value = { ...selectedCardIds.value, [cardId]: !selectedCardIds.value[cardId] }
+  }
+
+  function clearSelection() {
+    selectedCardIds.value = {}
+  }
 
   const api = useApi()
 
-  async function fetchBoard(projectId: string) {
+  async function fetchBoard(projectId: string, filters?: Partial<BoardFilters>) {
     loading.value = true
     error.value = null
+    if (filters) {
+      Object.assign(boardFilters.value, filters)
+    }
     try {
+      const cardsUrl = ApiRoutes.Cards.list(projectId)
+      const searchParams = new URLSearchParams()
+      // When includeArchived is true, fetch archived (up to 200) so per-column
+      // "archived only" filtering works. When false, skip archived entirely.
+      if (boardFilters.value.includeArchived) {
+        searchParams.set('includeArchived', 'true')
+        searchParams.set('archivedLimit', '200')
+      }
+      if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
+      if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
+      if (boardFilters.value.assigneeUserId) searchParams.set('assigneeUserId', boardFilters.value.assigneeUserId)
+      const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl
+
       const [columnsResult, cardsResult] = await Promise.all([
         api.GET(ApiRoutes.Columns.list(projectId)),
-        api.GET(ApiRoutes.Cards.list(projectId))
+        api.GET(cardsUrlWithParams)
       ])
 
       if (columnsResult.error) throw columnsResult.error
@@ -97,8 +143,27 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
+  const visibleColumns = computed(() => {
+    if (!boardFilters.value.hideEmptyColumns) return columns.value
+    const colIdsWithCards = new Set<string>()
+    for (const [colId, cards] of cardsByColumn.value) {
+      if (cards.length > 0) colIdsWithCards.add(colId)
+    }
+    return columns.value.filter(c => colIdsWithCards.has(c.id))
+  })
+
+  async function fetchMembers(projectId: string) {
+    const { data, error } = await api.GET(ApiRoutes.Projects.members(projectId))
+    if (!error && data) {
+      members.value = (data as MemberResponse[]) ?? []
+    }
+  }
+
   return {
     project, columns, cardsByColumn, loading, error,
-    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard
+    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard,
+    boardFilters, visibleColumns,
+    members, fetchMembers,
+    selectedCardIds, selectedCount, toggleSelectCard, clearSelection
   }
 })

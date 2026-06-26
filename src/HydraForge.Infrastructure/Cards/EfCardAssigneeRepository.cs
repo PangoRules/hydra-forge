@@ -34,6 +34,12 @@ public class EfCardAssigneeRepository(HydraForgeDbContext context) : ICardAssign
         await context.SaveChangesAsync(ct);
     }
 
+    public async Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default)
+    {
+        context.CardAssignees.AddRange(assignees);
+        await context.SaveChangesAsync(ct);
+    }
+
     public async Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default)
     {
         var assignee = await context.CardAssignees

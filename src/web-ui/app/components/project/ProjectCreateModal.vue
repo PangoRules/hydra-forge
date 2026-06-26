@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import AppModal from '~/components/shared/AppModal.vue'
 
 const props = defineProps<{
   open: boolean
@@ -28,11 +29,10 @@ const gitProviders = [
 
 const api = useApi()
 
-// Local state that mirrors the prop — v-model on this, not the prop directly
-const isOpen = computed({
-  get: () => props.open,
-  set: val => emit('update:open', val)
-})
+function onClose() {
+  emit('update:open', false)
+  emit('close')
+}
 
 function resetForm() {
   name.value = ''
@@ -43,7 +43,6 @@ function resetForm() {
   error.value = null
 }
 
-// Reset form when modal closes
 watch(() => props.open, (val) => {
   if (!val) resetForm()
 })
@@ -61,7 +60,7 @@ async function handleSubmit() {
       }
     })
     if (apiError) throw apiError
-    isOpen.value = false
+    onClose()
     emit('created')
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create project'
@@ -72,15 +71,18 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <UModal
-    v-model:open="isOpen"
+  <AppModal
+    :open="open"
     title="Create Project"
-    :close="true"
-    :transition="false"
+    :loading="loading"
+    :error="error"
+    width="sm:max-w-lg"
+    @update:open="emit('update:open', $event)"
+    @close="onClose"
   >
     <template #body>
       <form
-        class="space-y-4"
+        class="space-y-4 p-4"
         @submit.prevent="handleSubmit"
       >
         <UFormField
@@ -159,29 +161,25 @@ async function handleSubmit() {
             </UFormField>
           </div>
         </div>
-
-        <UAlert
-          v-if="error"
-          color="error"
-          variant="subtle"
-          :title="error"
-        />
-
-        <div class="flex justify-end gap-2">
-          <UButton
-            variant="outline"
-            @click="isOpen = false"
-          >
-            Cancel
-          </UButton>
-          <UButton
-            type="submit"
-            :loading="loading"
-          >
-            Create
-          </UButton>
-        </div>
       </form>
     </template>
-  </UModal>
+
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton
+          variant="outline"
+          @click="onClose"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          type="submit"
+          :loading="loading"
+          @click="handleSubmit"
+        >
+          Create
+        </UButton>
+      </div>
+    </template>
+  </AppModal>
 </template>

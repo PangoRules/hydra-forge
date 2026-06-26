@@ -643,6 +643,8 @@ export interface paths {
                     includeArchived?: boolean;
                     assigneeUserId?: string;
                     type?: components["schemas"]["CardType"];
+                    search?: string;
+                    archivedLimit?: number | string;
                 };
                 header?: never;
                 path: {
@@ -1064,6 +1066,63 @@ export interface paths {
                     "application/json": components["schemas"]["ArchiveCardRequest"];
                     "text/json": components["schemas"]["ArchiveCardRequest"];
                     "application/*+json": components["schemas"]["ArchiveCardRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardResponse"];
+                        "application/json": components["schemas"]["CardResponse"];
+                        "text/json": components["schemas"]["CardResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/Cards/{cardId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    cardId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreCardRequest"];
+                    "text/json": components["schemas"]["RestoreCardRequest"];
+                    "application/*+json": components["schemas"]["RestoreCardRequest"];
                 };
             };
             responses: {
@@ -2274,6 +2333,10 @@ export interface components {
             /** Format: int32 */
             version: number | string;
         };
+        RestoreCardRequest: {
+            /** Format: int32 */
+            version: number | string;
+        };
         ArchiveImpactRequest: {
             confirm: boolean;
         };
@@ -2365,6 +2428,8 @@ export interface components {
             parentCardId: null | string;
             /** Format: date-time */
             dueAt: null | string;
+            /** Format: uuid */
+            assigneeUserIds?: string[];
         };
         CreateChecklistItemRequest: {
             text: string;

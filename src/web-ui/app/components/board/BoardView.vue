@@ -9,11 +9,13 @@ defineProps<{
   columns: ColumnResponse[]
   cardsByColumn: Map<string, CardResponse[]>
   projectId: string
+  includeArchived: boolean
 }>()
 
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'add-card': [columnId: string]
 }>()
 
 function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
@@ -26,15 +28,17 @@ function handleCardClick(card: CardResponse) {
 </script>
 
 <template>
-  <div class="flex gap-4 overflow-x-auto pb-4 h-full">
+  <div class="flex gap-4 pb-4 h-full">
     <BoardColumn
       v-for="col in columns"
       :key="col.id"
       :column="col"
       :cards="cardsByColumn.get(col.id) ?? []"
       :project-id="projectId"
+      :include-archived="includeArchived"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
+      @add-card="(colId: string) => emit('add-card', colId)"
     />
   </div>
 </template>

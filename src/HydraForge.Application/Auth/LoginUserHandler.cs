@@ -33,6 +33,8 @@ public record LoginRequest(string Username, string Password);
 
 public record AccessToken(string Value, DateTimeOffset ExpiresAt);
 
+public record RefreshTokenResponse(string AccessToken, DateTimeOffset ExpiresAt);
+
 public record LoginResponse(
     string AccessToken,
     DateTimeOffset ExpiresAt,

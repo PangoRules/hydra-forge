@@ -31,10 +31,18 @@ describe('useAuthStore', () => {
     expect(store.user).toBeNull()
   })
 
-  it('isAuthenticated false when only token set', () => {
+  it('isAuthenticated true when only token set', () => {
     const store = useAuthStore()
-    store.token = 'jwt-token'
-    expect(store.isAuthenticated).toBe(false)
+    store.restoreToken('jwt-token')
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.token).toBe('jwt-token')
+  })
+
+  it('restoreToken sets token without user', () => {
+    const store = useAuthStore()
+    store.restoreToken('jwt-token')
+    expect(store.token).toBe('jwt-token')
+    expect(store.user).toBeNull()
   })
 
   it('isAuthenticated false when only user set', () => {

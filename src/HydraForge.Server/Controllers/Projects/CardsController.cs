@@ -23,12 +23,14 @@ public class CardsController(CardService cardService) : ControllerBase
         [FromQuery] Guid? columnId,
         [FromQuery] bool includeArchived = false,
         [FromQuery] Guid? assigneeUserId = null,
-        [FromQuery] CardType? type = null
+        [FromQuery] CardType? type = null,
+        [FromQuery] string? search = null,
+        [FromQuery] int? archivedLimit = null
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type);
+        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type, search, archivedLimit);
         var result = await cardService.ListAsync(projectId, filter, userId);
 
         if (result.IsFailure)
@@ -88,7 +90,8 @@ public class CardsController(CardService cardService) : ControllerBase
             request.Description,
             request.Type,
             request.ParentCardId,
-            request.DueAt
+            request.DueAt,
+            request.AssigneeUserIds
         );
         var result = await cardService.CreateAsync(cmd);
 
@@ -246,6 +249,28 @@ public class CardsController(CardService cardService) : ControllerBase
 
         var cmd = new AppCards.ArchiveCardCommand(projectId, cardId, userId, request.Version);
         var result = await cardService.ArchiveAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return Ok(MapToResponse(result.Value));
+    }
+
+    [HttpPost("{cardId:guid}/restore")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] AppCards.RestoreCardRequest request
+    )
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new AppCards.RestoreCardCommand(projectId, cardId, userId, request.Version);
+        var result = await cardService.RestoreAsync(cmd);
 
         if (result.IsFailure)
         {

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import CardCreateModal from '~/components/board/CardCreateModal.vue'
+import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
+import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -16,6 +19,15 @@ const projectName = ref('')
 
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
+const selectedCardId = ref<string | null>(null)
+const showCreateModal = ref(false)
+const createColumnId = ref<string | null>(null)
+const bulkTargetColumnId = ref<string | null>(null)
+
+function handleAddCard(columnId?: string) {
+  createColumnId.value = columnId ?? null
+  showCreateModal.value = true
+}
 
 async function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
   const card = findCard(cardId)
@@ -50,20 +62,102 @@ function findCard(cardId: string): CardResponse | undefined {
 
 function handleCardClick(card: CardResponse) {
   selectedCard.value = card
+  selectedCardId.value = card.id
   showCardModal.value = true
+}
+
+// Bulk handlers for desktop
+async function handleBulkMove() {
+  if (!bulkTargetColumnId.value) return
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  for (const cardId of ids) {
+    const card = findCard(cardId)
+    if (!card) continue
+    const targetPosition = 0
+    // Optimistic update
+    board.moveCard(cardId, bulkTargetColumnId.value, targetPosition)
+    const result = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
+      body: {
+        targetColumnId: bulkTargetColumnId.value,
+        targetPosition,
+        confirmBlockedMove: false,
+        version: card.version
+      }
+    })
+    if (result.error) {
+      board.rollbackMove(projectId)
+      toast.add({ title: `Failed to move card #${card.cardNumber}`, color: 'error' })
+    }
+  }
+  board.clearSelection()
+  toast.add({ title: `Moved ${ids.length} card(s)`, color: 'success' })
+}
+
+async function handleBulkArchive() {
+  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  for (const cardId of ids) {
+    const card = findCard(cardId)
+    if (!card) continue
+    const { error } = await api.POST(ApiRoutes.Cards.archive(projectId, cardId), {
+      body: { version: card.version }
+    })
+    if (error) {
+      toast.add({ title: `Failed to archive #${card.cardNumber}`, color: 'error' })
+    } else {
+      board.removeCard(cardId)
+    }
+  }
+  board.clearSelection()
+  toast.add({ title: `Archived ${ids.length} card(s)`, color: 'success' })
 }
 
 onMounted(async () => {
   board.fetchBoard(projectId)
+  board.fetchMembers(projectId)
   const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
     projectName.value = (data as components['schemas']['ProjectResponse']).name
   }
 })
+
+// Only re-fetch when type or includeArchived actually change — not when search changes
+watch(
+  () => board.boardFilters.type,
+  (newType, oldType) => {
+    if (newType !== oldType) board.fetchBoard(projectId)
+  }
+)
+
+watch(
+  () => board.boardFilters.includeArchived,
+  (newArchived, oldArchived) => {
+    if (newArchived !== oldArchived) board.fetchBoard(projectId)
+  }
+)
+
+// Debounced search — 300ms after user stops typing, fetch with search param
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => board.boardFilters.search,
+  () => {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+      board.fetchBoard(projectId)
+      searchTimer = null
+    }, 300)
+  }
+)
+
+watch(
+  () => board.boardFilters.assigneeUserId,
+  (newAssignee, oldAssignee) => {
+    if (newAssignee !== oldAssignee) board.fetchBoard(projectId)
+  }
+)
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="flex-1 flex flex-col">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <h1 class="text-xl font-bold truncate">
         {{ projectName || 'Board' }}
@@ -80,52 +174,106 @@ onMounted(async () => {
       </UButton>
     </div>
 
-    <div
-      v-if="board.loading"
-      class="flex-1 flex items-center justify-center"
-    >
-      <UIcon
-        name="i-lucide-loader"
-        class="size-8 animate-spin"
-      />
-    </div>
+    <!-- Filter bar — always visible above the board area -->
+    <BoardFilterBar
+      :members="board.members"
+      class="hidden md:flex"
+      @add-card="handleAddCard()"
+    />
 
-    <div
-      v-else-if="board.error"
-      class="flex-1 flex items-center justify-center"
-    >
-      <div class="text-center">
-        <p class="text-red-500 mb-2">
-          {{ board.error }}
-        </p>
-        <UButton
-          variant="outline"
-          size="sm"
-          @click="board.fetchBoard(projectId)"
-        >
-          Retry
-        </UButton>
+    <!-- Board area — takes remaining height with its own scroll context -->
+    <div class="flex-1 flex flex-col">
+      <!-- Error state — shown above all board content when present -->
+      <div
+        v-if="board.error"
+        class="h-full flex items-center justify-center"
+      >
+        <div class="text-center">
+          <p class="text-red-500 mb-2">
+            {{ board.error }}
+          </p>
+          <UButton
+            variant="outline"
+            size="sm"
+            @click="board.fetchBoard(projectId)"
+          >
+            Retry
+          </UButton>
+        </div>
+      </div>
+
+      <!-- Desktop board content — hidden during loading (desktop uses full-height spinner) -->
+      <div
+        v-else-if="!board.loading"
+        class="hidden md:flex flex-1 flex-col"
+      >
+        <!-- Bulk action bar for desktop (above board) -->
+        <BulkActionBar
+          :selected-count="board.selectedCount"
+          :bulk-target-column-id="bulkTargetColumnId"
+          :columns="board.columns"
+          @update:bulk-target-column-id="val => bulkTargetColumnId = val"
+          @move="handleBulkMove"
+          @archive="handleBulkArchive"
+          @clear="board.clearSelection()"
+        />
+        <div class="flex-1 overflow-x-auto p-4">
+          <BoardView
+            :columns="board.visibleColumns"
+            :cards-by-column="board.cardsByColumn"
+            :project-id="projectId"
+            :include-archived="board.boardFilters.includeArchived"
+            @card-move="handleCardMove"
+            @card-click="handleCardClick"
+            @add-card="handleAddCard"
+          />
+        </div>
+      </div>
+
+      <!-- Desktop: full-height loading spinner (only when loading) -->
+      <div
+        v-else
+        class="hidden md:flex h-full items-center justify-center"
+      >
+        <UIcon
+          name="i-lucide-loader"
+          class="size-8 animate-spin"
+        />
+      </div>
+
+      <!-- Mobile board content — always rendered so its inline spinner works -->
+      <div
+        v-if="!board.error"
+        class="md:hidden flex-1 overflow-x-auto"
+      >
+        <BoardMobileList
+          :columns="board.visibleColumns"
+          :cards-by-column="board.cardsByColumn"
+          :project-id="projectId"
+          :members="board.members"
+          :loading="board.loading"
+          @card-click="handleCardClick"
+          @add-card="handleAddCard"
+        />
       </div>
     </div>
 
-    <div
-      v-else
-      class="flex-1 overflow-x-auto p-4"
-    >
-      <BoardView
-        :columns="board.columns"
-        :cards-by-column="board.cardsByColumn"
-        :project-id="projectId"
-        class="hidden md:flex"
-        @card-move="handleCardMove"
-        @card-click="handleCardClick"
-      />
-      <BoardMobileList
-        :columns="board.columns"
-        :cards-by-column="board.cardsByColumn"
-        class="md:hidden"
-        @card-click="handleCardClick"
-      />
-    </div>
+    <CardModal
+      v-if="selectedCardId"
+      :card-id="selectedCardId"
+      :project-id="projectId"
+      @close="selectedCardId = null"
+      @archived="board.fetchBoard(projectId)"
+      @restored="board.fetchBoard(projectId)"
+    />
+    <CardCreateModal
+      v-if="showCreateModal"
+      :project-id="projectId"
+      :columns="board.columns"
+      :members="board.members"
+      :preselected-column-id="createColumnId ?? undefined"
+      @close="showCreateModal = false"
+      @created="board.fetchBoard(projectId)"
+    />
   </div>
 </template>

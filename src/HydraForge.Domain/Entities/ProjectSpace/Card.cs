@@ -53,6 +53,13 @@ public class Card
         Version += 1;
     }
 
+    public void Restore()
+    {
+        ArchivedAt = null;
+        UpdatedAt = DateTime.UtcNow;
+        Version += 1;
+    }
+
     public static Error? ValidateParentEpic(Card child, Card parent, IReadOnlyDictionary<Guid, Card>? cardMap = null)
     {
         if (child.Id == parent.Id)

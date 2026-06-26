@@ -4,18 +4,16 @@ import { UiRoutes } from '~/lib/routes'
 
 describe('auth middleware', () => {
   it('allows access to /login without token', () => {
-    const result = authMiddleware(
-      { path: UiRoutes.Login, fullPath: UiRoutes.Login } as any,
-      { path: UiRoutes.Login, fullPath: UiRoutes.Login } as any
-    )
+    const mockTo = { path: UiRoutes.Login } as const satisfies { path: string }
+    const mockFrom = { path: UiRoutes.Login } as const satisfies { path: string }
+    const result = authMiddleware(mockTo as never, mockFrom as never)
     expect(result).toBeUndefined()
   })
 
   it('allows access to /setup without token', () => {
-    const result = authMiddleware(
-      { path: UiRoutes.Setup, fullPath: UiRoutes.Setup } as any,
-      { path: UiRoutes.Setup, fullPath: UiRoutes.Setup } as any
-    )
+    const mockTo = { path: UiRoutes.Setup } as const satisfies { path: string }
+    const mockFrom = { path: UiRoutes.Setup } as const satisfies { path: string }
+    const result = authMiddleware(mockTo as never, mockFrom as never)
     expect(result).toBeUndefined()
   })
 })

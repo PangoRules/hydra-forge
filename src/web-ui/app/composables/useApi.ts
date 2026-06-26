@@ -10,7 +10,7 @@ export interface ApiResponse<T> {
   response: Response
 }
 
-function createApiClient() {
+function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const config = useRuntimeConfig()
   const { getToken, clearToken } = useAuthToken()
 
@@ -31,8 +31,13 @@ function createApiClient() {
     },
     async onResponse({ response }) {
       if (response.status === 401) {
+        store.clearAuth()
         clearToken()
-        await navigateTo(UiRoutes.Login)
+        // Hard redirect — navigateTo is unreliable in fetch interceptor context.
+        // clearToken() deletes the cookie synchronously before navigation starts.
+        if (typeof window !== 'undefined') {
+          window.location.href = UiRoutes.Login
+        }
         return response
       }
 
@@ -66,12 +71,15 @@ function createApiClient() {
   return client
 }
 
-// Module-level singleton
+// Module-level singleton — initialized lazily on first use so the
+// auth store (which must be called in setup context) is available.
 let _api: ReturnType<typeof createApiClient> | undefined
+let _store: ReturnType<typeof useAuthStore> | undefined
 
 function getApi() {
   if (!_api) {
-    _api = createApiClient()
+    _store = useAuthStore()
+    _api = createApiClient(_store)
   }
   return _api
 }
@@ -87,28 +95,33 @@ export { ApiError }
 export function useApi() {
   const client = getApi()
 
-  // Thin wrappers that accept string paths (from ApiRoutes) and return ApiResponse<T>
+  // openapi-fetch client is typed to Paths from the spec; our ApiRoutes are
+  // string URLs built dynamically — cast through `unknown` to satisfy the type
+  // checker while preserving runtime behaviour.
+  type UntypedClient = {
+    GET: (url: string, opts?: unknown) => Promise<unknown>
+    POST: (url: string, opts?: unknown) => Promise<unknown>
+    PUT: (url: string, opts?: unknown) => Promise<unknown>
+    DELETE: (url: string, opts?: unknown) => Promise<unknown>
+  }
+
   async function get<T>(url: string): Promise<ApiResponse<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (client as any).GET(url)
+    const result = await (client as unknown as UntypedClient).GET(url)
     return result as ApiResponse<T>
   }
 
   async function post<T>(url: string, opts?: Record<string, unknown>): Promise<ApiResponse<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (client as any).POST(url, opts)
+    const result = await (client as unknown as UntypedClient).POST(url, opts)
     return result as ApiResponse<T>
   }
 
   async function put<T>(url: string, opts?: Record<string, unknown>): Promise<ApiResponse<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (client as any).PUT(url, opts)
+    const result = await (client as unknown as UntypedClient).PUT(url, opts)
     return result as ApiResponse<T>
   }
 
   async function del<T>(url: string, opts?: Record<string, unknown>): Promise<ApiResponse<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (client as any).DELETE(url, opts)
+    const result = await (client as unknown as UntypedClient).DELETE(url, opts)
     return result as ApiResponse<T>
   }
 

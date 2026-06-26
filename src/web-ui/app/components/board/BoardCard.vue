@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { ApiRoutes } from '~/lib/routes'
+import { onClickOutside } from '@vueuse/core'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
 const props = defineProps<{
   card: CardResponse
+  projectId: string
 }>()
 
 const emit = defineEmits<{
   click: [card: CardResponse]
 }>()
 
-const cardTypeIcons: Record<number, string> = {
-  0: 'i-lucide-square', // Task
-  1: 'i-lucide-bug', // Bug
-  2: 'i-lucide-layers', // Epic
-  3: 'i-lucide-file-text', // Spec
-  4: 'i-lucide-lightbulb' // Idea
-}
+const api = useApi()
+const board = useBoardStore()
+const toast = useToast()
 
-const typeIcon = computed(() => cardTypeIcons[props.card.type] ?? 'i-lucide-square')
+const showMenu = ref(false)
+const menuRef = ref<HTMLElement | null>(null)
+const menuButtonRef = ref<HTMLElement | null>(null)
+const showArchiveConfirm = ref(false)
 
 const formattedDue = computed(() => {
   if (!props.card.dueAt) return null
@@ -30,6 +33,50 @@ const isOverdue = computed(() => {
   if (!props.card.dueAt) return false
   return new Date(props.card.dueAt) < new Date()
 })
+
+const plainDescription = computed(() =>
+  (props.card.description ?? '').replace(/<[^>]*>/g, '')
+)
+
+function toggleMenu() {
+  showMenu.value = !showMenu.value
+}
+
+function closeMenu() {
+  showMenu.value = false
+}
+
+onClickOutside(menuRef, closeMenu, { ignore: [menuButtonRef] })
+
+function handleArchive() {
+  closeMenu()
+  showArchiveConfirm.value = true
+}
+
+async function confirmArchive() {
+  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, props.card.id), {
+    body: { version: props.card.version }
+  })
+  if (error) {
+    toast.add({ title: 'Failed to archive card', color: 'error' })
+  } else {
+    board.fetchBoard(props.projectId)
+    toast.add({ title: 'Card archived', color: 'success' })
+  }
+}
+
+async function handleRestore() {
+  closeMenu()
+  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
+    body: { version: props.card.version }
+  })
+  if (error) {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
+  } else {
+    board.fetchBoard(props.projectId)
+    toast.add({ title: 'Card restored', color: 'success' })
+  }
+}
 </script>
 
 <template>
@@ -38,29 +85,74 @@ const isOverdue = computed(() => {
     @click="emit('click', card)"
   >
     <div class="flex items-start gap-2">
-      <UIcon
-        :name="typeIcon"
-        class="size-4 mt-0.5 shrink-0 text-gray-400"
-      />
+      <input
+        type="checkbox"
+        class="mr-2 shrink-0 hidden md:block"
+        :checked="!!board.selectedCardIds[card.id]"
+        aria-label="Select card"
+        @click.stop="board.toggleSelectCard(card.id)"
+        @keydown.stop.prevent="board.toggleSelectCard(card.id)"
+      >
       <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            {{ card.title }}
+          </h4>
           <span
             v-if="card.archivedAt"
-            class="text-xs text-gray-400"
+            class="text-xs text-gray-400 shrink-0"
           >
             archived
           </span>
         </div>
-        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-          {{ card.title }}
-        </h4>
         <p
-          v-if="card.description"
+          v-if="plainDescription"
           class="text-xs text-gray-500 mt-1 line-clamp-2"
         >
-          {{ card.description }}
+          {{ plainDescription }}
         </p>
+      </div>
+
+      <!-- Three-dot menu -->
+      <div class="relative shrink-0">
+        <span ref="menuButtonRef">
+          <UButton
+            icon="i-lucide-ellipsis-vertical"
+            variant="ghost"
+            size="xs"
+            @click.stop="toggleMenu"
+          />
+        </span>
+        <div
+          v-if="showMenu"
+          ref="menuRef"
+          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
+          @click.stop
+        >
+          <button
+            v-if="card.archivedAt"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+            @click="handleRestore"
+          >
+            <UIcon
+              name="i-lucide-archive-restore"
+              class="size-4"
+            />
+            Restore
+          </button>
+          <button
+            v-else
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+            @click="handleArchive"
+          >
+            <UIcon
+              name="i-lucide-archive"
+              class="size-4"
+            />
+            Archive
+          </button>
+        </div>
       </div>
     </div>
 
@@ -96,4 +188,12 @@ const isOverdue = computed(() => {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model:open="showArchiveConfirm"
+    title="Archive card"
+    :message="`Archive #${card.cardNumber} ${card.title}?`"
+    confirm-text="Archive"
+    @confirm="confirmArchive"
+  />
 </template>

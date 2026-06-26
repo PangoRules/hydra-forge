@@ -9,7 +9,7 @@ interface User {
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const user = ref<User | null>(null)
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAuthenticated = computed(() => !!token.value)
 
   function setAuth(newToken: string, newUser: User) {
     token.value = newToken
@@ -21,5 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { token, user, isAuthenticated, setAuth, clearAuth }
+  function restoreToken(savedToken: string) {
+    token.value = savedToken
+  }
+
+  return { token, user, isAuthenticated, setAuth, clearAuth, restoreToken }
 })

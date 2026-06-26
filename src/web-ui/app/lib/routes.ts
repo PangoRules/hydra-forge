@@ -23,7 +23,8 @@ export const UiRoutes = {
 
 export const ApiRoutes = {
   Auth: {
-    Login: '/api/Auth/login'
+    Login: '/api/Auth/login',
+    refresh: '/api/Auth/refresh'
   },
 
   Projects: {

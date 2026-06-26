@@ -407,7 +407,12 @@ internal class AttachmentsTestCardRepository : HydraForge.Application.Cards.ICar
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
     public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, HydraForge.Application.Cards.CardListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Card>>(_cards.Where(c => c.ProjectId == projectId).ToList());
+    {
+        var query = _cards.Where(c => c.ProjectId == projectId);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+            query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
+        return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
+    }
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
     public Task AddAsync(Card card, CancellationToken ct = default) { _cards.Add(card); return Task.CompletedTask; }
@@ -441,6 +446,7 @@ internal class AttachmentsTestCardAssigneeRepository : HydraForge.Application.Ca
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>([]);
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { return Task.CompletedTask; }
 }
 
@@ -453,6 +459,7 @@ internal class AttachmentsTestCardWatcherRepository : HydraForge.Application.Car
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardWatcher>>([]);
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { return Task.CompletedTask; }
 }
 
