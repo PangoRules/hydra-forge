@@ -2,7 +2,8 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import { onClickOutside } from '@vueuse/core'
+import { useEventListener } from '@vueuse/core'
+import { nextTick, watch } from 'vue'
 import { CARD_TYPE_ICONS, CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -33,22 +34,43 @@ const archiveTargetCard = ref<CardResponse | null>(null)
 // Card three-dot menu state
 const menuOpenFor = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
+const buttonRef = ref<HTMLElement | null>(null)
 
 // Function ref instead of string ref — avoids Vue 3 array-ref issue when ref is inside v-for
 function setMenuRef(el: Element | null) {
   menuRef.value = el as HTMLElement | null
 }
 
-function openMenu(cardId: string, event: Event) {
-  event.stopPropagation()
+function openMenu(cardId: string) {
   menuOpenFor.value = menuOpenFor.value === cardId ? null : cardId
 }
 
-onClickOutside(
-  menuRef,
-  () => { menuOpenFor.value = null },
-  { ignore: [] }
-)
+// close menu when click outside menu AND outside button (use click to avoid pointerdown race)
+useEventListener(document, 'click', (e: Event) => {
+  if (!menuOpenFor.value) return
+  const target = e.target as Node | null
+  if (!target) return
+  const menuEl = menuRef.value
+  const btnEl = buttonRef.value
+  if (menuEl && menuEl.contains(target)) return
+  if (btnEl && btnEl.contains(target)) return
+  menuOpenFor.value = null
+})
+
+// focus first menu item when menu opens; close on Escape
+watch(menuOpenFor, async (val) => {
+  if (!val) return
+  await nextTick()
+  const first = menuRef.value?.querySelector('button') as HTMLElement | null
+  first?.focus()
+})
+
+useEventListener(document, 'keydown', (e: KeyboardEvent) => {
+  if (!menuOpenFor.value) return
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    menuOpenFor.value = null
+  }
+})
 
 // Accordion state
 const expandedColumns = ref<Record<string, boolean>>({})
@@ -314,48 +336,66 @@ function stripHtml(text: string): string {
                 class="text-xs text-gray-400 shrink-0"
               >archived</span>
 
-              <!-- Three-dot menu button -->
-              <button
-                class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                @click="openMenu(card.id, $event)"
-              >
-                <UIcon
-                  name="i-lucide-more-horizontal"
-                  class="size-4"
-                />
-              </button>
+              <!-- Relative wrapper anchors the absolute dropdown -->
+              <div class="relative">
+                <!-- Three-dot menu button -->
+                <button
+                  :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
+                  class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                  aria-label="Card options"
+                  :aria-expanded="menuOpenFor === card.id"
+                  :aria-controls="`card-menu-${card.id}`"
+                  @click.stop="openMenu(card.id)"
+                  @keydown.down.prevent="openMenu(card.id)"
+                  @keydown.enter.prevent="openMenu(card.id)"
+                >
+                  <UIcon
+                    name="i-lucide-more-horizontal"
+                    class="size-4"
+                  />
+                </button>
 
-              <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
-              <div
-                v-if="menuOpenFor === card.id"
-                :ref="setMenuRef"
-                class="absolute z-20 mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-[120px]"
-                style="position: absolute;"
-              >
-                <template v-if="card.archivedAt">
-                  <button
-                    class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
-                    @click="handleRestore(card)"
-                  >
-                    <UIcon
-                      name="i-lucide-archive-restore"
-                      class="size-4"
-                    />
-                    Restore
-                  </button>
-                </template>
-                <template v-else>
-                  <button
-                    class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    @click="handleArchive(card)"
-                  >
-                    <UIcon
-                      name="i-lucide-archive"
-                      class="size-4"
-                    />
-                    Archive
-                  </button>
-                </template>
+                <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
+                <div
+                  v-if="menuOpenFor === card.id"
+                  :ref="setMenuRef"
+                  :id="`card-menu-${card.id}`"
+                  role="menu"
+                  class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-30"
+                >
+                  <template v-if="card.archivedAt">
+                    <button
+                      role="menuitem"
+                      tabindex="0"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+                      @click="handleRestore(card)"
+                      @keydown.enter.prevent="handleRestore(card)"
+                      @keydown.space.prevent="handleRestore(card)"
+                    >
+                      <UIcon
+                        name="i-lucide-archive-restore"
+                        class="size-4"
+                      />
+                      Restore
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      role="menuitem"
+                      tabindex="0"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      @click="handleArchive(card)"
+                      @keydown.enter.prevent="handleArchive(card)"
+                      @keydown.space.prevent="handleArchive(card)"
+                    >
+                      <UIcon
+                        name="i-lucide-archive"
+                        class="size-4"
+                      />
+                      Archive
+                    </button>
+                  </template>
+                </div>
               </div>
             </div>
 
