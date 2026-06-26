@@ -30,6 +30,52 @@ const { search, type: filterType, assigneeUserId: filterAssignee, includeArchive
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
+// Bulk selection
+const selectedCards = ref<Record<string, boolean>>({})
+const showBulkArchiveConfirm = ref(false)
+
+const selectedCount = computed(() => Object.values(selectedCards.value).filter(Boolean).length)
+
+function toggleCardSelect(cardId: string, event?: Event) {
+  event?.stopPropagation()
+  selectedCards.value[cardId] = !selectedCards.value[cardId]
+}
+
+function clearSelection() {
+  selectedCards.value = {}
+}
+
+function findCardById(cardId: string): CardResponse | undefined {
+  for (const cards of props.cardsByColumn.values()) {
+    const found = cards.find(c => c.id === cardId)
+    if (found) return found
+  }
+  return undefined
+}
+
+function confirmBulkArchive() {
+  // open confirm dialog
+  showBulkArchiveConfirm.value = true
+}
+
+async function archiveSelectedConfirmed() {
+  const ids = Object.entries(selectedCards.value).filter(([, v]) => v).map(([k]) => k)
+  if (ids.length === 0) return
+  const results = await Promise.all(ids.map(async (id) => {
+    const card = findCardById(id)
+    if (!card) return { id, ok: false }
+    const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, id), { body: { version: card.version } })
+    return { id, ok: !error }
+  }))
+  const ok = results.filter(r => r.ok).length
+  const fail = results.length - ok
+  if (ok) toast.add({ title: `${ok} card(s) archived`, color: 'success' })
+  if (fail) toast.add({ title: `${fail} failed`, color: 'error' })
+  // update board and selection
+  for (const r of results) if (r.ok) board.removeCard(r.id)
+  clearSelection()
+  showBulkArchiveConfirm.value = false
+}
 
 // Card three-dot menu state
 const menuOpenFor = ref<string | null>(null)
@@ -256,6 +302,28 @@ function stripHtml(text: string): string {
       </label>
     </div>
 
+    <!-- Bulk action bar -->
+    <div
+      v-if="selectedCount > 0"
+      class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2"
+    >
+      <span class="text-sm">{{ selectedCount }} selected</span>
+      <UButton
+        size="sm"
+        variant="ghost"
+        @click="confirmBulkArchive"
+      >
+        Archive selected
+      </UButton>
+      <UButton
+        size="sm"
+        variant="ghost"
+        @click="clearSelection"
+      >
+        Clear selection
+      </UButton>
+    </div>
+
     <!-- Columns as accordion -->
     <div class="relative p-4 space-y-2">
       <!-- Loading spinner -->
@@ -318,10 +386,10 @@ function stripHtml(text: string): string {
               type="button"
               class="text-xs text-gray-400"
               :aria-expanded="!!expandedColumns[column.id]"
+              aria-label="Toggle column"
               @click="toggleColumn(column.id)"
               @keydown.enter.prevent="toggleColumn(column.id)"
               @keydown.space.prevent="toggleColumn(column.id)"
-              aria-label="Toggle column"
             >
               {{ expandedColumns[column.id] ? '▼' : '▶' }}
             </button>
@@ -333,104 +401,119 @@ function stripHtml(text: string): string {
           v-if="expandedColumns[column.id]"
           class="px-3 pb-3 space-y-3"
         >
-          <div
-            v-for="card in filteredCardsByColumn.get(column.id) ?? []"
-            :key="card.id"
-            class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
-            role="button"
-            tabindex="0"
-            :aria-label="`Open card #${card.cardNumber} ${card.title}`"
-            @click="emit('card-click', card)"
-            @keydown.enter.prevent.stop="emit('card-click', card)"
-            @keydown.space.prevent.stop="emit('card-click', card)"
-          >
-            <!-- Card header row -->
-            <div class="flex items-center gap-2">
-              <UIcon
-                :name="CARD_TYPE_ICONS[card.type] ?? 'i-lucide-square'"
-                class="size-4 shrink-0 text-gray-400"
-              />
-              <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
-              <p class="text-sm font-medium truncate flex-1 min-w-0">
-                {{ card.title }}
-              </p>
-              <span
-                v-if="card.archivedAt"
-                class="text-xs text-gray-400 shrink-0"
-              >archived</span>
-
-              <!-- Relative wrapper anchors the absolute dropdown -->
-              <div class="relative">
-                <!-- Three-dot menu button -->
-                <button
-                  type="button"
-                  :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
-                  class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                  aria-label="Card options"
-                  :aria-expanded="menuOpenFor === card.id"
-                  :aria-controls="`card-menu-${card.id}`"
-                  @click.stop="openMenu(card.id)"
-                  @keydown.down.prevent.stop="openMenu(card.id)"
-                  @keydown.enter.prevent.stop="openMenu(card.id)"
-                  @keydown.space.prevent.stop="openMenu(card.id)"
+          <template v-if="(filteredCardsByColumn.get(column.id) ?? []).length === 0">
+            <div class="text-xs text-gray-500 p-3">
+              No cards
+            </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="card in filteredCardsByColumn.get(column.id) ?? []"
+              :key="card.id"
+              class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
+              role="button"
+              tabindex="0"
+              :aria-label="`Open card #${card.cardNumber} ${card.title}`"
+              @click="emit('card-click', card)"
+              @keydown.enter.prevent.stop="emit('card-click', card)"
+              @keydown.space.prevent.stop="emit('card-click', card)"
+            >
+              <!-- Card header row -->
+              <div class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="mr-2 shrink-0"
+                  :checked="!!selectedCards[card.id]"
+                  aria-label="Select card"
+                  @click.stop="toggleCardSelect(card.id, $event)"
+                  @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
                 >
-                  <UIcon
-                    name="i-lucide-more-horizontal"
-                    class="size-4"
-                  />
-                </button>
+                <UIcon
+                  :name="CARD_TYPE_ICONS[card.type] ?? 'i-lucide-square'"
+                  class="size-4 shrink-0 text-gray-400"
+                />
+                <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
+                <p class="text-sm font-medium truncate flex-1 min-w-0">
+                  {{ card.title }}
+                </p>
+                <span
+                  v-if="card.archivedAt"
+                  class="text-xs text-gray-400 shrink-0"
+                >archived</span>
 
-                <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
-                <div
-                  v-if="menuOpenFor === card.id"
-                  :ref="setMenuRef"
-                  :id="`card-menu-${card.id}`"
-                  role="menu"
-                  class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-30"
-                >
-                  <template v-if="card.archivedAt">
-                    <button
-                      role="menuitem"
-                      tabindex="0"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
-                      @click.stop="handleRestore(card)"
-                      @keydown.enter.prevent.stop="handleRestore(card)"
-                      @keydown.space.prevent.stop="handleRestore(card)"
-                    >
-                      <UIcon
-                        name="i-lucide-archive-restore"
-                        class="size-4"
-                      />
-                      Restore
-                    </button>
-                  </template>
-                  <template v-else>
-                    <button
-                      role="menuitem"
-                      tabindex="0"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      @click.stop="handleArchive(card)"
-                      @keydown.enter.prevent.stop="handleArchive(card)"
-                      @keydown.space.prevent.stop="handleArchive(card)"
-                    >
-                      <UIcon
-                        name="i-lucide-archive"
-                        class="size-4"
-                      />
-                      Archive
-                    </button>
-                  </template>
+                <!-- Relative wrapper anchors the absolute dropdown -->
+                <div class="relative">
+                  <!-- Three-dot menu button -->
+                  <button
+                    :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
+                    type="button"
+                    class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                    aria-label="Card options"
+                    :aria-expanded="menuOpenFor === card.id"
+                    :aria-controls="`card-menu-${card.id}`"
+                    @click.stop="openMenu(card.id)"
+                    @keydown.down.prevent.stop="openMenu(card.id)"
+                    @keydown.enter.prevent.stop="openMenu(card.id)"
+                    @keydown.space.prevent.stop="openMenu(card.id)"
+                  >
+                    <UIcon
+                      name="i-lucide-more-horizontal"
+                      class="size-4"
+                    />
+                  </button>
+
+                  <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
+                  <div
+                    v-if="menuOpenFor === card.id"
+                    :id="`card-menu-${card.id}`"
+                    :ref="setMenuRef"
+                    role="menu"
+                    class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-30"
+                  >
+                    <template v-if="card.archivedAt">
+                      <button
+                        role="menuitem"
+                        tabindex="0"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click.stop="handleRestore(card)"
+                        @keydown.enter.prevent.stop="handleRestore(card)"
+                        @keydown.space.prevent.stop="handleRestore(card)"
+                      >
+                        <UIcon
+                          name="i-lucide-archive-restore"
+                          class="size-4"
+                        />
+                        Restore
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button
+                        role="menuitem"
+                        tabindex="0"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click.stop="handleArchive(card)"
+                        @keydown.enter.prevent.stop="handleArchive(card)"
+                        @keydown.space.prevent.stop="handleArchive(card)"
+                      >
+                        <UIcon
+                          name="i-lucide-archive"
+                          class="size-4"
+                        />
+                        Archive
+                      </button>
+                    </template>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <p
-              v-if="card.description"
-              class="text-xs text-gray-500 mt-1 line-clamp-2"
-            >
-              {{ card.description ? stripHtml(card.description) : '' }}
-            </p>
-          </div>
+              <p
+                v-if="card.description"
+                class="text-xs text-gray-500 mt-1 line-clamp-2"
+              >
+                {{ card.description ? stripHtml(card.description) : '' }}
+              </p>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -441,6 +524,14 @@ function stripHtml(text: string): string {
       :message="archiveTargetCard ? `Archive #${archiveTargetCard.cardNumber} ${archiveTargetCard.title}?` : ''"
       confirm-text="Archive"
       @confirm="confirmArchive"
+    />
+
+    <ConfirmDialog
+      v-model:open="showBulkArchiveConfirm"
+      title="Archive selected cards"
+      :message="`Archive ${selectedCount} selected card(s)?`"
+      confirm-text="Archive"
+      @confirm="archiveSelectedConfirmed"
     />
   </div>
 </template>
