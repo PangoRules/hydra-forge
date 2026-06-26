@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { formatDueDate, isOverdue } from '~/lib/date'
 import { onClickOutside } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -24,15 +25,8 @@ const menuRef = ref<HTMLElement | null>(null)
 const menuButtonRef = ref<HTMLElement | null>(null)
 const showArchiveConfirm = ref(false)
 
-const formattedDue = computed(() => {
-  if (!props.card.dueAt) return null
-  return new Date(props.card.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-})
-
-const isOverdue = computed(() => {
-  if (!props.card.dueAt) return false
-  return new Date(props.card.dueAt) < new Date()
-})
+const formattedDue = computed(() => formatDueDate(props.card.dueAt))
+const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
 
 const plainDescription = computed(() =>
   (props.card.description ?? '').replace(/<[^>]*>/g, '')
@@ -177,7 +171,7 @@ async function handleRestore() {
         <span
           v-if="formattedDue"
           class="text-xs"
-          :class="isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
+          :class="cardIsOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
         >
           <UIcon
             name="i-lucide-calendar"

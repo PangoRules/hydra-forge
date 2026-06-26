@@ -3,7 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
-import { CARD_TYPE_MAP, toTypeString } from '~/lib/card-type'
+import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -141,11 +141,11 @@ function closeWithAnimation() {
               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
             >
               <option
-                v-for="[value, label] in Object.entries(CARD_TYPE_MAP)"
-                :key="value"
-                :value="Number(value)"
+                v-for="opt in CARD_TYPE_OPTIONS"
+                :key="opt.value"
+                :value="opt.value"
               >
-                {{ label }}
+                {{ opt.label }}
               </option>
             </select>
           </div>
