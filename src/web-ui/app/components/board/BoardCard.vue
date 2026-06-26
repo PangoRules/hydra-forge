@@ -24,16 +24,6 @@ const menuRef = ref<HTMLElement | null>(null)
 const menuButtonRef = ref<HTMLElement | null>(null)
 const showArchiveConfirm = ref(false)
 
-const cardTypeIcons: Record<number, string> = {
-  0: 'i-lucide-square', // Task
-  1: 'i-lucide-bug', // Bug
-  2: 'i-lucide-layers', // Epic
-  3: 'i-lucide-file-text', // Spec
-  4: 'i-lucide-lightbulb' // Idea
-}
-
-const typeIcon = computed(() => cardTypeIcons[props.card.type] ?? 'i-lucide-square')
-
 const formattedDue = computed(() => {
   if (!props.card.dueAt) return null
   return new Date(props.card.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -95,10 +85,14 @@ async function handleRestore() {
     @click="emit('click', card)"
   >
     <div class="flex items-start gap-2">
-      <UIcon
-        :name="typeIcon"
-        class="size-4 mt-0.5 shrink-0 text-gray-400"
-      />
+      <input
+        type="checkbox"
+        class="mr-2 shrink-0 hidden md:block"
+        :checked="!!board.selectedCardIds[card.id]"
+        aria-label="Select card"
+        @click.stop="board.toggleSelectCard(card.id)"
+        @keydown.stop.prevent="board.toggleSelectCard(card.id)"
+      >
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
@@ -133,7 +127,7 @@ async function handleRestore() {
         <div
           v-if="showMenu"
           ref="menuRef"
-          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-[140px]"
+          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
           @click.stop
         >
           <button

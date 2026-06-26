@@ -4,6 +4,7 @@ import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
+import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -30,23 +31,29 @@ const { search, type: filterType, assigneeUserId: filterAssignee, includeArchive
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
-// Bulk selection
-const selectedCards = ref<Record<string, boolean>>({})
+// Bulk selection (use board store)
 const showBulkArchiveConfirm = ref(false)
-
-const selectedCount = computed(() => Object.values(selectedCards.value).filter(Boolean).length)
 const bulkTargetColumnId = ref<string | null>(null)
+const selectedCount = board.selectedCount
 
 function toggleCardSelect(cardId: string, event?: Event) {
   event?.stopPropagation()
-  selectedCards.value[cardId] = !selectedCards.value[cardId]
+  board.toggleSelectCard(cardId)
 }
 
 function clearSelection() {
-  selectedCards.value = {}
+  board.clearSelection()
 }
 
-function findCardById(cardId: string): CardResponse | undefined {
+// Auto-select first column as default target when user selects cards
+watch(selectedCount, (n) => {
+  if (n > 0 && !bulkTargetColumnId.value) {
+    bulkTargetColumnId.value = board.columns[0]?.id ?? null
+  }
+})
+
+// helper to locate card in props map
+function _findCardById(cardId: string): CardResponse | undefined {
   for (const cards of props.cardsByColumn.values()) {
     const found = cards.find(c => c.id === cardId)
     if (found) return found
@@ -60,56 +67,17 @@ function confirmBulkArchive() {
 }
 
 async function moveSelectedToColumn() {
-  const ids = Object.entries(selectedCards.value).filter(([, v]) => v).map(([k]) => k)
-  if (ids.length === 0 || !bulkTargetColumnId.value) {
-    toast.add({ title: 'Select target column', color: 'error' })
-    return
-  }
-
-  // perform moves sequentially to keep server happy and reduce race
-  const results: Array<{ id: string, ok: boolean }> = []
-  for (const id of ids) {
-    const card = findCardById(id)
-    if (!card) {
-      results.push({ id, ok: false })
-      continue
-    }
-    const { error } = await api.POST(ApiRoutes.Cards.move(props.projectId, id), {
-      body: {
-        targetColumnId: bulkTargetColumnId.value,
-        targetPosition: 0,
-        confirmBlockedMove: false,
-        version: card.version
-      }
-    })
-    results.push({ id, ok: !error })
-  }
-
-  const ok = results.filter(r => r.ok).length
-  const fail = results.length - ok
-  if (ok) toast.add({ title: `${ok} card(s) moved`, color: 'success' })
-  if (fail) toast.add({ title: `${fail} failed`, color: 'error' })
-  // refresh board and clear selection
-  await board.fetchBoard(props.projectId)
-  clearSelection()
+  // UI-only stub for bulk move. TODO: implement server-side batch move endpoint
+  const ids = Object.entries(board.selectedCardIds.value).filter(([, v]) => v).map(([k]) => k)
+  console.log('[TODO bulk-move] projectId=', props.projectId, 'targetColumnId=', bulkTargetColumnId, 'cardIds=', ids)
+  toast.add({ title: 'Bulk move logged (TODO)', color: 'info' })
 }
 
 async function archiveSelectedConfirmed() {
-  const ids = Object.entries(selectedCards.value).filter(([, v]) => v).map(([k]) => k)
-  if (ids.length === 0) return
-  const results = await Promise.all(ids.map(async (id) => {
-    const card = findCardById(id)
-    if (!card) return { id, ok: false }
-    const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, id), { body: { version: card.version } })
-    return { id, ok: !error }
-  }))
-  const ok = results.filter(r => r.ok).length
-  const fail = results.length - ok
-  if (ok) toast.add({ title: `${ok} card(s) archived`, color: 'success' })
-  if (fail) toast.add({ title: `${fail} failed`, color: 'error' })
-  // update board and selection
-  for (const r of results) if (r.ok) board.removeCard(r.id)
-  clearSelection()
+  // UI-only stub for bulk archive. TODO: implement server-side batch archive endpoint
+  const ids = Object.entries(board.selectedCardIds.value).filter(([, v]) => v).map(([k]) => k)
+  console.log('[TODO bulk-archive] projectId=', props.projectId, 'cardIds=', ids)
+  toast.add({ title: 'Bulk archive logged (TODO)', color: 'info' })
   showBulkArchiveConfirm.value = false
 }
 
@@ -344,49 +312,16 @@ function stripHtml(text: string): string {
       </label>
     </div>
 
-    <!-- Bulk action bar -->
-    <div
-      v-if="selectedCount > 0"
-      class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2"
-    >
-      <span class="text-sm">{{ selectedCount }} selected</span>
-      <UButton
-        size="sm"
-        variant="ghost"
-        @click="confirmBulkArchive"
-      >
-        Archive selected
-      </UButton>
-      <select
-        v-model="bulkTargetColumnId"
-        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option :value="null">
-          Move to...
-        </option>
-        <option
-          v-for="col in props.columns"
-          :key="col.id"
-          :value="col.id"
-        >
-          {{ col.name }}
-        </option>
-      </select>
-      <UButton
-        size="sm"
-        variant="ghost"
-        @click="moveSelectedToColumn"
-      >
-        Move selected
-      </UButton>
-      <UButton
-        size="sm"
-        variant="ghost"
-        @click="clearSelection"
-      >
-        Clear selection
-      </UButton>
-    </div>
+    <!-- Bulk action bar (shared component) -->
+    <BulkActionBar
+      :selected-count="selectedCount"
+      :bulk-target-column-id="bulkTargetColumnId"
+      :columns="board.columns"
+      @update:bulk-target-column-id="val => bulkTargetColumnId = val"
+      @move="moveSelectedToColumn"
+      @archive="confirmBulkArchive"
+      @clear="clearSelection"
+    />
 
     <!-- Columns as accordion -->
     <div class="relative p-4 space-y-2">
@@ -484,14 +419,14 @@ function stripHtml(text: string): string {
             >
               <!-- Card header row -->
               <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  class="mr-2 shrink-0"
-                  :checked="!!selectedCards[card.id]"
-                  aria-label="Select card"
-                  @click.stop="toggleCardSelect(card.id, $event)"
-                  @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
-                >
+            <input
+              type="checkbox"
+              class="mr-2 shrink-0"
+              :checked="!!board.selectedCardIds[card.id]"
+              aria-label="Select card"
+              @click.stop="toggleCardSelect(card.id, $event)"
+              @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
+            >
                 <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}

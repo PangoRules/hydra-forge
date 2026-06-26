@@ -30,6 +30,17 @@ export const useBoardStore = defineStore('board', () => {
   })
 
   const members = ref<MemberResponse[]>([])
+  const selectedCardIds = ref<Record<string, boolean>>({})
+
+  const selectedCount = computed(() => Object.values(selectedCardIds.value).filter(Boolean).length)
+
+  function toggleSelectCard(cardId: string) {
+    selectedCardIds.value[cardId] = !selectedCardIds.value[cardId]
+  }
+
+  function clearSelection() {
+    selectedCardIds.value = {}
+  }
 
   const api = useApi()
 
@@ -151,6 +162,7 @@ export const useBoardStore = defineStore('board', () => {
     project, columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard,
     boardFilters, visibleColumns,
-    members, fetchMembers
+    members, fetchMembers,
+    selectedCardIds, selectedCount, toggleSelectCard, clearSelection
   }
 })
