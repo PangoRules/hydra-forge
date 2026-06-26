@@ -4,7 +4,7 @@
 
 **Branch:** `task/phase-3-e2e-foundation`
 **Parent branch:** `feat/phase-3-web-ui`
-**Parent spec:** `2026-06-23-phase-3-web-ui-design.md`
+**Parent spec:** `2026-06-23-phase-3-web-ui-design.md` — Task 4B
 
 **Goal:** Stand up Playwright (open source, MIT license) as the project's first automated end-to-end layer, driving the real Nuxt dev server against the real .NET API + Postgres + MinIO stack, and convert the three highest-value sections of `docs/superpowers/manual-validation/phase-3-plan-3-matrix.md` (Save dirty-state/debounce, Archive/Restore, Concurrency/version conflict) into automated specs.
 

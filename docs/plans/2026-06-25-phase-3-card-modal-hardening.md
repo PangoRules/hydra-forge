@@ -4,7 +4,7 @@
 
 **Branch:** `task/phase-3-card-modal-hardening`
 **Parent branch:** `feat/phase-3-web-ui`
-**Parent spec:** `2026-06-23-phase-3-web-ui-design.md`
+**Parent spec:** `2026-06-23-phase-3-web-ui-design.md` — Task 3A
 
 **Goal:** Fix a silent-failure bug in every component that calls `useApi()` without a try/catch, move card-version ownership out of `CardDescription` and into `CardModal` (so Plan 4's metadata editor doesn't reintroduce stale-version 409s), de-duplicate the card-type/due-date logic that has been copy-pasted into three components, and close the component-test gaps this exposed.
 

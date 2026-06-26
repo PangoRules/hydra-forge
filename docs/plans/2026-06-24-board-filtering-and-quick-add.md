@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Branch:** `task/phase-3-board-filtering`
+**Parent branch:** `feat/phase-3-web-ui`
+**Parent spec:** `2026-06-23-phase-3-web-ui-design.md` — Task 4A
+
 **Goal:** Add filter controls, archived card toggle, and quick-add card buttons to the board view (desktop + mobile).
 
 **Architecture:** Global filter bar above columns (desktop) / slide-out panel (mobile). Per-column filter controls in column headers. Backend `GET /api/projects/{id}/Cards` already supports `type`, `includeArchived`, `assigneeUserId`, `columnId` query params — no backend changes needed. All filtering logic is client-side on the already-fetched card list.
