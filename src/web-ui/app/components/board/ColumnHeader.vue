@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 
@@ -63,7 +63,7 @@ const emit = defineEmits<{
         "
       >
         <option
-          v-for="t in CARD_TYPE_OPTIONS"
+          v-for="t in CARD_TYPE_FILTER_OPTIONS"
           :key="t.label"
           :value="t.value ?? ''"
         >

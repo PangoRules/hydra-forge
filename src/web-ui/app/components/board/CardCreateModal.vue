@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'

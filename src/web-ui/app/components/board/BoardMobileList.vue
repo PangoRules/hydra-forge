@@ -5,7 +5,7 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -263,7 +263,7 @@ function stripHtml(text: string): string {
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
       >
         <option
-          v-for="opt in CARD_TYPE_OPTIONS"
+          v-for="opt in CARD_TYPE_FILTER_OPTIONS"
           :key="opt.label"
           :value="opt.value"
         >
@@ -365,7 +365,7 @@ function stripHtml(text: string): string {
               @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value !== '' ? Number(($event.target as HTMLSelectElement).value) : null"
             >
               <option
-                v-for="opt in CARD_TYPE_OPTIONS"
+                v-for="opt in CARD_TYPE_FILTER_OPTIONS"
                 :key="opt.label"
                 :value="opt.value ?? ''"
               >
