@@ -246,9 +246,12 @@ function stripHtml(text: string): string {
       </UButton>
       <UButton
         size="sm"
-        icon="i-lucide-plus"
+        type="button"
         @click="emit('add-card')"
-      />
+      >
+        <UIcon name="i-lucide-plus" class="mr-2 hidden sm:inline-block" />
+        <span>Add card</span>
+      </UButton>
     </div>
 
     <!-- Filter slide-out -->
