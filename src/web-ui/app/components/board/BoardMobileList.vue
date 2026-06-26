@@ -34,8 +34,6 @@ const archiveTargetCard = ref<CardResponse | null>(null)
 // Bulk selection (use board store)
 const showBulkArchiveConfirm = ref(false)
 const bulkTargetColumnId = ref<string | null>(null)
-const selectedCount = computed(() => board.selectedCount)
-
 function toggleCardSelect(cardId: string, event?: Event) {
   event?.stopPropagation()
   board.toggleSelectCard(cardId)
@@ -46,7 +44,7 @@ function clearSelection() {
 }
 
 // Auto-select first column as default target when user selects cards
-watch(selectedCount, (n: number) => {
+watch(() => board.selectedCount, (n: number) => {
   if (n > 0 && !bulkTargetColumnId.value) {
     bulkTargetColumnId.value = board.columns[0]?.id ?? null
   }
@@ -314,7 +312,7 @@ function stripHtml(text: string): string {
 
     <!-- Bulk action bar (shared component) -->
     <BulkActionBar
-      :selected-count="selectedCount"
+      :selected-count="board.selectedCount"
       :bulk-target-column-id="bulkTargetColumnId"
       :columns="board.columns"
       @update:bulk-target-column-id="val => bulkTargetColumnId = val"
@@ -524,7 +522,7 @@ function stripHtml(text: string): string {
     <ConfirmDialog
       v-model:open="showBulkArchiveConfirm"
       title="Archive selected cards"
-      :message="`Archive ${selectedCount} selected card(s)?`"
+      :message="`Archive ${board.selectedCount} selected card(s)?`"
       confirm-text="Archive"
       @confirm="archiveSelectedConfirmed"
     />
