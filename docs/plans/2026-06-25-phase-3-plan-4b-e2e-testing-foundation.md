@@ -6,7 +6,7 @@
 **Parent branch:** `feat/phase-3-web-ui`
 **Parent spec:** `2026-06-23-phase-3-web-ui-design.md` — Task 4B
 
-**Goal:** Stand up Playwright (open source, MIT license) as the project's first automated end-to-end layer, driving the real Nuxt dev server against the real .NET API + Postgres + MinIO stack, and convert the three highest-value sections of `docs/superpowers/manual-validation/phase-3-plan-3-matrix.md` (Save dirty-state/debounce, Archive/Restore, Concurrency/version conflict) into automated specs.
+**Goal:** Stand up Playwright (open source, MIT license) as the project's first automated end-to-end layer, driving the real Nuxt dev server against the real .NET API + Postgres + MinIO stack, and convert the three highest-value sections of `docs/manual-validation/2026-06-23-phase-3-web-ui-matrix.md` — Plan 3 section (Save dirty-state/debounce, Archive/Restore, Concurrency/version conflict) — into automated specs.
 
 **Architecture:** Playwright drives a real browser against `pnpm dev` (Nuxt, `localhost:3000`) which in turn calls the real API (`localhost:5000`). There is no per-test database reset — every spec seeds its own project/column/card through the API directly (the same way `docs/superpowers/manual-validation/*.md` seeds via curl) and gives every seeded title a random suffix so repeated runs never collide. One spec (`auth.setup.ts`) logs in through the real UI once and saves the session as `storageState`; every other spec reuses that state instead of re-logging in. Seeded test users (`testadmin`/`TestAdmin123!`) only exist when the API runs with `ASPNETCORE_ENVIRONMENT=Development` (per `TestUserSeeder`, `CLAUDE.md`).
 
