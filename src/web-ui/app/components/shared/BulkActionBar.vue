@@ -29,15 +29,8 @@ function onChange(e: Event) {
     v-if="selectedCount > 0"
     class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
   >
-    <!-- DEBUG: always visible so we can see if BulkActionBar renders at all -->
-    <div class="md:hidden bg-red-500 text-white text-xs">
-      DEBUG MOBILE: selectedCount={{ selectedCount }}
-    </div>
-    <div class="hidden md:block bg-blue-500 text-white text-xs">
-      DEBUG DESKTOP: selectedCount={{ selectedCount }}
-    </div>
-    <!-- Mobile: keep existing compact layout -->
-    <div class="flex gap-2 flex-wrap items-center md:hidden">
+    <!-- Mobile: right-aligned like desktop -->
+    <div class="flex gap-2 flex-wrap items-center justify-end md:hidden">
       <span class="text-sm">{{ selectedCount }} selected</span>
 
       <select
