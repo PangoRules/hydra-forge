@@ -268,7 +268,12 @@ function stripHtml(text: string): string {
         <!-- Column header (accordion toggle) -->
         <div
           class="flex items-center justify-between px-3 py-2 cursor-pointer"
+          role="button"
+          :aria-expanded="!!expandedColumns[column.id]"
+          tabindex="0"
           @click="toggleColumn(column.id)"
+          @keydown.enter.prevent="toggleColumn(column.id)"
+          @keydown.space.prevent="toggleColumn(column.id)"
         >
           <div class="flex items-center gap-2">
             <div
@@ -319,7 +324,12 @@ function stripHtml(text: string): string {
             v-for="card in filteredCardsByColumn.get(column.id) ?? []"
             :key="card.id"
             class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
+            role="button"
+            tabindex="0"
+            :aria-label="`Open card #${card.cardNumber} ${card.title}`"
             @click="emit('card-click', card)"
+            @keydown.enter.prevent.stop="emit('card-click', card)"
+            @keydown.space.prevent.stop="emit('card-click', card)"
           >
             <!-- Card header row -->
             <div class="flex items-center gap-2">
