@@ -45,23 +45,21 @@ async function handleCreate() {
     description: description.value,
     type: toTypeString(cardType.value)
   }
-  // HTML date input gives YYYY-MM-DD; convert to ISO 8601 datetime or null
   if (dueAt.value) {
     body.dueAt = `${dueAt.value}T00:00:00Z`
   }
   if (selectedAssignees.value.length > 0) {
     body.assigneeUserIds = selectedAssignees.value.map(id => id)
   }
-  const { error } = await api.POST(ApiRoutes.Cards.create(props.projectId), {
-    body
-  })
-  saving.value = false
-  if (error) {
-    toast.add({ title: error?.message ?? 'Failed to create card', color: 'error' })
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
     toast.add({ title: 'Card created', color: 'success' })
     emit('created')
     closeWithAnimation()
+  } catch (e: unknown) {
+    toast.add({ title: e instanceof ApiError ? e.message : 'Failed to create card', color: 'error' })
+  } finally {
+    saving.value = false
   }
 }
 

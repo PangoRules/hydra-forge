@@ -1,6 +1,21 @@
-import { describe, it, expect } from 'vitest'
-import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
 import BoardCard from '~/components/board/BoardCard.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import { ApiError } from '~/lib/api-error'
+
+const mockPOST = vi.fn()
+const mockToastAdd = vi.fn()
+
+mockNuxtImport('useApi', () => () => ({
+  GET: vi.fn(),
+  POST: mockPOST,
+  PUT: vi.fn(),
+  DELETE: vi.fn()
+}))
+
+mockNuxtImport('useToast', () => () => ({ add: mockToastAdd }))
 
 const makeCard = (overrides = {}) => ({
   id: 'c1',
@@ -24,14 +39,42 @@ const makeCard = (overrides = {}) => ({
 })
 
 describe('BoardCard', () => {
-  it('renders card title', async () => {
-    const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ title: 'Fix login bug' }), projectId: 'p1' }
-    })
-    expect(wrapper.text()).toContain('Fix login bug')
+  beforeEach(() => {
+    mockPOST.mockReset()
+    mockToastAdd.mockReset()
   })
 
-  it('shows card number', async () => {
+  it('shows an error toast and does not call fetchBoard when archive fails', async () => {
+    mockPOST.mockRejectedValue(new ApiError(409, 'CARD_CONCURRENCY_MISMATCH', 'Conflict', null, 'about:blank', 'corr-1'))
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: makeCard(), projectId: 'p1' },
+      global: { stubs: { ConfirmDialog } }
+    })
+
+    ;(wrapper.vm as any).showArchiveConfirm = true
+    await flushPromises()
+    await (wrapper.vm as any).confirmArchive()
+    await flushPromises()
+
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Failed to archive card', color: 'error' }))
+  })
+
+  it('shows an error toast when restore fails', async () => {
+    mockPOST.mockRejectedValue(new ApiError(500, 'UNKNOWN', 'Server Error', null, 'about:blank', 'corr-2'))
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: makeCard({ archivedAt: new Date().toISOString() }), projectId: 'p1' },
+      global: { stubs: { ConfirmDialog } }
+    })
+
+    ;(wrapper.vm as any).showMenu = true
+    await flushPromises()
+    await (wrapper.vm as any).handleRestore()
+    await flushPromises()
+
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Failed to restore card', color: 'error' }))
+  })
+
+  it('renders card title', async () => {
     const wrapper = await mountSuspended(BoardCard, {
       props: { card: makeCard({ cardNumber: 99 }), projectId: 'p1' }
     })

@@ -54,27 +54,27 @@ function handleArchive() {
 }
 
 async function confirmArchive() {
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, props.card.id), {
-    body: { version: props.card.version }
-  })
-  if (error) {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.archive(props.projectId, props.card.id), {
+      body: { version: props.card.version }
+    })
     board.fetchBoard(props.projectId)
     toast.add({ title: 'Card archived', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to archive card', color: 'error' })
   }
 }
 
 async function handleRestore() {
   closeMenu()
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
-    body: { version: props.card.version }
-  })
-  if (error) {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
+      body: { version: props.card.version }
+    })
     board.fetchBoard(props.projectId)
     toast.add({ title: 'Card restored', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
   }
 }
 </script>
