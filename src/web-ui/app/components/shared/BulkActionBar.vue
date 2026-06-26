@@ -33,22 +33,25 @@ function onChange(e: Event) {
     <div class="flex gap-2 flex-wrap items-center justify-end md:hidden">
       <span class="text-sm">{{ selectedCount }} selected</span>
 
-      <select
-        :value="bulkTargetColumnId"
-        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-        @change="onChange"
-      >
-        <option :value="null">
-          Move to...
-        </option>
-        <option
-          v-for="col in columns"
-          :key="col.id"
-          :value="col.id"
+      <div class="flex items-center gap-1">
+        <label class="text-xs text-gray-500 whitespace-nowrap">Move to:</label>
+        <select
+          :value="bulkTargetColumnId ?? ''"
+          class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+          @change="onChange"
         >
-          {{ col.name }}
-        </option>
-      </select>
+          <option value="">
+            Move to...
+          </option>
+          <option
+            v-for="col in columns"
+            :key="col.id"
+            :value="col.id"
+          >
+            {{ col.name }}
+          </option>
+        </select>
+      </div>
 
       <UButton
         size="sm"
@@ -80,14 +83,14 @@ function onChange(e: Event) {
       <span class="text-sm">{{ selectedCount }} selected</span>
 
       <div class="flex items-center gap-2">
-        <label class="text-xs text-gray-500 mr-2">Move to</label>
+        <label class="text-xs text-gray-500 mr-2">Move to:</label>
 
         <select
-          :value="bulkTargetColumnId"
+          :value="bulkTargetColumnId ?? ''"
           class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
           @change="onChange"
         >
-          <option :value="null">
+          <option value="">
             Choose column
           </option>
           <option

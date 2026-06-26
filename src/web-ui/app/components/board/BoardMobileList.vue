@@ -43,13 +43,6 @@ function clearSelection() {
   board.clearSelection()
 }
 
-// Auto-select first column as default target when user selects cards
-watch(() => board.selectedCount, (n: number) => {
-  if (n > 0 && !bulkTargetColumnId.value) {
-    bulkTargetColumnId.value = board.columns[0]?.id ?? null
-  }
-})
-
 // helper to locate card in props map
 function _findCardById(cardId: string): CardResponse | undefined {
   for (const cards of props.cardsByColumn.values()) {
