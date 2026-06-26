@@ -105,8 +105,16 @@ function onKeydown(e: KeyboardEvent) {
     <p
       v-if="saveError"
       class="text-xs text-error mt-1"
+      role="alert"
     >
       {{ saveError }}
+    </p>
+    <p
+      v-if="saving"
+      class="sr-only"
+      aria-live="polite"
+    >
+      Saving description…
     </p>
   </div>
 </template>

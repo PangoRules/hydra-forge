@@ -101,4 +101,37 @@ describe('CardDescription', () => {
     expect(wrapper.emitted('update:card')).toBeTruthy()
     expect(wrapper.emitted('update:card')![0]).toEqual([updated])
   })
+
+  it('marks the save error as an alert for assistive technology', async () => {
+    mockPUT.mockResolvedValue({ data: undefined, error: { message: 'boom' } })
+    const wrapper = await mountSuspended(CardDescription, {
+      props: { card: makeCard(), projectId: 'p1' }
+    })
+    await wrapper.findComponent(MarkdownEditor).vm.$emit('update:modelValue', 'edited')
+    const saveBtn = wrapper.findAll('button').find(b => b.text() === 'Save')!
+    await saveBtn.trigger('click')
+    await flushPromises()
+
+    const error = wrapper.find('[role="alert"]')
+    expect(error.exists()).toBe(true)
+    expect(error.text()).toContain('Failed to save')
+  })
+
+  it('announces saving state to screen readers via an aria-live region', async () => {
+    let resolvePut: (value: unknown) => void = () => {}
+    mockPUT.mockImplementation(() => new Promise(resolve => { resolvePut = resolve }))
+    const wrapper = await mountSuspended(CardDescription, {
+      props: { card: makeCard(), projectId: 'p1' }
+    })
+    await wrapper.findComponent(MarkdownEditor).vm.$emit('update:modelValue', 'edited')
+    const saveBtn = wrapper.findAll('button').find(b => b.text() === 'Save')!
+    await saveBtn.trigger('click')
+
+    const liveRegion = wrapper.find('[aria-live="polite"]')
+    expect(liveRegion.exists()).toBe(true)
+    expect(liveRegion.text()).toContain('Saving')
+
+    resolvePut({ data: makeCard({ version: 2 }), error: undefined })
+    await flushPromises()
+  })
 })
