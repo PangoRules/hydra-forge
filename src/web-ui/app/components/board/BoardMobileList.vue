@@ -79,6 +79,14 @@ function toggleColumn(colId: string) {
   expandedColumns.value[colId] = !expandedColumns.value[colId]
 }
 
+function onHeaderClick(e: Event, colId: string) {
+  // ignore clicks coming from interactive children (select, button, inputs)
+  if ((e.target as Node) !== (e.currentTarget as Node)) return
+  toggleColumn(colId)
+}
+
+// header toggle handled by dedicated button (avoids interfering with inner interactive controls)
+
 // Global filter panel visibility
 const showFilters = ref(false)
 
@@ -268,12 +276,7 @@ function stripHtml(text: string): string {
         <!-- Column header (accordion toggle) -->
         <div
           class="flex items-center justify-between px-3 py-2 cursor-pointer"
-          role="button"
-          :aria-expanded="!!expandedColumns[column.id]"
-          tabindex="0"
-          @click="toggleColumn(column.id)"
-          @keydown.enter.prevent="toggleColumn(column.id)"
-          @keydown.space.prevent="toggleColumn(column.id)"
+          @click="onHeaderClick($event, column.id)"
         >
           <div class="flex items-center gap-2">
             <div
@@ -311,7 +314,17 @@ function stripHtml(text: string): string {
                 {{ opt.label }}
               </option>
             </select>
-            <span class="text-xs text-gray-400">{{ expandedColumns[column.id] ? '▼' : '▶' }}</span>
+            <button
+              type="button"
+              class="text-xs text-gray-400"
+              :aria-expanded="!!expandedColumns[column.id]"
+              @click="toggleColumn(column.id)"
+              @keydown.enter.prevent="toggleColumn(column.id)"
+              @keydown.space.prevent="toggleColumn(column.id)"
+              aria-label="Toggle column"
+            >
+              {{ expandedColumns[column.id] ? '▼' : '▶' }}
+            </button>
           </div>
         </div>
 
@@ -350,14 +363,16 @@ function stripHtml(text: string): string {
               <div class="relative">
                 <!-- Three-dot menu button -->
                 <button
+                  type="button"
                   :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
                   class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   aria-label="Card options"
                   :aria-expanded="menuOpenFor === card.id"
                   :aria-controls="`card-menu-${card.id}`"
                   @click.stop="openMenu(card.id)"
-                  @keydown.down.prevent="openMenu(card.id)"
-                  @keydown.enter.prevent="openMenu(card.id)"
+                  @keydown.down.prevent.stop="openMenu(card.id)"
+                  @keydown.enter.prevent.stop="openMenu(card.id)"
+                  @keydown.space.prevent.stop="openMenu(card.id)"
                 >
                   <UIcon
                     name="i-lucide-more-horizontal"
@@ -378,9 +393,9 @@ function stripHtml(text: string): string {
                       role="menuitem"
                       tabindex="0"
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
-                      @click="handleRestore(card)"
-                      @keydown.enter.prevent="handleRestore(card)"
-                      @keydown.space.prevent="handleRestore(card)"
+                      @click.stop="handleRestore(card)"
+                      @keydown.enter.prevent.stop="handleRestore(card)"
+                      @keydown.space.prevent.stop="handleRestore(card)"
                     >
                       <UIcon
                         name="i-lucide-archive-restore"
@@ -394,9 +409,9 @@ function stripHtml(text: string): string {
                       role="menuitem"
                       tabindex="0"
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      @click="handleArchive(card)"
-                      @keydown.enter.prevent="handleArchive(card)"
-                      @keydown.space.prevent="handleArchive(card)"
+                      @click.stop="handleArchive(card)"
+                      @keydown.enter.prevent.stop="handleArchive(card)"
+                      @keydown.space.prevent.stop="handleArchive(card)"
                     >
                       <UIcon
                         name="i-lucide-archive"

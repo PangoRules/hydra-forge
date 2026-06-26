@@ -94,7 +94,7 @@ function closeWithAnimation() {
           <MarkdownEditor
             :model-value="description"
             placeholder="Optional description"
-            class="min-h-[100px]"
+            class="min-h-25"
             @update:model-value="description = $event"
           />
         </div>
