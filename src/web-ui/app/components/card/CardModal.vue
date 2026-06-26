@@ -101,6 +101,10 @@ async function fetchCard() {
   }
 }
 
+function applyCardUpdate(updated: CardResponse) {
+  card.value = updated
+}
+
 onMounted(() => fetchCard())
 </script>
 
@@ -152,6 +156,7 @@ onMounted(() => fetchCard())
                   :card="card"
                   :project-id="projectId"
                   :is-archived="isArchived"
+                  @update:card="applyCardUpdate"
                 />
               </div>
               <div v-else-if="activeTab === 'checklist'">
@@ -196,6 +201,7 @@ onMounted(() => fetchCard())
                 :card="card"
                 :project-id="projectId"
                 :is-archived="isArchived"
+                @update:card="applyCardUpdate"
               />
               <CardMetadata :card="card" />
             </div>

@@ -12,11 +12,14 @@ const props = defineProps<{
   isArchived?: boolean
 }>()
 
+const emit = defineEmits<{
+  'update:card': [card: CardResponse]
+}>()
+
 const description = ref(props.card.description ?? '')
 const saving = ref(false)
 const dirty = ref(false)
 const saveError = ref<string | null>(null)
-const currentVersion = ref(props.card.version)
 
 const api = useApi()
 const board = useBoardStore()
@@ -41,13 +44,13 @@ async function saveDescription() {
         title: props.card.title,
         description: description.value,
         type: toTypeString(props.card.type),
-        version: currentVersion.value,
+        version: props.card.version,
         parentCardId: props.card.parentCardId,
         dueAt: props.card.dueAt
       }
     })
     if (error) throw error
-    if (data) currentVersion.value = (data as CardResponse).version
+    if (data) emit('update:card', data as CardResponse)
     board.updateCard(props.card.id, { description: description.value })
     dirty.value = false
   } catch (e: unknown) {

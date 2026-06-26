@@ -36,3 +36,13 @@ export const CARD_TYPE_OPTIONS: { label: string, value: number | null }[] = [
 export function toTypeString(type: number | string): string {
   return typeof type === 'string' ? type : (CARD_TYPE_MAP[type] ?? 'Task')
 }
+
+/** Alias for toTypeString — matches Plan 4's Task 16 import pattern. */
+export const cardTypeToApiString = toTypeString
+
+/** Full option object for a given type value (value, apiValue, label, color, icon). */
+export function cardTypeOption(type: number | string) {
+  const apiValue = toTypeString(type)
+  return CARD_TYPE_OPTIONS.find(o => o.value !== null && o.label === apiValue)
+    ?? CARD_TYPE_OPTIONS[1] // Bug as fallback, or find Task
+}
