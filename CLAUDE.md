@@ -202,9 +202,9 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Branch:** `feat/phase-3-web-ui`
 - **Plan 1** (auth + scaffold) ✅ — login page, auth middleware, JWT token management
 - **Plan 2** (project list + board) ✅ — Pinia board store, project list, create modal (with git fields), board view (desktop kanban + mobile list), project name in header
-- **Plans 3-6** 🔲 — card modal, specs/plans, SignalR realtime, polish/hardening
-- **Card creation UI** not built yet — use curl for card CRUD testing
-- **43 vitest tests** across 11 test files (stores, composables, components, middleware, pages)
+- **Plan 3** (card modal core) ✅ — CardModal desktop/mobile layouts, Tiptap editor, archive/restore, 53 component tests
+- **Plans 4-7 + hardening + E2E** 🔲 — see `docs/plans/` for pending plan files
+- **67 vitest tests** across stores, composables, components, middleware, pages
 
 ### Nuxt UI v4 patterns
 
@@ -222,7 +222,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Soft-delete is `ArchivedAt: DateTime?`; hard-delete is the responsibility of the future `HousekeepingBackgroundService` (deferred across later phase work in `docs/functional-spec.md`).
 - Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`.
 - DB-level cascades cover `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. Polymorphic `DocumentChunk` (`SourceType`+`SourceId`) is cascaded manually in the housekeeping service.
-- Design spec: `docs/superpowers/specs/2026-06-03-archive-and-housekeeping-design.md`.
+- Design spec: `docs/archive/specs/2026-06-03-archive-and-housekeeping-design.md`.
 
 ## Docs
 
