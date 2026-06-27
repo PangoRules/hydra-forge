@@ -190,28 +190,6 @@ public class ProjectServiceTests
         Assert.Equal(projectId, log.ProjectId);
     }
 
-    [Fact]
-    public async Task DeleteProject_WritesAuditLog()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "To Delete" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-
-        var result = await handler.DeleteAsync(new DeleteProjectCommand(projectId, ownerId));
-
-        Assert.True(result.IsSuccess);
-        var log = Assert.Single(auditWriter.Writes);
-        Assert.Equal(AuditLogScope.Project, log.Scope);
-        Assert.Equal(ownerId, log.ActorId);
-        Assert.Equal("Project", log.EntityType);
-        Assert.Equal(projectId, log.EntityId);
-        Assert.Equal("Deleted", log.Action);
-        Assert.Equal(projectId, log.ProjectId);
-    }
-
     private static (
         InMemoryProjectRepository repo,
         InMemoryColumnRepository columnRepo,

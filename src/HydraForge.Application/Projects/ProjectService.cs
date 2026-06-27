@@ -285,52 +285,6 @@ public class ProjectService(
         return Result.Success();
     }
 
-    public async Task<Result> DeleteAsync(DeleteProjectCommand cmd, CancellationToken ct = default)
-    {
-        var project = await projectRepo.GetByIdAsync(cmd.ProjectId, ct);
-        if (project == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
-            );
-
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
-            );
-
-        if (membership.Role != MemberRole.Owner)
-            return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner role required."
-                )
-            );
-
-        await projectRepo.UpdateAsync(project, ct);
-        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Deleted, 1, DateTime.UtcNow, null!), ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(
-                cmd.ActorId,
-                AuditLogScope.Project,
-                "Project",
-                project.Id,
-                "Deleted",
-                project.Id,
-                null,
-                null
-            ),
-            ct
-        );
-
-        return Result.Success();
-    }
-
     private static ProjectDto MapToDto(
         Project project,
         IReadOnlyList<Column> columns,
