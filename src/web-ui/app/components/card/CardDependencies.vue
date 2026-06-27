@@ -51,6 +51,22 @@ function badgeColor(rel: CardRelationshipDto): BadgeColor {
   return relationshipColor[rel.type] as BadgeColor
 }
 
+const showLinkForm = ref(false)
+const searchTerm = ref('')
+const searchResults = ref<{ id: string, cardNumber: number, title: string }[]>([])
+const searchLoading = ref(false)
+const selectedTargetCard = ref<{ id: string, cardNumber: number, title: string } | null>(null)
+const selectedType = ref<number>(1)
+const linking = ref(false)
+
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+
+const relationshipTypeOptions = [
+  { label: 'Blocked by', value: 1 },
+  { label: 'Precedes', value: 2 },
+  { label: 'Relates to', value: 3 }
+]
+
 async function fetchRelationships() {
   loading.value = true
   try {
@@ -61,6 +77,71 @@ async function fetchRelationships() {
   } finally {
     loading.value = false
   }
+}
+
+async function searchCards(term: string) {
+  if (!term.trim()) {
+    searchResults.value = []
+    return
+  }
+  searchLoading.value = true
+  try {
+    const { data } = await api.GET<{ cards: { id: string, cardNumber: number, title: string }[] }>(
+      `${ApiRoutes.Cards.list(props.projectId)}?search=${encodeURIComponent(term)}`
+    )
+    searchResults.value = (data?.cards ?? []).filter(c => c.id !== props.cardId)
+  } catch {
+    searchResults.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+function onSearchInput(value: string) {
+  searchTerm.value = value
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => searchCards(value), 300)
+}
+
+function selectTargetCard(card: { id: string, cardNumber: number, title: string }) {
+  selectedTargetCard.value = card
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchTerm.value = card.title.slice(0, 50)
+  searchResults.value = []
+}
+
+function clearSelection() {
+  selectedTargetCard.value = null
+  searchTerm.value = ''
+  searchResults.value = []
+}
+
+async function linkCard() {
+  if (!selectedTargetCard.value) return
+  linking.value = true
+  try {
+    await api.POST(ApiRoutes.Relationships.create(props.projectId, props.cardId), {
+      body: {
+        targetCardId: selectedTargetCard.value.id,
+        type: selectedType.value
+      }
+    })
+    await fetchRelationships()
+    cancelLinkForm()
+  } catch {
+    toast.error('Failed to link card')
+  } finally {
+    linking.value = false
+  }
+}
+
+function cancelLinkForm() {
+  showLinkForm.value = false
+  searchTerm.value = ''
+  searchResults.value = []
+  selectedTargetCard.value = null
+  selectedType.value = 1
+  if (searchDebounce) clearTimeout(searchDebounce)
 }
 
 onMounted(() => fetchRelationships())
@@ -99,6 +180,89 @@ onMounted(() => fetchRelationships())
           {{ relationshipLabel[rel.type] }}
         </UBadge>
         <span class="truncate text-xs">{{ relatedTitle(rel) }}</span>
+      </div>
+    </div>
+
+    <div
+      v-if="!readonly"
+      class="pt-1"
+    >
+      <UButton
+        v-if="!showLinkForm"
+        size="xs"
+        variant="ghost"
+        @click="showLinkForm = true"
+      >
+        Link card
+      </UButton>
+
+      <div
+        v-else
+        class="space-y-2 rounded border border-muted p-2"
+      >
+        <UInput
+          v-if="!selectedTargetCard"
+          :model-value="searchTerm"
+          placeholder="Search cards..."
+          size="sm"
+          :loading="searchLoading"
+          @update:model-value="onSearchInput"
+        />
+
+        <div
+          v-if="selectedTargetCard"
+          class="flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs"
+        >
+          <span class="truncate font-medium">#{{ selectedTargetCard.cardNumber }} {{ selectedTargetCard.title }}</span>
+          <UButton
+            icon="i-lucide-x"
+            variant="ghost"
+            size="xs"
+            color="neutral"
+            class="ml-auto size-4"
+            aria-label="Clear selection"
+            @click="clearSelection"
+          />
+        </div>
+
+        <div
+          v-if="!selectedTargetCard && searchResults.length > 0"
+          class="max-h-32 overflow-y-auto rounded border border-muted"
+        >
+          <button
+            v-for="card in searchResults"
+            :key="card.id"
+            type="button"
+            class="flex w-full items-center gap-1 px-2 py-1 text-left text-xs hover:bg-muted/50"
+            @click="selectTargetCard(card)"
+          >
+            #{{ card.cardNumber }} {{ card.title }}
+          </button>
+        </div>
+
+        <USelect
+          v-model="selectedType"
+          :items="relationshipTypeOptions"
+          size="sm"
+        />
+
+        <div class="flex gap-2">
+          <UButton
+            size="sm"
+            :disabled="!selectedTargetCard || linking"
+            :loading="linking"
+            @click="linkCard"
+          >
+            Link
+          </UButton>
+          <UButton
+            size="sm"
+            variant="ghost"
+            @click="cancelLinkForm"
+          >
+            Cancel
+          </UButton>
+        </div>
       </div>
     </div>
   </div>

@@ -54,16 +54,22 @@ Works
 2. Click upload → select small image (< 5MB) → file uploads, appears in list with filename + size
 It allowed me to upload a pdf and a small image.
 3. Click downloaded file icon → file downloads with correct content
-
+Works!
 4. Click delete on an attachment → confirmation → attachment disappears from list
+Works!
 5. Stop API → click upload → red error toast, file not added
+Works!
 6. Try uploading > 10MB file → expect validation rejection (size limit)
+Works!
 7. MinIO stopped → upload → graceful failure with error toast, no crash
+Works!
 8. Mobile → attachments render in "Related" tab
+Works!
 
 ## Task 15 — Card Dependencies
 
 1. Open card with no dependencies → "No dependencies" empty state shown
+Works!
 2. Create dependency via API (link another card as blocks/blocked-by/relates-to) → reopen modal → badge appears with relationship type label
 3. Each linked card shows title + clickable to navigate (if routing wired)
 4. Mobile → dependencies render in "Related" tab
