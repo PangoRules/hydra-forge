@@ -68,6 +68,7 @@ async function confirmArchive() {
     await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
+    toast.add({ title: 'Card archived', color: 'success' })
     emit('archived')
     closeWithAnimation()
   } catch {

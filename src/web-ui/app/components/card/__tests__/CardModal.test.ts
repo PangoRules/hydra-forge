@@ -3,7 +3,6 @@ import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import { h } from 'vue'
 import CardModal from '~/components/card/CardModal.vue'
-import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { ApiError } from '~/lib/api-error'
 import type { components } from '~/types/api'
 
@@ -112,6 +111,7 @@ describe('CardModal', () => {
       expect.stringContaining('/archive'),
       expect.objectContaining({ body: { version: 1 } })
     )
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Card archived', color: 'success' }))
     expect(wrapper.emitted('archived')).toBeTruthy()
   })
 
