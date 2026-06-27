@@ -19,13 +19,18 @@ public class UsersController : ControllerBase
 
     [HttpGet("search")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] int limit = 10)
+    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int limit = 10)
     {
-        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
-            return Ok(new List<object>());
+        // Null/empty → return first N users (initial load on focus)
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            var allUsers = await _userRepo.SearchByUsernameAsync("", limit);
+            var result = allUsers.Select(u => new { u.Id, u.Username }).ToList();
+            return Ok(result);
+        }
 
         var users = await _userRepo.SearchByUsernameAsync(q, limit);
-        var result = users.Select(u => new { u.Id, u.Username }).ToList();
-        return Ok(result);
+        var result2 = users.Select(u => new { u.Id, u.Username }).ToList();
+        return Ok(result2);
     }
 }
