@@ -486,16 +486,16 @@
 - [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
 - [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
 - [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
-- [ ] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
+- [x] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
 - [x] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
 - [ ] Archive card with dependents: warning modal listing affected cards
 - [x] Card detail modal: desktop two-column layout + mobile tabbed layout (Plan 3 — CardModal, CardMetadata, CardDescription with Tiptap editor, MarkdownEditor, archive/restore, 53 component tests)
 - [ ] Fix silent failures on `useApi()` errors in CardModal/BoardCard/CardCreateModal archive, restore, and create flows (Card Modal Hardening plan, Task 1 — see D-40)
 - [ ] Lift card-version ownership to `CardModal`, extract shared `lib/card-type.ts`/`lib/date.ts`, accessibility pass on save status (Card Modal Hardening plan, Tasks 2-4 — see D-41)
-- [ ] Checklist panel in card detail modal (Plan 4)
-- [ ] Comments panel in card detail modal (Plan 4)
-- [ ] Attachments panel in card detail modal (Plan 4)
-- [ ] Card metadata editor: type, due date, assignees (Plan 4 Task 16, rewritten 2026-06-25 to depend on the Card Modal Hardening plan — see its pre-execution note)
+- [x] Checklist panel in card detail modal (Plan 4)
+- [x] Comments panel in card detail modal (Plan 4)
+- [x] Attachments panel in card detail modal (Plan 4)
+- [x] Card metadata editor: type, due date, assignees (Plan 4 Task 16, rewritten 2026-06-25 to depend on the Card Modal Hardening plan — see its pre-execution note)
 - [ ] Spec link panel in card detail modal (Plan 4)
 - [ ] Plan link panel in card detail modal (Plan 4)
 - [ ] E2E test foundation: Playwright, auth fixture, save/debounce + archive-restore + concurrency specs, CI job (E2E Testing Foundation plan — see D-42)
