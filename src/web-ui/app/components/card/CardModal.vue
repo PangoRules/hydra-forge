@@ -146,14 +146,14 @@ onMounted(() => fetchCard())
 
     <template #body>
       <template v-if="card">
-        <!-- Desktop: two-column with shared scroll container -->
-        <div class="hidden md:flex flex-col max-h-[70vh] overflow-hidden">
+        <!-- Desktop: two-column — UModal handles overflow naturally -->
+        <div class="hidden md:flex flex-col">
           <UTabs
             v-model="activeTab"
             :items="tabs"
-            class="border-b flex-shrink-0 px-3"
+            class="border-b px-3"
           />
-          <div class="flex-1 flex overflow-y-auto p-4 min-h-0">
+          <div class="flex p-4">
             <div class="flex-1">
               <div v-if="activeTab === 'details'">
                 <CardDescription
@@ -215,15 +215,15 @@ onMounted(() => fetchCard())
           </div>
         </div>
 
-        <!-- Mobile: tabbed -->
-        <div class="md:hidden flex flex-col max-h-[70vh] overflow-hidden">
+        <!-- Mobile: tabbed — UModal handles overflow naturally -->
+        <div class="md:hidden flex flex-col">
           <UTabs
             v-model="activeTab"
             :items="tabs"
             class="border-b px-3"
           />
 
-          <div class="flex-1 overflow-y-auto p-4">
+          <div class="p-4">
             <div
               v-if="activeTab === 'details'"
               class="space-y-4"
