@@ -30,28 +30,29 @@ const deleteTarget = ref<CardRelationshipDto | null>(null)
 const api = useApi()
 const toast = useAppToast()
 
-const relationshipLabel: Record<number, string> = {
-  1: 'Blocked by',
-  2: 'Precedes',
-  3: 'Relates to'
-}
-
-const relationshipColor: Record<number, string> = {
-  1: 'error',
-  2: 'warning',
-  3: 'neutral'
-}
-
 function relatedTitle(rel: CardRelationshipDto): string {
   return rel.sourceCardId === props.cardId
     ? `#${rel.targetCardNumber} ${rel.targetCardTitle}`
     : `#${rel.sourceCardNumber} ${rel.sourceCardTitle}`
 }
 
+function badgeLabel(rel: CardRelationshipDto): string {
+  const isSource = rel.sourceCardId === props.cardId
+  switch (rel.type) {
+    case 1: return isSource ? 'Blocked by' : 'Blocks'
+    case 2: return isSource ? 'Precedes' : 'Follows'
+    case 3: return 'Relates to'
+    default: return 'Unknown'
+  }
+}
+
 type BadgeColor = 'neutral' | 'primary' | 'info' | 'success' | 'warning' | 'error'
 
 function badgeColor(rel: CardRelationshipDto): BadgeColor {
-  return relationshipColor[rel.type] as BadgeColor
+  const isSource = rel.sourceCardId === props.cardId
+  if (rel.type === 1) return isSource ? 'error' : 'warning'
+  if (rel.type === 2) return isSource ? 'warning' : 'info'
+  return 'neutral'
 }
 
 const showLinkForm = ref(false)
@@ -198,7 +199,7 @@ onMounted(() => fetchRelationships())
           size="xs"
           :color="badgeColor(rel)"
         >
-          {{ relationshipLabel[rel.type] }}
+          {{ badgeLabel(rel) }}
         </UBadge>
         <span class="truncate text-xs flex-1">{{ relatedTitle(rel) }}</span>
         <UButton
@@ -301,7 +302,7 @@ onMounted(() => fetchRelationships())
   <ConfirmDialog
     v-model:open="showDeleteConfirm"
     title="Remove dependency"
-    :message="deleteTarget ? `Remove ${relationshipLabel[deleteTarget.type]} link with #${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardNumber : deleteTarget.sourceCardNumber} ${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardTitle : deleteTarget.sourceCardTitle}?` : ''"
+    :message="deleteTarget ? `Remove ${badgeLabel(deleteTarget)} link with #${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardNumber : deleteTarget.sourceCardNumber} ${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardTitle : deleteTarget.sourceCardTitle}?` : ''"
     confirm-text="Remove"
     @confirm="confirmDeleteRelationship"
   />
