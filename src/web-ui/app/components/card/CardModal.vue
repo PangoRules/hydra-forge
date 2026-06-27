@@ -154,7 +154,7 @@ onMounted(() => fetchCard())
             class="border-b px-3"
           />
           <div class="flex p-4">
-            <div class="flex-1">
+            <div class="flex-1 pr-4">
               <div v-if="activeTab === 'details'">
                 <CardDescription
                   :card="card"
