@@ -142,7 +142,7 @@ onMounted(async () => {
 
 async function handleRestore() {
   try {
-    await api.POST(ApiRoutes.Projects.restore(projectId))
+    await api.POST(ApiRoutes.Projects.toggleArchive(projectId))
     projectArchived.value = false
     toast.success('Project restored')
     board.fetchBoard(projectId)

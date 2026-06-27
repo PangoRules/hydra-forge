@@ -78,7 +78,7 @@ public class CommentService(
         if (usernames.Count == 0)
             return [];
 
-        var usersByUsername = await _userRepo.FindByUsernamesAsync(usernames, ct);
+        var usersByUsername = await _userRepo.FindByUsernamesAsync(usernames, ct: ct);
         var candidateIds = usersByUsername.Values
             .Where(u => !u.IsDisabled)
             .Select(u => u.Id)
@@ -256,7 +256,7 @@ public class CommentService(
             .ToList();
 
         var usersByUsername = allMentioned.Count > 0
-            ? await _userRepo.FindByUsernamesAsync(allMentioned, ct)
+            ? await _userRepo.FindByUsernamesAsync(allMentioned, ct: ct)
             : (IReadOnlyDictionary<string, User>)new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase);
 
         var dtos = new List<CommentDto>(comments.Count);

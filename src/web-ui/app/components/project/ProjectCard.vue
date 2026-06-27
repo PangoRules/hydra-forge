@@ -9,10 +9,9 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [projectId: string]
-  archive: [projectId: string]
-  restore: [projectId: string]
-  edit: [projectId: string]
+  'select': [projectId: string]
+  'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]
+  'edit': [projectId: string]
 }>()
 
 const showMenu = ref(false)
@@ -87,26 +86,14 @@ onClickOutside(menuRef, closeMenu, { ignore: [menuButtonRef] })
               Edit
             </button>
             <button
-              v-if="!project.archivedAt"
               class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
-              @click="emit('archive', project.id); closeMenu()"
+              @click="emit('toggle-archive', project); closeMenu()"
             >
               <UIcon
-                name="i-lucide-archive"
+                :name="project.archivedAt ? 'i-lucide-archive-restore' : 'i-lucide-archive'"
                 class="size-3.5"
               />
-              Archive
-            </button>
-            <button
-              v-else
-              class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
-              @click="emit('restore', project.id); closeMenu()"
-            >
-              <UIcon
-                name="i-lucide-archive-restore"
-                class="size-3.5"
-              />
-              Restore
+              {{ project.archivedAt ? 'Restore' : 'Archive' }}
             </button>
           </div>
         </div>

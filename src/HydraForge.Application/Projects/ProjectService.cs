@@ -222,8 +222,8 @@ public class ProjectService(
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
-    public async Task<Result> ArchiveAsync(
-        ArchiveProjectCommand cmd,
+    public async Task<Result> ToggleArchiveAsync(
+        ToggleProjectArchiveCommand cmd,
         CancellationToken ct = default
     )
     {
@@ -250,13 +250,23 @@ public class ProjectService(
                 )
             );
 
-        project.Archive();
+        bool isArchiving = project.ArchivedAt == null;
+        if (isArchiving)
+        {
+            project.Archive();
+            await chatArchiveService.ArchiveProjectAsync(cmd.ProjectId, ct);
+        }
+        else
+        {
+            project.Restore();
+        }
 
         await projectRepo.UpdateAsync(project, ct);
-        await chatArchiveService.ArchiveProjectAsync(cmd.ProjectId, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Archived, 1, DateTime.UtcNow, null!), ct);
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id,
+            isArchiving ? BoardAction.Archived : BoardAction.Restored,
+            1, DateTime.UtcNow, null!), ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -264,53 +274,13 @@ public class ProjectService(
                 AuditLogScope.Project,
                 "Project",
                 project.Id,
-                "Archived",
+                isArchiving ? "Archived" : "Restored",
                 project.Id,
                 null,
                 null
             ),
             ct
         );
-
-        return Result.Success();
-    }
-
-    public async Task<Result> RestoreAsync(
-        RestoreProjectCommand cmd,
-        CancellationToken ct = default
-    )
-    {
-        var project = await projectRepo.GetByIdAsync(cmd.ProjectId, ct);
-        if (project == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
-            );
-
-        if (project.ArchivedAt == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.Archived, "Project is not archived.")
-            );
-
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
-            );
-
-        if (membership.Role != MemberRole.Owner)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
-            );
-
-        project.Restore();
-
-        await projectRepo.UpdateAsync(project, ct);
-        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Restored, 1, DateTime.UtcNow, null!), ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(cmd.ActorId, AuditLogScope.Project, "Project", project.Id, "Restored", project.Id, null, null), ct);
 
         return Result.Success();
     }

@@ -46,9 +46,19 @@ async function fetchProjects() {
   }
 }
 
-function handleArchive(projectId: string) {
-  const project = projects.value.find(p => p.id === projectId)
-  archiveTarget.value = { id: projectId, name: project?.name ?? projectId.slice(0, 8) }
+async function handleToggleArchive(project: { id: string, name: string, archivedAt: string | null }) {
+  const isArchiving = !project.archivedAt
+  if (isArchiving) {
+    archiveTarget.value = { id: project.id, name: project.name }
+    return
+  }
+  try {
+    await api.POST(ApiRoutes.Projects.toggleArchive(project.id))
+    toast.success('Project restored')
+    fetchProjects()
+  } catch {
+    toast.error('Failed to restore project')
+  }
 }
 
 async function confirmArchive() {
@@ -56,21 +66,11 @@ async function confirmArchive() {
   const id = archiveTarget.value.id
   archiveTarget.value = null
   try {
-    await api.POST(ApiRoutes.Projects.archive(id))
+    await api.POST(ApiRoutes.Projects.toggleArchive(id))
     toast.success('Project archived')
     fetchProjects()
   } catch {
     toast.error('Failed to archive project')
-  }
-}
-
-async function handleRestore(projectId: string) {
-  try {
-    await api.POST(ApiRoutes.Projects.restore(projectId))
-    toast.success('Project restored')
-    fetchProjects()
-  } catch {
-    toast.error('Failed to restore project')
   }
 }
 
@@ -112,8 +112,7 @@ onMounted(() => fetchProjects())
           :projects="projects"
           :loading="loading"
           @select="onProjectSelect"
-          @archive="handleArchive"
-          @restore="handleRestore"
+          @toggle-archive="handleToggleArchive"
           @edit="handleEditProject"
         />
       </div>

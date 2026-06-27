@@ -119,7 +119,7 @@ public class ProjectServiceTests
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
 
-        var result = await handler.ArchiveAsync(new ArchiveProjectCommand(projectId, ownerId));
+        var result = await handler.ToggleArchiveAsync(new ToggleProjectArchiveCommand(projectId, ownerId));
 
         Assert.True(result.IsSuccess);
         Assert.Contains(projectId, chatService.ArchivedProjectIds);
@@ -178,7 +178,7 @@ public class ProjectServiceTests
         repo.Projects.Add(new Project { Id = projectId, Name = "To Archive" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
 
-        var result = await handler.ArchiveAsync(new ArchiveProjectCommand(projectId, ownerId));
+        var result = await handler.ToggleArchiveAsync(new ToggleProjectArchiveCommand(projectId, ownerId));
 
         Assert.True(result.IsSuccess);
         var log = Assert.Single(auditWriter.Writes);
@@ -398,10 +398,8 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
     public Task<HydraForge.Domain.Entities.Auth.User?> FindByUsernameAsync(string username)
         => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
 
-    public Task<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
 => Task.FromResult<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<string, HydraForge.Domain.Entities.Auth.User>());
-    public Task<List<HydraForge.Domain.Entities.Auth.User>> SearchByUsernameAsync(string query, int maxResults = 10, CancellationToken ct = default)
-        => Task.FromResult(new List<HydraForge.Domain.Entities.Auth.User>());
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
         => Task.CompletedTask;

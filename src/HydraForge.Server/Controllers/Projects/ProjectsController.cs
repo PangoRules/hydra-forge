@@ -94,33 +94,15 @@ public class ProjectsController(
         return Ok(response);
     }
 
-    [HttpPost("{projectId:guid}/archive")]
+    [HttpPost("{projectId:guid}/toggle-archive")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Archive(Guid projectId)
+    public async Task<IActionResult> ToggleArchive(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new ArchiveProjectCommand(projectId, userId);
-        var result = await projectService.ArchiveAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
-    }
-
-    [HttpPost("{projectId:guid}/restore")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Restore(Guid projectId)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new RestoreProjectCommand(projectId, userId);
-        var result = await projectService.RestoreAsync(cmd);
+        var cmd = new ToggleProjectArchiveCommand(projectId, userId);
+        var result = await projectService.ToggleArchiveAsync(cmd);
 
         if (result.IsFailure)
         {
@@ -237,8 +219,8 @@ public class ProjectsController(
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new ArchiveProjectCommand(projectId, userId);
-        var result = await projectService.ArchiveAsync(cmd);
+        var cmd = new ToggleProjectArchiveCommand(projectId, userId);
+        var result = await projectService.ToggleArchiveAsync(cmd);
 
         if (result.IsFailure)
         {

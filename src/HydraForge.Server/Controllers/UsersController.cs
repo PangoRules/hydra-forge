@@ -36,18 +36,14 @@ public class UsersController : ControllerBase
             excludeIds = members.Select(m => m.UserId).ToHashSet();
         }
 
-        // Null/empty → return first N users (initial load on focus)
-        List<User> users;
-        if (string.IsNullOrWhiteSpace(q))
-            users = await _userRepo.SearchByUsernameAsync("", limit);
-        else
-            users = await _userRepo.SearchByUsernameAsync(q, limit);
-
-        var result = users
-            .Where(u => excludeIds == null || !excludeIds.Contains(u.Id))
+        var users = (await _userRepo.FindByUsernamesAsync(
+            [],
+            string.IsNullOrWhiteSpace(q) ? null : q,
+            limit
+        )).Values.Where(u => excludeIds == null || !excludeIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Username })
             .ToList();
 
-        return Ok(result);
+        return Ok(users);
     }
 }

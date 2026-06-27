@@ -10,10 +10,9 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [projectId: string]
-  archive: [projectId: string]
-  restore: [projectId: string]
-  edit: [projectId: string]
+  'select': [projectId: string]
+  'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]
+  'edit': [projectId: string]
 }>()
 </script>
 
@@ -44,8 +43,7 @@ const emit = defineEmits<{
       :key="project.id"
       :project="project"
       @select="emit('select', $event)"
-      @archive="emit('archive', $event)"
-      @restore="emit('restore', $event)"
+      @toggle-archive="emit('toggle-archive', $event)"
       @edit="emit('edit', $event)"
     />
   </div>
