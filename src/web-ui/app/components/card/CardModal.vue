@@ -190,6 +190,11 @@ onMounted(() => fetchCard())
               :card-id="card.id"
               :project-id="projectId"
             />
+            <USeparator />
+            <CardAttachments
+              :card-id="card.id"
+              :project-id="projectId"
+            />
           </div>
         </div>
 
@@ -233,9 +238,10 @@ onMounted(() => fetchCard())
               v-else-if="activeTab === 'related'"
               class="space-y-4"
             >
-              <p class="text-sm text-muted">
-                Attachments, dependencies, specs, plans coming soon
-              </p>
+              <CardAttachments
+                :card-id="card.id"
+                :project-id="projectId"
+              />
             </div>
           </div>
         </div>
