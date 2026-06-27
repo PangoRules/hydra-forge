@@ -190,7 +190,7 @@ onMounted(() => fetchItems())
         <button
           class="mt-0.5 flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center"
           :class="[item.isCompleted ? 'bg-primary border-primary' : 'border-muted', readonly ? 'cursor-default' : 'cursor-pointer']"
-          :aria-label="item.isCompleted ? 'Mark incomplete' : 'Mark complete'"
+          :aria-label="item.isCompleted ? `Mark '${item.text}' incomplete` : `Mark '${item.text}' complete`"
           :disabled="readonly"
           @click="toggleItem(item)"
         >
@@ -210,13 +210,14 @@ onMounted(() => fetchItems())
 
         <div
           v-if="!readonly"
-          class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0"
+          class="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0"
         >
           <UButton
             variant="ghost"
             size="xs"
             icon="i-lucide-chevron-up"
             class="w-5 h-5"
+            aria-label="Move up"
             :disabled="idx === 0"
             @click="moveItem(item, 'up')"
           />
@@ -225,6 +226,7 @@ onMounted(() => fetchItems())
             size="xs"
             icon="i-lucide-chevron-down"
             class="w-5 h-5"
+            aria-label="Move down"
             :disabled="idx === visibleItems.length - 1"
             @click="moveItem(item, 'down')"
           />
@@ -233,6 +235,7 @@ onMounted(() => fetchItems())
             size="xs"
             icon="i-lucide-trash-2"
             class="w-5 h-5 text-error"
+            aria-label="Delete item"
             @click="deleteItem(item)"
           />
         </div>
