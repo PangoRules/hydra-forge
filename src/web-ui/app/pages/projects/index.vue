@@ -74,7 +74,7 @@ onMounted(() => fetchProjects())
       </h1>
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2">
-          <UToggle v-model="showArchived" />
+          <USwitch v-model="showArchived" />
           <span class="text-sm text-muted">Show archived</span>
         </div>
         <UButton @click="showCreateModal = true">
