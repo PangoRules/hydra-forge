@@ -18,7 +18,7 @@ const emit = defineEmits<{
 <template>
   <div
     v-if="loading"
-    class="flex justify-center p-8"
+    class="flex justify-center items-center p-8 min-h-[200px]"
   >
     <UIcon
       name="i-lucide-loader"
@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
   <div
     v-else-if="projects.length === 0"
-    class="text-center p-8 text-muted"
+    class="text-center p-8 text-muted min-h-[200px] flex items-center justify-center"
   >
     <p>No projects yet. Create your first project!</p>
   </div>

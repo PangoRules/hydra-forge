@@ -68,7 +68,7 @@ onMounted(() => fetchProjects())
 
 <template>
   <div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between pb-4 mb-6 border-b border-gray-200 dark:border-gray-700">
       <h1 class="text-2xl font-bold">
         Projects
       </h1>
