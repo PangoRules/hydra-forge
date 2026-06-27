@@ -46,10 +46,19 @@ async function fetchAttachments() {
   }
 }
 
+const MAX_FILE_SIZE = 10_485_760 // 10 MB (matches server RequestSizeLimit)
+
 async function handleUpload(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+
+  if (file.size > MAX_FILE_SIZE) {
+    const mb = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
+    toast.error(`File too large. Maximum size is ${mb} MB.`)
+    input.value = ''
+    return
+  }
 
   uploading.value = true
   try {
@@ -62,11 +71,15 @@ async function handleUpload(e: Event) {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
     })
-    if (!res.ok) throw new Error('Upload failed')
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(text || `Upload failed (${res.status})`)
+    }
     const data = await res.json() as AttachmentResponse
     attachments.value.push(data)
-  } catch {
-    toast.error('Failed to upload attachment')
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to upload attachment'
+    toast.error(msg)
   } finally {
     uploading.value = false
     input.value = ''
