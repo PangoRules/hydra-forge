@@ -23,7 +23,7 @@ const emit = defineEmits<{
 
 const isOpen = ref(true)
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const CARD_TYPE_DEFAULT = 0
 
@@ -54,11 +54,11 @@ async function handleCreate() {
   }
   try {
     await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
-    toast.add({ title: 'Card created', color: 'success', duration: 4000 })
+    toast.success('Card created')
     emit('created')
     closeWithAnimation()
   } catch (e: unknown) {
-    toast.add({ title: e instanceof ApiError ? e.message : 'Failed to create card', color: 'error' })
+    toast.error(e instanceof ApiError ? e.message : 'Failed to create card')
   } finally {
     saving.value = false
   }

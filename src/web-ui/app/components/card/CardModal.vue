@@ -24,7 +24,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const isArchived = computed(() => !!card.value?.archivedAt)
-const toast = useToast()
+const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
@@ -69,11 +69,11 @@ async function confirmArchive() {
     await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
+    toast.success('Card archived')
     emit('archived')
     closeWithAnimation()
   } catch {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
+    toast.error('Failed to archive card')
   }
 }
 
@@ -82,11 +82,11 @@ async function handleRestore() {
     await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
+    toast.success('Card restored')
     emit('restored')
     closeWithAnimation()
   } catch {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
+    toast.error('Failed to restore card')
   }
 }
 

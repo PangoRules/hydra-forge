@@ -19,7 +19,7 @@ const emit = defineEmits<{
 
 const api = useApi()
 const board = useBoardStore()
-const toast = useToast()
+const toast = useAppToast()
 
 const showMenu = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
@@ -55,9 +55,9 @@ async function confirmArchive() {
       body: { version: props.card.version }
     })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
+    toast.success('Card archived')
   } catch {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
+    toast.error('Failed to archive card')
   }
 }
 
@@ -68,9 +68,9 @@ async function handleRestore() {
       body: { version: props.card.version }
     })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
+    toast.success('Card restored')
   } catch {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
+    toast.error('Failed to restore card')
   }
 }
 </script>

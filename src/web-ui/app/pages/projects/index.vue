@@ -13,7 +13,7 @@ const showCreateModal = ref(false)
 const showArchived = ref(false)
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const archiveTarget = ref<{ id: string, name: string } | null>(null)
 const showArchiveConfirm = computed({
@@ -32,7 +32,7 @@ async function fetchProjects() {
     projects.value = (data as ProjectListResponse[]) ?? []
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to load projects'
-    toast.add({ title: message, color: 'error' })
+    toast.error(message)
   } finally {
     loading.value = false
   }
@@ -49,20 +49,20 @@ async function confirmArchive() {
   archiveTarget.value = null
   try {
     await api.POST(ApiRoutes.Projects.archive(id))
-    toast.add({ title: 'Project archived', color: 'success', duration: 4000 })
+    toast.success('Project archived')
     fetchProjects()
   } catch {
-    toast.add({ title: 'Failed to archive project', color: 'error' })
+    toast.error('Failed to archive project')
   }
 }
 
 async function handleRestore(projectId: string) {
   try {
     await api.POST(ApiRoutes.Projects.restore(projectId))
-    toast.add({ title: 'Project restored', color: 'success', duration: 4000 })
+    toast.success('Project restored')
     fetchProjects()
   } catch {
-    toast.add({ title: 'Failed to restore project', color: 'error' })
+    toast.error('Failed to restore project')
   }
 }
 
@@ -75,7 +75,7 @@ function onProjectSelect(projectId: string) {
 function onProjectCreated() {
   showCreateModal.value = false
   fetchProjects()
-  toast.add({ title: 'Project created', color: 'success', duration: 4000 })
+  toast.success('Project created')
 }
 
 onMounted(() => fetchProjects())

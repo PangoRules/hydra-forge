@@ -19,7 +19,7 @@ const props = defineProps<{
 }>()
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const comments = ref<CommentResponse[]>([])
 const loading = ref(true)
@@ -38,7 +38,7 @@ async function fetchComments() {
     )
     comments.value = data?.comments ?? []
   } catch {
-    toast.add({ title: 'Failed to load comments', color: 'error' })
+    toast.error('Failed to load comments')
   } finally {
     loading.value = false
   }
@@ -57,7 +57,7 @@ async function postComment() {
     comments.value.push(data as CommentResponse)
     newContent.value = ''
   } catch {
-    toast.add({ title: 'Failed to post comment', color: 'error' })
+    toast.error('Failed to post comment')
   } finally {
     posting.value = false
   }

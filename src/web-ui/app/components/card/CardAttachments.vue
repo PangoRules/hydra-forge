@@ -21,7 +21,7 @@ const uploading = ref(false)
 
 const api = useApi()
 const config = useRuntimeConfig()
-const toast = useToast()
+const toast = useAppToast()
 const fileInput = ref<HTMLInputElement>()
 const { getToken } = useAuthToken()
 
@@ -32,7 +32,7 @@ async function fetchAttachments() {
     if (error) throw error
     attachments.value = (data as { attachments: AttachmentResponse[] })?.attachments ?? []
   } catch {
-    toast.add({ title: 'Failed to load attachments', color: 'error' })
+    toast.error('Failed to load attachments')
   } finally {
     loading.value = false
   }
@@ -58,7 +58,7 @@ async function handleUpload(e: Event) {
     const data = await res.json() as AttachmentResponse
     attachments.value.push(data)
   } catch {
-    toast.add({ title: 'Failed to upload attachment', color: 'error' })
+    toast.error('Failed to upload attachment')
   } finally {
     uploading.value = false
     input.value = ''
@@ -70,7 +70,7 @@ async function deleteAttachment(attachmentId: string) {
     await api.DELETE(ApiRoutes.Attachments.delete(props.projectId, props.cardId, attachmentId))
     attachments.value = attachments.value.filter(a => a.id !== attachmentId)
   } catch {
-    toast.add({ title: 'Failed to delete attachment', color: 'error' })
+    toast.error('Failed to delete attachment')
   }
 }
 

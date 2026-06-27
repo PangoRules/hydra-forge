@@ -13,7 +13,7 @@ const route = useRoute()
 const projectId = route.params.id as string
 const board = useBoardStore()
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const projectName = ref('')
 
@@ -47,7 +47,7 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
   if (result.error) {
     board.rollbackMove(projectId)
     const message = result.error instanceof Error ? result.error.message : 'Failed to move card'
-    toast.add({ title: message, color: 'error' })
+    toast.error(message)
     return
   }
 }
@@ -86,11 +86,11 @@ async function handleBulkMove() {
     })
     if (result.error) {
       board.rollbackMove(projectId)
-      toast.add({ title: `Failed to move card #${card.cardNumber}`, color: 'error' })
+      toast.error(`Failed to move card #${card.cardNumber}`)
     }
   }
   board.clearSelection()
-  toast.add({ title: `Moved ${ids.length} card(s)`, color: 'success', duration: 4000 })
+  toast.success(`Moved ${ids.length} card(s)`)
 }
 
 async function handleBulkArchive() {
@@ -102,13 +102,13 @@ async function handleBulkArchive() {
       body: { version: card.version }
     })
     if (error) {
-      toast.add({ title: `Failed to archive #${card.cardNumber}`, color: 'error' })
+      toast.error(`Failed to archive #${card.cardNumber}`)
     } else {
       board.removeCard(cardId)
     }
   }
   board.clearSelection()
-  toast.add({ title: `Archived ${ids.length} card(s)`, color: 'success', duration: 4000 })
+  toast.success(`Archived ${ids.length} card(s)`)
 }
 
 onMounted(async () => {

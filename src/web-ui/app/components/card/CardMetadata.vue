@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 const api = useApi()
 const board = useBoardStore()
-const toast = useToast()
+const toast = useAppToast()
 
 const columnName = computed(() => {
   const col = board.columns.find(c => c.id === props.card.columnId)
@@ -60,7 +60,7 @@ async function persistCardFields(fields: { type?: string, dueAt?: string | null 
     if (data) emit('update:card', data as CardResponse)
     return true
   } catch {
-    toast.add({ title: 'Failed to update card', color: 'error' })
+    toast.error('Failed to update card')
     return false
   }
 }
@@ -94,7 +94,7 @@ async function handleAssign(userId: string) {
     })
     if (data) emit('update:card', data as CardResponse)
   } catch {
-    toast.add({ title: 'Failed to assign member', color: 'error' })
+    toast.error('Failed to assign member')
   }
 }
 
@@ -104,7 +104,7 @@ async function handleUnassign(userId: string) {
     const { data } = await api.DELETE(ApiRoutes.Cards.removeAssignee(props.projectId, props.card.id, userId))
     if (data) emit('update:card', data as CardResponse)
   } catch {
-    toast.add({ title: 'Failed to remove assignee', color: 'error' })
+    toast.error('Failed to remove assignee')
   }
 }
 </script>

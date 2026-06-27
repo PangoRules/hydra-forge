@@ -24,7 +24,7 @@ const relationships = ref<CardRelationshipDto[]>([])
 const loading = ref(true)
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const relationshipLabel: Record<number, string> = {
   1: 'Blocked by',
@@ -57,7 +57,7 @@ async function fetchRelationships() {
     if (error) throw error
     relationships.value = (data as { relationships: CardRelationshipDto[] })?.relationships ?? []
   } catch {
-    toast.add({ title: 'Failed to load dependencies', color: 'error' })
+    toast.error('Failed to load dependencies')
   } finally {
     loading.value = false
   }

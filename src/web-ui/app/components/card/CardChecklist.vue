@@ -14,7 +14,7 @@ const props = defineProps<{
 }>()
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const items = ref<ChecklistItemResponse[]>([])
 const loading = ref(true)
@@ -56,7 +56,7 @@ async function addItem() {
     items.value.push(data as ChecklistItemResponse)
     newItemText.value = ''
   } catch {
-    toast.add({ title: 'Failed to add item', color: 'error' })
+    toast.error('Failed to add item')
   } finally {
     adding.value = false
   }
@@ -71,7 +71,7 @@ async function toggleItem(item: ChecklistItemResponse) {
     await api.PATCH(ApiRoutes.Checklist.toggle(props.projectId, props.cardId, item.id))
   } catch {
     items.value[idx] = original
-    toast.add({ title: 'Failed to update item', color: 'error' })
+    toast.error('Failed to update item')
   }
 }
 
@@ -83,7 +83,7 @@ async function deleteItem(item: ChecklistItemResponse) {
     await api.DELETE(ApiRoutes.Checklist.item(props.projectId, props.cardId, item.id))
   } catch {
     items.value.splice(idx, 0, removed)
-    toast.add({ title: 'Failed to delete item', color: 'error' })
+    toast.error('Failed to delete item')
   }
 }
 
@@ -102,7 +102,7 @@ async function moveItem(item: ChecklistItemResponse, direction: 'up' | 'down') {
     })
   } catch {
     await fetchItems()
-    toast.add({ title: 'Failed to reorder item', color: 'error' })
+    toast.error('Failed to reorder item')
   }
 }
 
