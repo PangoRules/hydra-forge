@@ -110,8 +110,8 @@ async function addMember(user: { id: string, username: string }) {
 }
 
 async function removeMember(memberId: string, username: string) {
-  const isSelf = memberId === authStore.user?.userId
   const member = members.value.find(m => m.id === memberId)
+  const isSelf = member?.userId === authStore.user?.userId
   const isNonOwner = member ? String(member.role) !== 'Owner' : false
   if (isSelf && isNonOwner) {
     pendingMemberId.value = memberId
