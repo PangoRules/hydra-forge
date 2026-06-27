@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -13,6 +14,12 @@ const showArchived = ref(false)
 
 const api = useApi()
 const toast = useToast()
+
+const archiveTarget = ref<{ id: string, name: string } | null>(null)
+const showArchiveConfirm = computed({
+  get: () => archiveTarget.value !== null,
+  set: (v: boolean) => { if (!v) archiveTarget.value = null }
+})
 
 async function fetchProjects() {
   loading.value = true
@@ -31,9 +38,17 @@ async function fetchProjects() {
   }
 }
 
-async function handleArchive(projectId: string) {
+function handleArchive(projectId: string) {
+  const project = projects.value.find(p => p.id === projectId)
+  archiveTarget.value = { id: projectId, name: project?.name ?? projectId.slice(0, 8) }
+}
+
+async function confirmArchive() {
+  if (!archiveTarget.value) return
+  const id = archiveTarget.value.id
+  archiveTarget.value = null
   try {
-    await api.POST(ApiRoutes.Projects.archive(projectId))
+    await api.POST(ApiRoutes.Projects.archive(id))
     toast.add({ title: 'Project archived', color: 'success', duration: 4000 })
     fetchProjects()
   } catch {
@@ -98,6 +113,14 @@ onMounted(() => fetchProjects())
     <ProjectCreateModal
       v-model:open="showCreateModal"
       @created="onProjectCreated"
+    />
+
+    <ConfirmDialog
+      v-model:open="showArchiveConfirm"
+      title="Archive project"
+      :message="archiveTarget ? `Archive ${archiveTarget.name}? This will hide it from the default project list.` : ''"
+      confirm-text="Archive"
+      @confirm="confirmArchive"
     />
   </div>
 </template>
