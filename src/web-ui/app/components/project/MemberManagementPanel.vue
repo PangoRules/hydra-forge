@@ -150,6 +150,7 @@ onMounted(fetchMembers)
             :color="roleColor(member.role)"
             variant="subtle"
             size="xs"
+            class="shrink-0"
           >
             {{ roleLabel(member.role) }}
           </UBadge>

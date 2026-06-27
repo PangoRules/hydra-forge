@@ -21,6 +21,15 @@ const showArchiveConfirm = computed({
   set: (v: boolean) => { if (!v) archiveTarget.value = null }
 })
 
+const editingProject = ref<{ id: string, name: string, description: string | null } | null>(null)
+
+function handleEditProject(projectId: string) {
+  const project = projects.value.find(p => p.id === projectId)
+  if (project) {
+    editingProject.value = { id: project.id, name: project.name, description: project.description ?? null }
+  }
+}
+
 async function fetchProjects() {
   loading.value = true
   try {
@@ -106,6 +115,7 @@ onMounted(() => fetchProjects())
           @select="onProjectSelect"
           @archive="handleArchive"
           @restore="handleRestore"
+          @edit="handleEditProject"
         />
       </div>
     </div>
@@ -121,6 +131,15 @@ onMounted(() => fetchProjects())
       :message="archiveTarget ? `Archive ${archiveTarget.name}? This will hide it from the default project list.` : ''"
       confirm-text="Archive"
       @confirm="confirmArchive"
+    />
+
+    <ProjectEditModal
+      v-if="editingProject"
+      :project-id="editingProject.id"
+      :initial-name="editingProject.name"
+      :initial-description="editingProject.description"
+      @close="editingProject = null"
+      @updated="editingProject = null; fetchProjects()"
     />
   </div>
 </template>

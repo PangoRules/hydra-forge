@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { onClickOutside } from '@vueuse/core'
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 
@@ -12,7 +13,22 @@ const emit = defineEmits<{
   select: [projectId: string]
   archive: [projectId: string]
   restore: [projectId: string]
+  edit: [projectId: string]
 }>()
+
+const openMenuId = ref<string | null>(null)
+const menuRef = ref<HTMLElement | null>(null)
+const menuButtonRef = ref<HTMLElement | null>(null)
+
+function toggleMenu(projectId: string) {
+  openMenuId.value = openMenuId.value === projectId ? null : projectId
+}
+
+function closeMenu() {
+  openMenuId.value = null
+}
+
+onClickOutside(menuRef, closeMenu, { ignore: [menuButtonRef] })
 </script>
 
 <template>
@@ -68,25 +84,55 @@ const emit = defineEmits<{
             </UBadge>
           </div>
           <div
-            class="flex items-center gap-1"
+            class="relative shrink-0"
             @click.stop
           >
-            <UButton
-              v-if="!project.archivedAt"
-              variant="ghost"
-              size="xs"
-              icon="i-lucide-archive"
-              title="Archive project"
-              @click="emit('archive', project.id)"
-            />
-            <UButton
-              v-else
-              variant="ghost"
-              size="xs"
-              icon="i-lucide-archive-restore"
-              title="Restore project"
-              @click="emit('restore', project.id)"
-            />
+            <span ref="menuButtonRef">
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                variant="ghost"
+                size="xs"
+                @click="toggleMenu(project.id)"
+              />
+            </span>
+            <div
+              v-if="openMenuId === project.id"
+              ref="menuRef"
+              class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
+            >
+              <button
+                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+                @click="emit('edit', project.id); closeMenu()"
+              >
+                <UIcon
+                  name="i-lucide-pencil"
+                  class="size-4"
+                />
+                Edit project
+              </button>
+              <button
+                v-if="!project.archivedAt"
+                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+                @click="emit('archive', project.id); closeMenu()"
+              >
+                <UIcon
+                  name="i-lucide-archive"
+                  class="size-4"
+                />
+                Archive project
+              </button>
+              <button
+                v-else
+                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+                @click="emit('restore', project.id); closeMenu()"
+              >
+                <UIcon
+                  name="i-lucide-archive-restore"
+                  class="size-4"
+                />
+                Restore project
+              </button>
+            </div>
           </div>
         </div>
       </template>
