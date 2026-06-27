@@ -72,7 +72,7 @@ const editor = useEditor({
   ],
   editorProps: {
     attributes: {
-      class: 'focus:outline-none p-3 min-h-[180px]'
+      class: 'focus-visible:outline-2 focus-visible:outline-primary p-3 min-h-[180px]'
     }
   },
   onUpdate({ editor: ed }) {
@@ -164,7 +164,7 @@ function toggleSource() {
         size="xs"
         title="Bold"
         :color="isActive('bold') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('bold') }"
+        :class="{ 'bg-primary/10': isActive('bold'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleBold"
       />
       <UButton
@@ -173,7 +173,7 @@ function toggleSource() {
         size="xs"
         title="Italic"
         :color="isActive('italic') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('italic') }"
+        :class="{ 'bg-primary/10': isActive('italic'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleItalic"
       />
 
@@ -185,7 +185,7 @@ function toggleSource() {
         size="xs"
         title="Heading 1"
         :color="isActive('heading', { level: 1 }) ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('heading', { level: 1 }) }"
+        :class="{ 'bg-primary/10': isActive('heading', { level: 1 }), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleHeading(1)"
       />
       <UButton
@@ -194,7 +194,7 @@ function toggleSource() {
         size="xs"
         title="Heading 2"
         :color="isActive('heading', { level: 2 }) ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('heading', { level: 2 }) }"
+        :class="{ 'bg-primary/10': isActive('heading', { level: 2 }), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleHeading(2)"
       />
       <UButton
@@ -203,7 +203,7 @@ function toggleSource() {
         size="xs"
         title="Heading 3"
         :color="isActive('heading', { level: 3 }) ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('heading', { level: 3 }) }"
+        :class="{ 'bg-primary/10': isActive('heading', { level: 3 }), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleHeading(3)"
       />
 
@@ -215,7 +215,7 @@ function toggleSource() {
         size="xs"
         title="Bullet List"
         :color="isActive('bulletList') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('bulletList') }"
+        :class="{ 'bg-primary/10': isActive('bulletList'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleBulletList"
       />
       <UButton
@@ -224,7 +224,7 @@ function toggleSource() {
         size="xs"
         title="Ordered List"
         :color="isActive('orderedList') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('orderedList') }"
+        :class="{ 'bg-primary/10': isActive('orderedList'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleOrderedList"
       />
 
@@ -236,7 +236,7 @@ function toggleSource() {
         size="xs"
         title="Code Block"
         :color="isActive('codeBlock') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('codeBlock') }"
+        :class="{ 'bg-primary/10': isActive('codeBlock'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleCodeBlock"
       />
       <UButton
@@ -245,7 +245,7 @@ function toggleSource() {
         size="xs"
         title="Blockquote"
         :color="isActive('blockquote') ? 'primary' : 'neutral'"
-        :class="{ 'bg-primary/10': isActive('blockquote') }"
+        :class="{ 'bg-primary/10': isActive('blockquote'), 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleBlockquote"
       />
 
@@ -258,6 +258,7 @@ function toggleSource() {
         size="xs"
         title="Toggle Markdown Source"
         label="Source"
+        :class="{ 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleSource"
       />
     </div>
@@ -274,6 +275,7 @@ function toggleSource() {
         variant="ghost"
         size="xs"
         label="Preview"
+        :class="{ 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleSource"
       />
     </div>
@@ -289,7 +291,7 @@ function toggleSource() {
     <textarea
       v-if="sourceMode"
       v-model="sourceText"
-      class="w-full p-3 font-mono text-sm leading-loose resize-none focus:outline-none bg-transparent min-h-[180px]"
+      class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
       :placeholder="props.placeholder"
     />
   </div>
