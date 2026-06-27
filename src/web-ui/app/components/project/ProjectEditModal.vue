@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 
 const api = useApi()
 const toast = useAppToast()
+const authStore = useAuthStore()
 
 const isOpen = ref(true)
 
@@ -40,6 +42,9 @@ const searchResults = ref<Array<{ id: string, username: string }>>([])
 const searching = ref(false)
 const addingMember = ref(false)
 const selectedRole = ref(2)
+const selfRemoveConfirm = ref(false)
+const pendingMemberId = ref<string | null>(null)
+const pendingUsername = ref<string | null>(null)
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 const searchContainerRef = ref<HTMLElement | null>(null)
@@ -118,6 +123,19 @@ async function addMember(user: { id: string, username: string }) {
 }
 
 async function removeMember(memberId: string, username: string) {
+  const isSelf = memberId === authStore.user?.userId
+  const member = members.value.find(m => m.id === memberId)
+  const isNonOwner = member ? String(member.role) !== 'Owner' : false
+  if (isSelf && isNonOwner) {
+    pendingMemberId.value = memberId
+    pendingUsername.value = username
+    selfRemoveConfirm.value = true
+    return
+  }
+  await doRemoveMember(memberId, username)
+}
+
+async function doRemoveMember(memberId: string, username: string) {
   try {
     const { error } = await api.DELETE(ApiRoutes.Projects.member(props.projectId, memberId))
     if (error) throw error
@@ -165,6 +183,14 @@ function roleColor(role: string | number): 'warning' | 'error' | 'info' | 'neutr
 }
 
 onMounted(fetchMembers)
+
+function confirmSelfRemove() {
+  if (pendingMemberId.value && pendingUsername.value) {
+    doRemoveMember(pendingMemberId.value, pendingUsername.value)
+  }
+  pendingMemberId.value = null
+  pendingUsername.value = null
+}
 </script>
 
 <template>
@@ -305,4 +331,13 @@ onMounted(fetchMembers)
       </div>
     </template>
   </AppModal>
+
+  <ConfirmDialog
+    v-model:open="selfRemoveConfirm"
+    title="Remove yourself from project"
+    message="You are about to remove yourself from this project. You will lose access to it and it will be removed from your project list. You will need to contact an admin or the project owner to be reassigned."
+    confirm-text="Remove"
+    confirm-color="error"
+    @confirm="confirmSelfRemove"
+  />
 </template>
