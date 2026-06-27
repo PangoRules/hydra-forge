@@ -22,6 +22,7 @@ public record UpdateProjectCommand(
 public record ArchiveProjectCommand(Guid ProjectId, Guid ActorId);
 
 public record DeleteProjectCommand(Guid ProjectId, Guid ActorId);
+public record RestoreProjectCommand(Guid ProjectId, Guid ActorId);
 
 public record AddProjectMemberCommand(
     Guid ProjectId,

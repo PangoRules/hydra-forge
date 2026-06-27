@@ -138,18 +138,21 @@ public class ProjectService(
 
     public async Task<Result<IReadOnlyList<ProjectListDto>>> GetAllAsync(
         Guid requestUserId,
+        bool includeArchived = false,
         CancellationToken ct = default
     )
     {
         var projects = await projectRepo.ListByUserIdAsync(requestUserId, ct);
-        var activeProjects = projects.Where(p => p.ArchivedAt == null).ToList();
+        var filteredProjects = includeArchived
+            ? projects.ToList()
+            : projects.Where(p => p.ArchivedAt == null).ToList();
 
         var memberCounts = await memberRepo.GetMemberCountsAsync(
-            activeProjects.Select(p => p.Id),
+            filteredProjects.Select(p => p.Id),
             ct
         );
 
-        var result = activeProjects.Select(project => new ProjectListDto(
+        var result = filteredProjects.Select(project => new ProjectListDto(
             project.Id,
             project.Name,
             project.Description,
@@ -273,6 +276,46 @@ public class ProjectService(
             ),
             ct
         );
+
+        return Result.Success();
+    }
+
+    public async Task<Result> RestoreAsync(
+        RestoreProjectCommand cmd,
+        CancellationToken ct = default
+    )
+    {
+        var project = await projectRepo.GetByIdAsync(cmd.ProjectId, ct);
+        if (project == null)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
+            );
+
+        if (project.ArchivedAt == null)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Projects.Archived, "Project is not archived.")
+            );
+
+        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        if (membership.Role != MemberRole.Owner)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
+            );
+
+        project.Restore();
+
+        await projectRepo.UpdateAsync(project, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
+            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Restored, 1, DateTime.UtcNow, null!), ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(cmd.ActorId, AuditLogScope.Project, "Project", project.Id, "Restored", project.Id, null, null), ct);
 
         return Result.Success();
     }

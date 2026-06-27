@@ -70,11 +70,11 @@ public class ProjectsController(
 
     [HttpGet]
     [ProducesResponseType(typeof(List<ProjectListResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> List()
+    public async Task<IActionResult> List([FromQuery] bool includeArchived = false)
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await projectService.GetAllAsync(userId);
+        var result = await projectService.GetAllAsync(userId, includeArchived);
 
         if (result.IsFailure)
         {
@@ -92,6 +92,42 @@ public class ProjectsController(
             ))
             .ToList();
         return Ok(response);
+    }
+
+    [HttpPost("{projectId:guid}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Archive(Guid projectId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new ArchiveProjectCommand(projectId, userId);
+        var result = await projectService.ArchiveAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("{projectId:guid}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(Guid projectId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new RestoreProjectCommand(projectId, userId);
+        var result = await projectService.RestoreAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return NoContent();
     }
 
     [HttpGet("{projectId:guid}")]
