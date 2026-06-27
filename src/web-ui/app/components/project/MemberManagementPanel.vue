@@ -93,17 +93,21 @@ async function removeMember(memberId: string, username: string) {
   }
 }
 
-function roleLabel(role: number): string {
+function roleLabel(role: string | number): string {
   switch (role) {
+    case 'Owner':
     case 1: return 'Owner'
+    case 'Member':
     case 2: return 'Member'
-    default: return 'Unknown'
+    default: return String(role)
   }
 }
 
-function roleColor(role: number): 'warning' | 'error' | 'info' | 'neutral' {
+function roleColor(role: string | number): 'warning' | 'error' | 'info' | 'neutral' {
   switch (role) {
+    case 'Owner':
     case 1: return 'warning'
+    case 'Member':
     case 2: return 'info'
     default: return 'neutral'
   }
@@ -154,7 +158,7 @@ onMounted(fetchMembers)
           </UBadge>
         </div>
         <UButton
-          v-if="member.role !== 0 || members.filter(m => m.role === 0).length > 1"
+          v-if="String(member.role) !== 'Owner' || members.filter(m => String(m.role) === 'Owner').length > 1"
           variant="ghost"
           size="xs"
           icon="i-lucide-x"
