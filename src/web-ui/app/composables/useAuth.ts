@@ -14,18 +14,17 @@ export function useAuth() {
   const api = useApi()
 
   async function login(username: string, password: string) {
-    const { data, error } = await api.POST(ApiRoutes.Auth.Login, {
+    // api.POST throws on non-2xx — no error destructure needed
+    const { data } = await api.POST(ApiRoutes.Auth.Login, {
       body: { username, password }
-    })
-    if (error) throw error
+    }) as { data: LoginResponse }
     if (!data) throw new Error('Login failed: no data returned')
 
-    const response = data as unknown as LoginResponse
-    setToken(response.accessToken)
-    store.setAuth(response.accessToken, {
-      userId: response.userId,
-      username: response.username,
-      isAdmin: response.isAdmin
+    setToken(data.accessToken)
+    store.setAuth(data.accessToken, {
+      userId: data.userId,
+      username: data.username,
+      isAdmin: data.isAdmin
     })
   }
 
