@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 interface CardRelationshipDto {
   id: string
@@ -23,6 +24,8 @@ const props = defineProps<{
 
 const relationships = ref<CardRelationshipDto[]>([])
 const loading = ref(true)
+const showDeleteConfirm = ref(false)
+const deleteTarget = ref<CardRelationshipDto | null>(null)
 
 const api = useApi()
 const toast = useAppToast()
@@ -76,6 +79,24 @@ async function fetchRelationships() {
     toast.error('Failed to load dependencies')
   } finally {
     loading.value = false
+  }
+}
+
+function promptDelete(rel: CardRelationshipDto) {
+  deleteTarget.value = rel
+  showDeleteConfirm.value = true
+}
+
+async function confirmDeleteRelationship() {
+  if (!deleteTarget.value) return
+  const rel = deleteTarget.value
+  try {
+    await api.DELETE(ApiRoutes.Relationships.relationship(props.projectId, props.cardId, rel.id))
+    relationships.value = relationships.value.filter(r => r.id !== rel.id)
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
+  } catch {
+    toast.error('Failed to delete dependency')
   }
 }
 
@@ -170,7 +191,7 @@ onMounted(() => fetchRelationships())
       <div
         v-for="rel in relationships"
         :key="rel.id"
-        class="flex items-center gap-2 text-sm"
+        class="group flex items-center gap-2 text-sm"
       >
         <UBadge
           variant="subtle"
@@ -179,7 +200,17 @@ onMounted(() => fetchRelationships())
         >
           {{ relationshipLabel[rel.type] }}
         </UBadge>
-        <span class="truncate text-xs">{{ relatedTitle(rel) }}</span>
+        <span class="truncate text-xs flex-1">{{ relatedTitle(rel) }}</span>
+        <UButton
+          v-if="!readonly"
+          icon="i-lucide-trash-2"
+          variant="ghost"
+          size="xs"
+          color="neutral"
+          class="md:opacity-0 md:group-hover:opacity-100 flex-shrink-0"
+          aria-label="Remove dependency"
+          @click="promptDelete(rel)"
+        />
       </div>
     </div>
 
@@ -266,4 +297,12 @@ onMounted(() => fetchRelationships())
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model:open="showDeleteConfirm"
+    title="Remove dependency"
+    :message="deleteTarget ? `Remove ${relationshipLabel[deleteTarget.type]} link with #${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardNumber : deleteTarget.sourceCardNumber} ${deleteTarget.sourceCardId === cardId ? deleteTarget.targetCardTitle : deleteTarget.sourceCardTitle}?` : ''"
+    confirm-text="Remove"
+    @confirm="confirmDeleteRelationship"
+  />
 </template>
