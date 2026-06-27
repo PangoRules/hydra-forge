@@ -50,113 +50,135 @@ public class CardService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Column not found.")
             );
 
-        var maxNumber = await _cardRepo.GetMaxCardNumberAsync(cmd.ProjectId, ct);
-        var cardCount = await _cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
-        if (cmd.ParentCardId.HasValue)
+        // Retry on unique constraint violation (race condition on CardNumber)
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
-            if (parentCard == null)
-                return Result<CardDto>.Failure(
-                    new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
+            var maxNumber = await _cardRepo.GetMaxCardNumberAsync(cmd.ProjectId, ct);
+            var cardCount = await _cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
+            if (cmd.ParentCardId.HasValue)
+            {
+                Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
+                if (parentCard == null)
+                    return Result<CardDto>.Failure(
+                        new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
+                    );
+
+                var parentError = Card.ValidateParentEpic(
+                    new Card
+                    {
+                        Id = Guid.Empty,
+                        ProjectId = cmd.ProjectId,
+                        Type = cmd.Type,
+                    },
+                    parentCard
+                );
+                if (parentError != null)
+                    return Result<CardDto>.Failure(parentError);
+            }
+
+            var card = new Card
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = cmd.ProjectId,
+                ColumnId = cmd.ColumnId,
+                ParentCardId = cmd.ParentCardId,
+                CardNumber = maxNumber + 1,
+                Title = cmd.Title,
+                Description = cmd.Description,
+                Type = cmd.Type,
+                Position = cardCount,
+                DueAt = cmd.DueAt,
+                Version = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                MovedAt = DateTime.UtcNow,
+            };
+
+            try
+            {
+                await _cardRepo.AddAsync(card, ct);
+                // Success - exit retry loop
+                await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+                await _auditLogWriter.WriteAsync(
+                    new AuditLogRequest(
+                        cmd.ActorId,
+                        AuditLogScope.Project,
+                        "Card",
+                        card.Id,
+                        "Created",
+                        cmd.ProjectId,
+                        null,
+                        null
+                    ),
+                    ct
                 );
 
-            var parentError = Card.ValidateParentEpic(
-                new Card
+                // Assign requested users after card creation (batch flow — no N+1)
+                if (cmd.AssigneeUserIds is { Count: > 0 })
                 {
-                    Id = Guid.Empty,
-                    ProjectId = cmd.ProjectId,
-                    Type = cmd.Type,
-                },
-                parentCard
-            );
-            if (parentError != null)
-                return Result<CardDto>.Failure(parentError);
-        }
-
-        var card = new Card
-        {
-            Id = Guid.NewGuid(),
-            ProjectId = cmd.ProjectId,
-            ColumnId = cmd.ColumnId,
-            ParentCardId = cmd.ParentCardId,
-            CardNumber = maxNumber + 1,
-            Title = cmd.Title,
-            Description = cmd.Description,
-            Type = cmd.Type,
-            Position = cardCount,
-            DueAt = cmd.DueAt,
-            Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            MovedAt = DateTime.UtcNow,
-        };
-
-        await _cardRepo.AddAsync(card, ct);
-        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(
-                cmd.ActorId,
-                AuditLogScope.Project,
-                "Card",
-                card.Id,
-                "Created",
-                cmd.ProjectId,
-                null,
-                null
-            ),
-            ct
-        );
-
-        // Assign requested users after card creation (batch flow — no N+1)
-        if (cmd.AssigneeUserIds is { Count: > 0 })
-        {
-            var usersById = await _userRepo.FindByIdsAsync(cmd.AssigneeUserIds, ct);
-            if (usersById.Count > 0)
-            {
-                var existingAssignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
-                var existingWatchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
-                var existingAssigneeUserIds = existingAssignees.Select(a => a.UserId).ToHashSet();
-                var existingWatcherUserIds = existingWatchers.Select(w => w.UserId).ToHashSet();
-
-                var newAssignees = new List<CardAssignee>(usersById.Count);
-                var newWatchers = new List<CardWatcher>(usersById.Count);
-
-                foreach (var userId in usersById.Keys)
-                {
-                    if (existingAssigneeUserIds.Contains(userId))
-                        continue;
-
-                    newAssignees.Add(new CardAssignee
+                    var usersById = await _userRepo.FindByIdsAsync(cmd.AssigneeUserIds, ct);
+                    if (usersById.Count > 0)
                     {
-                        Id = Guid.NewGuid(),
-                        CardId = card.Id,
-                        UserId = userId,
-                        AssignedAt = DateTime.UtcNow,
-                        AssignedByUserId = cmd.ActorId,
-                    });
+                        var existingAssignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
+                        var existingWatchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+                        var existingAssigneeUserIds = existingAssignees.Select(a => a.UserId).ToHashSet();
+                        var existingWatcherUserIds = existingWatchers.Select(w => w.UserId).ToHashSet();
 
-                    if (!existingWatcherUserIds.Contains(userId))
-                    {
-                        newWatchers.Add(new CardWatcher
+                        var newAssignees = new List<CardAssignee>(usersById.Count);
+                        var newWatchers = new List<CardWatcher>(usersById.Count);
+
+                        foreach (var userId in usersById.Keys)
                         {
-                            CardId = card.Id,
-                            UserId = userId,
-                            AddedAt = DateTime.UtcNow,
-                        });
+                            if (existingAssigneeUserIds.Contains(userId))
+                                continue;
+
+                            newAssignees.Add(new CardAssignee
+                            {
+                                Id = Guid.NewGuid(),
+                                CardId = card.Id,
+                                UserId = userId,
+                                AssignedAt = DateTime.UtcNow,
+                                AssignedByUserId = cmd.ActorId,
+                            });
+
+                            if (!existingWatcherUserIds.Contains(userId))
+                            {
+                                newWatchers.Add(new CardWatcher
+                                {
+                                    CardId = card.Id,
+                                    UserId = userId,
+                                    AddedAt = DateTime.UtcNow,
+                                });
+                            }
+                        }
+
+                        if (newAssignees.Count > 0)
+                            await _assigneeRepo.AddRangeAsync(newAssignees, ct);
+                        if (newWatchers.Count > 0)
+                            await _watcherRepo.AddRangeAsync(newWatchers, ct);
                     }
                 }
 
-                if (newAssignees.Count > 0)
-                    await _assigneeRepo.AddRangeAsync(newAssignees, ct);
-                if (newWatchers.Count > 0)
-                    await _watcherRepo.AddRangeAsync(newWatchers, ct);
+                await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
+
+                return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+            }
+            catch (Exception ex) when (ex.Message.Contains("23505") || ex.Message.Contains("duplicate key") || ex.Message.Contains("IX_cards_ProjectId_CardNumber"))
+            {
+                // Unique constraint violation on CardNumber - retry with fresh max
+                if (attempt == maxRetries - 1)
+                    return Result<CardDto>.Failure(
+                        new Error(DomainErrorCodes.Cards.ConcurrencyConflict, "Failed to generate unique card number after retries.")
+                    );
+                // Continue loop to retry
             }
         }
 
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
-
-        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+        return Result<CardDto>.Failure(
+            new Error(DomainErrorCodes.Cards.ConcurrencyConflict, "Failed to generate unique card number after retries.")
+        );
     }
 
     private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
