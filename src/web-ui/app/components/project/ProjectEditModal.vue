@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
+import { onClickOutside } from '@vueuse/core'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -41,6 +42,18 @@ const addingMember = ref(false)
 const selectedRole = ref(2)
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+const searchContainerRef = ref<HTMLElement | null>(null)
+const searchInputRef = ref<HTMLElement | null>(null)
+
+onClickOutside(searchContainerRef, (event) => {
+  // Don't close if click is on the input itself (re-focus shows results again)
+  if (searchInputRef.value && !searchInputRef.value.contains(event.target as Node))
+    searchResults.value = []
+})
+
+function onSearchKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') searchResults.value = []
+}
 
 async function fetchMembers() {
   loadingMembers.value = true
@@ -226,8 +239,12 @@ onMounted(fetchMembers)
             <h5 class="text-xs font-semibold text-muted mb-2">
               Add Member
             </h5>
-            <div class="relative">
+            <div
+              ref="searchContainerRef"
+              class="relative"
+            >
               <UInput
+                ref="searchInputRef"
                 v-model="searchQuery"
                 placeholder="Search users..."
                 size="sm"
@@ -235,6 +252,7 @@ onMounted(fetchMembers)
                 :loading="searching"
                 @input="onSearchInput"
                 @focus="onSearchInput"
+                @keydown="onSearchKeydown"
               />
               <div
                 v-if="searchResults.length > 0"

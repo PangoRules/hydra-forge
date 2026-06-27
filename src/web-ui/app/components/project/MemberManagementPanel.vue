@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { onClickOutside } from '@vueuse/core'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -24,6 +25,17 @@ const addingMember = ref(false)
 const selectedRole = ref(2) // Member role
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+const searchContainerRef = ref<HTMLElement | null>(null)
+const searchInputRef = ref<HTMLElement | null>(null)
+
+onClickOutside(searchContainerRef, (event) => {
+  if (searchInputRef.value && !searchInputRef.value.contains(event.target as Node))
+    searchResults.value = []
+})
+
+function onSearchKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') searchResults.value = []
+}
 
 async function fetchMembers() {
   loading.value = true
@@ -169,8 +181,12 @@ onMounted(fetchMembers)
       <h4 class="text-xs font-semibold text-muted mb-2">
         Add Member
       </h4>
-      <div class="relative">
+      <div
+        ref="searchContainerRef"
+        class="relative"
+      >
         <UInput
+          ref="searchInputRef"
           v-model="searchQuery"
           placeholder="Search users..."
           size="sm"
@@ -178,6 +194,7 @@ onMounted(fetchMembers)
           :loading="searching"
           @input="onSearchInput"
           @focus="onSearchInput"
+          @keydown="onSearchKeydown"
         />
         <div
           v-if="searchResults.length > 0"
