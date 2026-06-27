@@ -42,11 +42,13 @@ const epicCards = ref<CardResponse[]>([])
 const canSave = computed(() => title.value.trim().length > 0 && columnId.value.length > 0)
 
 async function fetchEpics() {
-  const url = new URL(ApiRoutes.Cards.list(props.projectId), window.location.origin)
-  url.searchParams.set('type', 'Epic')
-  const result = await api.GET(url.toString())
-  if (!result.error && result.data) {
-    epicCards.value = (result.data as { cards: CardResponse[] }).cards
+  try {
+    const url = new URL(ApiRoutes.Cards.list(props.projectId), window.location.origin)
+    url.searchParams.set('type', 'Epic')
+    const { data } = await api.GET<{ cards: CardResponse[] }>(url.toString())
+    epicCards.value = data?.cards ?? []
+  } catch {
+    epicCards.value = []
   }
 }
 

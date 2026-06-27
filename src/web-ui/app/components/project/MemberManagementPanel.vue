@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import { onClickOutside } from '@vueuse/core'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -31,29 +32,19 @@ const pendingUsername = ref<string | null>(null)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 const searchContainerRef = ref<HTMLElement | null>(null)
 
-function onDocumentClick(e: MouseEvent) {
-  if (
-    searchResults.value.length > 0
-    && searchContainerRef.value
-    && !searchContainerRef.value.contains(e.target as Node)
-  ) {
-    searchResults.value = []
-  }
-}
+onClickOutside(searchContainerRef, () => {
+  searchResults.value = []
+})
 
 function onSearchKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') searchResults.value = []
 }
 
-onMounted(() => document.addEventListener('click', onDocumentClick))
-onUnmounted(() => document.removeEventListener('click', onDocumentClick))
-
 async function fetchMembers() {
   loading.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Projects.members(props.projectId))
-    if (error) throw error
-    members.value = (data as MemberResponse[]) ?? []
+    const { data } = await api.GET<MemberResponse[]>(ApiRoutes.Projects.members(props.projectId))
+    members.value = data ?? []
   } catch {
     toast.error('Failed to load members')
   } finally {
@@ -65,9 +56,8 @@ async function searchUsers() {
   const q = searchQuery.value.trim()
   searching.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Users.search(q, 10, props.projectId))
-    if (error) throw error
-    searchResults.value = (data as Array<{ id: string, username: string }>) ?? []
+    const { data } = await api.GET<Array<{ id: string, username: string }>>(ApiRoutes.Users.search(q, 10, props.projectId))
+    searchResults.value = data ?? []
   } catch {
     searchResults.value = []
   } finally {
@@ -84,10 +74,9 @@ function onSearchInput() {
 async function addMember(user: { id: string, username: string }) {
   addingMember.value = true
   try {
-    const { error } = await api.POST(ApiRoutes.Projects.members(props.projectId), {
+    await api.POST(ApiRoutes.Projects.members(props.projectId), {
       body: { userId: user.id, role: selectedRole.value }
     })
-    if (error) throw error
     toast.success(`${user.username} added to project`)
     searchQuery.value = ''
     searchResults.value = []
@@ -115,8 +104,7 @@ async function removeMember(memberId: string, username: string) {
 
 async function doRemoveMember(memberId: string, username: string) {
   try {
-    const { error } = await api.DELETE(ApiRoutes.Projects.member(props.projectId, memberId))
-    if (error) throw error
+    await api.DELETE(ApiRoutes.Projects.member(props.projectId, memberId))
     toast.success(`${username} removed from project`)
     await fetchMembers()
     emit('update')

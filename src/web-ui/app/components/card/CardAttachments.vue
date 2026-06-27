@@ -29,9 +29,8 @@ const { getToken } = useAuthToken()
 async function fetchAttachments() {
   loading.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Attachments.list(props.projectId, props.cardId))
-    if (error) throw error
-    attachments.value = (data as { attachments: AttachmentResponse[] })?.attachments ?? []
+    const { data } = await api.GET<{ attachments: AttachmentResponse[] }>(ApiRoutes.Attachments.list(props.projectId, props.cardId))
+    attachments.value = data?.attachments ?? []
   } catch {
     toast.error('Failed to load attachments')
   } finally {

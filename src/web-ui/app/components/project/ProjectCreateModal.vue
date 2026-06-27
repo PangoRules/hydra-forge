@@ -63,8 +63,7 @@ async function searchUsers() {
   }
   searching.value = true
   try {
-    const { data, error: searchError } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
-    if (searchError) throw searchError
+    const { data } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
     const existingIds = new Set(selectedMembers.value.map(m => m.id))
     searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
       .filter(u => !existingIds.has(u.id))
@@ -94,7 +93,7 @@ async function handleSubmit() {
   error.value = null
   loading.value = true
   try {
-    const { data, error: apiError } = await api.POST(ApiRoutes.Projects.create(), {
+    const { data } = await api.POST(ApiRoutes.Projects.create(), {
       body: {
         name: name.value,
         description: description.value,
@@ -102,7 +101,6 @@ async function handleSubmit() {
         gitProvider: gitProvider.value ?? null
       }
     })
-    if (apiError) throw apiError
 
     // Add selected members
     const projectId = (data as { id: string }).id

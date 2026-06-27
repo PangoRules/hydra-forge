@@ -39,6 +39,12 @@ const tabs = [
   { label: 'Related', value: 'related' as const }
 ]
 
+const desktopTabs = [
+  { label: 'Details', value: 'details' as const },
+  { label: 'Checklist', value: 'checklist' as const },
+  { label: 'Comments', value: 'comments' as const }
+]
+
 const api = useApi()
 
 /** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
@@ -96,8 +102,7 @@ async function handleRestore() {
 async function fetchCard() {
   loading.value = true
   try {
-    const { data, error: apiError } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
-    if (apiError) throw apiError
+    const { data } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
     card.value = data as CardResponse
   } catch (e: unknown) {
     error.value = e instanceof ApiError ? e.message : 'Failed to load card'
@@ -151,7 +156,7 @@ onMounted(() => fetchCard())
         <div class="hidden md:flex flex-col">
           <UTabs
             v-model="activeTab"
-            :items="tabs"
+            :items="desktopTabs"
             class="border-b px-3"
           />
           <div class="flex p-4">

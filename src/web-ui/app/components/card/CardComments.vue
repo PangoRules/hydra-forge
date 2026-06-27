@@ -50,11 +50,10 @@ async function postComment() {
   if (!content) return
   posting.value = true
   try {
-    const { data, error: apiError } = await api.POST<CommentResponse>(
+    const { data } = await api.POST<CommentResponse>(
       ApiRoutes.Comments.create(props.projectId, props.cardId),
       { body: { content } }
     )
-    if (apiError) throw apiError
     comments.value.push(data as CommentResponse)
     newContent.value = ''
   } catch {

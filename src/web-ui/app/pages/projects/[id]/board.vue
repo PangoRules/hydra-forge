@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
@@ -41,19 +42,22 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
 
   board.moveCard(cardId, targetColumnId, targetPosition)
 
-  const result = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
-    body: {
-      targetColumnId,
-      targetPosition,
-      confirmBlockedMove: false,
-      version: card.version
-    }
-  })
-
-  if (result.error) {
+  try {
+    await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
+      body: {
+        targetColumnId,
+        targetPosition,
+        confirmBlockedMove: false,
+        version: card.version
+      }
+    })
+  } catch (error: unknown) {
     board.rollbackMove(projectId)
-    const message = result.error instanceof Error ? result.error.message : 'Failed to move card'
-    toast.error(message)
+    if (error instanceof ApiError && error.status === 409) {
+      toast.error('Cannot move blocked card')
+    } else {
+      toast.error('Failed to move card')
+    }
     return
   }
 }
@@ -88,15 +92,16 @@ async function handleBulkMove() {
     const targetPosition = 0
     // Optimistic update
     board.moveCard(cardId, bulkTargetColumnId.value, targetPosition)
-    const result = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
-      body: {
-        targetColumnId: bulkTargetColumnId.value,
-        targetPosition,
-        confirmBlockedMove: false,
-        version: card.version
-      }
-    })
-    if (result.error) {
+    try {
+      await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
+        body: {
+          targetColumnId: bulkTargetColumnId.value,
+          targetPosition,
+          confirmBlockedMove: false,
+          version: card.version
+        }
+      })
+    } catch {
       board.rollbackMove(projectId)
       toast.error(`Failed to move card #${card.cardNumber}`)
     }
@@ -111,13 +116,13 @@ async function handleBulkArchive() {
   for (const cardId of ids) {
     const card = findCard(cardId)
     if (!card) continue
-    const { error } = await api.POST(ApiRoutes.Cards.archive(projectId, cardId), {
-      body: { version: card.version }
-    })
-    if (error) {
-      toast.error(`Failed to archive #${card.cardNumber}`)
-    } else {
+    try {
+      await api.POST(ApiRoutes.Cards.archive(projectId, cardId), {
+        body: { version: card.version }
+      })
       board.removeCard(cardId)
+    } catch {
+      toast.error(`Failed to archive #${card.cardNumber}`)
     }
   }
   board.clearSelection()

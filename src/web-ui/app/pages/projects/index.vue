@@ -36,9 +36,8 @@ async function fetchProjects() {
     const url = showArchived.value
       ? `${ApiRoutes.Projects.list()}?includeArchived=true`
       : ApiRoutes.Projects.list()
-    const { data, error } = await api.GET(url)
-    if (error) throw error
-    projects.value = (data as ProjectListResponse[]) ?? []
+    const { data } = await api.GET<ProjectListResponse[]>(url)
+    projects.value = data ?? []
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to load projects'
     toast.error(message)

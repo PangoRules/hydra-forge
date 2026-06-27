@@ -20,9 +20,7 @@ const emit = defineEmits<{
   updated: []
 }>()
 
-watch(() => props.refreshKey, () => {
-  if (props.refreshKey) fetchItems()
-})
+watch(() => props.refreshKey, fetchItems)
 
 const api = useApi()
 const toast = useAppToast()
@@ -70,11 +68,10 @@ async function addItem() {
   if (!text) return
   adding.value = true
   try {
-    const { data, error: apiError } = await api.POST<ChecklistItemResponse>(
+    const { data } = await api.POST<ChecklistItemResponse>(
       ApiRoutes.Checklist.create(props.projectId, props.cardId),
       { body: { text } }
     )
-    if (apiError) throw apiError
     items.value.push(data as ChecklistItemResponse)
     newItemText.value = ''
     emit('updated')

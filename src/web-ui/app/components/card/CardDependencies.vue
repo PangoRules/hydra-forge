@@ -54,9 +54,8 @@ function badgeColor(rel: CardRelationshipDto): BadgeColor {
 async function fetchRelationships() {
   loading.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Relationships.list(props.projectId, props.cardId))
-    if (error) throw error
-    relationships.value = (data as { relationships: CardRelationshipDto[] })?.relationships ?? []
+    const { data } = await api.GET<{ relationships: CardRelationshipDto[] }>(ApiRoutes.Relationships.list(props.projectId, props.cardId))
+    relationships.value = data?.relationships ?? []
   } catch {
     toast.error('Failed to load dependencies')
   } finally {
