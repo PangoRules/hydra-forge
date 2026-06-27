@@ -39,17 +39,12 @@ async function fetchMembers() {
 }
 
 async function searchUsers() {
-  if (searchQuery.value.length < 2) {
-    searchResults.value = []
-    return
-  }
+  const q = searchQuery.value.trim()
   searching.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
+    const { data, error } = await api.GET(ApiRoutes.Users.search(q, 10, props.projectId))
     if (error) throw error
-    const existingIds = new Set(members.value.map(m => m.userId))
-    searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
-      .filter(u => !existingIds.has(u.id))
+    searchResults.value = (data as Array<{ id: string, username: string }>) ?? []
   } catch {
     searchResults.value = []
   } finally {
@@ -59,6 +54,7 @@ async function searchUsers() {
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
+  if (searchQuery.value.trim() === '' && searchResults.value.length > 0) return
   searchTimer = setTimeout(searchUsers, 300)
 }
 
@@ -181,6 +177,7 @@ onMounted(fetchMembers)
           class="w-full"
           :loading="searching"
           @input="onSearchInput"
+          @focus="onSearchInput"
         />
         <div
           v-if="searchResults.length > 0"

@@ -28,7 +28,8 @@ export const ApiRoutes = {
   },
 
   Users: {
-    search: (query: string, limit = 10) => `/api/Users/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    search: (query: string, limit = 10, excludeProjectId?: string) =>
+      `/api/Users/search?q=${encodeURIComponent(query)}&limit=${limit}${excludeProjectId ? `&excludeProjectId=${excludeProjectId}` : ''}`
   },
 
   Projects: {

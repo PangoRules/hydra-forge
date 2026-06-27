@@ -57,29 +57,11 @@ async function fetchMembers() {
 
 async function searchUsers() {
   const q = searchQuery.value.trim()
-  if (q.length === 0) {
-    // On empty query, fetch initial batch to show available users
-    searching.value = true
-    try {
-      const { data, error } = await api.GET(ApiRoutes.Users.search(''))
-      if (error) throw error
-      const existingIds = new Set(members.value.map(m => m.userId))
-      searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
-        .filter(u => !existingIds.has(u.id))
-    } catch {
-      searchResults.value = []
-    } finally {
-      searching.value = false
-    }
-    return
-  }
   searching.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Users.search(q))
+    const { data, error } = await api.GET(ApiRoutes.Users.search(q, 10, props.projectId))
     if (error) throw error
-    const existingIds = new Set(members.value.map(m => m.userId))
-    searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
-      .filter(u => !existingIds.has(u.id))
+    searchResults.value = (data as Array<{ id: string, username: string }>) ?? []
   } catch {
     searchResults.value = []
   } finally {
