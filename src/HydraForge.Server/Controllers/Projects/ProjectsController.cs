@@ -212,24 +212,6 @@ public class ProjectsController(
         return Ok(response);
     }
 
-    [HttpDelete("{projectId:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid projectId)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new ToggleProjectArchiveCommand(projectId, userId);
-        var result = await projectService.ToggleArchiveAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
-    }
-
     [HttpGet("{projectId:guid}/members")]
     [ProducesResponseType(typeof(List<MemberResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
