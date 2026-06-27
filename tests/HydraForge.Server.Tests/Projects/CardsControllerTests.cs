@@ -492,7 +492,7 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
         return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
     }
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(_cards.Where(c => c.ProjectId == projectId && c.ArchivedAt == null).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+        => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
     public Task AddAsync(Card card, CancellationToken ct = default) { _cards.Add(card); return Task.CompletedTask; }
     public Task UpdateAsync(Card card, CancellationToken ct = default)
     {

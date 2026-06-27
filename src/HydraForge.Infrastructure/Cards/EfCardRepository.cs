@@ -48,7 +48,7 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
     public async Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
     {
         var max = await context.Cards
-            .Where(c => c.ProjectId == projectId && c.ArchivedAt == null)
+            .Where(c => c.ProjectId == projectId)
             .MaxAsync(c => (int?)c.CardNumber, ct);
         return max ?? 0;
     }

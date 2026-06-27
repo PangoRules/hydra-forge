@@ -165,7 +165,11 @@ public class CardService(
 
                 return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
             }
-            catch (Exception ex) when (ex.Message.Contains("23505") || ex.Message.Contains("duplicate key") || ex.Message.Contains("IX_cards_ProjectId_CardNumber"))
+            catch (Exception ex) when (ex.Message.Contains("23505") 
+                || ex.Message.Contains("duplicate key") 
+                || ex.Message.Contains("IX_cards_ProjectId_CardNumber")
+                || ex.InnerException?.Message.Contains("23505") == true
+                || ex.InnerException?.Message.Contains("duplicate key") == true)
             {
                 // Unique constraint violation on CardNumber - retry with fresh max
                 if (attempt == maxRetries - 1)
