@@ -23,17 +23,19 @@ Validated this works as expected.
 1. From board view → three-dot menu on card → Archive → confirm → observe toast "Card archived" + card disappears (happy path)
 2. Stop API server → three-dot menu → Archive → confirm → observe red error toast "Failed to archive card" (previously: silent nothing)
 3. Restart API server → verify happy path still works
-
+Validated this works as expected.
 
 ### Board Card Restore Error
 1. Enable "Include archived" filter → three-dot menu on archived card → Restore → observe toast "Card restored" + card reappears (happy path)
 2. Stop API server → three-dot menu on archived card → Restore → observe red error toast "Failed to restore card" (previously: silent nothing)
 3. Restart API server → verify happy path still works
+Validates this works as expected.
 
 ### Card Create Error
 1. Click "Add card" → fill form → click Create → observe toast "Card created" + card appears on board (happy path)
 2. Stop API server → click "Add card" → fill form → click Create → observe red error toast with message (previously: modal just closed silently)
 3. Restart API server → verify happy path still works
+Validated this works as epxected.
 
 ## Task 2 — Version Ownership (requires Plan 4 Task 16 for full test)
 
@@ -44,12 +46,19 @@ Validated this works as expected.
 ## Task 3 — Shared Utilities & Type Filters
 
 1. Card create modal Type dropdown shows options: Task, Bug, Epic, Spec, Idea
+Validated
 2. Board filter bar Type dropdown shows: All, Task, Bug, Epic, Spec, Idea
+Validated
 3. Column header Type dropdown (mobile + desktop) shows: All, Task, Bug, Epic, Spec, Idea
+Validated
 4. Select "Bug" filter → only Bug cards visible
+Validated with Task type
 5. Select "All" → all cards visible again
+Validated
 6. Due date shown on cards formatted as "Mar 15" (short month + day)
+Working
 7. Past due date card shows red text "text-red-500"
+Working
 
 ## Task 4 — Accessibility
 
