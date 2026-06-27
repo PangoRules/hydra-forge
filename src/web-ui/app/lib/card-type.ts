@@ -56,3 +56,14 @@ export function cardTypeOption(type: number | string) {
   const apiValue = toTypeString(type)
   return CARD_TYPE_OPTIONS.find(o => o.apiValue === apiValue) ?? CARD_TYPE_OPTIONS[0]
 }
+
+/** Map CARD_TYPE_OPTION color name to a Tailwind text color class. */
+export function cardTypeColorClass(option: { color: string }): string {
+  switch (option.color) {
+    case 'error': return 'text-red-500'
+    case 'warning': return 'text-amber-500'
+    case 'info': return 'text-blue-500'
+    case 'primary': return 'text-primary'
+    default: return 'text-gray-400'
+  }
+}

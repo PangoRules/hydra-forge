@@ -5,7 +5,7 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -423,7 +423,7 @@ function stripHtml(text: string): string {
                 <UIcon
                   :name="cardTypeOption(card.type).icon"
                   class="size-3.5 shrink-0"
-                  :class="cardTypeOption(card.type).color === 'error' ? 'text-red-500' : cardTypeOption(card.type).color === 'warning' ? 'text-amber-500' : cardTypeOption(card.type).color === 'info' ? 'text-blue-500' : cardTypeOption(card.type).color === 'primary' ? 'text-primary' : 'text-gray-400'"
+                  :class="cardTypeColorClass(cardTypeOption(card.type))"
                 />
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}

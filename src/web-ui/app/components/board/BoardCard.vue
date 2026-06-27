@@ -2,7 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import { formatDueDate, isOverdue } from '~/lib/date'
-import { cardTypeOption } from '~/lib/card-type'
+import { cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { onClickOutside } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -95,7 +95,7 @@ async function handleRestore() {
           <UIcon
             :name="typeOption.icon"
             class="size-3.5 shrink-0"
-            :class="typeOption.color === 'error' ? 'text-red-500' : typeOption.color === 'warning' ? 'text-amber-500' : typeOption.color === 'info' ? 'text-blue-500' : typeOption.color === 'primary' ? 'text-primary' : 'text-gray-400'"
+            :class="cardTypeColorClass(typeOption)"
           />
           <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {{ card.title }}
