@@ -10,7 +10,7 @@ interface CardRelationshipDto {
   sourceCardTitle: string
   targetCardNumber: number
   targetCardTitle: string
-  type: number
+  type: string
   createdAt: string
   createdByUserId: string
   archivedAt: string | null
@@ -39,10 +39,10 @@ function relatedTitle(rel: CardRelationshipDto): string {
 function badgeLabel(rel: CardRelationshipDto): string {
   const isSource = rel.sourceCardId === props.cardId
   switch (rel.type) {
-    case 1: return isSource ? 'Blocked by' : 'Blocks'
-    case 2: return isSource ? 'Precedes' : 'Follows'
-    case 3: return 'Relates to'
-    default: return 'Unknown'
+    case 'BlockedBy': return isSource ? 'Blocked by' : 'Blocks'
+    case 'Precedes': return isSource ? 'Precedes' : 'Follows'
+    case 'Relates': return 'Relates to'
+    default: return rel.type
   }
 }
 
@@ -50,8 +50,8 @@ type BadgeColor = 'neutral' | 'primary' | 'info' | 'success' | 'warning' | 'erro
 
 function badgeColor(rel: CardRelationshipDto): BadgeColor {
   const isSource = rel.sourceCardId === props.cardId
-  if (rel.type === 1) return isSource ? 'error' : 'warning'
-  if (rel.type === 2) return isSource ? 'warning' : 'info'
+  if (rel.type === 'BlockedBy') return isSource ? 'error' : 'warning'
+  if (rel.type === 'Precedes') return isSource ? 'warning' : 'info'
   return 'neutral'
 }
 
@@ -60,15 +60,15 @@ const searchTerm = ref('')
 const searchResults = ref<{ id: string, cardNumber: number, title: string }[]>([])
 const searchLoading = ref(false)
 const selectedTargetCard = ref<{ id: string, cardNumber: number, title: string } | null>(null)
-const selectedType = ref<number>(1)
+const selectedType = ref<string>('BlockedBy')
 const linking = ref(false)
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
 
 const relationshipTypeOptions = [
-  { label: 'Blocked by', value: 1 },
-  { label: 'Precedes', value: 2 },
-  { label: 'Relates to', value: 3 }
+  { label: 'Blocked by', value: 'BlockedBy' },
+  { label: 'Precedes', value: 'Precedes' },
+  { label: 'Relates to', value: 'Relates' }
 ]
 
 async function fetchRelationships() {
@@ -162,7 +162,7 @@ function cancelLinkForm() {
   searchTerm.value = ''
   searchResults.value = []
   selectedTargetCard.value = null
-  selectedType.value = 1
+  selectedType.value = 'BlockedBy'
   if (searchDebounce) clearTimeout(searchDebounce)
 }
 
