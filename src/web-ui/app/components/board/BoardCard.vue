@@ -53,7 +53,7 @@ async function confirmArchive() {
       body: { version: props.card.version }
     })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card archived', color: 'success' })
+    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
   } catch {
     toast.add({ title: 'Failed to archive card', color: 'error' })
   }
@@ -66,7 +66,7 @@ async function handleRestore() {
       body: { version: props.card.version }
     })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card restored', color: 'success' })
+    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
   } catch {
     toast.add({ title: 'Failed to restore card', color: 'error' })
   }

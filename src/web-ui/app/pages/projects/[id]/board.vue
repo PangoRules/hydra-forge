@@ -90,7 +90,7 @@ async function handleBulkMove() {
     }
   }
   board.clearSelection()
-  toast.add({ title: `Moved ${ids.length} card(s)`, color: 'success' })
+  toast.add({ title: `Moved ${ids.length} card(s)`, color: 'success', duration: 4000 })
 }
 
 async function handleBulkArchive() {
@@ -108,7 +108,7 @@ async function handleBulkArchive() {
     }
   }
   board.clearSelection()
-  toast.add({ title: `Archived ${ids.length} card(s)`, color: 'success' })
+  toast.add({ title: `Archived ${ids.length} card(s)`, color: 'success', duration: 4000 })
 }
 
 onMounted(async () => {

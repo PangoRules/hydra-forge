@@ -54,7 +54,7 @@ async function handleCreate() {
   }
   try {
     await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
-    toast.add({ title: 'Card created', color: 'success' })
+    toast.add({ title: 'Card created', color: 'success', duration: 4000 })
     emit('created')
     closeWithAnimation()
   } catch (e: unknown) {

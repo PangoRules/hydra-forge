@@ -34,7 +34,7 @@ function handleSessionLogout() {
 
 <template>
   <UApp
-    :toaster="{ position: 'bottom-right' }"
+    :toaster="{ position: 'bottom-right', duration: 5000 }"
     class="h-full flex flex-col overflow-hidden"
   >
     <UHeader>

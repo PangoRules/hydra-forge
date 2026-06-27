@@ -68,7 +68,7 @@ async function confirmArchive() {
     await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card archived', color: 'success' })
+    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
     emit('archived')
     closeWithAnimation()
   } catch {
@@ -81,7 +81,7 @@ async function handleRestore() {
     await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card restored', color: 'success' })
+    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
     emit('restored')
     closeWithAnimation()
   } catch {

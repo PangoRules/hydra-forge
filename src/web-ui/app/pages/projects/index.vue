@@ -34,7 +34,7 @@ function onProjectSelect(projectId: string) {
 function onProjectCreated() {
   showCreateModal.value = false
   fetchProjects()
-  toast.add({ title: 'Project created', color: 'success' })
+  toast.add({ title: 'Project created', color: 'success', duration: 4000 })
 }
 
 onMounted(() => fetchProjects())
