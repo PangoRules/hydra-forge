@@ -202,6 +202,7 @@ onMounted(() => fetchCard())
                 :project-id="projectId"
                 :readonly="isReadonly"
                 :refresh-key="checklistRefresh"
+                :visible-limit="4"
                 @updated="checklistRefresh++"
               />
               <USeparator />

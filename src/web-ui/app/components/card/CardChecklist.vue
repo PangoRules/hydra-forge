@@ -13,6 +13,7 @@ const props = defineProps<{
   projectId: string
   readonly?: boolean
   refreshKey?: number
+  visibleLimit?: number
 }>()
 
 const emit = defineEmits<{
@@ -31,6 +32,17 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const newItemText = ref('')
 const adding = ref(false)
+
+const expanded = ref(false)
+const visibleItems = computed(() => {
+  if (!props.visibleLimit || props.visibleLimit <= 0) return items.value
+  if (expanded.value) return items.value
+  return items.value.slice(0, props.visibleLimit)
+})
+const hiddenCount = computed(() => {
+  if (!props.visibleLimit || props.visibleLimit <= 0) return 0
+  return Math.max(0, items.value.length - props.visibleLimit)
+})
 
 const completedCount = computed(() => items.value.filter((i: ChecklistItemResponse) => i.isCompleted).length)
 const totalCount = computed(() => items.value.length)
@@ -163,7 +175,7 @@ onMounted(() => fetchItems())
       class="space-y-1"
     >
       <li
-        v-for="(item, idx) in items"
+        v-for="(item, idx) in visibleItems"
         :key="item.id"
         class="group flex items-start gap-2 rounded p-1 hover:bg-muted/50"
       >
@@ -205,7 +217,7 @@ onMounted(() => fetchItems())
             size="xs"
             icon="i-lucide-chevron-down"
             class="w-5 h-5"
-            :disabled="idx === items.length - 1"
+            :disabled="idx === visibleItems.length - 1"
             @click="moveItem(item, 'down')"
           />
           <UButton
@@ -216,6 +228,18 @@ onMounted(() => fetchItems())
             @click="deleteItem(item)"
           />
         </div>
+      </li>
+
+      <li v-if="hiddenCount > 0">
+        <UButton
+          variant="ghost"
+          size="xs"
+          :icon="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="w-full justify-start text-muted"
+          @click="expanded = !expanded"
+        >
+          {{ expanded ? 'Show less' : `Show all (${hiddenCount} more)` }}
+        </UButton>
       </li>
     </ul>
     <p
