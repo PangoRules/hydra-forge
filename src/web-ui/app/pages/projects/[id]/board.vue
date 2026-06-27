@@ -243,7 +243,7 @@ watch(
     <!-- Members panel -->
     <div
       v-if="showMembersPanel"
-      class="hidden md:block px-4 pt-3"
+      class="px-4 pt-3"
     >
       <MemberManagementPanel
         :project-id="projectId"
