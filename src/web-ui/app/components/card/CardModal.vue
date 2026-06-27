@@ -195,6 +195,11 @@ onMounted(() => fetchCard())
               :card-id="card.id"
               :project-id="projectId"
             />
+            <USeparator />
+            <CardDependencies
+              :card-id="card.id"
+              :project-id="projectId"
+            />
           </div>
         </div>
 
@@ -239,6 +244,11 @@ onMounted(() => fetchCard())
               class="space-y-4"
             >
               <CardAttachments
+                :card-id="card.id"
+                :project-id="projectId"
+              />
+              <USeparator />
+              <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
               />
