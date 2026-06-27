@@ -12,7 +12,7 @@ export interface ApiResponse<T> {
 
 function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const config = useRuntimeConfig()
-  const { getToken, clearToken } = useAuthToken()
+  const { clearToken } = useAuthToken()
 
   const client = createClient<paths>({
     baseUrl: config.public.apiBaseUrl as string,
@@ -23,7 +23,7 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
 
   client.use({
     async onRequest({ request }) {
-      const token = getToken()
+      const token = store.token
       if (token) {
         request.headers.set('Authorization', `Bearer ${token}`)
       }
