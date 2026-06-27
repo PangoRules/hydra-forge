@@ -70,6 +70,16 @@ this works as expectd
 11. Open archived card modal → metadata fields disabled / not editable
 12. Mobile → metadata renders in "Related" tab
 
+## Project Members — Self-Remove Confirmation (cycle 3 fix)
+
+1. Log in as a non-owner member of a project with another active member present
+2. Open project members list (either Project edit modal or board page MemberManagementPanel)
+3. Click remove (trash icon) on own row → confirm dialog appears (was broken before: removed immediately without confirmation)
+4. Click Cancel in confirm dialog → member still in list, no API call fired
+5. Click remove on own row again → confirm dialog → click Confirm → member removed, toast shown
+6. Log in as project Owner → click remove on own row → no confirm dialog, member removed immediately (owners bypass the warning)
+7. Click remove on another non-owner member → no confirm dialog, removed immediately
+
 ## Project List — Archive / Restore + Filter Toggle
 
 1. Project list page (`/projects`) → three-dot menu on a project → Archive → confirm → project disappears from default list
