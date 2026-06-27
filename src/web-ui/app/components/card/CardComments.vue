@@ -31,6 +31,14 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString()
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function isSameAuthor(comment: CommentResponse, prev: CommentResponse | undefined): boolean {
+  return !!prev && comment.authorId === prev.authorId
+}
+
 async function fetchComments() {
   loading.value = true
   try {
@@ -88,27 +96,39 @@ onMounted(() => fetchComments())
 
     <ul
       v-else
-      class="space-y-3"
+      class="space-y-0"
     >
       <li
-        v-for="comment in comments"
+        v-for="(comment, idx) in comments"
         :key="comment.id"
-        class="flex gap-3"
+        :class="[isSameAuthor(comment, comments[idx - 1]) ? 'ml-11 -mt-1.5' : 'flex gap-3 mt-3', idx === 0 ? 'mt-0' : '']"
       >
-        <UAvatar
-          :name="comment.authorUsername"
-          size="sm"
-          class="flex-shrink-0"
-        />
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium">{{ comment.authorUsername }}</span>
-            <span class="text-xs text-muted">{{ formatDate(comment.createdAt) }}</span>
+        <template v-if="isSameAuthor(comment, comments[idx - 1])">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm break-words">
+                {{ comment.content }}
+              </p>
+              <span class="text-xs text-muted whitespace-nowrap flex-shrink-0">{{ formatTime(comment.createdAt) }}</span>
+            </div>
           </div>
-          <p class="text-sm mt-0.5 break-words">
-            {{ comment.content }}
-          </p>
-        </div>
+        </template>
+        <template v-else>
+          <UAvatar
+            :name="comment.authorUsername"
+            size="sm"
+            class="flex-shrink-0"
+          />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">{{ comment.authorUsername }}</span>
+              <span class="text-xs text-muted">{{ formatDate(comment.createdAt) }}</span>
+            </div>
+            <p class="text-sm mt-0.5 break-words">
+              {{ comment.content }}
+            </p>
+          </div>
+        </template>
       </li>
     </ul>
 
