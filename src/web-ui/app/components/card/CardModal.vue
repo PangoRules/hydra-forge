@@ -168,9 +168,10 @@ onMounted(() => fetchCard())
                 />
               </div>
               <div v-else-if="activeTab === 'comments'">
-                <p class="text-sm text-muted">
-                  Comments coming soon
-                </p>
+                <CardComments
+                  :card-id="card.id"
+                  :project-id="projectId"
+                />
               </div>
               <div v-else-if="activeTab === 'related'">
                 <div class="space-y-4">
@@ -222,9 +223,10 @@ onMounted(() => fetchCard())
             </div>
 
             <div v-else-if="activeTab === 'comments'">
-              <p class="text-sm text-muted">
-                Comments coming soon
-              </p>
+              <CardComments
+                :card-id="card.id"
+                :project-id="projectId"
+              />
             </div>
 
             <div
