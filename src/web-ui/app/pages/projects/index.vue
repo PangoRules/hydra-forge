@@ -67,29 +67,33 @@ onMounted(() => fetchProjects())
 </script>
 
 <template>
-  <div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-    <div class="flex items-center justify-between pb-4 mb-6 border-b border-gray-200 dark:border-gray-700">
-      <h1 class="text-2xl font-bold">
-        Projects
-      </h1>
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-          <USwitch v-model="showArchived" />
-          <span class="text-sm text-muted">Show archived</span>
+  <div class="min-h-screen flex flex-col">
+    <div class="p-4 sm:p-6 lg:p-8 pb-0 max-w-6xl mx-auto w-full flex-1 flex flex-col">
+      <div class="flex items-center justify-between pb-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <h1 class="text-2xl font-bold">
+          Projects
+        </h1>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <USwitch v-model="showArchived" />
+            <span class="text-sm text-muted">Show archived</span>
+          </div>
+          <UButton @click="showCreateModal = true">
+            New Project
+          </UButton>
         </div>
-        <UButton @click="showCreateModal = true">
-          New Project
-        </UButton>
+      </div>
+
+      <div class="flex-1">
+        <ProjectList
+          :projects="projects"
+          :loading="loading"
+          @select="onProjectSelect"
+          @archive="handleArchive"
+          @restore="handleRestore"
+        />
       </div>
     </div>
-
-    <ProjectList
-      :projects="projects"
-      :loading="loading"
-      @select="onProjectSelect"
-      @archive="handleArchive"
-      @restore="handleRestore"
-    />
 
     <ProjectCreateModal
       v-model:open="showCreateModal"
