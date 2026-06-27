@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -96,7 +97,7 @@ async function fetchCard() {
     if (apiError) throw apiError
     card.value = data as CardResponse
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load card'
+    error.value = e instanceof ApiError ? e.message : 'Failed to load card'
   } finally {
     loading.value = false
   }

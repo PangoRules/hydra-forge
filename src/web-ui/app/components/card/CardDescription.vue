@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 import { toTypeString } from '~/lib/card-type'
 
@@ -54,7 +55,7 @@ async function saveDescription() {
     board.updateCard(props.card.id, { description: description.value })
     dirty.value = false
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'Failed to save'
+    saveError.value = e instanceof ApiError ? e.message : 'Failed to save'
   } finally {
     saving.value = false
   }
