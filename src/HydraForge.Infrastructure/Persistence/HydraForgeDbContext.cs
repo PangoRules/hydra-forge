@@ -93,7 +93,9 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<CardRelationship>(modelBuilder, "card_relationships", b =>
         {
-            b.HasIndex(e => new { e.SourceCardId, e.TargetCardId }).IsUnique();
+            b.HasIndex(e => new { e.SourceCardId, e.TargetCardId })
+                .IsUnique()
+                .HasFilter("\"ArchivedAt\" IS NULL");
         });
 
         ConfigureEntity<CardWatcher>(modelBuilder, "card_watchers", b =>
