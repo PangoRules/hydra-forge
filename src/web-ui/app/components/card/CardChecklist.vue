@@ -163,9 +163,20 @@ onMounted(() => fetchItems())
     </div>
     <div
       v-else-if="error"
-      class="py-4 text-center text-sm text-error"
+      class="py-4 text-center"
     >
-      {{ error }}
+      <p class="text-sm text-error mb-2">
+        {{ error }}
+      </p>
+      <UButton
+        size="xs"
+        variant="soft"
+        color="neutral"
+        :loading="loading"
+        @click="fetchItems"
+      >
+        Retry
+      </UButton>
     </div>
     <ul
       v-else-if="items.length > 0"
