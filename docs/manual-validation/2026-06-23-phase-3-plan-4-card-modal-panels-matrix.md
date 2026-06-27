@@ -22,6 +22,7 @@ Yep I got Failed to update item this passes
 6. Restart API → toggle item 2 → checkbox persists (happy path restored)
 Yep passes
 7. Click up arrow on item 3 → item 3 swaps with item 2 in UI
+this works as expectd
 8. Stop API → click up arrow on item 3 → list snaps back to server order, red error toast "Failed to reorder item"
 9. Click trash icon on an item → item disappears from list
 10. Stop API → click trash → item reappears at original position, red error toast "Failed to delete item"
