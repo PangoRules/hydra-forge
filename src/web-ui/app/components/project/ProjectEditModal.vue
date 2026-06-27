@@ -2,7 +2,6 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import AppModal from '~/components/shared/AppModal.vue'
-import { onClickOutside } from '@vueuse/core'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -22,8 +21,9 @@ const toast = useAppToast()
 
 const isOpen = ref(true)
 
-/** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
+/** Close with animation: clear dropdown, set isOpen=false (triggers UModal scale-out 200ms), then emit close */
 function closeWithAnimation() {
+  searchResults.value = []
   if (!isOpen.value) return
   isOpen.value = false
   setTimeout(() => emit('close'), 200)
@@ -43,17 +43,27 @@ const selectedRole = ref(2)
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 const searchContainerRef = ref<HTMLElement | null>(null)
-const searchInputRef = ref<HTMLElement | null>(null)
 
-onClickOutside(searchContainerRef, (event) => {
-  // Don't close if click is on the input itself (re-focus shows results again)
-  if (searchInputRef.value && !searchInputRef.value.contains(event.target as Node))
+/** Dismiss search dropdown when clicking outside the search container */
+function onDocumentClick(e: MouseEvent) {
+  if (
+    searchResults.value.length > 0
+    && searchContainerRef.value
+    && !searchContainerRef.value.contains(e.target as Node)
+  ) {
     searchResults.value = []
-})
+  }
+}
 
 function onSearchKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') searchResults.value = []
+  if (e.key === 'Escape') {
+    e.stopPropagation() // Prevent modal from closing — close dropdown first
+    searchResults.value = []
+  }
 }
+
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
 async function fetchMembers() {
   loadingMembers.value = true
@@ -244,7 +254,6 @@ onMounted(fetchMembers)
               class="relative"
             >
               <UInput
-                ref="searchInputRef"
                 v-model="searchQuery"
                 placeholder="Search users..."
                 size="sm"
