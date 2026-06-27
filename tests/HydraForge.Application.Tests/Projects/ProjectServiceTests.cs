@@ -94,7 +94,7 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ArchivedProject_ReturnsArchived()
+    public async Task GetByIdAsync_ArchivedProject_ReturnsProject()
     {
         var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
         var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
@@ -105,8 +105,8 @@ public class ProjectServiceTests
 
         var result = await handler.GetByIdAsync(projectId, userId);
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Projects.Archived, result.Error.Code);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value.ArchivedAt);
     }
 
     [Fact]

@@ -116,11 +116,6 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        if (project.ArchivedAt != null)
-            return Result<ProjectDto>.Failure(
-                new Error(DomainErrorCodes.Projects.Archived, "Project is archived.")
-            );
-
         var membership = await memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
         if (membership == null)
             return Result<ProjectDto>.Failure(
