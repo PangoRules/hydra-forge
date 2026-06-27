@@ -78,6 +78,25 @@ function downloadUrl(attachment: AttachmentResponse) {
   return `${config.public.apiBaseUrl}${ApiRoutes.Attachments.download(props.projectId, props.cardId, attachment.id)}`
 }
 
+async function downloadAttachment(att: AttachmentResponse) {
+  try {
+    const token = getToken()
+    const res = await fetch(downloadUrl(att), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    if (!res.ok) throw new Error('Download failed')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = att.fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    toast.error('Failed to download file')
+  }
+}
+
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -134,13 +153,13 @@ onMounted(() => fetchAttachments())
           name="i-lucide-paperclip"
           class="size-3 text-muted"
         />
-        <a
-          :href="downloadUrl(att)"
-          class="flex-1 truncate hover:underline"
-          download
+        <button
+          class="flex-1 truncate text-left hover:underline"
+          title="Download"
+          @click="downloadAttachment(att)"
         >
           {{ att.fileName }}
-        </a>
+        </button>
         <span class="text-xs text-muted">{{ formatSize(att.size) }}</span>
         <UButton
           v-if="!readonly"

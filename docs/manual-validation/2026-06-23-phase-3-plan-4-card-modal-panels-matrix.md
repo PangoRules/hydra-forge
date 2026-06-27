@@ -39,15 +39,22 @@ Works! mobile and desktop
 2. Type comment text → click Post → comment appears in list with author + timestamp
 Works!
 3. Empty input → Post button disabled
+Works!
 4. Stop API → type comment → click Post → input not cleared, red error toast
+Works
 5. Page refresh → comments persist (loaded from API, not just local state)
+Works
 6. Mobile → comments render in "Related" tab
+Works
 
 ## Task 14 — Card Attachments
 
 1. Open any card modal → attachments panel visible
+Works
 2. Click upload → select small image (< 5MB) → file uploads, appears in list with filename + size
+It allowed me to upload a pdf and a small image.
 3. Click downloaded file icon → file downloads with correct content
+
 4. Click delete on an attachment → confirmation → attachment disappears from list
 5. Stop API → click upload → red error toast, file not added
 6. Try uploading > 10MB file → expect validation rejection (size limit)
