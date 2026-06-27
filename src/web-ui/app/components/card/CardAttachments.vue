@@ -185,7 +185,7 @@ onMounted(() => fetchAttachments())
           class="size-3 text-muted"
         />
         <button
-          class="flex-1 truncate text-left hover:underline"
+          class="flex-1 truncate text-left underline md:decoration-transparent md:hover:decoration-current transition"
           title="Download"
           @click="downloadAttachment(att)"
         >
@@ -198,7 +198,7 @@ onMounted(() => fetchAttachments())
           variant="ghost"
           size="xs"
           color="neutral"
-          class="opacity-0 group-hover:opacity-100"
+          class="md:opacity-0 md:group-hover:opacity-100"
           @click="promptDelete(att)"
         />
       </div>
