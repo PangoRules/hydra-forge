@@ -72,6 +72,11 @@ function handleCardClick(card: CardResponse) {
   showCardModal.value = true
 }
 
+function handleCardModalClose() {
+  selectedCardId.value = null
+  board.fetchBoard(projectId)
+}
+
 // Bulk handlers for desktop
 async function handleBulkMove() {
   if (projectArchived.value) return
@@ -325,7 +330,7 @@ watch(
       :card-id="selectedCardId"
       :project-id="projectId"
       :readonly="projectArchived"
-      @close="selectedCardId = null"
+      @close="handleCardModalClose"
       @archived="board.fetchBoard(projectId)"
       @restored="board.fetchBoard(projectId)"
     />
