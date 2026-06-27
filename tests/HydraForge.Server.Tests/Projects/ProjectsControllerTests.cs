@@ -346,7 +346,7 @@ internal class TestProjectRepository : IProjectRepository
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<Project?>(_projects.FirstOrDefault(p => p.Id == id));
 
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Project>>(_projects);
 
     public Task UpdateAsync(Project project, CancellationToken ct = default)

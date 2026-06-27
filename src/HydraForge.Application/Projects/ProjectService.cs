@@ -84,8 +84,19 @@ public class ProjectService(
             TemplateGeneratedAt = DateTime.UtcNow,
         };
         await snapshotRepo.AddAsync(snapshot, ct);
-        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Created, 1, DateTime.UtcNow, null!), ct);
+        await _publisher.PublishAsync(
+            new ProjectBoardEventEnvelope(
+                Guid.NewGuid(),
+                project.Id,
+                BoardEntityType.Project,
+                project.Id,
+                BoardAction.Created,
+                1,
+                DateTime.UtcNow,
+                null!
+            ),
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -119,10 +130,7 @@ public class ProjectService(
         var membership = await memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
         if (membership == null)
             return Result<ProjectDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var columns = await columnRepo.GetByProjectIdAsync(projectId, ct);
@@ -137,24 +145,23 @@ public class ProjectService(
         CancellationToken ct = default
     )
     {
-        var projects = await projectRepo.ListByUserIdAsync(requestUserId, ct);
-        var filteredProjects = includeArchived
-            ? projects.ToList()
-            : projects.Where(p => p.ArchivedAt == null).ToList();
+        var projects = await projectRepo.ListByUserIdAsync(requestUserId, includeArchived, ct);
 
         var memberCounts = await memberRepo.GetMemberCountsAsync(
-            filteredProjects.Select(p => p.Id),
+            projects.Select(p => p.Id),
             ct
         );
 
-        var result = filteredProjects.Select(project => new ProjectListDto(
-            project.Id,
-            project.Name,
-            project.Description,
-            project.CreatedAt,
-            project.ArchivedAt,
-            memberCounts.GetValueOrDefault(project.Id, 0)
-        )).ToList();
+        var result = projects
+            .Select(project => new ProjectListDto(
+                project.Id,
+                project.Name,
+                project.Description,
+                project.CreatedAt,
+                project.ArchivedAt,
+                memberCounts.GetValueOrDefault(project.Id, 0)
+            ))
+            .ToList();
 
         return Result<IReadOnlyList<ProjectListDto>>.Success(result);
     }
@@ -172,35 +179,37 @@ public class ProjectService(
 
         if (project.ArchivedAt != null)
             return Result<ProjectDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.Archived,
-                    "Cannot update archived project."
-                )
+                new Error(DomainErrorCodes.Projects.Archived, "Cannot update archived project.")
             );
 
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
             return Result<ProjectDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         if (membership.Role != MemberRole.Owner && membership.Role != MemberRole.Member)
             return Result<ProjectDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner or Member role required."
-                )
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner or Member role required.")
             );
 
         project.UpdateDetails(cmd.Name, cmd.Description, cmd.GitRemoteUrl, cmd.GitProvider);
 
         await projectRepo.UpdateAsync(project, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id, BoardAction.Updated, 1, DateTime.UtcNow, null!), ct);
+        await _publisher.PublishAsync(
+            new ProjectBoardEventEnvelope(
+                Guid.NewGuid(),
+                project.Id,
+                BoardEntityType.Project,
+                project.Id,
+                BoardAction.Updated,
+                1,
+                DateTime.UtcNow,
+                null!
+            ),
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -236,18 +245,12 @@ public class ProjectService(
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
         if (membership == null)
             return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         if (membership.Role != MemberRole.Owner)
             return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner role required."
-                )
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
             );
 
         bool isArchiving = project.ArchivedAt == null;
@@ -263,10 +266,19 @@ public class ProjectService(
 
         await projectRepo.UpdateAsync(project, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await _publisher.PublishAsync(new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), project.Id, BoardEntityType.Project, project.Id,
-            isArchiving ? BoardAction.Archived : BoardAction.Restored,
-            1, DateTime.UtcNow, null!), ct);
+        await _publisher.PublishAsync(
+            new ProjectBoardEventEnvelope(
+                Guid.NewGuid(),
+                project.Id,
+                BoardEntityType.Project,
+                project.Id,
+                isArchiving ? BoardAction.Archived : BoardAction.Restored,
+                1,
+                DateTime.UtcNow,
+                null!
+            ),
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -303,7 +315,15 @@ public class ProjectService(
             columns
                 .Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color))
                 .ToList(),
-            members.Select(m => new ProjectMemberDto(m.Id, m.UserId, m.User?.Username ?? string.Empty, m.Role, m.JoinedAt)).ToList()
+            members
+                .Select(m => new ProjectMemberDto(
+                    m.Id,
+                    m.UserId,
+                    m.User?.Username ?? string.Empty,
+                    m.Role,
+                    m.JoinedAt
+                ))
+                .ToList()
         );
     }
 }

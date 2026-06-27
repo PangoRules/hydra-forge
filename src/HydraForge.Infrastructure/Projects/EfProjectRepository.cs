@@ -22,6 +22,7 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
 
     public async Task<IReadOnlyList<Project>> ListByUserIdAsync(
         Guid userId,
+        bool includeArchived = false,
         CancellationToken ct = default
     )
     {
@@ -30,7 +31,11 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
             .Select(m => m.ProjectId)
             .ToListAsync(ct);
 
-        return await context.Projects.Where(p => projectIds.Contains(p.Id)).ToListAsync(ct);
+        var query = context.Projects.Where(p => projectIds.Contains(p.Id));
+        if (!includeArchived)
+            query = query.Where(p => p.ArchivedAt == null);
+
+        return await query.ToListAsync(ct);
     }
 
     public async Task UpdateAsync(Project project, CancellationToken ct = default)
