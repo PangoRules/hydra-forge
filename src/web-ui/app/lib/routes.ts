@@ -27,6 +27,10 @@ export const ApiRoutes = {
     refresh: '/api/Auth/refresh'
   },
 
+  Users: {
+    search: (query: string, limit = 10) => `/api/Users/search?q=${encodeURIComponent(query)}&limit=${limit}`
+  },
+
   Projects: {
     list: () => '/api/Projects',
     create: () => '/api/Projects',

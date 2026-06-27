@@ -11,6 +11,7 @@ public interface IUserRepository
     Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
     Task<User?> FindByUsernameAsync(string username);
     Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default);
+    Task<List<User>> SearchByUsernameAsync(string query, int maxResults = 10, CancellationToken ct = default);
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();
     Task CreateAsync(User user);

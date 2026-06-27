@@ -876,7 +876,9 @@ internal class InMemoryUserRepository : IUserRepository
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
     public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+=> Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+    public Task<List<HydraForge.Domain.Entities.Auth.User>> SearchByUsernameAsync(string query, int maxResults = 10, CancellationToken ct = default)
+        => Task.FromResult(new List<HydraForge.Domain.Entities.Auth.User>());
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }

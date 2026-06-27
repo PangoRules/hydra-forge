@@ -30,6 +30,15 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return users.ToDictionary(u => u.Username, u => u, StringComparer.OrdinalIgnoreCase);
     }
 
+    public async Task<List<User>> SearchByUsernameAsync(string query, int maxResults = 10, CancellationToken ct = default)
+    {
+        var normalized = query.ToLowerInvariant();
+        return await context.Users
+            .Where(u => EF.Functions.ILike(u.Username, $"%{normalized}%"))
+            .Take(maxResults)
+            .ToListAsync(ct);
+    }
+
     public async Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
     {
         var user = await context.Users.FindAsync(userId);

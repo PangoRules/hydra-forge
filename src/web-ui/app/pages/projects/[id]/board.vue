@@ -4,6 +4,7 @@ import { ApiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
+import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -24,6 +25,7 @@ const selectedCardId = ref<string | null>(null)
 const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
+const showMembersPanel = ref(false)
 
 function handleAddCard(columnId?: string) {
   if (projectArchived.value) return
@@ -203,6 +205,13 @@ watch(
         <UButton
           variant="ghost"
           size="sm"
+          icon="i-lucide-users"
+          title="Members"
+          @click="showMembersPanel = !showMembersPanel"
+        />
+        <UButton
+          variant="ghost"
+          size="sm"
           @click="board.fetchBoard(projectId)"
         >
           <UIcon
@@ -220,6 +229,17 @@ watch(
       class="hidden md:flex"
       @add-card="handleAddCard()"
     />
+
+    <!-- Members panel -->
+    <div
+      v-if="showMembersPanel"
+      class="hidden md:block px-4 pt-3"
+    >
+      <MemberManagementPanel
+        :project-id="projectId"
+        @update="board.fetchMembers(projectId)"
+      />
+    </div>
 
     <!-- Board area — takes remaining height with its own scroll context -->
     <div class="flex-1 flex flex-col">

@@ -58,6 +58,14 @@ const emit = defineEmits<{
             >
               Archived
             </UBadge>
+            <UBadge
+              v-if="project.memberCount"
+              variant="subtle"
+              size="xs"
+              color="info"
+            >
+              {{ project.memberCount }} member{{ project.memberCount === 1 ? '' : 's' }}
+            </UBadge>
           </div>
           <div
             class="flex items-center gap-1"
