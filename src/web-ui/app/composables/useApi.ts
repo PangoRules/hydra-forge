@@ -30,7 +30,11 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
       return request
     },
     async onResponse({ response }) {
-      if (response.status === 401) {
+      // Gate: skip 401 redirect for login endpoint — 401 is expected here
+      // (bad credentials), not a stale-token signal. Let the caller handle it.
+      const isLoginRequest = response.url?.includes('/api/Auth/login')
+
+      if (response.status === 401 && !isLoginRequest) {
         store.clearAuth()
         clearToken()
         // Hard redirect — navigateTo is unreliable in fetch interceptor context.

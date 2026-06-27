@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
-import { CARD_TYPE_MAP, toTypeString } from '~/lib/card-type'
+import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -45,23 +46,21 @@ async function handleCreate() {
     description: description.value,
     type: toTypeString(cardType.value)
   }
-  // HTML date input gives YYYY-MM-DD; convert to ISO 8601 datetime or null
   if (dueAt.value) {
     body.dueAt = `${dueAt.value}T00:00:00Z`
   }
   if (selectedAssignees.value.length > 0) {
     body.assigneeUserIds = selectedAssignees.value.map(id => id)
   }
-  const { error } = await api.POST(ApiRoutes.Cards.create(props.projectId), {
-    body
-  })
-  saving.value = false
-  if (error) {
-    toast.add({ title: error?.message ?? 'Failed to create card', color: 'error' })
-  } else {
-    toast.add({ title: 'Card created', color: 'success' })
+  try {
+    await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
+    toast.add({ title: 'Card created', color: 'success', duration: 4000 })
     emit('created')
     closeWithAnimation()
+  } catch (e: unknown) {
+    toast.add({ title: e instanceof ApiError ? e.message : 'Failed to create card', color: 'error' })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -143,11 +142,11 @@ function closeWithAnimation() {
               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
             >
               <option
-                v-for="[value, label] in Object.entries(CARD_TYPE_MAP)"
-                :key="value"
-                :value="Number(value)"
+                v-for="opt in CARD_TYPE_OPTIONS"
+                :key="opt.value"
+                :value="opt.value"
               >
-                {{ label }}
+                {{ opt.label }}
               </option>
             </select>
           </div>

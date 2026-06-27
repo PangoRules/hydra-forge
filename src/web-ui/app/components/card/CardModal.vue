@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -64,26 +65,27 @@ function handleArchive() {
 }
 
 async function confirmArchive() {
-  const { error: apiError } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
-    body: { version: card.value!.version }
-  })
-  if (!apiError) {
+  try {
+    await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
+      body: { version: card.value!.version }
+    })
+    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
     emit('archived')
     closeWithAnimation()
-  } else {
+  } catch {
     toast.add({ title: 'Failed to archive card', color: 'error' })
   }
 }
 
 async function handleRestore() {
-  const { error: apiError } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {
-    body: { version: card.value!.version }
-  })
-  if (!apiError) {
-    toast.add({ title: 'Card restored', color: 'success' })
+  try {
+    await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {
+      body: { version: card.value!.version }
+    })
+    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
     emit('restored')
     closeWithAnimation()
-  } else {
+  } catch {
     toast.add({ title: 'Failed to restore card', color: 'error' })
   }
 }
@@ -95,10 +97,14 @@ async function fetchCard() {
     if (apiError) throw apiError
     card.value = data as CardResponse
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load card'
+    error.value = e instanceof ApiError ? e.message : 'Failed to load card'
   } finally {
     loading.value = false
   }
+}
+
+function applyCardUpdate(updated: CardResponse) {
+  card.value = updated
 }
 
 onMounted(() => fetchCard())
@@ -152,6 +158,7 @@ onMounted(() => fetchCard())
                   :card="card"
                   :project-id="projectId"
                   :is-archived="isArchived"
+                  @update:card="applyCardUpdate"
                 />
               </div>
               <div v-else-if="activeTab === 'checklist'">
@@ -196,6 +203,7 @@ onMounted(() => fetchCard())
                 :card="card"
                 :project-id="projectId"
                 :is-archived="isArchived"
+                @update:card="applyCardUpdate"
               />
               <CardMetadata :card="card" />
             </div>

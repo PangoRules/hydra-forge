@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import { formatDueDate, isOverdue } from '~/lib/date'
+import { cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { onClickOutside } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -24,15 +26,9 @@ const menuRef = ref<HTMLElement | null>(null)
 const menuButtonRef = ref<HTMLElement | null>(null)
 const showArchiveConfirm = ref(false)
 
-const formattedDue = computed(() => {
-  if (!props.card.dueAt) return null
-  return new Date(props.card.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-})
-
-const isOverdue = computed(() => {
-  if (!props.card.dueAt) return false
-  return new Date(props.card.dueAt) < new Date()
-})
+const formattedDue = computed(() => formatDueDate(props.card.dueAt))
+const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
+const typeOption = computed(() => cardTypeOption(props.card.type))
 
 const plainDescription = computed(() =>
   (props.card.description ?? '').replace(/<[^>]*>/g, '')
@@ -54,27 +50,27 @@ function handleArchive() {
 }
 
 async function confirmArchive() {
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, props.card.id), {
-    body: { version: props.card.version }
-  })
-  if (error) {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.archive(props.projectId, props.card.id), {
+      body: { version: props.card.version }
+    })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card archived', color: 'success' })
+    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
+  } catch {
+    toast.add({ title: 'Failed to archive card', color: 'error' })
   }
 }
 
 async function handleRestore() {
   closeMenu()
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
-    body: { version: props.card.version }
-  })
-  if (error) {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.restore(props.projectId, props.card.id), {
+      body: { version: props.card.version }
+    })
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card restored', color: 'success' })
+    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
+  } catch {
+    toast.add({ title: 'Failed to restore card', color: 'error' })
   }
 }
 </script>
@@ -96,6 +92,11 @@ async function handleRestore() {
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
+          <UIcon
+            :name="typeOption.icon"
+            class="size-3.5 shrink-0"
+            :class="cardTypeColorClass(typeOption)"
+          />
           <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {{ card.title }}
           </h4>
@@ -177,7 +178,7 @@ async function handleRestore() {
         <span
           v-if="formattedDue"
           class="text-xs"
-          :class="isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
+          :class="cardIsOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
         >
           <UIcon
             name="i-lucide-calendar"

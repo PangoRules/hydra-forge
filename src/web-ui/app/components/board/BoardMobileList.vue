@@ -5,7 +5,8 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
+import { formatDueDate, isOverdue } from '~/lib/date'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -193,7 +194,7 @@ async function confirmArchive() {
     toast.add({ title: 'Failed to archive card', color: 'error' })
   } else {
     board.removeCard(card.id)
-    toast.add({ title: 'Card archived', color: 'success' })
+    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
   }
   archiveTargetCard.value = null
   menuOpenFor.value = null
@@ -208,7 +209,7 @@ async function handleRestore(card: CardResponse) {
     toast.add({ title: 'Failed to restore card', color: 'error' })
   } else {
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card restored', color: 'success' })
+    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
   }
 }
 
@@ -263,7 +264,7 @@ function stripHtml(text: string): string {
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
       >
         <option
-          v-for="opt in CARD_TYPE_OPTIONS"
+          v-for="opt in CARD_TYPE_FILTER_OPTIONS"
           :key="opt.label"
           :value="opt.value"
         >
@@ -365,7 +366,7 @@ function stripHtml(text: string): string {
               @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value !== '' ? Number(($event.target as HTMLSelectElement).value) : null"
             >
               <option
-                v-for="opt in CARD_TYPE_OPTIONS"
+                v-for="opt in CARD_TYPE_FILTER_OPTIONS"
                 :key="opt.label"
                 :value="opt.value ?? ''"
               >
@@ -418,7 +419,12 @@ function stripHtml(text: string): string {
                   @click.stop="toggleCardSelect(card.id, $event)"
                   @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
                 >
-                <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
+                <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
+                <UIcon
+                  :name="cardTypeOption(card.type).icon"
+                  class="size-3.5 shrink-0"
+                  :class="cardTypeColorClass(cardTypeOption(card.type))"
+                />
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}
                 </p>
@@ -497,6 +503,17 @@ function stripHtml(text: string): string {
                 class="text-xs text-gray-500 mt-1 line-clamp-2"
               >
                 {{ card.description ? stripHtml(card.description) : '' }}
+              </p>
+              <p
+                v-if="formatDueDate(card.dueAt)"
+                class="text-xs mt-1"
+                :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
+              >
+                <UIcon
+                  name="i-lucide-calendar"
+                  class="size-3 inline mr-0.5"
+                />
+                {{ formatDueDate(card.dueAt) }}
               </p>
             </div>
           </template>

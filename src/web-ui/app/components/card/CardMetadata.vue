@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { formatDueDate } from '~/lib/date'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -62,7 +63,7 @@ const columnName = computed(() => {
         Due Date
       </p>
       <p class="text-sm">
-        {{ card.dueAt ?? 'None' }}
+        {{ formatDueDate(card.dueAt) ?? 'None' }}
       </p>
     </div>
   </div>

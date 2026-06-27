@@ -82,7 +82,6 @@ function onKeydown(e: KeyboardEvent) {
           v-else-if="error"
           color="error"
           :title="error"
-          class="m-4"
         />
 
         <!-- Content -->

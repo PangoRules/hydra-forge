@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { CARD_TYPE_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -35,7 +35,7 @@ const { search, type, assigneeUserId, includeArchived, hideEmptyColumns } = useB
         @change="type = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
       >
         <option
-          v-for="t in CARD_TYPE_OPTIONS"
+          v-for="t in CARD_TYPE_FILTER_OPTIONS"
           :key="t.label"
           :value="t.value ?? ''"
         >
