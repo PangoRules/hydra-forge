@@ -216,7 +216,7 @@ onMounted(() => fetchItems())
     >
       <UInput
         v-model="newItemText"
-        placeholder="Add an item..."
+        placeholder="Add item..."
         size="sm"
         class="flex-1"
         :disabled="adding"

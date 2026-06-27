@@ -9,6 +9,7 @@ type ProjectListResponse = components['schemas']['ProjectListResponse']
 const projects = ref<ProjectListResponse[]>([])
 const loading = ref(true)
 const showCreateModal = ref(false)
+const showArchived = ref(false)
 
 const api = useApi()
 const toast = useToast()
@@ -16,7 +17,10 @@ const toast = useToast()
 async function fetchProjects() {
   loading.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Projects.list())
+    const url = showArchived.value
+      ? `${ApiRoutes.Projects.list()}?includeArchived=true`
+      : ApiRoutes.Projects.list()
+    const { data, error } = await api.GET(url)
     if (error) throw error
     projects.value = (data as ProjectListResponse[]) ?? []
   } catch (e: unknown) {
@@ -26,6 +30,28 @@ async function fetchProjects() {
     loading.value = false
   }
 }
+
+async function handleArchive(projectId: string) {
+  try {
+    await api.POST(ApiRoutes.Projects.archive(projectId))
+    toast.add({ title: 'Project archived', color: 'success', duration: 4000 })
+    fetchProjects()
+  } catch {
+    toast.add({ title: 'Failed to archive project', color: 'error' })
+  }
+}
+
+async function handleRestore(projectId: string) {
+  try {
+    await api.POST(ApiRoutes.Projects.restore(projectId))
+    toast.add({ title: 'Project restored', color: 'success', duration: 4000 })
+    fetchProjects()
+  } catch {
+    toast.add({ title: 'Failed to restore project', color: 'error' })
+  }
+}
+
+watch(showArchived, () => fetchProjects())
 
 function onProjectSelect(projectId: string) {
   navigateTo(UiRoutes.Projects.Board(projectId))
@@ -46,15 +72,23 @@ onMounted(() => fetchProjects())
       <h1 class="text-2xl font-bold">
         Projects
       </h1>
-      <UButton @click="showCreateModal = true">
-        New Project
-      </UButton>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <UToggle v-model="showArchived" />
+          <span class="text-sm text-muted">Show archived</span>
+        </div>
+        <UButton @click="showCreateModal = true">
+          New Project
+        </UButton>
+      </div>
     </div>
 
     <ProjectList
       :projects="projects"
       :loading="loading"
       @select="onProjectSelect"
+      @archive="handleArchive"
+      @restore="handleRestore"
     />
 
     <ProjectCreateModal

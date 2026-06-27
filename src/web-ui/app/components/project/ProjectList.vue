@@ -10,6 +10,8 @@ defineProps<{
 
 const emit = defineEmits<{
   select: [projectId: string]
+  archive: [projectId: string]
+  restore: [projectId: string]
 }>()
 </script>
 
@@ -42,9 +44,32 @@ const emit = defineEmits<{
       @click="emit('select', project.id)"
     >
       <template #header>
-        <h3 class="font-semibold truncate">
-          {{ project.name }}
-        </h3>
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold truncate">
+            {{ project.name }}
+          </h3>
+          <div
+            class="flex items-center gap-1"
+            @click.stop
+          >
+            <UButton
+              v-if="!project.archivedAt"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-archive"
+              title="Archive project"
+              @click="emit('archive', project.id)"
+            />
+            <UButton
+              v-else
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-archive-restore"
+              title="Restore project"
+              @click="emit('restore', project.id)"
+            />
+          </div>
+        </div>
       </template>
       <p class="text-sm text-muted line-clamp-2">
         {{ project.description ?? 'No description' }}
