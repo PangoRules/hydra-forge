@@ -162,9 +162,10 @@ onMounted(() => fetchCard())
                 />
               </div>
               <div v-else-if="activeTab === 'checklist'">
-                <p class="text-sm text-muted">
-                  Checklist coming soon
-                </p>
+                <CardChecklist
+                  :card-id="card.id"
+                  :project-id="projectId"
+                />
               </div>
               <div v-else-if="activeTab === 'comments'">
                 <p class="text-sm text-muted">
@@ -181,8 +182,13 @@ onMounted(() => fetchCard())
             </div>
           </div>
 
-          <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4">
+          <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4 space-y-6">
             <CardMetadata :card="card" />
+            <USeparator />
+            <CardChecklist
+              :card-id="card.id"
+              :project-id="projectId"
+            />
           </div>
         </div>
 
@@ -209,9 +215,10 @@ onMounted(() => fetchCard())
             </div>
 
             <div v-else-if="activeTab === 'checklist'">
-              <p class="text-sm text-muted">
-                Checklist coming soon
-              </p>
+              <CardChecklist
+                :card-id="card.id"
+                :project-id="projectId"
+              />
             </div>
 
             <div v-else-if="activeTab === 'comments'">
