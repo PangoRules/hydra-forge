@@ -146,15 +146,15 @@ onMounted(() => fetchCard())
 
     <template #body>
       <template v-if="card">
-        <!-- Desktop: two-column with tabs in left pane -->
-        <div class="hidden md:flex max-h-[70vh] overflow-hidden">
-          <div class="flex-1 flex flex-col overflow-hidden">
-            <UTabs
-              v-model="activeTab"
-              :items="tabs"
-              class="border-b flex-shrink-0 px-3"
-            />
-            <div class="flex-1 overflow-y-auto p-4">
+        <!-- Desktop: two-column with shared scroll container -->
+        <div class="hidden md:flex flex-col max-h-[70vh] overflow-hidden">
+          <UTabs
+            v-model="activeTab"
+            :items="tabs"
+            class="border-b flex-shrink-0 px-3"
+          />
+          <div class="flex-1 flex overflow-y-auto p-4 min-h-0">
+            <div class="flex-1">
               <div v-if="activeTab === 'details'">
                 <CardDescription
                   :card="card"
@@ -185,33 +185,33 @@ onMounted(() => fetchCard())
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4 space-y-6">
-            <CardMetadata
-              :card="card"
-              :project-id="projectId"
-              :is-archived="isReadonly"
-              @update:card="applyCardUpdate"
-            />
-            <USeparator />
-            <CardChecklist
-              :card-id="card.id"
-              :project-id="projectId"
-              :readonly="isReadonly"
-            />
-            <USeparator />
-            <CardAttachments
-              :card-id="card.id"
-              :project-id="projectId"
-              :readonly="isReadonly"
-            />
-            <USeparator />
-            <CardDependencies
-              :card-id="card.id"
-              :project-id="projectId"
-              :readonly="isReadonly"
-            />
+            <div class="w-64 flex-shrink-0 border-l pl-4 space-y-6">
+              <CardMetadata
+                :card="card"
+                :project-id="projectId"
+                :is-archived="isReadonly"
+                @update:card="applyCardUpdate"
+              />
+              <USeparator />
+              <CardChecklist
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <USeparator />
+              <CardAttachments
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <USeparator />
+              <CardDependencies
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+            </div>
           </div>
         </div>
 
