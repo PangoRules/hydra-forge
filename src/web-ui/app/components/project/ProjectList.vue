@@ -101,36 +101,36 @@ onClickOutside(menuRef, closeMenu, { ignore: [menuButtonRef] })
               class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
             >
               <button
-                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+                class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
                 @click="emit('edit', project.id); closeMenu()"
               >
                 <UIcon
                   name="i-lucide-pencil"
-                  class="size-4"
+                  class="size-3.5"
                 />
-                Edit project
+                Edit
               </button>
               <button
                 v-if="!project.archivedAt"
-                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+                class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
                 @click="emit('archive', project.id); closeMenu()"
               >
                 <UIcon
                   name="i-lucide-archive"
-                  class="size-4"
+                  class="size-3.5"
                 />
-                Archive project
+                Archive
               </button>
               <button
                 v-else
-                class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+                class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
                 @click="emit('restore', project.id); closeMenu()"
               >
                 <UIcon
                   name="i-lucide-archive-restore"
-                  class="size-4"
+                  class="size-3.5"
                 />
-                Restore project
+                Restore
               </button>
             </div>
           </div>

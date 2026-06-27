@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
+import AppModal from '~/components/shared/AppModal.vue'
 
 type MemberResponse = components['schemas']['MemberResponse']
 
@@ -139,6 +140,7 @@ onMounted(fetchMembers)
   <AppModal
     :open="true"
     title="Edit Project"
+    @update:open="emit('close')"
     @close="emit('close')"
   >
     <template #body>
