@@ -68,10 +68,7 @@ async function toggleItem(item: ChecklistItemResponse) {
   const original = items.value[idx]!
   items.value[idx] = { id: original.id, text: original.text, isCompleted: !original.isCompleted, position: original.position }
   try {
-    const client = (api as unknown as { _client?: { PATCH: (url: string) => Promise<unknown> } })._client
-    if (client?.PATCH) {
-      await client.PATCH(ApiRoutes.Checklist.toggle(props.projectId, props.cardId, item.id))
-    }
+    await api.PATCH(ApiRoutes.Checklist.toggle(props.projectId, props.cardId, item.id))
   } catch {
     items.value[idx] = original
     toast.add({ title: 'Failed to update item', color: 'error' })
@@ -100,8 +97,8 @@ async function moveItem(item: ChecklistItemResponse, direction: 'up' | 'down') {
   reordered.splice(newIdx, 0, moved!)
   items.value = reordered
   try {
-    await api.POST(ApiRoutes.Checklist.reorder(props.projectId, props.cardId, item.id), {
-      body: { afterItemId: reordered[newIdx - 1]?.id ?? null } as Record<string, unknown>
+    await api.PUT(ApiRoutes.Checklist.reorder(props.projectId, props.cardId, item.id), {
+      body: { newPosition: newIdx }
     })
   } catch {
     await fetchItems()

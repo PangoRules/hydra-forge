@@ -107,6 +107,7 @@ export function useApi() {
     POST: (url: string, opts?: unknown) => Promise<unknown>
     PUT: (url: string, opts?: unknown) => Promise<unknown>
     DELETE: (url: string, opts?: unknown) => Promise<unknown>
+    PATCH: (url: string, opts?: unknown) => Promise<unknown>
   }
 
   async function get<T>(url: string): Promise<ApiResponse<T>> {
@@ -129,5 +130,10 @@ export function useApi() {
     return result as ApiResponse<T>
   }
 
-  return { GET: get, POST: post, PUT: put, DELETE: del }
+  async function patch<T>(url: string, opts?: Record<string, unknown>): Promise<ApiResponse<T>> {
+    const result = await (client as unknown as UntypedClient).PATCH(url, opts)
+    return result as ApiResponse<T>
+  }
+
+  return { GET: get, POST: post, PUT: put, DELETE: del, PATCH: patch }
 }

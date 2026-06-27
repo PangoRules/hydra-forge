@@ -184,7 +184,12 @@ onMounted(() => fetchCard())
           </div>
 
           <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4 space-y-6">
-            <CardMetadata :card="card" />
+            <CardMetadata
+              :card="card"
+              :project-id="projectId"
+              :is-archived="isArchived"
+              @update:card="applyCardUpdate"
+            />
             <USeparator />
             <CardChecklist
               :card-id="card.id"
@@ -222,7 +227,12 @@ onMounted(() => fetchCard())
                 :is-archived="isArchived"
                 @update:card="applyCardUpdate"
               />
-              <CardMetadata :card="card" />
+              <CardMetadata
+                :card="card"
+                :project-id="projectId"
+                :is-archived="isArchived"
+                @update:card="applyCardUpdate"
+              />
             </div>
 
             <div v-else-if="activeTab === 'checklist'">
