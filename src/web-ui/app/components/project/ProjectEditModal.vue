@@ -56,13 +56,26 @@ async function fetchMembers() {
 }
 
 async function searchUsers() {
-  if (searchQuery.value.length < 2) {
-    searchResults.value = []
+  const q = searchQuery.value.trim()
+  if (q.length === 0) {
+    // On empty query, fetch initial batch to show available users
+    searching.value = true
+    try {
+      const { data, error } = await api.GET(ApiRoutes.Users.search(''))
+      if (error) throw error
+      const existingIds = new Set(members.value.map(m => m.userId))
+      searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
+        .filter(u => !existingIds.has(u.id))
+    } catch {
+      searchResults.value = []
+    } finally {
+      searching.value = false
+    }
     return
   }
   searching.value = true
   try {
-    const { data, error } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
+    const { data, error } = await api.GET(ApiRoutes.Users.search(q))
     if (error) throw error
     const existingIds = new Set(members.value.map(m => m.userId))
     searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
@@ -76,6 +89,8 @@ async function searchUsers() {
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
+  // Avoid re-fetching empty results that are already visible (e.g. re-focus)
+  if (searchQuery.value.trim() === '' && searchResults.value.length > 0) return
   searchTimer = setTimeout(searchUsers, 300)
 }
 
@@ -237,10 +252,11 @@ onMounted(fetchMembers)
                 class="w-full"
                 :loading="searching"
                 @input="onSearchInput"
+                @focus="onSearchInput"
               />
               <div
                 v-if="searchResults.length > 0"
-                class="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                class="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
               >
                 <button
                   v-for="user in searchResults"
