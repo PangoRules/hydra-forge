@@ -181,7 +181,7 @@ onMounted(fetchMembers)
         />
         <div
           v-if="searchResults.length > 0"
-          class="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+          class="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
         >
           <button
             v-for="user in searchResults"
