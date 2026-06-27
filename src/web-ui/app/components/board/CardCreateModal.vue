@@ -4,10 +4,12 @@ import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
+import { onMounted } from 'vue'
 import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
+type CardResponse = components['schemas']['CardResponse']
 
 const props = defineProps<{
   projectId: string
@@ -35,7 +37,20 @@ const dueAt = ref('')
 const selectedAssignees = ref<string[]>([])
 const saving = ref(false)
 
+const selectedParentEpicId = ref<string | undefined>()
+const epicCards = ref<CardResponse[]>([])
 const canSave = computed(() => title.value.trim().length > 0 && columnId.value.length > 0)
+
+async function fetchEpics() {
+  const url = new URL(ApiRoutes.Cards.list(props.projectId), window.location.origin)
+  url.searchParams.set('type', 'Epic')
+  const result = await api.GET(url.toString())
+  if (!result.error && result.data) {
+    epicCards.value = (result.data as { cards: CardResponse[] }).cards
+  }
+}
+
+onMounted(() => fetchEpics())
 
 async function handleCreate() {
   if (!canSave.value) return
@@ -51,6 +66,9 @@ async function handleCreate() {
   }
   if (selectedAssignees.value.length > 0) {
     body.assigneeUserIds = selectedAssignees.value.map(id => id)
+  }
+  if (selectedParentEpicId.value) {
+    body.parentCardId = selectedParentEpicId.value
   }
   try {
     await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
@@ -181,6 +199,24 @@ function closeWithAnimation() {
               </option>
             </select>
           </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Parent Epic</label>
+          <select
+            v-model="selectedParentEpicId"
+            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+          >
+            <option :value="undefined">
+              None
+            </option>
+            <option
+              v-for="epic in epicCards"
+              :key="epic.id"
+              :value="epic.id"
+            >
+              {{ epic.title }}
+            </option>
+          </select>
         </div>
       </div>
     </template>
