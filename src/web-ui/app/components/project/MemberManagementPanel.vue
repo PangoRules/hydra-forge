@@ -95,8 +95,7 @@ async function removeMember(memberId: string, username: string) {
 
 function roleLabel(role: number): string {
   switch (role) {
-    case 0: return 'Owner'
-    case 1: return 'Admin'
+    case 1: return 'Owner'
     case 2: return 'Member'
     default: return 'Unknown'
   }
@@ -104,8 +103,7 @@ function roleLabel(role: number): string {
 
 function roleColor(role: number): 'warning' | 'error' | 'info' | 'neutral' {
   switch (role) {
-    case 0: return 'warning'
-    case 1: return 'error'
+    case 1: return 'warning'
     case 2: return 'info'
     default: return 'neutral'
   }

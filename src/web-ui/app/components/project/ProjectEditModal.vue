@@ -19,6 +19,15 @@ const emit = defineEmits<{
 const api = useApi()
 const toast = useAppToast()
 
+const isOpen = ref(true)
+
+/** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
+function closeWithAnimation() {
+  if (!isOpen.value) return
+  isOpen.value = false
+  setTimeout(() => emit('close'), 200)
+}
+
 const name = ref(props.initialName)
 const description = ref(props.initialDescription ?? '')
 const saving = ref(false)
@@ -117,8 +126,7 @@ async function saveProject() {
 
 function roleLabel(role: number): string {
   switch (role) {
-    case 0: return 'Owner'
-    case 1: return 'Admin'
+    case 1: return 'Owner'
     case 2: return 'Member'
     default: return 'Unknown'
   }
@@ -126,8 +134,7 @@ function roleLabel(role: number): string {
 
 function roleColor(role: number): 'warning' | 'error' | 'info' | 'neutral' {
   switch (role) {
-    case 0: return 'warning'
-    case 1: return 'error'
+    case 1: return 'warning'
     case 2: return 'info'
     default: return 'neutral'
   }
@@ -138,10 +145,10 @@ onMounted(fetchMembers)
 
 <template>
   <AppModal
-    :open="true"
+    :open="isOpen"
     title="Edit Project"
-    @update:open="emit('close')"
-    @close="emit('close')"
+    @update:open="closeWithAnimation"
+    @close="closeWithAnimation"
   >
     <template #body>
       <div class="space-y-4">
@@ -204,7 +211,7 @@ onMounted(fetchMembers)
                 </UBadge>
               </div>
               <UButton
-                v-if="member.role !== 0 || members.filter(m => m.role === 0).length > 1"
+                v-if="member.role !== 1 || members.filter(m => m.role === 1).length > 1"
                 variant="ghost"
                 size="xs"
                 icon="i-lucide-x"
@@ -256,7 +263,7 @@ onMounted(fetchMembers)
       <div class="flex justify-end gap-2">
         <UButton
           variant="ghost"
-          @click="emit('close')"
+          @click="closeWithAnimation"
         >
           Cancel
         </UButton>
