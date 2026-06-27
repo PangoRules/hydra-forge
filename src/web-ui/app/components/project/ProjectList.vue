@@ -41,13 +41,24 @@ const emit = defineEmits<{
       v-for="project in projects"
       :key="project.id"
       class="cursor-pointer hover:ring-2 hover:ring-primary transition-shadow"
+      :class="project.archivedAt ? 'opacity-60' : ''"
       @click="emit('select', project.id)"
     >
       <template #header>
-        <div class="flex items-center justify-between">
-          <h3 class="font-semibold truncate">
-            {{ project.name }}
-          </h3>
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <h3 class="font-semibold truncate">
+              {{ project.name }}
+            </h3>
+            <UBadge
+              v-if="project.archivedAt"
+              variant="subtle"
+              size="xs"
+              color="neutral"
+            >
+              Archived
+            </UBadge>
+          </div>
           <div
             class="flex items-center gap-1"
             @click.stop

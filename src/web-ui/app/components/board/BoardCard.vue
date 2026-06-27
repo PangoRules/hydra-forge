@@ -11,6 +11,7 @@ type CardResponse = components['schemas']['CardResponse']
 const props = defineProps<{
   card: CardResponse
   projectId: string
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -82,6 +83,7 @@ async function handleRestore() {
   >
     <div class="flex items-start gap-2">
       <input
+        v-if="!readonly"
         type="checkbox"
         class="mr-2 shrink-0 hidden md:block"
         :checked="!!board.selectedCardIds[card.id]"
@@ -116,7 +118,10 @@ async function handleRestore() {
       </div>
 
       <!-- Three-dot menu -->
-      <div class="relative shrink-0">
+      <div
+        v-if="!readonly"
+        class="relative shrink-0"
+      >
         <span ref="menuButtonRef">
           <UButton
             icon="i-lucide-ellipsis-vertical"

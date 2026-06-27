@@ -16,6 +16,7 @@ const api = useApi()
 const toast = useAppToast()
 
 const projectName = ref('')
+const projectArchived = ref(false)
 
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
@@ -25,11 +26,14 @@ const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 
 function handleAddCard(columnId?: string) {
+  if (projectArchived.value) return
   createColumnId.value = columnId ?? null
   showCreateModal.value = true
 }
 
 async function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
+  if (projectArchived.value) return
+
   const card = findCard(cardId)
   if (!card) return
 
@@ -68,6 +72,7 @@ function handleCardClick(card: CardResponse) {
 
 // Bulk handlers for desktop
 async function handleBulkMove() {
+  if (projectArchived.value) return
   if (!bulkTargetColumnId.value) return
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   for (const cardId of ids) {
@@ -94,6 +99,7 @@ async function handleBulkMove() {
 }
 
 async function handleBulkArchive() {
+  if (projectArchived.value) return
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   for (const cardId of ids) {
     const card = findCard(cardId)
@@ -116,9 +122,22 @@ onMounted(async () => {
   board.fetchMembers(projectId)
   const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
-    projectName.value = (data as components['schemas']['ProjectResponse']).name
+    const project = data as components['schemas']['ProjectResponse']
+    projectName.value = project.name
+    projectArchived.value = !!project.archivedAt
   }
 })
+
+async function handleRestore() {
+  try {
+    await api.POST(ApiRoutes.Projects.restore(projectId))
+    projectArchived.value = false
+    toast.success('Project restored')
+    board.fetchBoard(projectId)
+  } catch {
+    toast.error('Failed to restore project')
+  }
+}
 
 // Only re-fetch when type or includeArchived actually change — not when search changes
 watch(
@@ -159,24 +178,45 @@ watch(
 <template>
   <div class="flex-1 flex flex-col">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h1 class="text-xl font-bold truncate">
-        {{ projectName || 'Board' }}
-      </h1>
-      <UButton
-        variant="ghost"
-        size="sm"
-        @click="board.fetchBoard(projectId)"
-      >
-        <UIcon
-          name="i-lucide-refresh-cw"
-          class="size-4"
+      <div class="flex items-center gap-2 min-w-0">
+        <h1 class="text-xl font-bold truncate">
+          {{ projectName || 'Board' }}
+        </h1>
+        <UBadge
+          v-if="projectArchived"
+          variant="subtle"
+          size="xs"
+          color="neutral"
+        >
+          Archived
+        </UBadge>
+      </div>
+      <div class="flex items-center gap-1">
+        <UButton
+          v-if="projectArchived"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-archive-restore"
+          title="Restore project"
+          @click="handleRestore"
         />
-      </UButton>
+        <UButton
+          variant="ghost"
+          size="sm"
+          @click="board.fetchBoard(projectId)"
+        >
+          <UIcon
+            name="i-lucide-refresh-cw"
+            class="size-4"
+          />
+        </UButton>
+      </div>
     </div>
 
     <!-- Filter bar — always visible above the board area -->
     <BoardFilterBar
       :members="board.members"
+      :readonly="projectArchived"
       class="hidden md:flex"
       @add-card="handleAddCard()"
     />
@@ -223,6 +263,7 @@ watch(
             :cards-by-column="board.cardsByColumn"
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
+            :readonly="projectArchived"
             @card-move="handleCardMove"
             @card-click="handleCardClick"
             @add-card="handleAddCard"
@@ -252,6 +293,7 @@ watch(
           :project-id="projectId"
           :members="board.members"
           :loading="board.loading"
+          :readonly="projectArchived"
           @card-click="handleCardClick"
           @add-card="handleAddCard"
         />
@@ -262,6 +304,7 @@ watch(
       v-if="selectedCardId"
       :card-id="selectedCardId"
       :project-id="projectId"
+      :readonly="projectArchived"
       @close="selectedCardId = null"
       @archived="board.fetchBoard(projectId)"
       @restored="board.fetchBoard(projectId)"

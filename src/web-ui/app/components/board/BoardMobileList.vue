@@ -18,6 +18,7 @@ const props = defineProps<{
   projectId: string
   members?: MemberResponse[]
   loading?: boolean
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,7 +28,7 @@ const emit = defineEmits<{
 
 const api = useApi()
 const board = useBoardStore()
-const toast = useToast()
+const toast = useAppToast()
 const { search, type: filterType, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
@@ -62,14 +63,14 @@ async function moveSelectedToColumn() {
   // UI-only stub for bulk move. TODO: implement server-side batch move endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   console.log('[TODO bulk-move] projectId=', props.projectId, 'targetColumnId=', bulkTargetColumnId, 'cardIds=', ids)
-  toast.add({ title: 'Bulk move logged (TODO)', color: 'info' })
+  toast.success('Bulk move logged (TODO)')
 }
 
 async function archiveSelectedConfirmed() {
   // UI-only stub for bulk archive. TODO: implement server-side batch archive endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
   console.log('[TODO bulk-archive] projectId=', props.projectId, 'cardIds=', ids)
-  toast.add({ title: 'Bulk archive logged (TODO)', color: 'info' })
+  toast.success('Bulk archive logged (TODO)')
   showBulkArchiveConfirm.value = false
 }
 
@@ -191,10 +192,10 @@ async function confirmArchive() {
     body: { version: card.version }
   })
   if (error) {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
+    toast.error('Failed to archive card')
   } else {
     board.removeCard(card.id)
-    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
+    toast.success('Card archived')
   }
   archiveTargetCard.value = null
   menuOpenFor.value = null
@@ -206,10 +207,10 @@ async function handleRestore(card: CardResponse) {
     body: { version: card.version }
   })
   if (error) {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
+    toast.error('Failed to restore card')
   } else {
     board.fetchBoard(props.projectId)
-    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
+    toast.success('Card restored')
   }
 }
 
@@ -241,6 +242,7 @@ function stripHtml(text: string): string {
         Filter
       </UButton>
       <UButton
+        v-if="!readonly"
         size="sm"
         type="button"
         @click="emit('add-card')"
@@ -412,6 +414,7 @@ function stripHtml(text: string): string {
               <!-- Card header row -->
               <div class="flex items-center gap-2">
                 <input
+                  v-if="!readonly"
                   type="checkbox"
                   class="mr-2 shrink-0"
                   :checked="!!board.selectedCardIds[card.id]"
@@ -434,7 +437,10 @@ function stripHtml(text: string): string {
                 >archived</span>
 
                 <!-- Relative wrapper anchors the absolute dropdown -->
-                <div class="relative">
+                <div
+                  v-if="!readonly"
+                  class="relative"
+                >
                   <!-- Three-dot menu button -->
                   <button
                     :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"

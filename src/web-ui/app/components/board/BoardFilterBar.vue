@@ -6,6 +6,7 @@ type MemberResponse = components['schemas']['MemberResponse']
 
 defineProps<{
   members?: MemberResponse[]
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -85,6 +86,7 @@ const { search, type, assigneeUserId, includeArchived, hideEmptyColumns } = useB
     </label>
 
     <UButton
+      v-if="!readonly"
       size="sm"
       icon="i-lucide-plus"
       color="primary"

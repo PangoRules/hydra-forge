@@ -11,6 +11,7 @@ interface ChecklistItemResponse {
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const api = useApi()
@@ -154,9 +155,10 @@ onMounted(() => fetchItems())
         class="group flex items-start gap-2 rounded p-1 hover:bg-muted/50"
       >
         <button
-          class="mt-0.5 flex-shrink-0 w-4 h-4 rounded border cursor-pointer flex items-center justify-center"
-          :class="item.isCompleted ? 'bg-primary border-primary' : 'border-muted'"
+          class="mt-0.5 flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center"
+          :class="[item.isCompleted ? 'bg-primary border-primary' : 'border-muted', readonly ? 'cursor-default' : 'cursor-pointer']"
           :aria-label="item.isCompleted ? 'Mark incomplete' : 'Mark complete'"
+          :disabled="readonly"
           @click="toggleItem(item)"
         >
           <UIcon
@@ -173,7 +175,10 @@ onMounted(() => fetchItems())
           {{ item.text }}
         </span>
 
-        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+        <div
+          v-if="!readonly"
+          class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0"
+        >
           <UButton
             variant="ghost"
             size="xs"
@@ -208,6 +213,7 @@ onMounted(() => fetchItems())
     </p>
 
     <form
+      v-if="!readonly"
       class="flex gap-2"
       @submit.prevent="addItem"
     >

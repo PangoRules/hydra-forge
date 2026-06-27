@@ -13,6 +13,7 @@ interface AttachmentResponse {
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const attachments = ref<AttachmentResponse[]>([])
@@ -94,6 +95,7 @@ onMounted(() => fetchAttachments())
         Attachments
       </p>
       <UButton
+        v-if="!readonly"
         size="xs"
         variant="outline"
         :loading="uploading"
@@ -102,6 +104,7 @@ onMounted(() => fetchAttachments())
         Upload
       </UButton>
       <input
+        v-if="!readonly"
         ref="fileInput"
         type="file"
         class="hidden"
@@ -141,6 +144,7 @@ onMounted(() => fetchAttachments())
         </a>
         <span class="text-xs text-muted">{{ formatSize(att.size) }}</span>
         <UButton
+          v-if="!readonly"
           icon="i-lucide-trash-2"
           variant="ghost"
           size="xs"

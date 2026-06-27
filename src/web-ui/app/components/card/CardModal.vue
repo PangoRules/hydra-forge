@@ -10,6 +10,7 @@ type CardResponse = components['schemas']['CardResponse']
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +25,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const isArchived = computed(() => !!card.value?.archivedAt)
+const isReadonly = computed(() => props.readonly || isArchived.value)
 const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 
@@ -124,7 +126,7 @@ onMounted(() => fetchCard())
     <template #header-trailing>
       <div class="flex items-center gap-1">
         <UButton
-          v-if="card && !isArchived"
+          v-if="card && !isReadonly && !isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive"
@@ -132,7 +134,7 @@ onMounted(() => fetchCard())
           @click="handleArchive"
         />
         <UButton
-          v-else-if="card && isArchived"
+          v-else-if="card && !isReadonly && isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive-restore"
@@ -157,7 +159,7 @@ onMounted(() => fetchCard())
                 <CardDescription
                   :card="card"
                   :project-id="projectId"
-                  :is-archived="isArchived"
+                  :is-archived="isReadonly"
                   @update:card="applyCardUpdate"
                 />
               </div>
@@ -165,12 +167,14 @@ onMounted(() => fetchCard())
                 <CardChecklist
                   :card-id="card.id"
                   :project-id="projectId"
+                  :readonly="isReadonly"
                 />
               </div>
               <div v-else-if="activeTab === 'comments'">
                 <CardComments
                   :card-id="card.id"
                   :project-id="projectId"
+                  :readonly="isReadonly"
                 />
               </div>
               <div v-else-if="activeTab === 'related'">
@@ -187,23 +191,26 @@ onMounted(() => fetchCard())
             <CardMetadata
               :card="card"
               :project-id="projectId"
-              :is-archived="isArchived"
+              :is-archived="isReadonly"
               @update:card="applyCardUpdate"
             />
             <USeparator />
             <CardChecklist
               :card-id="card.id"
               :project-id="projectId"
+              :readonly="isReadonly"
             />
             <USeparator />
             <CardAttachments
               :card-id="card.id"
               :project-id="projectId"
+              :readonly="isReadonly"
             />
             <USeparator />
             <CardDependencies
               :card-id="card.id"
               :project-id="projectId"
+              :readonly="isReadonly"
             />
           </div>
         </div>
@@ -224,13 +231,13 @@ onMounted(() => fetchCard())
               <CardDescription
                 :card="card"
                 :project-id="projectId"
-                :is-archived="isArchived"
+                :is-archived="isReadonly"
                 @update:card="applyCardUpdate"
               />
               <CardMetadata
                 :card="card"
                 :project-id="projectId"
-                :is-archived="isArchived"
+                :is-archived="isReadonly"
                 @update:card="applyCardUpdate"
               />
             </div>
@@ -239,6 +246,7 @@ onMounted(() => fetchCard())
               <CardChecklist
                 :card-id="card.id"
                 :project-id="projectId"
+                :readonly="isReadonly"
               />
             </div>
 
@@ -246,6 +254,7 @@ onMounted(() => fetchCard())
               <CardComments
                 :card-id="card.id"
                 :project-id="projectId"
+                :readonly="isReadonly"
               />
             </div>
 
@@ -256,11 +265,13 @@ onMounted(() => fetchCard())
               <CardAttachments
                 :card-id="card.id"
                 :project-id="projectId"
+                :readonly="isReadonly"
               />
               <USeparator />
               <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
+                :readonly="isReadonly"
               />
             </div>
           </div>

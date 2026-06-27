@@ -10,6 +10,7 @@ defineProps<{
   cardsByColumn: Map<string, CardResponse[]>
   projectId: string
   includeArchived: boolean
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +37,7 @@ function handleCardClick(card: CardResponse) {
       :cards="cardsByColumn.get(col.id) ?? []"
       :project-id="projectId"
       :include-archived="includeArchived"
+      :readonly="readonly"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
       @add-card="(colId: string) => emit('add-card', colId)"

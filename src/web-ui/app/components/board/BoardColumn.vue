@@ -11,6 +11,7 @@ const props = defineProps<{
   cards: CardResponse[]
   projectId: string
   includeArchived: boolean
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -68,6 +69,7 @@ function handleFilterArchived(value: boolean) {
       :column="column"
       :card-count="filteredCards.length"
       :include-archived="includeArchived"
+      :readonly="readonly"
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"
@@ -87,6 +89,7 @@ function handleFilterArchived(value: boolean) {
         :key="card.id"
         :card="card"
         :project-id="projectId"
+        :readonly="readonly"
         @click="emit('card-click', card)"
       />
     </div>

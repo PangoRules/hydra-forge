@@ -18,6 +18,7 @@ interface CardRelationshipDto {
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const relationships = ref<CardRelationshipDto[]>([])

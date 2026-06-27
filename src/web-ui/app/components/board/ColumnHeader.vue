@@ -8,6 +8,7 @@ defineProps<{
   column: ColumnResponse
   cardCount: number
   includeArchived: boolean
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -82,6 +83,7 @@ const emit = defineEmits<{
         <span class="text-gray-500">Archived only</span>
       </label>
       <button
+        v-if="!readonly"
         class="ml-auto text-xs px-2 py-1 rounded border border-primary text-primary bg-primary/5 hover:bg-primary/10"
         title="Add card to this column"
         @click="emit('add-card')"

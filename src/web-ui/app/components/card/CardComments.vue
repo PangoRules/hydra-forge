@@ -16,6 +16,7 @@ interface CommentResponse {
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const api = useApi()
@@ -113,6 +114,7 @@ onMounted(() => fetchComments())
     </ul>
 
     <form
+      v-if="!readonly"
       class="flex gap-2"
       @submit.prevent="postComment"
     >
