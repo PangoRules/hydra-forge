@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 interface AttachmentResponse {
   id: string
@@ -25,6 +26,13 @@ const config = useRuntimeConfig()
 const toast = useAppToast()
 const fileInput = ref<HTMLInputElement>()
 const { getToken } = useAuthToken()
+
+const deleteTarget = ref<AttachmentResponse | null>(null)
+const showDeleteConfirm = computed({
+  get: () => deleteTarget.value !== null,
+  set: (v: boolean) => { if (!v) deleteTarget.value = null }
+})
+const deleting = ref(false)
 
 async function fetchAttachments() {
   loading.value = true
@@ -65,12 +73,22 @@ async function handleUpload(e: Event) {
   }
 }
 
-async function deleteAttachment(attachmentId: string) {
+function promptDelete(att: AttachmentResponse) {
+  deleteTarget.value = att
+}
+
+async function confirmDeleteAttachment() {
+  const target = deleteTarget.value
+  if (!target) return
+  deleting.value = true
   try {
-    await api.DELETE(ApiRoutes.Attachments.delete(props.projectId, props.cardId, attachmentId))
-    attachments.value = attachments.value.filter(a => a.id !== attachmentId)
+    await api.DELETE(ApiRoutes.Attachments.delete(props.projectId, props.cardId, target.id))
+    attachments.value = attachments.value.filter(a => a.id !== target.id)
+    deleteTarget.value = null
   } catch {
     toast.error('Failed to delete attachment')
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -168,9 +186,18 @@ onMounted(() => fetchAttachments())
           size="xs"
           color="neutral"
           class="opacity-0 group-hover:opacity-100"
-          @click="deleteAttachment(att.id)"
+          @click="promptDelete(att)"
         />
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model:open="showDeleteConfirm"
+    title="Delete attachment"
+    :message="deleteTarget ? `Delete ${deleteTarget.fileName}? This cannot be undone.` : ''"
+    confirm-text="Delete"
+    :loading="deleting"
+    @confirm="confirmDeleteAttachment"
+  />
 </template>
