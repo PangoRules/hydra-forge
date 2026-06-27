@@ -5,7 +5,8 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
+import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption } from '~/lib/card-type'
+import { formatDueDate, isOverdue } from '~/lib/date'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -418,7 +419,12 @@ function stripHtml(text: string): string {
                   @click.stop="toggleCardSelect(card.id, $event)"
                   @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
                 >
-                <span class="text-xs font-medium text-gray-500">#{{ card.cardNumber }}</span>
+                <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
+                <UIcon
+                  :name="cardTypeOption(card.type).icon"
+                  class="size-3.5 shrink-0"
+                  :class="cardTypeOption(card.type).color === 'error' ? 'text-red-500' : cardTypeOption(card.type).color === 'warning' ? 'text-amber-500' : cardTypeOption(card.type).color === 'info' ? 'text-blue-500' : cardTypeOption(card.type).color === 'primary' ? 'text-primary' : 'text-gray-400'"
+                />
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}
                 </p>
@@ -497,6 +503,17 @@ function stripHtml(text: string): string {
                 class="text-xs text-gray-500 mt-1 line-clamp-2"
               >
                 {{ card.description ? stripHtml(card.description) : '' }}
+              </p>
+              <p
+                v-if="formatDueDate(card.dueAt)"
+                class="text-xs mt-1"
+                :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
+              >
+                <UIcon
+                  name="i-lucide-calendar"
+                  class="size-3 inline mr-0.5"
+                />
+                {{ formatDueDate(card.dueAt) }}
               </p>
             </div>
           </template>
