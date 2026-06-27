@@ -30,11 +30,14 @@ Works!
 10. Stop API → click trash → item reappears at original position, red error toast "Failed to delete item"
 Works!
 11. Mobile viewport → open card modal → switch to "Related" tab → checklist renders there
+Related has attachments and dependencies, Checklist is rendered as a clickable tab so we're good
 
 ## Task 13 — Card Comments
 
 1. Open any card modal → comments panel visible
+Works! mobile and desktop
 2. Type comment text → click Post → comment appears in list with author + timestamp
+Works!
 3. Empty input → Post button disabled
 4. Stop API → type comment → click Post → input not cleared, red error toast
 5. Page refresh → comments persist (loaded from API, not just local state)

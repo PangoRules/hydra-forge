@@ -39,6 +39,14 @@ function isSameAuthor(comment: CommentResponse, prev: CommentResponse | undefine
   return !!prev && comment.authorId === prev.authorId
 }
 
+function isSameDay(a: string, b: string): boolean {
+  const da = new Date(a)
+  const db = new Date(b)
+  return da.getFullYear() === db.getFullYear()
+    && da.getMonth() === db.getMonth()
+    && da.getDate() === db.getDate()
+}
+
 async function fetchComments() {
   loading.value = true
   try {
@@ -104,12 +112,14 @@ onMounted(() => fetchComments())
         :class="[isSameAuthor(comment, comments[idx - 1]) ? 'ml-11 -mt-1.5' : 'flex gap-3 mt-3', idx === 0 ? 'mt-0' : '']"
       >
         <template v-if="isSameAuthor(comment, comments[idx - 1])">
-          <div class="flex-1 min-w-0">
+          <div class="flex-1 min-w-0 mt-2">
             <div class="flex items-start justify-between gap-2">
-              <p class="text-sm break-words">
+              <p class="text-sm wrap-break-word flex-1">
                 {{ comment.content }}
               </p>
-              <span class="text-xs text-muted whitespace-nowrap flex-shrink-0">{{ formatTime(comment.createdAt) }}</span>
+              <span class="text-xs text-muted whitespace-nowrap shrink-0 ml-2">
+                {{ isSameDay(comment.createdAt, comments[idx - 1]!.createdAt) ? formatTime(comment.createdAt) : formatDate(comment.createdAt) }}
+              </span>
             </div>
           </div>
         </template>
@@ -117,14 +127,14 @@ onMounted(() => fetchComments())
           <UAvatar
             :name="comment.authorUsername"
             size="sm"
-            class="flex-shrink-0"
+            class="shrink-0"
           />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">{{ comment.authorUsername }}</span>
               <span class="text-xs text-muted">{{ formatDate(comment.createdAt) }}</span>
             </div>
-            <p class="text-sm mt-0.5 break-words">
+            <p class="text-sm mt-0.5 wrap-break-word">
               {{ comment.content }}
             </p>
           </div>
