@@ -28,6 +28,7 @@ const isArchived = computed(() => !!card.value?.archivedAt)
 const isReadonly = computed(() => props.readonly || isArchived.value)
 const toast = useAppToast()
 const showArchiveConfirm = ref(false)
+const checklistRefresh = ref(0)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
 
@@ -168,6 +169,8 @@ onMounted(() => fetchCard())
                   :card-id="card.id"
                   :project-id="projectId"
                   :readonly="isReadonly"
+                  :refresh-key="checklistRefresh"
+                  @updated="checklistRefresh++"
                 />
               </div>
               <div v-else-if="activeTab === 'comments'">
@@ -198,6 +201,8 @@ onMounted(() => fetchCard())
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="checklistRefresh"
+                @updated="checklistRefresh++"
               />
               <USeparator />
               <CardAttachments

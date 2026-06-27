@@ -12,7 +12,16 @@ const props = defineProps<{
   cardId: string
   projectId: string
   readonly?: boolean
+  refreshKey?: number
 }>()
+
+const emit = defineEmits<{
+  updated: []
+}>()
+
+watch(() => props.refreshKey, () => {
+  if (props.refreshKey) fetchItems()
+})
 
 const api = useApi()
 const toast = useAppToast()
@@ -56,6 +65,7 @@ async function addItem() {
     if (apiError) throw apiError
     items.value.push(data as ChecklistItemResponse)
     newItemText.value = ''
+    emit('updated')
   } catch {
     toast.error('Failed to add item')
   } finally {
@@ -70,6 +80,7 @@ async function toggleItem(item: ChecklistItemResponse) {
   items.value[idx] = { id: original.id, text: original.text, isCompleted: !original.isCompleted, position: original.position }
   try {
     await api.PATCH(ApiRoutes.Checklist.toggle(props.projectId, props.cardId, item.id))
+    emit('updated')
   } catch {
     items.value[idx] = original
     toast.error('Failed to update item')
@@ -82,6 +93,7 @@ async function deleteItem(item: ChecklistItemResponse) {
   const removed = items.value.splice(idx, 1)[0]!
   try {
     await api.DELETE(ApiRoutes.Checklist.item(props.projectId, props.cardId, item.id))
+    emit('updated')
   } catch {
     items.value.splice(idx, 0, removed)
     toast.error('Failed to delete item')
@@ -101,6 +113,7 @@ async function moveItem(item: ChecklistItemResponse, direction: 'up' | 'down') {
     await api.PUT(ApiRoutes.Checklist.reorder(props.projectId, props.cardId, item.id), {
       body: { newPosition: newIdx }
     })
+    emit('updated')
   } catch {
     await fetchItems()
     toast.error('Failed to reorder item')
