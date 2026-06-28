@@ -5,7 +5,7 @@ import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 import { onMounted } from 'vue'
-import { CARD_TYPE_OPTIONS, toTypeString, PARENT_CARD_API_VALUE } from '~/lib/card-type'
+import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -37,23 +37,20 @@ const dueAt = ref('')
 const selectedAssignees = ref<string[]>([])
 const saving = ref(false)
 
-const selectedParentEpicId = ref<string | undefined>()
-const epicCards = ref<CardResponse[]>([])
+const selectedParentId = ref<string | undefined>()
+const parentCandidates = ref<CardResponse[]>([])
 const canSave = computed(() => title.value.trim().length > 0 && columnId.value.length > 0)
 
-async function fetchEpics() {
+async function fetchParentCandidates() {
   try {
-    const params = new URLSearchParams()
-    params.set('type', PARENT_CARD_API_VALUE)
-    const url = `${ApiRoutes.Cards.list(props.projectId)}?${params}`
-    const { data } = await api.GET<{ cards: CardResponse[] }>(url)
-    epicCards.value = data?.cards ?? []
+    const { data } = await api.GET<{ cards: CardResponse[] }>(ApiRoutes.Cards.list(props.projectId))
+    parentCandidates.value = data?.cards ?? []
   } catch {
-    epicCards.value = []
+    parentCandidates.value = []
   }
 }
 
-onMounted(() => fetchEpics())
+onMounted(() => fetchParentCandidates())
 
 async function handleCreate() {
   if (!canSave.value) return
@@ -70,8 +67,8 @@ async function handleCreate() {
   if (selectedAssignees.value.length > 0) {
     body.assigneeUserIds = selectedAssignees.value.map(id => id)
   }
-  if (selectedParentEpicId.value) {
-    body.parentCardId = selectedParentEpicId.value
+  if (selectedParentId.value) {
+    body.parentCardId = selectedParentId.value
   }
   try {
     await api.POST(ApiRoutes.Cards.create(props.projectId), { body })
@@ -204,20 +201,20 @@ function closeWithAnimation() {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Parent Epic</label>
+          <label class="block text-sm font-medium mb-1">Parent</label>
           <select
-            v-model="selectedParentEpicId"
+            v-model="selectedParentId"
             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
           >
             <option :value="undefined">
               None
             </option>
             <option
-              v-for="epic in epicCards"
-              :key="epic.id"
-              :value="epic.id"
+              v-for="card in parentCandidates"
+              :key="card.id"
+              :value="card.id"
             >
-              {{ epic.title }}
+              {{ card.title }}
             </option>
           </select>
         </div>
