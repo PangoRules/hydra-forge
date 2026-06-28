@@ -31,7 +31,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
-const { search, type: filterType, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns } = useBoardFilters()
+const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -155,6 +155,13 @@ function onHeaderClick(e: Event, colId: string) {
 // Global filter panel visibility
 const showFilters = ref(false)
 
+function toggleColumnVisibility(id: string) {
+  const current = visibleColumnIds.value
+  visibleColumnIds.value = current.includes(id)
+    ? current.filter(c => c !== id)
+    : [...current, id]
+}
+
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
@@ -169,10 +176,6 @@ function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
       c.title.toLowerCase().includes(q)
       || String(c.cardNumber).includes(q)
     )
-  }
-  // c.type is number per generated types, but API returns string via JsonStringEnumConverter
-  if (filterType.value !== null) {
-    filtered = filtered.filter(c => String(c.type) === filterType.value)
   }
   if (filterAssignee.value) {
     filtered = filtered.filter(c => c.assignees.some(a => a.userId === filterAssignee.value))
@@ -284,19 +287,25 @@ function stripHtml(text: string): string {
       v-if="showFilters"
       class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
-      <span class="text-xs text-gray-500 self-center">Type:</span>
-      <select
-        v-model="filterType"
-        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option
-          v-for="opt in CARD_TYPE_FILTER_OPTIONS"
-          :key="opt.label"
-          :value="opt.value"
-        >
-          {{ opt.label }}
-        </option>
-      </select>
+      <!-- Column visibility chips -->
+      <div class="flex flex-col gap-1 w-full">
+        <span class="text-xs text-gray-500">Columns:</span>
+        <div class="flex flex-wrap gap-1">
+          <button
+            v-for="col in board.columns"
+            :key="col.id"
+            type="button"
+            data-testid="column-chip"
+            class="px-2 py-0.5 rounded-full text-xs border transition-colors"
+            :class="visibleColumnIds.includes(col.id)
+              ? 'bg-primary-500 text-white border-primary-500'
+              : 'bg-white text-gray-600 border-gray-300'"
+            @click="toggleColumnVisibility(col.id)"
+          >
+            {{ col.name }}
+          </button>
+        </div>
+      </div>
       <select
         v-model="filterAssignee"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
@@ -320,14 +329,23 @@ function stripHtml(text: string): string {
         >
         Include archived
       </label>
-      <label class="flex items-center gap-1 text-xs">
+      <label
+        class="flex items-center gap-1 text-xs"
+        :class="columnSelectionActive ? 'opacity-40 cursor-not-allowed' : ''"
+      >
         <input
           v-model="hideEmptyColumns"
           type="checkbox"
+          data-testid="hide-empty-checkbox"
           class="rounded"
+          :disabled="columnSelectionActive"
         >
         Hide empty
       </label>
+      <span
+        v-if="columnSelectionActive"
+        class="text-xs text-gray-400"
+      >(column selected)</span>
     </div>
 
     <!-- Bulk action bar (shared component) -->
