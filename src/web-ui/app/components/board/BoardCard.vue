@@ -18,7 +18,7 @@ const emit = defineEmits<{
   'click': [card: CardResponse]
   'move-up': [cardId: string]
   'move-down': [cardId: string]
-  'card-drop': [draggedCardId: string]
+  'card-drop': [draggedCardId: string, targetPosition: number]
 }>()
 
 const api = useApi()
