@@ -28,7 +28,7 @@ export default defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-        command: 'NUXT_PUBLIC_API_BASE_URL=http://localhost:5116 pnpm dev',
+        command: 'pnpm dev',
         url: 'http://localhost:3000',
         reuseExistingServer: true,
         timeout: 30000
