@@ -19,7 +19,7 @@ const emit = defineEmits<{
   'add-card': []
   'filter-type': [value: number | null]
   'filter-archived': [value: boolean]
-  'reorder': [draggedColumnId: string, targetColumnId: string, insertBefore: boolean]
+  'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
   'move-right': []
 }>()
@@ -44,12 +44,7 @@ function handleDrop(event: DragEvent) {
   if (!event.dataTransfer) return
   const draggedColumnId = event.dataTransfer.getData('text/plain')
   if (draggedColumnId === props.column.id) return
-
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const offsetX = event.clientX - rect.left
-  const insertBefore = offsetX < rect.width / 2
-
-  emit('reorder', draggedColumnId, props.column.id, insertBefore)
+  emit('reorder', draggedColumnId, props.column.id)
 }
 </script>
 

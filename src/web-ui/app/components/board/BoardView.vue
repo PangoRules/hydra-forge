@@ -35,21 +35,18 @@ function handleCardClick(card: CardResponse) {
   emit('card-click', card)
 }
 
-async function handleColumnReorder(draggedColumnId: string, targetColumnId: string, insertBefore: boolean = true) {
+async function handleColumnReorder(draggedColumnId: string, targetColumnId: string) {
   const currentColumns = boardStore.visibleColumns
-  const newOrder = [...currentColumns]
-  const draggedIdx = newOrder.findIndex(c => c.id === draggedColumnId)
-  if (draggedIdx === -1) return
-  const [dragged] = newOrder.splice(draggedIdx, 1)
-  if (!dragged) return
-  const targetIdx = newOrder.findIndex(c => c.id === targetColumnId)
-  if (targetIdx === -1) return
+  const draggedIdx = currentColumns.findIndex(c => c.id === draggedColumnId)
+  const targetIdx = currentColumns.findIndex(c => c.id === targetColumnId)
+  if (draggedIdx === -1 || targetIdx === -1 || draggedIdx === targetIdx) return
 
-  if (insertBefore) {
-    newOrder.splice(targetIdx, 0, dragged)
-  } else {
-    newOrder.splice(targetIdx + 1, 0, dragged)
-  }
+  const newOrder = [...currentColumns]
+  const dragged = newOrder[draggedIdx]
+  const target = newOrder[targetIdx]
+  if (!dragged || !target) return
+  newOrder[draggedIdx] = target
+  newOrder[targetIdx] = dragged
 
   try {
     await api.PUT(ApiRoutes.Columns.reorder(props.projectId), {

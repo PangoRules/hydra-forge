@@ -20,7 +20,7 @@ const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
   'add-card': [columnId: string]
-  'reorder': [draggedColumnId: string, targetColumnId: string, insertBefore: boolean]
+  'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
   'move-right': []
 }>()
@@ -100,7 +100,7 @@ function handleDrop(event: DragEvent) {
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"
-      @reorder="(a: string, b: string, c: boolean) => emit('reorder', a, b, c)"
+      @reorder="(a: string, b: string) => emit('reorder', a, b)"
       @move-left="emit('move-left')"
       @move-right="emit('move-right')"
     >
