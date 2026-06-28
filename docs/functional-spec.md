@@ -46,11 +46,11 @@
 | FR-3 | Columns: Renamable, reorderable, per-project columns | ✅ |
 | FR-4 | Columns: Default set = Backlog → Spec-ing → Planned → In Dev → In Review → Done | ✅ |
 | FR-5 | Cards: Create, edit, delete, move between columns | ✅ |
-| FR-6 | Cards: Title, description, type (Task / Bug / Epic / Spec / Idea) | ✅ |
+| FR-6 | Cards: Title, description, type (Task / Issue / Goal / Idea) | ✅ |
 | FR-7 | Cards: Assignee(s) | ✅ |
 | FR-8 | Cards: Checklist with subtasks | ✅ |
 | FR-9 | Cards: Comments | ✅ |
-| FR-10 | Cards: Link child cards to parent Epic | ✅ |
+| FR-10 | Cards: Any card can parent any other card in the same project; cycles are rejected | ✅ |
 | FR-11 | Cards: Move by drag-and-drop (Web UI) and keyboard (TUI) | ✅ |
 | FR-12 | Cards: Linked to Specs and Plans | ✅ |
 | FR-13 | Specs: Long-form markdown documents linked to cards | ✅ |
@@ -460,8 +460,8 @@
 - [x] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
 - [x] Column CRUD + reordering + per-project default columns
 - [x] Card CRUD + move between columns + position ordering
-- [x] Card types: Task / Bug / Epic / Spec / Idea
-- [x] Epic → child card linking
+- [x] Card types: Task / Issue / Goal / Idea
+- [x] Goal → child card linking (any card type can be a parent)
 - [x] Checklists on cards (items, completion, assignee per item)
 - [x] Comments on cards + @mention extraction + CardWatcher auto-add
 - [x] File attachments on cards (local FS storage, S3-compatible abstraction)

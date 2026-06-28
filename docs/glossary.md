@@ -9,8 +9,12 @@
 |---|---|
 | **Project** | Top-level container. One repo = one project. |
 | **Column** | A stage in the workflow pipeline. Customizable name and order. |
-| **Card** | A unit of work — task, bug, epic, spec, or idea. |
+| **Card** | A unit of work — task, issue, goal, or idea. |
 | **CardNumber** | Sequential integer identifier per project (e.g. #1, #42). Never reused after deletion. Never expose raw GUIDs to users. |
+| **Goal** | Card type (integer 5). A significant objective that groups child work. Formerly "Epic". Any card can be a child of a Goal — the Epic-only parent restriction is removed. |
+| **Issue** | Card type (integer 2). A problem, concern, or question. Formerly "Bug". |
+| **Idea** | Card type (integer 4). A suggestion that may later become a Goal or Task. |
+| **Parent** | A card that another card is linked to via `parentCardId`. Any card type can be a parent; cycle detection prevents loops. Formerly restricted to Epic-type cards only. |
 | **Spec** | A long-form markdown document describing a feature in detail. Linked to a card. Versioned. |
 | **Plan** | A step-by-step numbered markdown execution plan. Linked to a spec or card. Versioned. |
 | **Audit Log** | Immutable record of all changes, with before/after JSON snapshots. |
