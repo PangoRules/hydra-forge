@@ -3,17 +3,22 @@
 Renames `Bug`→`Issue`, `Epic`→`Goal`, retires `Spec` (rows data-migrated to Goal). Removes the Epic-only parent restriction so any card type can parent any other. Updates UI labels across `CardCreateModal`, `CardMetadata`, `BoardCard`, `BoardMobileList`, and the type filter dropdowns.
 
 ### Setup
-- [ ] `pnpm dev` running (web + API + Postgres + MinIO)
-- [ ] Logged in as a user with access to a project
-- [ ] Project has 2+ columns and 3+ existing cards of mixed types
-- [ ] (Optional) seed a card via API with `Type=3` to verify data migration before reset
-- [ ] Browser DevTools at mobile width (~390px) ready for mobile checks
+- [X] `pnpm dev` running (web + API + Postgres + MinIO)
+- [X] Logged in as a user with access to a project
+- [x] Project has 2+ columns and 3+ existing cards of mixed types
+- [X] (Optional) seed a card via API with `Type=3` to verify data migration before reset
+- [X] Browser DevTools at mobile width (~390px) ready for mobile checks
 
 ### Happy Path — Type Rename
 1. Open `+ Add Card` modal → Type dropdown lists exactly: `Task`, `Issue`, `Goal`, `Idea` (no `Bug`, `Epic`, `Spec`)
+Works!
 2. Create a card of each type → each shows correct label, color, and Lucide icon on the board (`square-check` / `bug` / `layers` / `lightbulb`)
+Works!
 3. Column header Type filter dropdown lists: `All`, `Task`, `Issue`, `Goal`, `Idea`
+Works!
 4. BoardCard and BoardMobileList show "Parent" (not "Epic") when `parentCardId` is set, with `i-lucide-layers` icon
+Works!
+
 
 ### Happy Path — Open Parent Restriction
 5. Create a `Task` card with parent = another `Task` → succeeds (200), card displays on board
