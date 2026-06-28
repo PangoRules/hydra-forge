@@ -29,32 +29,29 @@ function onChange(e: Event) {
     v-if="selectedCount > 0"
     class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
   >
-    <!-- Mobile: right-aligned like desktop -->
-    <div class="flex gap-2 flex-wrap items-center justify-end md:hidden">
-      <span class="text-sm">{{ selectedCount }} selected</span>
+    <!-- Mobile: compact single row -->
+    <div class="flex gap-1.5 items-center justify-end md:hidden overflow-x-auto">
+      <span class="text-xs whitespace-nowrap shrink-0">{{ selectedCount }} selected</span>
 
-      <div class="flex items-center gap-1">
-        <label class="text-xs text-gray-500 whitespace-nowrap">Move to:</label>
-        <select
-          :value="bulkTargetColumnId ?? ''"
-          class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
-          @change="onChange"
+      <select
+        :value="bulkTargetColumnId ?? ''"
+        class="text-xs px-1.5 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600 shrink-0"
+        @change="onChange"
+      >
+        <option value="">
+          Move to...
+        </option>
+        <option
+          v-for="col in columns"
+          :key="col.id"
+          :value="col.id"
         >
-          <option value="">
-            Move to...
-          </option>
-          <option
-            v-for="col in columns"
-            :key="col.id"
-            :value="col.id"
-          >
-            {{ col.name }}
-          </option>
-        </select>
-      </div>
+          {{ col.name }}
+        </option>
+      </select>
 
       <UButton
-        size="sm"
+        size="xs"
         variant="ghost"
         @click="$emit('move')"
       >
@@ -62,7 +59,7 @@ function onChange(e: Event) {
       </UButton>
 
       <UButton
-        size="sm"
+        size="xs"
         variant="ghost"
         @click="$emit('archive')"
       >
@@ -70,7 +67,7 @@ function onChange(e: Event) {
       </UButton>
 
       <UButton
-        size="sm"
+        size="xs"
         variant="ghost"
         @click="$emit('clear')"
       >
