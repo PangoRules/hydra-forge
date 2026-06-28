@@ -132,14 +132,7 @@ async function handleRestore() {
   }
 }
 
-// Only re-fetch when type or includeArchived actually change — not when search changes
-watch(
-  () => board.boardFilters.type,
-  (newType, oldType) => {
-    if (newType !== oldType) board.fetchBoard(projectId)
-  }
-)
-
+// Only re-fetch when includeArchived actually change — not when search changes
 watch(
   () => board.boardFilters.includeArchived,
   (newArchived, oldArchived) => {
@@ -216,6 +209,7 @@ watch(
     <!-- Filter bar — always visible above the board area -->
     <BoardFilterBar
       :members="board.members"
+      :columns="board.columns"
       :readonly="projectArchived"
       class="hidden md:flex"
       @add-card="handleAddCard()"
