@@ -354,7 +354,7 @@ function stripHtml(text: string): string {
         />
       </div>
       <div
-        v-for="column in filteredColumns"
+        v-for="(column, colIdx) in filteredColumns"
         :key="column.id"
         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
       >
@@ -385,19 +385,21 @@ function stripHtml(text: string): string {
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              class="text-xs text-gray-400 hover:text-gray-600"
-              title="Move column left"
+              class="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Move column up"
+              :disabled="colIdx === 0"
               @click.stop="moveColumnLeft(column.id)"
             >
-              <UIcon name="i-lucide-chevron-left" class="size-3" />
+              <UIcon name="i-lucide-chevron-up" class="size-3" />
             </button>
             <button
               type="button"
-              class="text-xs text-gray-400 hover:text-gray-600"
-              title="Move column right"
+              class="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Move column down"
+              :disabled="colIdx === filteredColumns.length - 1"
               @click.stop="moveColumnRight(column.id)"
             >
-              <UIcon name="i-lucide-chevron-right" class="size-3" />
+              <UIcon name="i-lucide-chevron-down" class="size-3" />
             </button>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
