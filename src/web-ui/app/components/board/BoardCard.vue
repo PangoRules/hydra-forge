@@ -146,16 +146,22 @@ function handleCardDrop(event: DragEvent) {
             class="size-3.5 shrink-0"
             :class="cardTypeColorClass(typeOption)"
           />
-          <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-            {{ card.title }}
-          </h4>
           <span
-            v-if="card.archivedAt"
-            class="text-xs text-gray-400 shrink-0"
+            class="text-xs font-medium shrink-0"
+            :class="cardTypeColorClass(typeOption)"
           >
-            archived
+            {{ typeOption.label }}
           </span>
         </div>
+        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
+          {{ card.title }}
+          <span
+            v-if="card.archivedAt"
+            class="text-xs text-gray-400 font-normal ml-1"
+          >
+            (archived)
+          </span>
+        </h4>
         <p
           v-if="plainDescription"
           class="text-xs text-gray-500 mt-1 line-clamp-2"
@@ -163,19 +169,6 @@ function handleCardDrop(event: DragEvent) {
           {{ plainDescription }}
         </p>
       </div>
-
-      <!-- Drag handle -->
-      <span
-        v-if="!readonly"
-        class="touch-none select-none shrink-0 cursor-grab text-gray-300 hover:text-gray-500"
-        @mousedown.stop
-        @touchstart.stop
-      >
-        <UIcon
-          name="i-lucide-grip-vertical"
-          class="size-4"
-        />
-      </span>
 
       <!-- Move up/down arrows -->
       <div
@@ -202,11 +195,21 @@ function handleCardDrop(event: DragEvent) {
         </div>
       </div>
 
-      <!-- Three-dot menu -->
+      <!-- Drag handle + three-dot menu -->
       <div
         v-if="!readonly"
-        class="relative shrink-0"
+        class="flex items-center shrink-0 relative"
       >
+        <span
+          class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
+          @mousedown.stop
+          @touchstart.stop
+        >
+          <UIcon
+            name="i-lucide-grip-vertical"
+            class="size-4"
+          />
+        </span>
         <span ref="menuButtonRef">
           <UButton
             icon="i-lucide-ellipsis-vertical"
@@ -218,7 +221,7 @@ function handleCardDrop(event: DragEvent) {
         <div
           v-if="showMenu"
           ref="menuRef"
-          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
+          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
           @click.stop
         >
           <button
@@ -249,6 +252,17 @@ function handleCardDrop(event: DragEvent) {
 
     <div class="flex items-center justify-between mt-2">
       <div class="flex items-center gap-2">
+        <span
+          v-if="card.parentCardId"
+          class="text-xs text-primary flex items-center gap-1"
+          title="Child of an epic"
+        >
+          <UIcon
+            name="i-lucide-layers"
+            class="size-3"
+          />
+          Epic
+        </span>
         <div
           v-if="card.assignees.length > 0"
           class="flex -space-x-1"

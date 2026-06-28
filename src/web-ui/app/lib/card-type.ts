@@ -29,15 +29,21 @@ export const CARD_TYPE_OPTIONS = [
 ] as const
 
 /**
+ * API string value for the parent card type filter.
+ * Used in CardCreateModal to populate the Parent dropdown.
+ */
+export const PARENT_CARD_API_VALUE = 'Epic' as const
+
+/**
  * Filter options with "All" first (value: null for untyped cards).
  */
 export const CARD_TYPE_FILTER_OPTIONS = [
   { label: 'All', value: null },
-  { label: 'Task', value: 0 },
-  { label: 'Bug', value: 1 },
-  { label: 'Epic', value: 2 },
-  { label: 'Spec', value: 3 },
-  { label: 'Idea', value: 4 }
+  { label: 'Task', value: 'Task' },
+  { label: 'Bug', value: 'Bug' },
+  { label: 'Epic', value: 'Epic' },
+  { label: 'Spec', value: 'Spec' },
+  { label: 'Idea', value: 'Idea' }
 ] as const
 
 /**
