@@ -23,6 +23,7 @@ mockNuxtImport('useApi', () => () => ({
 mockNuxtImport('useBoardStore', () => () => ({
   columns: mockBoardColumns(),
   members: mockBoardMembers(),
+  cardsByColumn: new Map([['col1', []]]),
   fetchMembers: vi.fn(),
   fetchBoard: vi.fn()
 }))
@@ -83,7 +84,7 @@ describe('CardMetadata', () => {
     })
     const wrapper = await mountSuspended(CardMetadata, { props: { card: makeCard(), projectId: 'p1' } })
 
-    await wrapper.find('select').setValue('u1')
+    await wrapper.findAll('select')[1].setValue('u1')
     await flushPromises()
 
     expect(mockPOST).toHaveBeenCalledWith(ApiRoutes.Cards.assignees('p1', 'c1'), { body: { assigneeUserId: 'u1' } })

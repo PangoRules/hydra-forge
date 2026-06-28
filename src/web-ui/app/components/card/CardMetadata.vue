@@ -162,6 +162,88 @@ async function handleParentChange(value: string | null) {
   savingParent.value = false
 }
 
+const savingChild = ref(false)
+
+const childCards = computed(() => {
+  const children: CardResponse[] = []
+  for (const cards of board.cardsByColumn.values()) {
+    for (const c of cards) {
+      if (c.parentCardId === props.card.id) children.push(c)
+    }
+  }
+  return children
+})
+
+const addChildCandidates = computed(() => {
+  const excludeIds = new Set(childCards.value.map(c => c.id))
+  excludeIds.add(props.card.id)
+  const candidates: CardResponse[] = []
+  for (const cards of board.cardsByColumn.values()) {
+    for (const c of cards) {
+      if (!excludeIds.has(c.id)) candidates.push(c)
+    }
+  }
+  return candidates
+})
+
+async function addChild(childId: string) {
+  const child = addChildCandidates.value.find(c => c.id === childId)
+  if (!child) return
+  savingChild.value = true
+  try {
+    const { data } = await api.PUT(ApiRoutes.Cards.update(props.projectId, childId), {
+      body: {
+        title: child.title,
+        description: child.description,
+        type: cardTypeToApiString(child.type),
+        version: child.version,
+        parentCardId: props.card.id,
+        dueAt: child.dueAt
+      }
+    })
+    if (data) {
+      const updated = data as CardResponse
+      for (const cards of board.cardsByColumn.values()) {
+        const idx = cards.findIndex(c => c.id === updated.id)
+        if (idx !== -1) cards[idx] = updated
+      }
+      toast.success('Child added')
+    }
+  } catch {
+    toast.error('Failed to add child')
+  } finally {
+    savingChild.value = false
+  }
+}
+
+async function removeChild(child: CardResponse) {
+  savingChild.value = true
+  try {
+    const { data } = await api.PUT(ApiRoutes.Cards.update(props.projectId, child.id), {
+      body: {
+        title: child.title,
+        description: child.description,
+        type: cardTypeToApiString(child.type),
+        version: child.version,
+        parentCardId: null,
+        dueAt: child.dueAt
+      }
+    })
+    if (data) {
+      const updated = data as CardResponse
+      for (const cards of board.cardsByColumn.values()) {
+        const idx = cards.findIndex(c => c.id === updated.id)
+        if (idx !== -1) cards[idx] = updated
+      }
+      toast.success('Child removed')
+    }
+  } catch {
+    toast.error('Failed to remove child')
+  } finally {
+    savingChild.value = false
+  }
+}
+
 onMounted(() => {
   if (!props.isArchived) fetchParentCandidates()
 })
@@ -169,71 +251,166 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
-    <!-- Type -->
-    <div>
-      <p class="text-xs font-medium text-muted uppercase mb-1">
-        Type
-      </p>
-      <USelect
-        v-if="!isArchived"
-        :model-value="typeValue"
-        :items="CARD_TYPE_OPTIONS.map(o => ({ label: o.label, value: o.apiValue }))"
-        :loading="savingType"
-        size="xs"
-        class="w-32"
-        @update:model-value="handleTypeChange"
-      />
-      <UBadge
-        v-else
-        :color="typeOption.color"
-        :icon="typeOption.icon"
-        variant="subtle"
-      >
-        {{ typeOption.label }}
-      </UBadge>
+    <!-- Type + Column -->
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Type -->
+      <div>
+        <p class="text-xs font-medium text-muted uppercase mb-1">
+          Type
+        </p>
+        <USelect
+          v-if="!isArchived"
+          :model-value="typeValue"
+          :items="CARD_TYPE_OPTIONS.map(o => ({ label: o.label, value: o.apiValue }))"
+          :loading="savingType"
+          size="xs"
+          class="w-full"
+          @update:model-value="handleTypeChange"
+        />
+        <UBadge
+          v-else
+          :color="typeOption.color"
+          :icon="typeOption.icon"
+          variant="subtle"
+        >
+          {{ typeOption.label }}
+        </UBadge>
+      </div>
+
+      <!-- Column -->
+      <div>
+        <p class="text-xs font-medium text-muted uppercase mb-1">
+          Column
+        </p>
+        <USelect
+          v-if="!isArchived"
+          :model-value="currentColumnOption?.id"
+          :items="columnOptions"
+          :loading="savingColumn"
+          size="xs"
+          class="w-full"
+          @update:model-value="handleColumnChange"
+        />
+        <UBadge
+          v-else
+          color="neutral"
+          variant="subtle"
+        >
+          {{ currentColumnOption?.name ?? props.card.columnId.slice(0, 8) }}
+        </UBadge>
+      </div>
     </div>
 
-    <!-- Column -->
-    <div>
-      <p class="text-xs font-medium text-muted uppercase mb-1">
-        Column
-      </p>
-      <USelect
-        v-if="!isArchived"
-        :model-value="currentColumnOption?.id"
-        :items="columnOptions"
-        :loading="savingColumn"
-        size="xs"
-        class="w-44"
-        @update:model-value="handleColumnChange"
-      />
-      <UBadge
-        v-else
-        color="neutral"
-        variant="subtle"
-      >
-        {{ currentColumnOption?.name ?? props.card.columnId.slice(0, 8) }}
-      </UBadge>
-    </div>
+    <!-- Parent + Children -->
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Parent -->
+      <div>
+        <p class="text-xs font-medium text-muted uppercase mb-1">
+          Parent
+        </p>
+        <USelect
+          v-if="!isArchived"
+          :model-value="card.parentCardId ?? null"
+          :items="[{ label: 'None', value: null }, ...parentCandidates.map(c => ({ label: c.title, value: c.id }))]"
+          :loading="savingParent"
+          size="xs"
+          class="w-full"
+          @update:model-value="handleParentChange"
+        />
+        <span
+          v-else
+          class="text-sm"
+        >{{ parentCard?.title ?? 'None' }}</span>
+      </div>
 
-    <!-- Parent -->
-    <div>
-      <p class="text-xs font-medium text-muted uppercase mb-1">
-        Parent
-      </p>
-      <USelect
-        v-if="!isArchived"
-        :model-value="card.parentCardId ?? null"
-        :items="[{ label: 'None', value: null }, ...parentCandidates.map(c => ({ label: c.title, value: c.id }))]"
-        :loading="savingParent"
-        size="xs"
-        class="w-52"
-        @update:model-value="handleParentChange"
-      />
-      <span
-        v-else
-        class="text-sm"
-      >{{ parentCard?.title ?? 'None' }}</span>
+      <!-- Children -->
+      <div>
+        <p class="text-xs font-medium text-muted uppercase mb-1">
+          Children
+        </p>
+        <div
+          v-if="!isArchived"
+          class="space-y-2"
+        >
+          <div
+            v-if="childCards.length > 0"
+            class="flex flex-wrap gap-1.5"
+          >
+            <span
+              v-for="child in childCards"
+              :key="child.id"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
+            >
+              <UIcon
+                :name="cardTypeOption(child.type).icon"
+                class="size-3"
+              />
+              {{ cardTypeOption(child.type).label }} #{{ child.cardNumber }}
+              <button
+                class="ml-0.5 text-gray-400 hover:text-red-500"
+                :disabled="savingChild"
+                @click="removeChild(child)"
+              >
+                <UIcon
+                  name="i-lucide-x"
+                  class="size-3"
+                />
+              </button>
+            </span>
+          </div>
+          <p
+            v-else
+            class="text-xs text-gray-400"
+          >
+            None
+          </p>
+          <select
+            class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+            :value="''"
+            :disabled="savingChild"
+            @change="(e: Event) => addChild((e.target as HTMLSelectElement).value)"
+          >
+            <option
+              value=""
+              disabled
+            >
+              Add child...
+            </option>
+            <option
+              v-for="c in addChildCandidates"
+              :key="c.id"
+              :value="c.id"
+            >
+              {{ cardTypeOption(c.type).label }} #{{ c.cardNumber }} — {{ c.title }}
+            </option>
+          </select>
+        </div>
+        <div
+          v-else
+          class="space-y-1"
+        >
+          <span
+            v-if="childCards.length === 0"
+            class="text-sm text-muted"
+          >None</span>
+          <div
+            v-else
+            class="flex flex-wrap gap-1.5"
+          >
+            <span
+              v-for="child in childCards"
+              :key="child.id"
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600"
+            >
+              <UIcon
+                :name="cardTypeOption(child.type).icon"
+                class="size-3"
+              />
+              {{ cardTypeOption(child.type).label }} #{{ child.cardNumber }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Assignees -->

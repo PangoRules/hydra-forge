@@ -268,23 +268,39 @@ function handleCardDrop(event: DragEvent) {
     </div>
 
     <div class="flex items-center justify-between mt-2">
-      <div class="flex items-center gap-2">
-        <span
+      <div class="flex items-center gap-3">
+        <div
           v-if="parentCard"
-          class="text-xs text-primary flex items-center gap-1"
-          :title="parentCard.title"
+          class="flex flex-col"
         >
-          <UIcon :name="cardTypeOption(parentCard.type).icon" class="size-3" />
-          {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
-        </span>
-        <span
+          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
+          <span
+            class="text-xs text-primary flex items-center gap-1"
+            :title="parentCard.title"
+          >
+            <UIcon
+              :name="cardTypeOption(parentCard.type).icon"
+              class="size-3"
+            />
+            {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
+          </span>
+        </div>
+        <div
           v-if="childCount > 0"
-          class="text-xs text-gray-400 flex items-center gap-1"
-          :title="`Has ${childCount} child card${childCount === 1 ? '' : 's'}`"
+          class="flex flex-col"
         >
-          <UIcon name="i-lucide-git-merge" class="size-3" />
-          {{ childCount }}
-        </span>
+          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Children:</span>
+          <span
+            class="text-xs text-gray-400 flex items-center gap-1"
+            :title="`Has ${childCount} child card${childCount === 1 ? '' : 's'}`"
+          >
+            <UIcon
+              name="i-lucide-git-merge"
+              class="size-3"
+            />
+            {{ childCount }}
+          </span>
+        </div>
         <div
           v-if="card.assignees.length > 0"
           class="flex -space-x-1"
