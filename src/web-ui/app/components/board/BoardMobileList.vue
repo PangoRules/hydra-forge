@@ -445,7 +445,7 @@ function stripHtml(text: string): string {
             <div
               v-for="card in filteredCardsByColumn.get(column.id) ?? []"
               :key="card.id"
-              class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer"
+              class="bg-gray-50 dark:bg-gray-700 rounded p-3 cursor-pointer flex gap-2"
               role="button"
               tabindex="0"
               :aria-label="`Open card #${card.cardNumber} ${card.title}`"
@@ -453,176 +453,166 @@ function stripHtml(text: string): string {
               @keydown.enter.prevent.stop="emit('card-click', card)"
               @keydown.space.prevent.stop="emit('card-click', card)"
             >
-              <!-- Card header row -->
-              <div class="flex items-center gap-2">
-                <input
-                  v-if="!readonly"
-                  type="checkbox"
-                  class="mr-2 shrink-0"
-                  :checked="!!board.selectedCardIds[card.id]"
-                  aria-label="Select card"
-                  @click.stop="toggleCardSelect(card.id, $event)"
-                  @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
-                >
-                <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
-                <UIcon
-                  :name="cardTypeOption(card.type).icon"
-                  class="size-3.5 shrink-0"
-                  :class="cardTypeColorClass(cardTypeOption(card.type))"
-                />
-                <span
-                  class="text-xs font-medium shrink-0"
-                  :class="cardTypeColorClass(cardTypeOption(card.type))"
-                >
-                  {{ cardTypeOption(card.type).label }}
-                </span>
+              <!-- Left: checkbox (vertically centered) -->
+              <input
+                v-if="!readonly"
+                type="checkbox"
+                class="shrink-0 self-center"
+                :checked="!!board.selectedCardIds[card.id]"
+                aria-label="Select card"
+                @click.stop="toggleCardSelect(card.id, $event)"
+                @keydown.stop.prevent="toggleCardSelect(card.id, $event)"
+              >
 
-                <!-- Relative wrapper anchors the absolute dropdown -->
-                <div
-                  v-if="!readonly"
-                  class="relative ml-auto"
-                >
-                  <!-- Three-dot menu button -->
-                  <button
-                    :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
-                    type="button"
-                    class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                    aria-label="Card options"
-                    :aria-expanded="menuOpenFor === card.id"
-                    :aria-controls="`card-menu-${card.id}`"
-                    @click.stop="openMenu(card.id)"
-                    @keydown.down.prevent.stop="openMenu(card.id)"
-                    @keydown.enter.prevent.stop="openMenu(card.id)"
-                    @keydown.space.prevent.stop="openMenu(card.id)"
+              <!-- Right: card content -->
+              <div class="flex-1 min-w-0">
+                <!-- Row 1: #number icon TypeLabel + 3-dot menu -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-gray-500 shrink-0">#{{ card.cardNumber }}</span>
+                  <UIcon
+                    :name="cardTypeOption(card.type).icon"
+                    class="size-3.5 shrink-0"
+                    :class="cardTypeColorClass(cardTypeOption(card.type))"
+                  />
+                  <span
+                    class="text-xs font-medium shrink-0"
+                    :class="cardTypeColorClass(cardTypeOption(card.type))"
                   >
-                    <UIcon
-                      name="i-lucide-more-horizontal"
-                      class="size-4"
-                    />
-                  </button>
+                    {{ cardTypeOption(card.type).label }}
+                  </span>
 
-                  <!-- Dropdown menu (only one renders since menuOpenFor is a single value) -->
+                  <!-- Three-dot menu -->
                   <div
-                    v-if="menuOpenFor === card.id"
-                    :id="`card-menu-${card.id}`"
-                    :ref="setMenuRef"
-                    role="menu"
-                    class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-44 whitespace-nowrap"
+                    v-if="!readonly"
+                    class="relative ml-auto"
                   >
-                    <template v-if="card.archivedAt">
-                      <button
-                        role="menuitem"
-                        tabindex="0"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click.stop="handleRestore(card)"
-                        @keydown.enter.prevent.stop="handleRestore(card)"
-                        @keydown.space.prevent.stop="handleRestore(card)"
-                      >
-                        <UIcon
-                          name="i-lucide-archive-restore"
-                          class="size-4"
-                        />
-                        Restore
-                      </button>
-                    </template>
-                    <template v-else>
-                      <button
-                        role="menuitem"
-                        tabindex="0"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click.stop="handleArchive(card)"
-                        @keydown.enter.prevent.stop="handleArchive(card)"
-                        @keydown.space.prevent.stop="handleArchive(card)"
-                      >
-                        <UIcon
-                          name="i-lucide-archive"
-                          class="size-4"
-                        />
-                        Archive
-                      </button>
-                      <USeparator class="my-1" />
-                      <button
-                        role="menuitem"
-                        tabindex="0"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click.stop="handleMoveUp(card)"
-                        @keydown.enter.prevent.stop="handleMoveUp(card)"
-                      >
-                        <UIcon name="i-lucide-chevron-up" class="size-4" />
-                        Move up
-                      </button>
-                      <button
-                        role="menuitem"
-                        tabindex="0"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click.stop="handleMoveDown(card)"
-                        @keydown.enter.prevent.stop="handleMoveDown(card)"
-                      >
-                        <UIcon name="i-lucide-chevron-down" class="size-4" />
-                        Move down
-                      </button>
-                      <button
-                        role="menuitem"
-                        tabindex="0"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click.stop="startMoveToColumn(card.id)"
-                        @keydown.enter.prevent.stop="startMoveToColumn(card.id)"
-                      >
-                        <UIcon name="i-lucide-arrow-right" class="size-4" />
-                        Move to column...
-                      </button>
-                      <div v-if="showMoveToColumn[card.id]" class="border-t mt-1 pt-1">
+                    <button
+                      :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
+                      type="button"
+                      class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                      aria-label="Card options"
+                      :aria-expanded="menuOpenFor === card.id"
+                      :aria-controls="`card-menu-${card.id}`"
+                      @click.stop="openMenu(card.id)"
+                      @keydown.down.prevent.stop="openMenu(card.id)"
+                      @keydown.enter.prevent.stop="openMenu(card.id)"
+                      @keydown.space.prevent.stop="openMenu(card.id)"
+                    >
+                      <UIcon name="i-lucide-more-horizontal" class="size-4" />
+                    </button>
+
+                    <div
+                      v-if="menuOpenFor === card.id"
+                      :id="`card-menu-${card.id}`"
+                      :ref="setMenuRef"
+                      role="menu"
+                      class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-44 whitespace-nowrap"
+                    >
+                      <template v-if="card.archivedAt">
                         <button
-                          v-for="col in columns"
-                          :key="col.id"
                           role="menuitem"
                           tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                          :class="{ 'font-semibold': col.id === card.columnId }"
-                          :disabled="col.id === card.columnId"
-                          @click.stop="moveToColumn(card.id, col.id, card)"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="handleRestore(card)"
                         >
-                          <div v-if="col.color" class="size-2 rounded-full" :style="{ backgroundColor: col.color }" />
-                          {{ col.name }}
+                          <UIcon name="i-lucide-archive-restore" class="size-4" />
+                          Restore
                         </button>
-                      </div>
-                    </template>
+                      </template>
+                      <template v-else>
+                        <button
+                          role="menuitem"
+                          tabindex="0"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="handleArchive(card)"
+                        >
+                          <UIcon name="i-lucide-archive" class="size-4" />
+                          Archive
+                        </button>
+                        <USeparator class="my-1" />
+                        <button
+                          role="menuitem"
+                          tabindex="0"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="handleMoveUp(card)"
+                        >
+                          <UIcon name="i-lucide-chevron-up" class="size-4" />
+                          Move up
+                        </button>
+                        <button
+                          role="menuitem"
+                          tabindex="0"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="handleMoveDown(card)"
+                        >
+                          <UIcon name="i-lucide-chevron-down" class="size-4" />
+                          Move down
+                        </button>
+                        <button
+                          role="menuitem"
+                          tabindex="0"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="startMoveToColumn(card.id)"
+                        >
+                          <UIcon name="i-lucide-arrow-right" class="size-4" />
+                          Move to column...
+                        </button>
+                        <div v-if="showMoveToColumn[card.id]" class="border-t mt-1 pt-1">
+                          <button
+                            v-for="col in columns"
+                            :key="col.id"
+                            role="menuitem"
+                            tabindex="0"
+                            class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                            :class="{ 'font-semibold': col.id === card.columnId }"
+                            :disabled="col.id === card.columnId"
+                            @click.stop="moveToColumn(card.id, col.id, card)"
+                          >
+                            <div v-if="col.color" class="size-2 rounded-full" :style="{ backgroundColor: col.color }" />
+                            {{ col.name }}
+                          </button>
+                        </div>
+                      </template>
+                    </div>
                   </div>
                 </div>
+
+                <!-- Row 2: title -->
+                <h4 class="text-sm font-medium truncate mt-1">
+                  {{ card.title }}
+                  <span
+                    v-if="card.archivedAt"
+                    class="text-xs text-gray-400 font-normal ml-1"
+                  >(archived)</span>
+                </h4>
+
+                <!-- Row 3: description -->
+                <p
+                  v-if="card.description"
+                  class="text-xs text-gray-500 mt-1 line-clamp-2"
+                >
+                  {{ stripHtml(card.description) }}
+                </p>
+
+                <!-- Row 4: due date -->
+                <p
+                  v-if="formatDueDate(card.dueAt)"
+                  class="text-xs mt-1"
+                  :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
+                >
+                  <UIcon name="i-lucide-calendar" class="size-3 inline mr-0.5" />
+                  {{ formatDueDate(card.dueAt) }}
+                </p>
+
+                <!-- Row 5: epic link -->
+                <p
+                  v-if="card.parentCardId"
+                  class="text-xs mt-1 text-primary flex items-center gap-1"
+                >
+                  <UIcon name="i-lucide-layers" class="size-3" />
+                  Epic
+                </p>
               </div>
-
-              <h4 class="text-sm font-medium truncate mt-1">
-                {{ card.title }}
-                <span
-                  v-if="card.archivedAt"
-                  class="text-xs text-gray-400 font-normal ml-1"
-                >(archived)</span>
-              </h4>
-
-              <p
-                v-if="card.description"
-                class="text-xs text-gray-500 mt-1 line-clamp-2"
-              >
-                {{ card.description ? stripHtml(card.description) : '' }}
-              </p>
-              <p
-                v-if="formatDueDate(card.dueAt)"
-                class="text-xs mt-1"
-                :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
-              >
-                <UIcon
-                  name="i-lucide-calendar"
-                  class="size-3 inline mr-0.5"
-                />
-                {{ formatDueDate(card.dueAt) }}
-              </p>
-              <p
-                v-if="card.parentCardId"
-                class="text-xs mt-1 text-primary flex items-center gap-1"
-              >
-                <UIcon name="i-lucide-layers" class="size-3" />
-                Epic
-              </p>
             </div>
           </template>
         </div>
