@@ -15,7 +15,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  click: [card: CardResponse]
+  'click': [card: CardResponse]
+  'move-up': [cardId: string]
+  'move-down': [cardId: string]
+  'card-drop': [draggedCardId: string]
 }>()
 
 const api = useApi()
@@ -27,6 +30,7 @@ const menuRef = ref<HTMLElement | null>(null)
 const menuButtonRef = ref<HTMLElement | null>(null)
 const showArchiveConfirm = ref(false)
 const isDragging = ref(false)
+const isCardDragOver = ref(false)
 
 const formattedDue = computed(() => formatDueDate(props.card.dueAt))
 const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
@@ -86,16 +90,36 @@ function handleDragStart(event: DragEvent) {
 function handleDragEnd() {
   isDragging.value = false
 }
+
+function handleCardDragOver(event: DragEvent) {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  isCardDragOver.value = true
+}
+
+function handleCardDragLeave() {
+  isCardDragOver.value = false
+}
+
+function handleCardDrop(event: DragEvent) {
+  isCardDragOver.value = false
+  if (!event.dataTransfer) return
+  const draggedCardId = event.dataTransfer.getData('text/plain')
+  if (!draggedCardId || draggedCardId === props.card.id) return
+  emit('card-drop', draggedCardId)
+}
 </script>
 
 <template>
   <div
-    class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow"
-    :class="{ 'opacity-50': isDragging }"
+    class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow group"
+    :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver }"
     draggable="true"
     @click="emit('click', card)"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
+    @dragover.stop.prevent="handleCardDragOver"
+    @dragleave="handleCardDragLeave"
+    @drop.prevent="handleCardDrop"
   >
     <div class="flex items-start gap-2">
       <input
@@ -145,6 +169,31 @@ function handleDragEnd() {
           class="size-4"
         />
       </span>
+
+      <!-- Move up/down arrows -->
+      <div
+        v-if="!readonly"
+        class="shrink-0"
+      >
+        <div class="flex flex-col">
+          <UButton
+            icon="i-lucide-chevron-up"
+            size="xs"
+            variant="ghost"
+            color="neutral"
+            class="opacity-0 group-hover:opacity-100 transition-opacity -my-0.5"
+            @click.stop="emit('move-up', card.id)"
+          />
+          <UButton
+            icon="i-lucide-chevron-down"
+            size="xs"
+            variant="ghost"
+            color="neutral"
+            class="opacity-0 group-hover:opacity-100 transition-opacity -my-0.5"
+            @click.stop="emit('move-down', card.id)"
+          />
+        </div>
+      </div>
 
       <!-- Three-dot menu -->
       <div
