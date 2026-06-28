@@ -1,75 +1,66 @@
-/** Card type names indexed by their numeric enum value (mirrors backend CardType). */
+/** UI display index → API string name. Zero-based; NOT the C# enum integer. */
 export const CARD_TYPE_MAP: Record<number, string> = {
   0: 'Task',
-  1: 'Bug',
-  2: 'Epic',
-  3: 'Spec',
-  4: 'Idea'
+  1: 'Issue',
+  2: 'Goal',
+  3: 'Idea'
 }
 
-/** Lucide icon name for each card type. */
+/** Lucide icon name for each UI index. */
 export const CARD_TYPE_ICONS: Record<number, string> = {
-  0: 'i-lucide-square',
+  0: 'i-lucide-square-check',
   1: 'i-lucide-bug',
   2: 'i-lucide-layers',
-  3: 'i-lucide-file-text',
-  4: 'i-lucide-lightbulb'
+  3: 'i-lucide-lightbulb'
 }
 
 /**
- * Select / filter options with full metadata for each type.
- * Includes apiValue, color, and icon for UI rendering.
+ * Full metadata per type. `value` is the zero-based UI dropdown index;
+ * `apiValue` is the string sent to / received from the API.
  */
 export const CARD_TYPE_OPTIONS = [
-  { value: 0, apiValue: 'Task', label: 'Task', color: 'neutral', icon: 'i-lucide-square-check' },
-  { value: 1, apiValue: 'Bug', label: 'Bug', color: 'error', icon: 'i-lucide-bug' },
-  { value: 2, apiValue: 'Epic', label: 'Epic', color: 'primary', icon: 'i-lucide-layers' },
-  { value: 3, apiValue: 'Spec', label: 'Spec', color: 'info', icon: 'i-lucide-file-text' },
-  { value: 4, apiValue: 'Idea', label: 'Idea', color: 'warning', icon: 'i-lucide-lightbulb' }
+  { value: 0, apiValue: 'Task',  label: 'Task',  color: 'neutral', icon: 'i-lucide-square-check' },
+  { value: 1, apiValue: 'Issue', label: 'Issue', color: 'error',   icon: 'i-lucide-bug' },
+  { value: 2, apiValue: 'Goal',  label: 'Goal',  color: 'primary', icon: 'i-lucide-layers' },
+  { value: 3, apiValue: 'Idea',  label: 'Idea',  color: 'warning', icon: 'i-lucide-lightbulb' },
 ] as const
 
-/**
- * API string value for the parent card type filter.
- * Used in CardCreateModal to populate the Parent dropdown.
- */
-export const PARENT_CARD_API_VALUE = 'Epic' as const
+/** @deprecated — parent type is no longer restricted; any card can be a parent. */
+export const PARENT_CARD_API_VALUE = ''
 
-/**
- * Filter options with "All" first (value: null for untyped cards).
- */
+/** Per-column filter options. Values are API strings; null means "All". */
 export const CARD_TYPE_FILTER_OPTIONS = [
-  { label: 'All', value: null },
-  { label: 'Task', value: 'Task' },
-  { label: 'Bug', value: 'Bug' },
-  { label: 'Epic', value: 'Epic' },
-  { label: 'Spec', value: 'Spec' },
-  { label: 'Idea', value: 'Idea' }
+  { label: 'All',   value: null },
+  { label: 'Task',  value: 'Task' },
+  { label: 'Issue', value: 'Issue' },
+  { label: 'Goal',  value: 'Goal' },
+  { label: 'Idea',  value: 'Idea' },
 ] as const
 
 /**
- * Normalize a card type value to its API string representation.
- * Handles both numeric enum values (from backend) and pre-resolved strings.
+ * Resolve a card type to its API string name.
+ * Accepts the zero-based UI index (number) or an already-resolved API string.
  */
 export function toTypeString(type: number | string): string {
   return typeof type === 'string' ? type : (CARD_TYPE_MAP[type] ?? 'Task')
 }
 
-/** Alias for toTypeString — matches Plan 4's Task 16 import pattern. */
+/** Alias for toTypeString — matches existing import pattern across components. */
 export const cardTypeToApiString = toTypeString
 
-/** Full option object for a given type value (value, apiValue, label, color, icon). */
+/** Full option object for a given UI index or API string. */
 export function cardTypeOption(type: number | string) {
   const apiValue = toTypeString(type)
   return CARD_TYPE_OPTIONS.find(o => o.apiValue === apiValue) ?? CARD_TYPE_OPTIONS[0]
 }
 
-/** Map CARD_TYPE_OPTION color name to a Tailwind text color class. */
+/** Tailwind text-color class for a card type option's color name. */
 export function cardTypeColorClass(option: { color: string }): string {
   switch (option.color) {
-    case 'error': return 'text-red-500'
+    case 'error':   return 'text-red-500'
     case 'warning': return 'text-amber-500'
-    case 'info': return 'text-blue-500'
+    case 'info':    return 'text-blue-500'
     case 'primary': return 'text-primary'
-    default: return 'text-gray-400'
+    default:        return 'text-gray-400'
   }
 }
