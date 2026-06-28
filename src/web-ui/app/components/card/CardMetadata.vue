@@ -69,7 +69,7 @@ const availableMembers = computed(() =>
   board.members.filter(m => !props.card.assignees?.some(a => a.userId === m.userId))
 )
 
-async function persistCardFields(fields: { type?: string, dueAt?: string | null }) {
+async function persistCardFields(fields: { type?: string, dueAt?: string | null, parentCardId?: string | null }) {
   try {
     const { data } = await api.PUT(ApiRoutes.Cards.update(props.projectId, props.card.id), {
       body: {
@@ -77,7 +77,7 @@ async function persistCardFields(fields: { type?: string, dueAt?: string | null 
         description: props.card.description,
         type: fields.type ?? cardTypeToApiString(props.card.type),
         version: props.card.version,
-        parentCardId: props.card.parentCardId,
+        parentCardId: fields.parentCardId !== undefined ? fields.parentCardId : props.card.parentCardId,
         dueAt: fields.dueAt !== undefined ? fields.dueAt : props.card.dueAt
       }
     })
@@ -131,6 +131,40 @@ async function handleUnassign(userId: string) {
     toast.error('Failed to remove assignee')
   }
 }
+
+const parentCandidates = ref<CardResponse[]>([])
+const savingParent = ref(false)
+
+const parentCard = computed(() => {
+  if (!props.card.parentCardId) return null
+  for (const col of board.columns) {
+    const found = board.cardsByColumn.get(col.id)?.find(c => c.id === props.card.parentCardId)
+    if (found) return found
+  }
+  return null
+})
+
+async function fetchParentCandidates() {
+  try {
+    const { data } = await api.GET<{ cards: CardResponse[] }>(ApiRoutes.Cards.list(props.projectId))
+    parentCandidates.value = (data?.cards ?? []).filter(c => c.id !== props.card.id)
+  } catch {
+    parentCandidates.value = []
+  }
+}
+
+async function handleParentChange(value: string | null) {
+  if (props.isArchived) return
+  const newParentId = value || null
+  if (newParentId === props.card.parentCardId) return
+  savingParent.value = true
+  await persistCardFields({ parentCardId: newParentId })
+  savingParent.value = false
+}
+
+onMounted(() => {
+  if (!props.isArchived) fetchParentCandidates()
+})
 </script>
 
 <template>
@@ -180,6 +214,26 @@ async function handleUnassign(userId: string) {
       >
         {{ currentColumnOption?.name ?? props.card.columnId.slice(0, 8) }}
       </UBadge>
+    </div>
+
+    <!-- Parent -->
+    <div>
+      <p class="text-xs font-medium text-muted uppercase mb-1">
+        Parent
+      </p>
+      <USelect
+        v-if="!isArchived"
+        :model-value="card.parentCardId ?? null"
+        :items="[{ label: 'None', value: null }, ...parentCandidates.map(c => ({ label: c.title, value: c.id }))]"
+        :loading="savingParent"
+        size="xs"
+        class="w-52"
+        @update:model-value="handleParentChange"
+      />
+      <span
+        v-else
+        class="text-sm"
+      >{{ parentCard?.title ?? 'None' }}</span>
     </div>
 
     <!-- Assignees -->
