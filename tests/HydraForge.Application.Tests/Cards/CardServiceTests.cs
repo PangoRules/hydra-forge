@@ -124,7 +124,7 @@ public class CardServiceTests
         var columnId = NewId();
 
         cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Type = CardType.Task, Title = "Task" });
-        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Type = CardType.Bug, Title = "Bug" });
+        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Type = CardType.Issue, Title = "Issue" });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
         var result = await service.ListAsync(projectId, new CardListFilter(Type: CardType.Task), actorId);

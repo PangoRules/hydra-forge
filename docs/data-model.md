@@ -118,7 +118,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | ParentCardId | Guid? | FK to parent card (epic → child) |
 | Title | string | |
 | Description | string | Markdown content |
-| Type | CardType | Task / Bug / Epic / Spec / Idea |
+| Type | CardType | Task / Issue / Goal / Idea |
 | Position | int | Order within column |
 | DueAt | DateTime? | Optional due date/time. Aligned with `PersonalTask.DueAt`, `CalendarEvent.StartAt`, `NoteReminder.TriggerAt`. |
 | Version | int | Optimistic concurrency / increment per edit |
@@ -710,7 +710,14 @@ Singleton row (Id = `00000000-0000-0000-0000-000000000001`) holding admin-config
 ## 6. Enums
 
 ### CardType
-`Task`, `Bug`, `Epic`, `Spec`, `Idea`
+| Value | Name  | Description                               |
+|-------|-------|-------------------------------------------|
+| 1     | Task  | Unit of work                              |
+| 2     | Issue | Problem, concern, or question             |
+| 4     | Idea  | Suggestion; may become a Goal or Task     |
+| 5     | Goal  | Significant objective; groups child cards |
+
+> Value 3 (Spec) was retired in migration `MigrateSpecCardsToGoal`; existing rows moved to Goal (5).
 
 ### RelationshipType
 `BlockedBy`, `Precedes`, `Relates`

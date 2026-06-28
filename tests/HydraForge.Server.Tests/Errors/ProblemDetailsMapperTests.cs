@@ -346,16 +346,16 @@ public class ProblemDetailsMapperTests
     }
 
     [Fact]
-    public void FromError_CardInvalidParentEpic_MapsTo400()
+    public void FromError_CardInvalidParent_MapsTo400()
     {
         var error = new HydraForge.Domain.Common.Error(
-            HydraForge.Domain.Common.DomainErrorCodes.Cards.InvalidParentEpic, "Invalid parent epic.");
+            HydraForge.Domain.Common.DomainErrorCodes.Cards.InvalidParent, "Invalid parent.");
 
         var details = ProblemDetailsMapper.FromError(error, "corr-ca6");
 
         Assert.Equal(400, details.Status);
-        Assert.Equal("Invalid parent epic", details.Title);
-        Assert.Equal("https://hydraforge.local/errors/card-invalid-parent-epic", details.Type);
+        Assert.Equal("Invalid parent", details.Title);
+        Assert.Equal("https://hydraforge.local/errors/card-invalid-parent", details.Type);
     }
 
     [Fact]

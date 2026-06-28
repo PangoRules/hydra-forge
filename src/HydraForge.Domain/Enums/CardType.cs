@@ -3,8 +3,8 @@ namespace HydraForge.Domain.Enums;
 public enum CardType
 {
     Task = 1,
-    Bug = 2,
-    Spec = 3,
+    Issue = 2,   // was Bug
+    // 3 intentionally skipped — was Spec; rows migrated to Goal in MigrateSpecCardsToGoal
     Idea = 4,
-    Epic = 5
+    Goal = 5     // was Epic
 }

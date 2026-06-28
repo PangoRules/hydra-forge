@@ -253,10 +253,27 @@ function handleArchive(card: CardResponse) {
 function stripHtml(text: string): string {
   return text.replace(/<[^>]*>/g, '')
 }
+
+function getParentCard(card: CardResponse): CardResponse | null {
+  if (!card.parentCardId) return null
+  for (const cards of props.cardsByColumn.values()) {
+    const found = cards.find(c => c.id === card.parentCardId)
+    if (found) return found
+  }
+  return null
+}
+
+function getChildCount(card: CardResponse): number {
+  let count = 0
+  for (const cards of props.cardsByColumn.values()) {
+    count += cards.filter(c => c.parentCardId === card.id).length
+  }
+  return count
+}
 </script>
 
 <template>
-  <div>
+  <div class="flex-1 min-h-0 flex flex-col overflow-y-auto">
     <!-- Global mobile bar -->
     <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       <input
@@ -673,17 +690,41 @@ function stripHtml(text: string): string {
                   {{ formatDueDate(card.dueAt) }}
                 </p>
 
-                <!-- Row 5: epic link -->
-                <p
-                  v-if="card.parentCardId"
-                  class="text-xs mt-1 text-primary flex items-center gap-1"
-                >
-                  <UIcon
-                    name="i-lucide-layers"
-                    class="size-3"
-                  />
-                  Epic
-                </p>
+                <!-- Row 5: parent + children -->
+                <div class="flex items-center gap-3">
+                  <div
+                    v-if="getParentCard(card)"
+                    class="flex flex-col"
+                  >
+                    <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
+                    <p
+                      class="text-xs text-primary flex items-center gap-1"
+                      :title="getParentCard(card)!.title"
+                    >
+                      <UIcon
+                        :name="cardTypeOption(getParentCard(card)!.type).icon"
+                        class="size-3"
+                      />
+                      {{ cardTypeOption(getParentCard(card)!.type).label }} #{{ getParentCard(card)!.cardNumber }}
+                    </p>
+                  </div>
+                  <div
+                    v-if="getChildCount(card) > 0"
+                    class="flex flex-col"
+                  >
+                    <span class="text-[10px] text-gray-400 leading-none mb-0.5">Children:</span>
+                    <p
+                      class="text-xs text-gray-400 flex items-center gap-1"
+                      :title="`Has ${getChildCount(card)} child card${getChildCount(card) === 1 ? '' : 's'}`"
+                    >
+                      <UIcon
+                        name="i-lucide-git-merge"
+                        class="size-3"
+                      />
+                      {{ getChildCount(card) }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </template>

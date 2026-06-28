@@ -60,16 +60,13 @@ public class Card
         Version += 1;
     }
 
-    public static Error? ValidateParentEpic(Card child, Card parent, IReadOnlyDictionary<Guid, Card>? cardMap = null)
+    public static Error? ValidateParent(Card child, Card parent, IReadOnlyDictionary<Guid, Card>? cardMap = null)
     {
         if (child.Id == parent.Id)
             return new Error(DomainErrorCodes.Cards.ParentCycle, "Card cannot be its own parent.");
 
         if (child.ProjectId != parent.ProjectId)
-            return new Error(DomainErrorCodes.Cards.InvalidParentEpic, "Parent card must be in the same project.");
-
-        if (parent.Type != CardType.Epic)
-            return new Error(DomainErrorCodes.Cards.InvalidParentEpic, "Parent card must be of type Epic.");
+            return new Error(DomainErrorCodes.Cards.InvalidParent, "Parent card must be in the same project.");
 
         if (cardMap != null)
         {

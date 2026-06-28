@@ -9,10 +9,10 @@ import { useCardMove } from '~/composables/useCardMove'
 
 definePageMeta({ middleware: ['auth'] })
 
-// Prevent body scroll — columns handle their own overflow
+// Desktop: kanban columns handle own scroll. Mobile: page scrolls naturally.
 useHead({
   bodyAttrs: {
-    class: 'overflow-hidden'
+    class: 'md:overflow-hidden'
   }
 })
 
@@ -290,7 +290,7 @@ watch(
       <!-- Mobile board content — always rendered so its inline spinner works -->
       <div
         v-if="!board.error"
-        class="md:hidden flex-1 overflow-x-auto"
+        class="md:hidden flex-1 min-h-0 overflow-auto"
       >
         <BoardMobileList
           :columns="board.columns"
