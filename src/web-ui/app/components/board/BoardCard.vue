@@ -146,6 +146,12 @@ function handleCardDrop(event: DragEvent) {
             class="size-3.5 shrink-0"
             :class="cardTypeColorClass(typeOption)"
           />
+          <span
+            class="text-xs font-medium shrink-0"
+            :class="cardTypeColorClass(typeOption)"
+          >
+            {{ typeOption.label }}
+          </span>
           <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {{ card.title }}
           </h4>
@@ -246,6 +252,14 @@ function handleCardDrop(event: DragEvent) {
 
     <div class="flex items-center justify-between mt-2">
       <div class="flex items-center gap-2">
+        <span
+          v-if="card.parentCardId"
+          class="text-xs text-primary flex items-center gap-1"
+          title="Child of an epic"
+        >
+          <UIcon name="i-lucide-layers" class="size-3" />
+          Epic
+        </span>
         <div
           v-if="card.assignees.length > 0"
           class="flex -space-x-1"

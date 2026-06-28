@@ -470,6 +470,12 @@ function stripHtml(text: string): string {
                   class="size-3.5 shrink-0"
                   :class="cardTypeColorClass(cardTypeOption(card.type))"
                 />
+                <span
+                  class="text-xs font-medium shrink-0"
+                  :class="cardTypeColorClass(cardTypeOption(card.type))"
+                >
+                  {{ cardTypeOption(card.type).label }}
+                </span>
                 <p class="text-sm font-medium truncate flex-1 min-w-0">
                   {{ card.title }}
                 </p>
@@ -608,6 +614,13 @@ function stripHtml(text: string): string {
                   class="size-3 inline mr-0.5"
                 />
                 {{ formatDueDate(card.dueAt) }}
+              </p>
+              <p
+                v-if="card.parentCardId"
+                class="text-xs mt-1 text-primary flex items-center gap-1"
+              >
+                <UIcon name="i-lucide-layers" class="size-3" />
+                Epic
               </p>
             </div>
           </template>
