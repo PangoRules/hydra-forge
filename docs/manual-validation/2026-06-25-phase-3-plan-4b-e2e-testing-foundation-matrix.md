@@ -4,8 +4,8 @@
 
 ### Setup
 - [ ] Postgres + MinIO up: `docker compose up -d postgres minio`
-- [ ] API running with dev env: `ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/HydraForge.Server` (must listen on `http://localhost:5116` per `launchSettings.json`)
-- [ ] Web dev server up: `cd src/web-ui && NUXT_PUBLIC_API_BASE_URL=http://localhost:5116 pnpm dev`
+- [ ] API running with dev env: `ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/HydraForge.Server` (listens on `http://localhost:5000` — `launchSettings.json` and `nuxt.config.ts` now aligned on port 5000)
+- [ ] Web dev server up: `cd src/web-ui && pnpm dev`
 - [ ] `cd src/web-ui && pnpm install` already run (so `playwright` is on PATH)
 - [ ] One-time: `cd src/web-ui && pnpm exec playwright install --with-deps chromium`
 
@@ -16,7 +16,7 @@
 4. Push branch and open PR → `e2e` job appears in Checks tab and passes (validates `ASPNETCORE_URLS: http://localhost:5000` + `wait-on http://localhost:5000` + `E2E_API_BASE_URL=http://localhost:5000` all align)
 
 ### Edge Cases
-1. Local dev with API on default 5116 → `E2E_API_BASE_URL` unset, fixtures resolve to `http://localhost:5116`; all specs seed + run green
+1. Local dev with API on default 5000 → all defaults align (launchSettings, fixtures, nuxt.config, CI); no env vars needed
 2. CI e2e job → API on 5000 (forced by `ASPNETCORE_URLS`), fixtures resolve to `http://localhost:5000`; `auth.setup.ts` posts to Nuxt's `/login`, not the API, so port is the web app's port (3000 via `pnpm preview --port 3000`)
 3. Re-run `pnpm test:e2e` twice in a row without DB reset → second run also passes (random-suffix seeding avoids collisions; no `expect(count(N cards))` style assertions)
 4. Concurrency spec run alone → opens two browser contexts, both auth'd, second save rejected with visible error in `[role="alert"]`
