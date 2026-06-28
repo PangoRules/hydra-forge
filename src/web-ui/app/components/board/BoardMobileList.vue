@@ -7,6 +7,7 @@ import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
+import { useColumnReorder } from '~/composables/useColumnReorder'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -24,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'card-click': [card: CardResponse]
   'add-card': []
+  'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
 }>()
 
 const api = useApi()
@@ -67,6 +69,37 @@ async function archiveSelectedConfirmed() {
 const menuOpenFor = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
+
+const { moveColumnLeft, moveColumnRight } = useColumnReorder(props.projectId)
+
+const showMoveToColumn = ref<Record<string, boolean>>({})
+const moveTargetCardId = ref<string | null>(null)
+
+async function handleMoveUp(card: CardResponse) {
+  const colCards = filteredCardsByColumn.value.get(card.columnId) ?? []
+  const idx = colCards.findIndex(c => c.id === card.id)
+  if (idx <= 0) return
+  emit('card-move', card.id, card.columnId, idx - 1)
+}
+
+async function handleMoveDown(card: CardResponse) {
+  const colCards = filteredCardsByColumn.value.get(card.columnId) ?? []
+  const idx = colCards.findIndex(c => c.id === card.id)
+  if (idx === -1 || idx >= colCards.length - 1) return
+  emit('card-move', card.id, card.columnId, idx + 1)
+}
+
+function startMoveToColumn(cardId: string) {
+  moveTargetCardId.value = cardId
+  showMoveToColumn.value = { ...showMoveToColumn.value, [cardId]: true }
+}
+
+function moveToColumn(cardId: string, targetColumnId: string, card: CardResponse) {
+  const targetPos = 0
+  emit('card-move', cardId, targetColumnId, targetPos)
+  showMoveToColumn.value = { ...showMoveToColumn.value, [cardId]: false }
+  moveTargetCardId.value = null
+}
 
 // Function ref instead of string ref — avoids Vue 3 array-ref issue when ref is inside v-for
 function setMenuRef(el: Element | null) {
@@ -350,6 +383,22 @@ function stripHtml(text: string): string {
             </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              class="text-xs text-gray-400 hover:text-gray-600"
+              title="Move column left"
+              @click.stop="moveColumnLeft(column.id)"
+            >
+              <UIcon name="i-lucide-chevron-left" class="size-3" />
+            </button>
+            <button
+              type="button"
+              class="text-xs text-gray-400 hover:text-gray-600"
+              title="Move column right"
+              @click.stop="moveColumnRight(column.id)"
+            >
+              <UIcon name="i-lucide-chevron-right" class="size-3" />
+            </button>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
             <select
@@ -490,6 +539,52 @@ function stripHtml(text: string): string {
                         />
                         Archive
                       </button>
+                      <USeparator class="my-1" />
+                      <button
+                        role="menuitem"
+                        tabindex="0"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click.stop="handleMoveUp(card)"
+                        @keydown.enter.prevent.stop="handleMoveUp(card)"
+                      >
+                        <UIcon name="i-lucide-chevron-up" class="size-4" />
+                        Move up
+                      </button>
+                      <button
+                        role="menuitem"
+                        tabindex="0"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click.stop="handleMoveDown(card)"
+                        @keydown.enter.prevent.stop="handleMoveDown(card)"
+                      >
+                        <UIcon name="i-lucide-chevron-down" class="size-4" />
+                        Move down
+                      </button>
+                      <button
+                        role="menuitem"
+                        tabindex="0"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click.stop="startMoveToColumn(card.id)"
+                        @keydown.enter.prevent.stop="startMoveToColumn(card.id)"
+                      >
+                        <UIcon name="i-lucide-arrow-right" class="size-4" />
+                        Move to column...
+                      </button>
+                      <div v-if="showMoveToColumn[card.id]" class="border-t mt-1 pt-1">
+                        <button
+                          v-for="col in columns"
+                          :key="col.id"
+                          role="menuitem"
+                          tabindex="0"
+                          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                          :class="{ 'font-semibold': col.id === card.columnId }"
+                          :disabled="col.id === card.columnId"
+                          @click.stop="moveToColumn(card.id, col.id, card)"
+                        >
+                          <div v-if="col.color" class="size-2 rounded-full" :style="{ backgroundColor: col.color }" />
+                          {{ col.name }}
+                        </button>
+                      </div>
                     </template>
                   </div>
                 </div>

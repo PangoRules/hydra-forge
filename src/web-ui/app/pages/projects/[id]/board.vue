@@ -6,6 +6,7 @@ import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
+import { useCardMove } from '~/composables/useCardMove'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -41,36 +42,7 @@ function handleAddCard(columnId?: string) {
   showCreateModal.value = true
 }
 
-async function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
-  if (projectArchived.value) return
-
-  const card = findCard(cardId)
-  if (!card) return
-
-  board.moveCard(cardId, targetColumnId, targetPosition)
-
-  try {
-    const { data } = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
-      body: {
-        targetColumnId,
-        targetPosition,
-        confirmBlockedMove: false,
-        version: card.version
-      }
-    })
-    if (data) {
-      board.updateCard(cardId, data as CardResponse)
-    }
-  } catch (error: unknown) {
-    board.rollbackMove(projectId)
-    if (error instanceof ApiError && error.status === 409) {
-      toast.error('Cannot move blocked card')
-    } else {
-      toast.error('Failed to move card')
-    }
-    return
-  }
-}
+const { moveCardToColumn } = useCardMove(projectId)
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of board.cardsByColumn) {
@@ -304,7 +276,7 @@ watch(
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
             :readonly="projectArchived"
-            @card-move="handleCardMove"
+            @card-move="moveCardToColumn"
             @card-click="handleCardClick"
             @add-card="handleAddCard"
           />
@@ -336,6 +308,7 @@ watch(
           :readonly="projectArchived"
           @card-click="handleCardClick"
           @add-card="handleAddCard"
+          @card-move="moveCardToColumn"
         />
       </div>
     </div>

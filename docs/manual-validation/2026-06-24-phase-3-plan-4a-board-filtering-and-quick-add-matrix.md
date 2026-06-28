@@ -10,11 +10,17 @@
 
 ### Global Filter Bar (Desktop — viewport ≥768px)
 1. **Search**: type text → cards filter in real-time client-side, then server re-fetch on debounce
+Works
 2. **Type dropdown**: select "Bug" → only Bug cards visible, column counts update
+Works
 3. **Include Archived**: check → archived cards appear in columns (they start hidden)
+Works
 4. **Hide Empty**: check → columns with 0 visible cards disappear from layout
+Works
 5. **+ Add Card**: click → CardCreateModal opens with no column preselected
+Works
 6. **Assignee filter**: select member → only their cards shown
+Works
 
 ### Per-Column Filters (Desktop)
 7. **Column type dropdown**: select "Epic" in column → only Epics in that column shown
