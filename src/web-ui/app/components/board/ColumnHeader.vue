@@ -4,25 +4,62 @@ import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 
-defineProps<{
+const props = defineProps<{
   column: ColumnResponse
   cardCount: number
   includeArchived: boolean
   readonly?: boolean
 }>()
 
+const isDragging = ref(false)
+
 const emit = defineEmits<{
   'add-card': []
   'filter-type': [value: number | null]
   'filter-archived': [value: boolean]
+  'reorder': [draggedColumnId: string, targetColumnId: string]
 }>()
+
+function handleDragStart(event: DragEvent) {
+  if (!event.dataTransfer) return
+  event.dataTransfer.setData('text/plain', props.column.id)
+  event.dataTransfer.effectAllowed = 'move'
+  isDragging.value = true
+}
+
+function handleDragEnd() {
+  isDragging.value = false
+}
+
+function handleDragOver(event: DragEvent) {
+  if (!event.dataTransfer) return
+  event.dataTransfer.dropEffect = 'move'
+}
+
+function handleDrop(event: DragEvent) {
+  if (!event.dataTransfer) return
+  const draggedColumnId = event.dataTransfer.getData('text/plain')
+  if (draggedColumnId === props.column.id) return
+  emit('reorder', draggedColumnId, props.column.id)
+}
 </script>
 
 <template>
-  <div class="px-2 pt-2 pb-1">
+  <div
+    class="px-2 pt-2 pb-1"
+    :class="{ 'opacity-50': isDragging }"
+    :draggable="!readonly"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @dragover.prevent="handleDragOver"
+    @drop.prevent="handleDrop"
+  >
     <!-- Row 1: title + metadata only -->
     <div class="flex items-center gap-2 mb-2">
-      <span class="column-drag-handle cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
+      <span
+        class="column-drag-handle cursor-grab text-gray-300 hover:text-gray-500 shrink-0"
+        @mousedown.stop
+      >
         <UIcon
           name="i-lucide-grip-vertical"
           class="size-4"

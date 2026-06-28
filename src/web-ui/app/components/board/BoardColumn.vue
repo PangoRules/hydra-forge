@@ -18,6 +18,7 @@ const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
   'add-card': [columnId: string]
+  'reorder': [draggedColumnId: string, targetColumnId: string]
 }>()
 
 // Per-column filter state
@@ -93,6 +94,7 @@ function handleDrop(event: DragEvent) {
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"
+      @reorder="(a: string, b: string) => emit('reorder', a, b)"
     >
       <template #filter-row>
         <input
