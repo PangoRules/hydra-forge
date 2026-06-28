@@ -62,14 +62,12 @@ function confirmBulkArchive() {
 async function moveSelectedToColumn() {
   // UI-only stub for bulk move. TODO: implement server-side batch move endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
-  console.log('[TODO bulk-move] projectId=', props.projectId, 'targetColumnId=', bulkTargetColumnId, 'cardIds=', ids)
   toast.success('Bulk move logged (TODO)')
 }
 
 async function archiveSelectedConfirmed() {
   // UI-only stub for bulk archive. TODO: implement server-side batch archive endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
-  console.log('[TODO bulk-archive] projectId=', props.projectId, 'cardIds=', ids)
   toast.success('Bulk archive logged (TODO)')
   showBulkArchiveConfirm.value = false
 }
