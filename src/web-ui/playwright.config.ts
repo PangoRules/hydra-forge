@@ -27,10 +27,18 @@ export default defineConfig({
   ],
   webServer: process.env.CI
     ? undefined
-    : {
-        command: 'pnpm dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: true,
-        timeout: 30000
-      }
+    : [
+        {
+          command: 'dotnet run --project ../../src/HydraForge.Server',
+          url: 'http://localhost:5000/health',
+          reuseExistingServer: true,
+          timeout: 60000
+        },
+        {
+          command: 'pnpm dev',
+          url: 'http://localhost:3000',
+          reuseExistingServer: true,
+          timeout: 30000
+        }
+      ]
 })
