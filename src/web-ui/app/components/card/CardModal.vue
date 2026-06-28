@@ -93,7 +93,7 @@ async function handleRestore() {
     })
     toast.success('Card restored')
     emit('restored')
-    closeWithAnimation()
+    await fetchCard()
   } catch {
     toast.error('Failed to restore card')
   }
