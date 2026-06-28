@@ -13,7 +13,7 @@ export function useBoardFilters() {
 
   const type = computed({
     get: () => board.boardFilters.type,
-    set: (val: number | null) => { board.boardFilters.type = val }
+    set: (val: string | null) => { board.boardFilters.type = val }
   })
 
   const assigneeUserId = computed({

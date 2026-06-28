@@ -45,15 +45,6 @@ function clearSelection() {
   board.clearSelection()
 }
 
-// helper to locate card in props map
-function _findCardById(cardId: string): CardResponse | undefined {
-  for (const cards of props.cardsByColumn.values()) {
-    const found = cards.find(c => c.id === cardId)
-    if (found) return found
-  }
-  return undefined
-}
-
 function confirmBulkArchive() {
   // open confirm dialog
   showBulkArchiveConfirm.value = true
@@ -62,13 +53,13 @@ function confirmBulkArchive() {
 async function moveSelectedToColumn() {
   // UI-only stub for bulk move. TODO: implement server-side batch move endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
-  toast.success('Bulk move logged (TODO)')
+  toast.success(`Bulk move logged (TODO), ${ids}`)
 }
 
 async function archiveSelectedConfirmed() {
   // UI-only stub for bulk archive. TODO: implement server-side batch archive endpoint
   const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
-  toast.success('Bulk archive logged (TODO)')
+  toast.success(`Bulk archive logged (TODO), ${ids}`)
   showBulkArchiveConfirm.value = false
 }
 
@@ -132,7 +123,7 @@ function onHeaderClick(e: Event, colId: string) {
 const showFilters = ref(false)
 
 // Per-column type filter state
-const columnTypeFilters = ref<Record<string, number | null>>({})
+const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
 const columnArchivedFilters = ref<Record<string, boolean | null>>({})
 
@@ -146,17 +137,19 @@ function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
       || String(c.cardNumber).includes(q)
     )
   }
+  // c.type is number per generated types, but API returns string via JsonStringEnumConverter
   if (filterType.value !== null) {
-    filtered = filtered.filter(c => c.type === filterType.value)
+    filtered = filtered.filter(c => String(c.type) === filterType.value)
   }
   if (filterAssignee.value) {
     filtered = filtered.filter(c => c.assignees.some(a => a.userId === filterAssignee.value))
   }
 
   // Per-column type filter
+  // c.type is number per generated types, but API returns string via JsonStringEnumConverter
   const colType = columnTypeFilters.value[colId]
   if (colType !== undefined && colType !== null) {
-    filtered = filtered.filter(c => c.type === colType)
+    filtered = filtered.filter(c => String(c.type) === colType)
   }
 
   // Per-column archived filter
@@ -363,7 +356,7 @@ function stripHtml(text: string): string {
               :value="columnTypeFilters[column.id] ?? ''"
               class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
               @click.stop
-              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value !== '' ? Number(($event.target as HTMLSelectElement).value) : null"
+              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value || null"
             >
               <option
                 v-for="opt in CARD_TYPE_FILTER_OPTIONS"

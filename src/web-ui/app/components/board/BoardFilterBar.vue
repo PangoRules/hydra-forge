@@ -33,7 +33,7 @@ const { search, type, assigneeUserId, includeArchived, hideEmptyColumns } = useB
       <select
         :value="type ?? ''"
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-        @change="type = ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null"
+        @change="type = ($event.target as HTMLSelectElement).value || null"
       >
         <option
           v-for="t in CARD_TYPE_FILTER_OPTIONS"

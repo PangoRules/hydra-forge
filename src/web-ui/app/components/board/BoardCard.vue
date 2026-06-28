@@ -164,19 +164,6 @@ function handleCardDrop(event: DragEvent) {
         </p>
       </div>
 
-      <!-- Drag handle -->
-      <span
-        v-if="!readonly"
-        class="touch-none select-none shrink-0 cursor-grab text-gray-300 hover:text-gray-500"
-        @mousedown.stop
-        @touchstart.stop
-      >
-        <UIcon
-          name="i-lucide-grip-vertical"
-          class="size-4"
-        />
-      </span>
-
       <!-- Move up/down arrows -->
       <div
         v-if="!readonly"
@@ -202,11 +189,21 @@ function handleCardDrop(event: DragEvent) {
         </div>
       </div>
 
-      <!-- Three-dot menu -->
+      <!-- Drag handle + three-dot menu -->
       <div
         v-if="!readonly"
-        class="relative shrink-0"
+        class="flex items-center shrink-0 relative"
       >
+        <span
+          class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
+          @mousedown.stop
+          @touchstart.stop
+        >
+          <UIcon
+            name="i-lucide-grip-vertical"
+            class="size-4"
+          />
+        </span>
         <span ref="menuButtonRef">
           <UButton
             icon="i-lucide-ellipsis-vertical"

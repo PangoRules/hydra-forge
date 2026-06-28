@@ -33,11 +33,11 @@ export const CARD_TYPE_OPTIONS = [
  */
 export const CARD_TYPE_FILTER_OPTIONS = [
   { label: 'All', value: null },
-  { label: 'Task', value: 0 },
-  { label: 'Bug', value: 1 },
-  { label: 'Epic', value: 2 },
-  { label: 'Spec', value: 3 },
-  { label: 'Idea', value: 4 }
+  { label: 'Task', value: 'Task' },
+  { label: 'Bug', value: 'Bug' },
+  { label: 'Epic', value: 'Epic' },
+  { label: 'Spec', value: 'Spec' },
+  { label: 'Idea', value: 'Idea' }
 ] as const
 
 /**

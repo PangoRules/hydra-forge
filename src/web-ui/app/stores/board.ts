@@ -9,7 +9,7 @@ type MemberResponse = components['schemas']['MemberResponse']
 
 export interface BoardFilters {
   search: string
-  type: number | null
+  type: string | null
   includeArchived: boolean
   hideEmptyColumns: boolean
   assigneeUserId: string | null
@@ -60,7 +60,7 @@ export const useBoardStore = defineStore('board', () => {
         searchParams.set('includeArchived', 'true')
         searchParams.set('archivedLimit', '200')
       }
-      if (boardFilters.value.type !== null) searchParams.set('type', String(boardFilters.value.type))
+      if (boardFilters.value.type !== null) searchParams.set('type', boardFilters.value.type)
       if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
       if (boardFilters.value.assigneeUserId) searchParams.set('assigneeUserId', boardFilters.value.assigneeUserId)
       const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl

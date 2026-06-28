@@ -17,7 +17,7 @@ const isDragging = ref(false)
 
 const emit = defineEmits<{
   'add-card': []
-  'filter-type': [value: number | null]
+  'filter-type': [value: string | null]
   'filter-archived': [value: boolean]
   'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
@@ -113,14 +113,7 @@ function handleDrop(event: DragEvent) {
       <span class="text-xs text-gray-500 shrink-0">Type:</span>
       <select
         class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-        @change="
-          emit(
-            'filter-type',
-            ($event.target as HTMLSelectElement).value
-              ? Number(($event.target as HTMLSelectElement).value)
-              : null
-          )
-        "
+        @change="emit('filter-type', ($event.target as HTMLSelectElement).value || null)"
       >
         <option
           v-for="t in CARD_TYPE_FILTER_OPTIONS"

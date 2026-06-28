@@ -28,7 +28,7 @@ const emit = defineEmits<{
 // Per-column filter state
 // columnArchived: null = show all (respect server fetch), false = non-archived only, true = archived only
 const columnSearch = ref('')
-const columnType = ref<number | null>(null)
+const columnType = ref<string | null>(null)
 const columnArchived = ref<boolean | null>(null)
 
 const isDragOver = ref(false)
@@ -46,8 +46,9 @@ const filteredCards = computed(() => {
   }
 
   // Column type filter
+  // c.type is number per generated types, but API returns string via JsonStringEnumConverter
   if (columnType.value !== null) {
-    result = result.filter(c => c.type === columnType.value)
+    result = result.filter(c => String(c.type) === columnType.value)
   }
 
   // Column archived filter: null = show all, false = non-archived, true = archived only
@@ -60,7 +61,7 @@ const filteredCards = computed(() => {
   return result
 })
 
-function handleFilterType(value: number | null) {
+function handleFilterType(value: string | null) {
   columnType.value = value
 }
 

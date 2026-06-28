@@ -1,6 +1,6 @@
 # Board Filtering & Quick-Add Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Branch:** `task/phase-3-board-filtering`
 **Parent branch:** `feat/phase-3-web-ui`
@@ -42,7 +42,7 @@
 **Files:**
 - Modify: `app/stores/board.ts`
 
-- [ ] **Step 1: Add BoardFilters interface and state**
+- [x] **Step 1: Add BoardFilters interface and state**
 
 Add after `error` ref:
 
@@ -68,7 +68,7 @@ export const useBoardStore = defineStore('board', () => {
   })
 ```
 
-- [ ] **Step 2: Update `fetchBoard` to pass query params**
+- [x] **Step 2: Update `fetchBoard` to pass query params**
 
 Change signature and add query params to the Cards.list call:
 
@@ -95,7 +95,7 @@ Change signature and add query params to the Cards.list call:
 
 The rest of the function stays the same (build map, sort by position).
 
-- [ ] **Step 3: Update `rollbackMove` to preserve filters**
+- [x] **Step 3: Update `rollbackMove` to preserve filters**
 
 ```ts
   function rollbackMove(projectId: string) {
@@ -105,7 +105,7 @@ The rest of the function stays the same (build map, sort by position).
 
 No change needed — `fetchBoard` already reads current `boardFilters`.
 
-- [ ] **Step 4: Add `visibleColumns` getter**
+- [x] **Step 4: Add `visibleColumns` getter**
 
 Add after `removeCard`:
 
@@ -120,7 +120,7 @@ Add after `removeCard`:
   })
 ```
 
-- [ ] **Step 5: Export new members**
+- [x] **Step 5: Export new members**
 
 Replace the return block:
 
@@ -132,12 +132,12 @@ Replace the return block:
   }
 ```
 
-- [ ] **Step 6: Verify typecheck passes**
+- [x] **Step 6: Verify typecheck passes**
 
 Run: `pnpm typecheck`
 Expected: no errors
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/stores/board.ts
@@ -152,7 +152,7 @@ git commit -m "feat(board): add filter state and fetchBoard query params"
 - Create: `app/components/board/BoardFilterBar.vue`
 - Test: `app/components/board/__tests__/BoardFilterBar.test.ts`
 
-- [ ] **Step 1: Create BoardFilterBar component**
+- [x] **Step 1: Create BoardFilterBar component**
 
 ```vue
 <script setup lang="ts">
@@ -245,7 +245,7 @@ function toggleHideEmpty() {
 </template>
 ```
 
-- [ ] **Step 2: Write BoardFilterBar test**
+- [x] **Step 2: Write BoardFilterBar test**
 
 Create `app/components/board/__tests__/BoardFilterBar.test.ts`:
 
@@ -306,12 +306,12 @@ describe('BoardFilterBar', () => {
 })
 ```
 
-- [ ] **Step 3: Verify tests pass**
+- [x] **Step 3: Verify tests pass**
 
 Run: `pnpm run test`
 Expected: 4 new tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/components/board/BoardFilterBar.vue app/components/board/__tests__/BoardFilterBar.test.ts
@@ -327,7 +327,7 @@ git commit -m "feat(board): add global BoardFilterBar component"
 - Modify: `app/components/board/BoardColumn.vue`
 - Modify: `app/components/board/BoardView.vue`
 
-- [ ] **Step 1: Add emit types to ColumnHeader**
+- [x] **Step 1: Add emit types to ColumnHeader**
 
 Replace entire ColumnHeader.vue:
 
@@ -427,7 +427,7 @@ const cardTypes = [
 </template>
 ```
 
-- [ ] **Step 2: Add per-column filter state to BoardColumn**
+- [x] **Step 2: Add per-column filter state to BoardColumn**
 
 Replace BoardColumn.vue:
 
@@ -523,7 +523,7 @@ function handleFilterArchived(value: boolean) {
 </template>
 ```
 
-- [ ] **Step 3: Update BoardView to pass add-card event up**
+- [x] **Step 3: Update BoardView to pass add-card event up**
 
 Replace BoardView.vue:
 
@@ -572,12 +572,12 @@ function handleCardClick(card: CardResponse) {
 </template>
 ```
 
-- [ ] **Step 4: Verify typecheck passes**
+- [x] **Step 4: Verify typecheck passes**
 
 Run: `pnpm typecheck`
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/components/board/ColumnHeader.vue app/components/board/BoardColumn.vue app/components/board/BoardView.vue
@@ -592,7 +592,7 @@ git commit -m "feat(board): add per-column filter controls to column headers"
 - Create: `app/components/board/CardCreateModal.vue`
 - Modify: `app/pages/projects/[id]/board.vue`
 
-- [ ] **Step 1: Create CardCreateModal component**
+- [x] **Step 1: Create CardCreateModal component**
 
 ```vue
 <script setup lang="ts">
@@ -731,7 +731,7 @@ function closeWithAnimation() {
 </template>
 ```
 
-- [ ] **Step 2: Wire CardCreateModal in board page**
+- [x] **Step 2: Wire CardCreateModal in board page**
 
 In `board.vue`, add state and handler:
 
@@ -771,12 +771,12 @@ And in the template area where `BoardView` is, emit `add-card`:
 />
 ```
 
-- [ ] **Step 3: Verify typecheck passes**
+- [x] **Step 3: Verify typecheck passes**
 
 Run: `pnpm typecheck`
 Expected: no errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/components/board/CardCreateModal.vue app/pages/projects/[id]/board.vue
@@ -790,7 +790,7 @@ git commit -m "feat(board): add CardCreateModal with column picker"
 **Files:**
 - Modify: `app/components/board/BoardMobileList.vue`
 
-- [ ] **Step 1: Add accordion state and filter panel to BoardMobileList**
+- [x] **Step 1: Add accordion state and filter panel to BoardMobileList**
 
 Replace script with expanded state + filter panel logic. Add after `archiveTargetCard`:
 
@@ -845,7 +845,7 @@ const filteredColumns = computed(() => {
 })
 ```
 
-- [ ] **Step 2: Update mobile template**
+- [x] **Step 2: Update mobile template**
 
 Replace template (keeping existing ConfirmDialog at bottom). Key changes:
 
@@ -939,17 +939,17 @@ Template structure:
 </template>
 ```
 
-- [ ] **Step 3: Verify typecheck passes**
+- [x] **Step 3: Verify typecheck passes**
 
 Run: `pnpm typecheck`
 Expected: no errors
 
-- [ ] **Step 4: Verify existing tests still pass**
+- [x] **Step 4: Verify existing tests still pass**
 
 Run: `pnpm run test`
 Expected: 54+ tests pass (existing + any new)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/components/board/BoardMobileList.vue
@@ -965,7 +965,7 @@ git commit -m "feat(board): add mobile accordion columns and filter panel"
 - Modify: `app/components/board/BoardView.vue`
 - Test: manual validation via browser
 
-- [ ] **Step 1: Add BoardFilterBar to board page**
+- [x] **Step 1: Add BoardFilterBar to board page**
 
 In `board.vue`, add before BoardView:
 
@@ -982,7 +982,7 @@ Import it:
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 ```
 
-- [ ] **Step 2: Wire visibleColumns in BoardView**
+- [x] **Step 2: Wire visibleColumns in BoardView**
 
 In `board.vue`, replace `board.columns` with `board.visibleColumns` for BoardView:
 
@@ -1013,7 +1013,7 @@ const emit = defineEmits<{
 }>()
 ```
 
-- [ ] **Step 3: Re-fetch board on filter changes with debounce**
+- [x] **Step 3: Re-fetch board on filter changes with debounce**
 
 Add a debounced watch on boardFilters to re-fetch on type/archived changes. But text search is client-side. Only re-fetch when `includeArchived` or `type` changes.
 
@@ -1025,12 +1025,12 @@ watch(() => [board.boardFilters.type, board.boardFilters.includeArchived], () =>
 }, { deep: false })
 ```
 
-- [ ] **Step 4: Verify typecheck passes**
+- [x] **Step 4: Verify typecheck passes**
 
 Run: `pnpm typecheck`
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/pages/projects/[id]/board.vue app/components/board/BoardView.vue app/components/board/BoardMobileList.vue
@@ -1045,7 +1045,7 @@ git commit -m "feat(board): wire board page with global filters and empty column
 - Create: `app/stores/__tests__/board.test.ts`
 - Create or modify: `app/components/board/__tests__/BoardMobileList.test.ts` (extend with accordion tests)
 
-- [ ] **Step 1: Write board store filter test**
+- [x] **Step 1: Write board store filter test**
 
 Create `app/stores/__tests__/board.test.ts`:
 
@@ -1097,7 +1097,7 @@ describe('BoardStore filters', () => {
 })
 ```
 
-- [ ] **Step 2: Extend BoardMobileList test with accordion**
+- [x] **Step 2: Extend BoardMobileList test with accordion**
 
 Add to `app/components/board/__tests__/BoardMobileList.test.ts`:
 
@@ -1121,12 +1121,12 @@ it('renders accordion column headers', async () => {
 })
 ```
 
-- [ ] **Step 3: Verify all tests pass**
+- [x] **Step 3: Verify all tests pass**
 
 Run: `pnpm run test`
 Expected: 56+ tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/stores/__tests__/board.test.ts app/components/board/__tests__/BoardMobileList.test.ts

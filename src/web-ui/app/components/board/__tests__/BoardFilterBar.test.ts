@@ -43,8 +43,8 @@ describe('BoardFilterBar', () => {
     const board = useBoardStore()
     const wrapper = await mountSuspended(BoardFilterBar)
     const select = wrapper.find('select')
-    await select.setValue('1')
-    expect(board.boardFilters.type).toBe(1)
+    await select.setValue('Bug')
+    expect(board.boardFilters.type).toBe('Bug')
   })
 
   it('updates board store when archived toggles', async () => {
