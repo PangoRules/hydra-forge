@@ -9,10 +9,10 @@ import { useCardMove } from '~/composables/useCardMove'
 
 definePageMeta({ middleware: ['auth'] })
 
-// Prevent body scroll — columns handle their own overflow
+// Desktop: kanban columns handle own scroll. Mobile: page scrolls naturally.
 useHead({
   bodyAttrs: {
-    class: 'overflow-hidden'
+    class: 'md:overflow-hidden'
   }
 })
 
