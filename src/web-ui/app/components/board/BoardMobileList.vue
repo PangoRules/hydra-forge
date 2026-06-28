@@ -476,18 +476,11 @@ function stripHtml(text: string): string {
                 >
                   {{ cardTypeOption(card.type).label }}
                 </span>
-                <p class="text-sm font-medium truncate flex-1 min-w-0">
-                  {{ card.title }}
-                </p>
-                <span
-                  v-if="card.archivedAt"
-                  class="text-xs text-gray-400 shrink-0"
-                >archived</span>
 
                 <!-- Relative wrapper anchors the absolute dropdown -->
                 <div
                   v-if="!readonly"
-                  class="relative"
+                  class="relative ml-auto"
                 >
                   <!-- Three-dot menu button -->
                   <button
@@ -514,7 +507,7 @@ function stripHtml(text: string): string {
                     :id="`card-menu-${card.id}`"
                     :ref="setMenuRef"
                     role="menu"
-                    class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-30"
+                    class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-44 whitespace-nowrap"
                   >
                     <template v-if="card.archivedAt">
                       <button
@@ -597,6 +590,14 @@ function stripHtml(text: string): string {
                   </div>
                 </div>
               </div>
+
+              <h4 class="text-sm font-medium truncate mt-1">
+                {{ card.title }}
+                <span
+                  v-if="card.archivedAt"
+                  class="text-xs text-gray-400 font-normal ml-1"
+                >(archived)</span>
+              </h4>
 
               <p
                 v-if="card.description"

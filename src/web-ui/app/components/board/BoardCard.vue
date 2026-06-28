@@ -152,16 +152,16 @@ function handleCardDrop(event: DragEvent) {
           >
             {{ typeOption.label }}
           </span>
-          <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-            {{ card.title }}
-          </h4>
+        </div>
+        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
+          {{ card.title }}
           <span
             v-if="card.archivedAt"
-            class="text-xs text-gray-400 shrink-0"
+            class="text-xs text-gray-400 font-normal ml-1"
           >
-            archived
+            (archived)
           </span>
-        </div>
+        </h4>
         <p
           v-if="plainDescription"
           class="text-xs text-gray-500 mt-1 line-clamp-2"
@@ -221,7 +221,7 @@ function handleCardDrop(event: DragEvent) {
         <div
           v-if="showMenu"
           ref="menuRef"
-          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-35"
+          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
           @click.stop
         >
           <button
