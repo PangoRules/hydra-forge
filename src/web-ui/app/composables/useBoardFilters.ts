@@ -11,11 +11,6 @@ export function useBoardFilters() {
     set: (val: string) => { board.boardFilters.search = val }
   })
 
-  const type = computed({
-    get: () => board.boardFilters.type,
-    set: (val: string | null) => { board.boardFilters.type = val }
-  })
-
   const assigneeUserId = computed({
     get: () => board.boardFilters.assigneeUserId,
     set: (val: string | null) => { board.boardFilters.assigneeUserId = val }
@@ -31,5 +26,12 @@ export function useBoardFilters() {
     set: (val: boolean) => { board.boardFilters.hideEmptyColumns = val }
   })
 
-  return { search, type, assigneeUserId, includeArchived, hideEmptyColumns }
+  const visibleColumnIds = computed({
+    get: () => board.boardFilters.visibleColumnIds,
+    set: (val: string[]) => { board.boardFilters.visibleColumnIds = val }
+  })
+
+  const columnSelectionActive = computed(() => board.boardFilters.visibleColumnIds.length > 0)
+
+  return { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive }
 }
