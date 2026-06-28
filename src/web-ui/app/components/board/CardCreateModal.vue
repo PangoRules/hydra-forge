@@ -5,7 +5,7 @@ import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 import { onMounted } from 'vue'
-import { CARD_TYPE_OPTIONS, toTypeString } from '~/lib/card-type'
+import { CARD_TYPE_OPTIONS, toTypeString, PARENT_CARD_API_VALUE } from '~/lib/card-type'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type MemberResponse = components['schemas']['MemberResponse']
@@ -44,7 +44,7 @@ const canSave = computed(() => title.value.trim().length > 0 && columnId.value.l
 async function fetchEpics() {
   try {
     const params = new URLSearchParams()
-    params.set('type', 'Epic')
+    params.set('type', PARENT_CARD_API_VALUE)
     const url = `${ApiRoutes.Cards.list(props.projectId)}?${params}`
     const { data } = await api.GET<{ cards: CardResponse[] }>(url)
     epicCards.value = data?.cards ?? []

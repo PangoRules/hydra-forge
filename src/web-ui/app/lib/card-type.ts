@@ -29,6 +29,12 @@ export const CARD_TYPE_OPTIONS = [
 ] as const
 
 /**
+ * API string value for the parent card type filter.
+ * Used in CardCreateModal to populate the Parent dropdown.
+ */
+export const PARENT_CARD_API_VALUE = 'Epic' as const
+
+/**
  * Filter options with "All" first (value: null for untyped cards).
  */
 export const CARD_TYPE_FILTER_OPTIONS = [
