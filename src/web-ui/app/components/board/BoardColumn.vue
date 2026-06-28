@@ -130,7 +130,7 @@ function handleDrop(event: DragEvent) {
           @click="emit('card-click', card)"
           @move-up="(id) => emit('card-move', id, column.id, Math.max(0, Number(card.position) - 1))"
           @move-down="(id) => emit('card-move', id, column.id, Math.min(filteredCards.length - 1, Number(card.position) + 1))"
-          @card-drop="(draggedCardId) => emit('card-move', draggedCardId, column.id, Number(card.position))"
+          @card-drop="(draggedCardId, targetPos) => emit('card-move', draggedCardId, column.id, targetPos)"
         />
       </div>
     </div>

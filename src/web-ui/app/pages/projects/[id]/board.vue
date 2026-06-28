@@ -58,7 +58,6 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
         version: card.version
       }
     })
-    // Update card metadata (position, version) from server response
     if (data) {
       board.updateCard(cardId, data as CardResponse)
     }

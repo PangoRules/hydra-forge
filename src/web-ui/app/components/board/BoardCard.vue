@@ -83,6 +83,7 @@ async function handleRestore() {
 function handleDragStart(event: DragEvent) {
   if (props.readonly) return
   event.dataTransfer!.setData('text/plain', props.card.id)
+  event.dataTransfer!.setData('application/position', String(props.card.position))
   event.dataTransfer!.effectAllowed = 'move'
   isDragging.value = true
 }
@@ -105,7 +106,13 @@ function handleCardDrop(event: DragEvent) {
   if (!event.dataTransfer) return
   const draggedCardId = event.dataTransfer.getData('text/plain')
   if (!draggedCardId || draggedCardId === props.card.id) return
-  emit('card-drop', draggedCardId)
+  // For same-column downward moves, adjust so dragged card lands BEFORE the target
+  const draggedPos = Number(event.dataTransfer.getData('application/position'))
+  let targetPos = Number(props.card.position)
+  if (!isNaN(draggedPos) && draggedPos < targetPos) {
+    targetPos = Math.max(0, targetPos - 1)
+  }
+  emit('card-drop', draggedCardId, targetPos)
 }
 </script>
 
