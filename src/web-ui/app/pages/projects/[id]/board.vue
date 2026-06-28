@@ -287,7 +287,7 @@ watch(
           @archive="handleBulkArchive"
           @clear="board.clearSelection()"
         />
-        <div class="flex-1 overflow-x-auto p-4">
+        <div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden p-4 flex flex-col">
           <BoardView
             :columns="board.visibleColumns"
             :cards-by-column="board.cardsByColumn"

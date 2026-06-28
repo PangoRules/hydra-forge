@@ -73,12 +73,16 @@ Works!
 2. Create dependency via API (link another card as blocks/blocked-by/relates-to) → reopen modal → badge appears with relationship type label
 3. Each linked card shows title + clickable to navigate (if routing wired)
 4. Mobile → dependencies render in "Related" tab
+All this works as expected
 
 ## Task 16 — Card Metadata Editor
 
 1. Open any card modal → metadata sidebar shows: Type, Column, Assignees, Due date, Parent epic
+Working
 2. Change Type from Task → Bug → save → modal refreshes, type shown as Bug, no 409 error
+Working
 3. Stop API → change type → save → red error toast, type reverts
+
 4. Change Column dropdown → save → card column updates
 5. Add an assignee (project member) → appears in assignees list
 6. Remove an assignee → disappears

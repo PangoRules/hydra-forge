@@ -85,7 +85,7 @@ function handleDrop(event: DragEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] h-full shrink-0">
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0">
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
@@ -106,7 +106,7 @@ function handleDrop(event: DragEvent) {
     </ColumnHeader>
 
     <div
-      class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]"
+      class="flex-1 overflow-y-auto p-2 space-y-2 min-h-0"
       :class="{ 'ring-2 ring-primary/30': isDragOver }"
       @dragover.prevent="handleDragOver"
       @dragleave="handleDragLeave"
