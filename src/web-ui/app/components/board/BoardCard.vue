@@ -26,6 +26,7 @@ const showMenu = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
 const menuButtonRef = ref<HTMLElement | null>(null)
 const showArchiveConfirm = ref(false)
+const isDragging = ref(false)
 
 const formattedDue = computed(() => formatDueDate(props.card.dueAt))
 const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
@@ -74,12 +75,27 @@ async function handleRestore() {
     toast.error('Failed to restore card')
   }
 }
+
+function handleDragStart(event: DragEvent) {
+  if (props.readonly) return
+  event.dataTransfer!.setData('text/plain', props.card.id)
+  event.dataTransfer!.effectAllowed = 'move'
+  isDragging.value = true
+}
+
+function handleDragEnd() {
+  isDragging.value = false
+}
 </script>
 
 <template>
   <div
     class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow"
+    :class="{ 'opacity-50': isDragging }"
+    draggable="true"
     @click="emit('click', card)"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
   >
     <div class="flex items-start gap-2">
       <input
@@ -116,6 +132,19 @@ async function handleRestore() {
           {{ plainDescription }}
         </p>
       </div>
+
+      <!-- Drag handle -->
+      <span
+        v-if="!readonly"
+        class="touch-none select-none shrink-0 cursor-grab text-gray-300 hover:text-gray-500"
+        @mousedown.stop
+        @touchstart.stop
+      >
+        <UIcon
+          name="i-lucide-grip-vertical"
+          class="size-4"
+        />
+      </span>
 
       <!-- Three-dot menu -->
       <div

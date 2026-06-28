@@ -20,14 +20,38 @@ const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
 
-const columnName = computed(() => {
-  const col = board.columns.find(c => c.id === props.card.columnId)
-  return col?.name ?? props.card.columnId.slice(0, 8)
-})
-
 const typeOption = computed(() => cardTypeOption(props.card.type))
 const typeValue = computed(() => typeOption.value.apiValue)
 const savingType = ref(false)
+const savingColumn = ref(false)
+
+const currentColumnOption = computed(() =>
+  board.columns.find(c => c.id === props.card.columnId)
+)
+const columnOptions = computed(() =>
+  board.columns.map(c => ({ label: c.name, value: c.id }))
+)
+
+async function handleColumnChange(targetColumnId: string) {
+  if (props.isArchived || targetColumnId === props.card.columnId) return
+  savingColumn.value = true
+  const targetPosition = board.cardsByColumn.get(targetColumnId)?.length ?? 0
+  try {
+    const { data } = await api.POST(ApiRoutes.Cards.move(props.projectId, props.card.id), {
+      body: {
+        targetColumnId,
+        targetPosition,
+        confirmBlockedMove: true,
+        version: props.card.version
+      }
+    })
+    if (data) emit('update:card', data as CardResponse)
+  } catch {
+    toast.error('Failed to move card')
+  } finally {
+    savingColumn.value = false
+  }
+}
 
 const editingDueDate = ref(false)
 const savingDueDate = ref(false)
@@ -135,14 +159,27 @@ async function handleUnassign(userId: string) {
       </UBadge>
     </div>
 
-    <!-- Column (read-only — moved via drag-and-drop on the board) -->
+    <!-- Column -->
     <div>
       <p class="text-xs font-medium text-muted uppercase mb-1">
         Column
       </p>
-      <p class="text-sm">
-        {{ columnName }}
-      </p>
+      <USelect
+        v-if="!isArchived"
+        :model-value="currentColumnOption?.id"
+        :items="columnOptions"
+        :loading="savingColumn"
+        size="xs"
+        class="w-44"
+        @update:model-value="handleColumnChange"
+      />
+      <UBadge
+        v-else
+        color="neutral"
+        variant="subtle"
+      >
+        {{ currentColumnOption?.name ?? props.card.columnId.slice(0, 8) }}
+      </UBadge>
     </div>
 
     <!-- Assignees -->

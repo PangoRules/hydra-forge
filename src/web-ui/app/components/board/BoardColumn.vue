@@ -26,6 +26,8 @@ const columnSearch = ref('')
 const columnType = ref<number | null>(null)
 const columnArchived = ref<boolean | null>(null)
 
+const isDragOver = ref(false)
+
 const filteredCards = computed(() => {
   let result = props.cards
 
@@ -61,6 +63,24 @@ function handleFilterArchived(value: boolean) {
   // false = reset to show all (respect server fetch); true = show archived only
   columnArchived.value = value ? true : null
 }
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+  isDragOver.value = true
+}
+
+function handleDragLeave() {
+  isDragOver.value = false
+}
+
+function handleDrop(event: DragEvent) {
+  event.preventDefault()
+  isDragOver.value = false
+  const cardId = event.dataTransfer!.getData('text/plain')
+  if (!cardId) return
+  emit('card-move', cardId, props.column.id, filteredCards.value.length)
+}
 </script>
 
 <template>
@@ -83,7 +103,13 @@ function handleFilterArchived(value: boolean) {
       </template>
     </ColumnHeader>
 
-    <div class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]">
+    <div
+      class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]"
+      :class="{ 'ring-2 ring-primary/30': isDragOver }"
+      @dragover.prevent="handleDragOver"
+      @dragleave="handleDragLeave"
+      @drop.prevent="handleDrop"
+    >
       <BoardCard
         v-for="card in filteredCards"
         :key="card.id"
