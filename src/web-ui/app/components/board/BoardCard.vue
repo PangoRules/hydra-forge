@@ -36,6 +36,23 @@ const formattedDue = computed(() => formatDueDate(props.card.dueAt))
 const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
 const typeOption = computed(() => cardTypeOption(props.card.type))
 
+const parentCard = computed(() => {
+  if (!props.card.parentCardId) return null
+  for (const cards of board.cardsByColumn.values()) {
+    const found = cards.find(c => c.id === props.card.parentCardId)
+    if (found) return found
+  }
+  return null
+})
+
+const childCount = computed(() => {
+  let count = 0
+  for (const cards of board.cardsByColumn.values()) {
+    count += cards.filter(c => c.parentCardId === props.card.id).length
+  }
+  return count
+})
+
 const plainDescription = computed(() =>
   (props.card.description ?? '').replace(/<[^>]*>/g, '')
 )
@@ -253,15 +270,20 @@ function handleCardDrop(event: DragEvent) {
     <div class="flex items-center justify-between mt-2">
       <div class="flex items-center gap-2">
         <span
-          v-if="card.parentCardId"
+          v-if="parentCard"
           class="text-xs text-primary flex items-center gap-1"
-          title="Has a parent card"
+          :title="parentCard.title"
         >
-          <UIcon
-            name="i-lucide-layers"
-            class="size-3"
-          />
-          Parent
+          <UIcon :name="cardTypeOption(parentCard.type).icon" class="size-3" />
+          {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
+        </span>
+        <span
+          v-if="childCount > 0"
+          class="text-xs text-gray-400 flex items-center gap-1"
+          :title="`Has ${childCount} child card${childCount === 1 ? '' : 's'}`"
+        >
+          <UIcon name="i-lucide-git-merge" class="size-3" />
+          {{ childCount }}
         </span>
         <div
           v-if="card.assignees.length > 0"

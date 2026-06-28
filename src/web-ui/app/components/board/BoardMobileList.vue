@@ -253,6 +253,23 @@ function handleArchive(card: CardResponse) {
 function stripHtml(text: string): string {
   return text.replace(/<[^>]*>/g, '')
 }
+
+function getParentCard(card: CardResponse): CardResponse | null {
+  if (!card.parentCardId) return null
+  for (const cards of props.cardsByColumn.values()) {
+    const found = cards.find(c => c.id === card.parentCardId)
+    if (found) return found
+  }
+  return null
+}
+
+function getChildCount(card: CardResponse): number {
+  let count = 0
+  for (const cards of props.cardsByColumn.values()) {
+    count += cards.filter(c => c.parentCardId === card.id).length
+  }
+  return count
+}
 </script>
 
 <template>
@@ -675,14 +692,20 @@ function stripHtml(text: string): string {
 
                 <!-- Row 5: parent link -->
                 <p
-                  v-if="card.parentCardId"
+                  v-if="getParentCard(card)"
                   class="text-xs mt-1 text-primary flex items-center gap-1"
+                  :title="getParentCard(card)!.title"
                 >
-                  <UIcon
-                    name="i-lucide-layers"
-                    class="size-3"
-                  />
-                  Parent
+                  <UIcon :name="cardTypeOption(getParentCard(card)!.type).icon" class="size-3" />
+                  {{ cardTypeOption(getParentCard(card)!.type).label }} #{{ getParentCard(card)!.cardNumber }}
+                </p>
+                <p
+                  v-if="getChildCount(card) > 0"
+                  class="text-xs mt-1 text-gray-400 flex items-center gap-1"
+                  :title="`Has ${getChildCount(card)} child card${getChildCount(card) === 1 ? '' : 's'}`"
+                >
+                  <UIcon name="i-lucide-git-merge" class="size-3" />
+                  {{ getChildCount(card) }}
                 </p>
               </div>
             </div>
