@@ -14,14 +14,7 @@ const emit = defineEmits<{
   'add-card': []
 }>()
 
-const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive } = useBoardFilters()
-
-function toggleColumn(id: string) {
-  const current = visibleColumnIds.value
-  visibleColumnIds.value = current.includes(id)
-    ? current.filter(c => c !== id)
-    : [...current, id]
-}
+const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
 </script>
 
 <template>
@@ -47,7 +40,7 @@ function toggleColumn(id: string) {
         :class="visibleColumnIds.includes(col.id)
           ? 'bg-primary-500 text-white border-primary-500'
           : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'"
-        @click="toggleColumn(col.id)"
+        @click="toggleColumnVisibility(col.id)"
       >
         {{ col.name }}
       </button>

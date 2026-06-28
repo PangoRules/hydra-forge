@@ -33,5 +33,12 @@ export function useBoardFilters() {
 
   const columnSelectionActive = computed(() => board.boardFilters.visibleColumnIds.length > 0)
 
-  return { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive }
+  function toggleColumnVisibility(id: string) {
+    const current = board.boardFilters.visibleColumnIds
+    board.boardFilters.visibleColumnIds = current.includes(id)
+      ? current.filter(c => c !== id)
+      : [...current, id]
+  }
+
+  return { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility }
 }

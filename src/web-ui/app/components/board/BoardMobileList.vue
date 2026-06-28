@@ -31,7 +31,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
-const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive } = useBoardFilters()
+const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -155,13 +155,6 @@ function onHeaderClick(e: Event, colId: string) {
 // Global filter panel visibility
 const showFilters = ref(false)
 
-function toggleColumnVisibility(id: string) {
-  const current = visibleColumnIds.value
-  visibleColumnIds.value = current.includes(id)
-    ? current.filter(c => c !== id)
-    : [...current, id]
-}
-
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
@@ -208,6 +201,7 @@ const filteredCardsByColumn = computed(() => {
 })
 
 const filteredColumns = computed(() => {
+  if (board.boardFilters.visibleColumnIds.length > 0) return props.columns
   if (!hideEmptyColumns.value) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
@@ -264,6 +258,7 @@ function stripHtml(text: string): string {
       <UButton
         variant="ghost"
         size="sm"
+        data-testid="mobile-filter-btn"
         @click="showFilters = !showFilters"
       >
         Filter
@@ -292,14 +287,14 @@ function stripHtml(text: string): string {
         <span class="text-xs text-gray-500">Columns:</span>
         <div class="flex flex-wrap gap-1">
           <button
-            v-for="col in board.columns"
+            v-for="col in columns"
             :key="col.id"
             type="button"
             data-testid="column-chip"
             class="px-2 py-0.5 rounded-full text-xs border transition-colors"
             :class="visibleColumnIds.includes(col.id)
               ? 'bg-primary-500 text-white border-primary-500'
-              : 'bg-white text-gray-600 border-gray-300'"
+              : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'"
             @click="toggleColumnVisibility(col.id)"
           >
             {{ col.name }}
