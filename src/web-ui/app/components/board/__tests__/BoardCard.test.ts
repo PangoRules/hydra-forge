@@ -113,7 +113,7 @@ describe('BoardCard', () => {
 
   it('renders type-specific icon', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ type: 1 }), projectId: 'p1' } // Bug type
+      props: { card: makeCard({ type: 1 }), projectId: 'p1' } // Issue type
     })
     expect(wrapper.find('.size-4').exists()).toBe(true)
   })

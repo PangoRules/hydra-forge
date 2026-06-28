@@ -255,13 +255,13 @@ function handleCardDrop(event: DragEvent) {
         <span
           v-if="card.parentCardId"
           class="text-xs text-primary flex items-center gap-1"
-          title="Child of an epic"
-        >
+          title="Has a parent card"
+>
           <UIcon
             name="i-lucide-layers"
             class="size-3"
           />
-          Epic
+          Parent
         </span>
         <div
           v-if="card.assignees.length > 0"

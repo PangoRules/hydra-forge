@@ -673,7 +673,7 @@ function stripHtml(text: string): string {
                   {{ formatDueDate(card.dueAt) }}
                 </p>
 
-                <!-- Row 5: epic link -->
+                <!-- Row 5: parent link -->
                 <p
                   v-if="card.parentCardId"
                   class="text-xs mt-1 text-primary flex items-center gap-1"
@@ -682,7 +682,7 @@ function stripHtml(text: string): string {
                     name="i-lucide-layers"
                     class="size-3"
                   />
-                  Epic
+                  Parent
                 </p>
               </div>
             </div>
