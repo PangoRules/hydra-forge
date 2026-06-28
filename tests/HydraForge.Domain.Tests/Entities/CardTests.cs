@@ -8,19 +8,18 @@ public class CardTests
 {
     [Theory]
     [InlineData(CardType.Task)]
-    [InlineData(CardType.Bug)]
-    [InlineData(CardType.Spec)]
+    [InlineData(CardType.Issue)]
     [InlineData(CardType.Idea)]
-    [InlineData(CardType.Epic)]
+    [InlineData(CardType.Goal)]
     public void CardType_AllValues_AreDefined(CardType type)
     {
         Assert.True(Enum.IsDefined(typeof(CardType), type));
     }
 
     [Fact]
-    public void CardType_Epic_HasCorrectValue()
+    public void CardType_Goal_HasCorrectValue()
     {
-        Assert.Equal(5, (int)CardType.Epic);
+        Assert.Equal(5, (int)CardType.Goal);
     }
 
     [Fact]
@@ -89,61 +88,60 @@ public class CardTests
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_SameProject_Succeeds()
+    public void Card_ValidateParent_SameProject_Succeeds()
     {
         var projectId = Guid.NewGuid();
-        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Epic };
+        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal };
         var childCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
 
-        var result = Card.ValidateParentEpic(childCard, parentCard);
+        var result = Card.ValidateParent(childCard, parentCard);
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_DifferentProject_ReturnsInvalidParentEpic()
+    public void Card_ValidateParent_DifferentProject_ReturnsInvalidParent()
     {
-        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Type = CardType.Epic };
+        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Type = CardType.Goal };
         var childCard = new Card { Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Type = CardType.Task };
 
-        var result = Card.ValidateParentEpic(childCard, parentCard);
+        var result = Card.ValidateParent(childCard, parentCard);
 
         Assert.NotNull(result);
-        Assert.Equal(DomainErrorCodes.Cards.InvalidParentEpic, result.Code);
+        Assert.Equal(DomainErrorCodes.Cards.InvalidParent, result.Code);
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_ParentNotEpic_ReturnsInvalidParentEpic()
+    public void Card_ValidateParent_AnyCardType_CanBeParent()
     {
         var projectId = Guid.NewGuid();
         var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
         var childCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
 
-        var result = Card.ValidateParentEpic(childCard, parentCard);
+        var result = Card.ValidateParent(childCard, parentCard);
 
-        Assert.NotNull(result);
-        Assert.Equal(DomainErrorCodes.Cards.InvalidParentEpic, result.Code);
+        Assert.Null(result);
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_SelfReference_ReturnsParentCycle()
+    public void Card_ValidateParent_SelfReference_ReturnsParentCycle()
     {
         var projectId = Guid.NewGuid();
         var card = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
 
-        var result = Card.ValidateParentEpic(card, card);
+        var result = Card.ValidateParent(card, card);
 
         Assert.NotNull(result);
         Assert.Equal(DomainErrorCodes.Cards.ParentCycle, result.Code);
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_AncestorCycle_ReturnsParentCycle()
+    public void Card_ValidateParent_AncestorCycle_ReturnsParentCycle()
     {
         var projectId = Guid.NewGuid();
         var grandchild = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
         var child = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = grandchild.Id };
-        var parent = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Epic, ParentCardId = child.Id };
+        var parent = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal, ParentCardId = child.Id };
         var cardMap = new Dictionary<Guid, Card>
         {
             { grandchild.Id, grandchild },
@@ -151,21 +149,21 @@ public class CardTests
             { parent.Id, parent }
         };
 
-        var result = Card.ValidateParentEpic(grandchild, parent, cardMap);
+        var result = Card.ValidateParent(grandchild, parent, cardMap);
 
         Assert.NotNull(result);
         Assert.Equal(DomainErrorCodes.Cards.ParentCycle, result.Code);
     }
 
     [Fact]
-    public void Card_ValidateParentEpic_ValidAncestorChain_Succeeds()
+    public void Card_ValidateParent_ValidAncestorChain_Succeeds()
     {
         var projectId = Guid.NewGuid();
-        var epic = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Epic };
-        var child = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = epic.Id };
+        var goal = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal };
+        var child = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = goal.Id };
         var grandchild = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = child.Id };
 
-        var result = Card.ValidateParentEpic(grandchild, epic);
+        var result = Card.ValidateParent(grandchild, goal);
 
         Assert.Null(result);
     }
@@ -175,11 +173,11 @@ public class CardTests
     {
         var card = new Card { Version = 1 };
 
-        card.UpdateDetails("Updated Title", "Updated Desc", CardType.Bug, Guid.NewGuid(), DateTime.UtcNow.AddDays(1));
+        card.UpdateDetails("Updated Title", "Updated Desc", CardType.Issue, Guid.NewGuid(), DateTime.UtcNow.AddDays(1));
 
         Assert.Equal("Updated Title", card.Title);
         Assert.Equal("Updated Desc", card.Description);
-        Assert.Equal(CardType.Bug, card.Type);
+        Assert.Equal(CardType.Issue, card.Type);
         Assert.NotNull(card.ParentCardId);
         Assert.NotNull(card.DueAt);
         Assert.Equal(2, card.Version);

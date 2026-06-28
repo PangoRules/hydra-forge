@@ -64,7 +64,7 @@ public class CardService(
                         new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
                     );
 
-                var parentError = Card.ValidateParentEpic(
+var parentError = Card.ValidateParent(
                     new Card
                     {
                         Id = Guid.Empty,
@@ -325,7 +325,7 @@ public class CardService(
                     new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
                 );
 
-            var parentError = Card.ValidateParentEpic(card, parentCard);
+            var parentError = Card.ValidateParent(card, parentCard);
             if (parentError != null)
                 return Result<CardDto>.Failure(parentError);
         }
