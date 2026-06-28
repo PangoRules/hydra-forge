@@ -70,11 +70,11 @@ public class ProjectsController(
 
     [HttpGet]
     [ProducesResponseType(typeof(List<ProjectListResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> List()
+    public async Task<IActionResult> List([FromQuery] bool includeArchived = false)
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await projectService.GetAllAsync(userId);
+        var result = await projectService.GetAllAsync(userId, includeArchived);
 
         if (result.IsFailure)
         {
@@ -92,6 +92,24 @@ public class ProjectsController(
             ))
             .ToList();
         return Ok(response);
+    }
+
+    [HttpPost("{projectId:guid}/toggle-archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleArchive(Guid projectId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new ToggleProjectArchiveCommand(projectId, userId);
+        var result = await projectService.ToggleArchiveAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return NoContent();
     }
 
     [HttpGet("{projectId:guid}")]
@@ -192,24 +210,6 @@ public class ProjectsController(
         );
 
         return Ok(response);
-    }
-
-    [HttpDelete("{projectId:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid projectId)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new ArchiveProjectCommand(projectId, userId);
-        var result = await projectService.ArchiveAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
     }
 
     [HttpGet("{projectId:guid}/members")]

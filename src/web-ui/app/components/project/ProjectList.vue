@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import ProjectCard from '~/components/project/ProjectCard.vue'
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 
@@ -9,14 +10,16 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [projectId: string]
+  'select': [projectId: string]
+  'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]
+  'edit': [projectId: string]
 }>()
 </script>
 
 <template>
   <div
     v-if="loading"
-    class="flex justify-center p-8"
+    class="flex justify-center items-center p-8 min-h-[200px]"
   >
     <UIcon
       name="i-lucide-loader"
@@ -26,7 +29,7 @@ const emit = defineEmits<{
 
   <div
     v-else-if="projects.length === 0"
-    class="text-center p-8 text-muted"
+    class="text-center p-8 text-muted min-h-[200px] flex items-center justify-center"
   >
     <p>No projects yet. Create your first project!</p>
   </div>
@@ -35,20 +38,13 @@ const emit = defineEmits<{
     v-else
     class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
   >
-    <UCard
+    <ProjectCard
       v-for="project in projects"
       :key="project.id"
-      class="cursor-pointer hover:ring-2 hover:ring-primary transition-shadow"
-      @click="emit('select', project.id)"
-    >
-      <template #header>
-        <h3 class="font-semibold truncate">
-          {{ project.name }}
-        </h3>
-      </template>
-      <p class="text-sm text-muted line-clamp-2">
-        {{ project.description ?? 'No description' }}
-      </p>
-    </UCard>
+      :project="project"
+      @select="emit('select', $event)"
+      @toggle-archive="emit('toggle-archive', $event)"
+      @edit="emit('edit', $event)"
+    />
   </div>
 </template>

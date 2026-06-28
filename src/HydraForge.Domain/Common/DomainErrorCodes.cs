@@ -51,6 +51,7 @@ public static class DomainErrorCodes
         public const string ParentCycle = "CARD_PARENT_CYCLE";
         public const string BlockedMoveWarning = "CARD_BLOCKED_MOVE_WARNING";
         public const string ConcurrencyMismatch = "CARD_CONCURRENCY_MISMATCH";
+        public const string ConcurrencyConflict = "CARD_CONCURRENCY_CONFLICT";
     }
 
     public static class Checklist

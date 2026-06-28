@@ -6,7 +6,7 @@ public interface IProjectRepository
 {
     Task AddAsync(Project project, CancellationToken ct = default);
     Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default);
     Task UpdateAsync(Project project, CancellationToken ct = default);
 }
 

@@ -14,7 +14,7 @@
 - [x] Task 2: Project List & Board View
 - [x] Task 3: Card Modal Core — Desktop Split + Mobile Tabs + Tiptap Description
 - [x] Task 3A: Card Modal Hardening — useApi try/catch fixes, version ownership lift to CardModal, shared card-type/date utils (prerequisite for Task 4)
-- [ ] Task 4: Card Modal Panels — Checklist, Comments, Attachments, Dependencies, Metadata
+- [x] Task 4: Card Modal Panels — Checklist, Comments, Attachments, Dependencies, Metadata
 - [ ] Task 4A: Board Filtering & Quick-Add — filter bar, per-column search, archived toggle, card create modal
 - [ ] Task 4B: E2E Testing Foundation — Playwright setup, auth fixture, save/debounce + archive/restore + concurrency specs, CI job
 - [ ] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub

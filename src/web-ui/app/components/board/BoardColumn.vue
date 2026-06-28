@@ -11,12 +11,18 @@ const props = defineProps<{
   cards: CardResponse[]
   projectId: string
   includeArchived: boolean
+  readonly?: boolean
+  canMoveLeft?: boolean
+  canMoveRight?: boolean
 }>()
 
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
   'add-card': [columnId: string]
+  'reorder': [draggedColumnId: string, targetColumnId: string]
+  'move-left': []
+  'move-right': []
 }>()
 
 // Per-column filter state
@@ -24,6 +30,8 @@ const emit = defineEmits<{
 const columnSearch = ref('')
 const columnType = ref<number | null>(null)
 const columnArchived = ref<boolean | null>(null)
+
+const isDragOver = ref(false)
 
 const filteredCards = computed(() => {
   let result = props.cards
@@ -60,17 +68,41 @@ function handleFilterArchived(value: boolean) {
   // false = reset to show all (respect server fetch); true = show archived only
   columnArchived.value = value ? true : null
 }
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+  isDragOver.value = true
+}
+
+function handleDragLeave() {
+  isDragOver.value = false
+}
+
+function handleDrop(event: DragEvent) {
+  event.preventDefault()
+  isDragOver.value = false
+  const cardId = event.dataTransfer!.getData('text/plain')
+  if (!cardId) return
+  emit('card-move', cardId, props.column.id, filteredCards.value.length)
+}
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] h-full shrink-0">
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0">
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
       :include-archived="includeArchived"
+      :readonly="readonly"
+      :can-move-left="canMoveLeft"
+      :can-move-right="canMoveRight"
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"
+      @reorder="(a: string, b: string) => emit('reorder', a, b)"
+      @move-left="emit('move-left')"
+      @move-right="emit('move-right')"
     >
       <template #filter-row>
         <input
@@ -81,14 +113,26 @@ function handleFilterArchived(value: boolean) {
       </template>
     </ColumnHeader>
 
-    <div class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[100px]">
-      <BoardCard
-        v-for="card in filteredCards"
-        :key="card.id"
-        :card="card"
-        :project-id="projectId"
-        @click="emit('card-click', card)"
-      />
+    <div class="flex-1 relative min-h-0">
+      <div
+        class="absolute inset-0 overflow-y-auto p-2 space-y-2"
+        :class="{ 'ring-2 ring-primary/30': isDragOver }"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
+        <BoardCard
+          v-for="card in filteredCards"
+          :key="card.id"
+          :card="card"
+          :project-id="projectId"
+          :readonly="readonly"
+          @click="emit('card-click', card)"
+          @move-up="(id) => emit('card-move', id, column.id, Math.max(0, Number(card.position) - 1))"
+          @move-down="(id) => emit('card-move', id, column.id, Math.min(filteredCards.length - 1, Number(card.position) + 1))"
+          @card-drop="(draggedCardId, targetPos) => emit('card-move', draggedCardId, column.id, targetPos)"
+        />
+      </div>
     </div>
   </div>
 </template>

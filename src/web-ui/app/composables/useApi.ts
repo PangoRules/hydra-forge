@@ -12,7 +12,7 @@ export interface ApiResponse<T> {
 
 function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const config = useRuntimeConfig()
-  const { getToken, clearToken } = useAuthToken()
+  const { clearToken } = useAuthToken()
 
   const client = createClient<paths>({
     baseUrl: config.public.apiBaseUrl as string,
@@ -23,7 +23,7 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
 
   client.use({
     async onRequest({ request }) {
-      const token = getToken()
+      const token = store.token
       if (token) {
         request.headers.set('Authorization', `Bearer ${token}`)
       }
@@ -107,6 +107,7 @@ export function useApi() {
     POST: (url: string, opts?: unknown) => Promise<unknown>
     PUT: (url: string, opts?: unknown) => Promise<unknown>
     DELETE: (url: string, opts?: unknown) => Promise<unknown>
+    PATCH: (url: string, opts?: unknown) => Promise<unknown>
   }
 
   async function get<T>(url: string): Promise<ApiResponse<T>> {
@@ -129,5 +130,10 @@ export function useApi() {
     return result as ApiResponse<T>
   }
 
-  return { GET: get, POST: post, PUT: put, DELETE: del }
+  async function patch<T>(url: string, opts?: Record<string, unknown>): Promise<ApiResponse<T>> {
+    const result = await (client as unknown as UntypedClient).PATCH(url, opts)
+    return result as ApiResponse<T>
+  }
+
+  return { GET: get, POST: post, PUT: put, DELETE: del, PATCH: patch }
 }

@@ -147,7 +147,7 @@ public class ProjectsControllerTests
     }
 
     [Fact]
-    public async Task Delete_NonOwner_Returns403()
+    public async Task ToggleArchive_NonOwner_Returns403()
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
@@ -155,10 +155,10 @@ public class ProjectsControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Delete Test" });
+        factory.AddProject(new Project { Id = projectId, Name = "Archive Test" });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/toggle-archive");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -346,7 +346,7 @@ internal class TestProjectRepository : IProjectRepository
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<Project?>(_projects.FirstOrDefault(p => p.Id == id));
 
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Project>>(_projects);
 
     public Task UpdateAsync(Project project, CancellationToken ct = default)

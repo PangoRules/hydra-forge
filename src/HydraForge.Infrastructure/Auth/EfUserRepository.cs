@@ -23,10 +23,22 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.UsernameNormalized == normalized);
     }
 
-    public async Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
     {
-        var normalized = usernames.Select(u => u.ToLowerInvariant()).ToList();
-        var users = await context.Users.Where(u => normalized.Contains(u.UsernameNormalized)).ToListAsync(ct);
+        IQueryable<User> query = context.Users;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var normalized = searchTerm.ToLowerInvariant();
+            query = query.Where(u => EF.Functions.ILike(u.Username, $"%{normalized}%"));
+        }
+        else if (usernames.Count > 0)
+        {
+            var normalized = usernames.Select(u => u.ToLowerInvariant()).ToList();
+            query = query.Where(u => normalized.Contains(u.UsernameNormalized));
+        }
+
+        var users = await query.Take(maxResults).ToListAsync(ct);
         return users.ToDictionary(u => u.Username, u => u, StringComparer.OrdinalIgnoreCase);
     }
 

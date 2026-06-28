@@ -26,4 +26,10 @@ public class Project
         ArchivedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Restore()
+    {
+        ArchivedAt = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

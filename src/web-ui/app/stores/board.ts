@@ -143,6 +143,10 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
+  function setColumnOrder(newOrder: ColumnResponse[]) {
+    columns.value = newOrder
+  }
+
   const visibleColumns = computed(() => {
     if (!boardFilters.value.hideEmptyColumns) return columns.value
     const colIdsWithCards = new Set<string>()
@@ -161,7 +165,7 @@ export const useBoardStore = defineStore('board', () => {
 
   return {
     project, columns, cardsByColumn, loading, error,
-    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard,
+    fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard, setColumnOrder,
     boardFilters, visibleColumns,
     members, fetchMembers,
     selectedCardIds, selectedCount, toggleSelectCard, clearSelection

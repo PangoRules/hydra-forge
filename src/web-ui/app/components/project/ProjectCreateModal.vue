@@ -20,6 +20,11 @@ const showAdvanced = ref(false)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+const selectedMembers = ref<Array<{ id: string, username: string }>>([])
+const searchQuery = ref('')
+const searchResults = ref<Array<{ id: string, username: string }>>([])
+const searching = ref(false)
+
 const gitProviders = [
   { label: 'GitHub', value: 'github' },
   { label: 'GitLab', value: 'gitlab' },
@@ -28,6 +33,7 @@ const gitProviders = [
 ]
 
 const api = useApi()
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 function onClose() {
   emit('update:open', false)
@@ -41,17 +47,53 @@ function resetForm() {
   gitProvider.value = undefined
   showAdvanced.value = false
   error.value = null
+  selectedMembers.value = []
+  searchQuery.value = ''
+  searchResults.value = []
 }
 
 watch(() => props.open, (val) => {
   if (!val) resetForm()
 })
 
+async function searchUsers() {
+  if (searchQuery.value.length < 2) {
+    searchResults.value = []
+    return
+  }
+  searching.value = true
+  try {
+    const { data } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
+    const existingIds = new Set(selectedMembers.value.map(m => m.id))
+    searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
+      .filter(u => !existingIds.has(u.id))
+  } catch {
+    searchResults.value = []
+  } finally {
+    searching.value = false
+  }
+}
+
+function onSearchInput() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(searchUsers, 300)
+}
+
+function addMember(user: { id: string, username: string }) {
+  selectedMembers.value.push(user)
+  searchQuery.value = ''
+  searchResults.value = []
+}
+
+function removeMember(userId: string) {
+  selectedMembers.value = selectedMembers.value.filter(m => m.id !== userId)
+}
+
 async function handleSubmit() {
   error.value = null
   loading.value = true
   try {
-    const { error: apiError } = await api.POST(ApiRoutes.Projects.create(), {
+    const { data } = await api.POST(ApiRoutes.Projects.create(), {
       body: {
         name: name.value,
         description: description.value,
@@ -59,7 +101,15 @@ async function handleSubmit() {
         gitProvider: gitProvider.value ?? null
       }
     })
-    if (apiError) throw apiError
+
+    // Add selected members
+    const projectId = (data as { id: string }).id
+    for (const member of selectedMembers.value) {
+      await api.POST(ApiRoutes.Projects.members(projectId), {
+        body: { userId: member.id, role: 2 }
+      })
+    }
+
     onClose()
     emit('created')
   } catch (e: unknown) {
@@ -107,6 +157,65 @@ async function handleSubmit() {
             class="w-full"
           />
         </UFormField>
+
+        <!-- Members -->
+        <div>
+          <UFormField
+            label="Add Members"
+            class="w-full"
+          >
+            <UInput
+              v-model="searchQuery"
+              placeholder="Search users to add..."
+              size="sm"
+              :loading="searching"
+              @input="onSearchInput"
+            />
+            <div
+              v-if="searchResults.length > 0"
+              class="relative"
+            >
+              <div class="absolute z-10 top-1 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                <button
+                  v-for="user in searchResults"
+                  :key="user.id"
+                  type="button"
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  @click="addMember(user)"
+                >
+                  <UAvatar
+                    :username="user.username"
+                    size="xs"
+                  />
+                  {{ user.username }}
+                </button>
+              </div>
+            </div>
+          </UFormField>
+          <div
+            v-if="selectedMembers.length > 0"
+            class="flex flex-wrap gap-2 mt-2"
+          >
+            <UBadge
+              v-for="member in selectedMembers"
+              :key="member.id"
+              variant="subtle"
+              class="flex items-center gap-1"
+            >
+              {{ member.username }}
+              <button
+                type="button"
+                class="hover:text-red-500"
+                @click="removeMember(member.id)"
+              >
+                <UIcon
+                  name="i-lucide-x"
+                  class="size-3"
+                />
+              </button>
+            </UBadge>
+          </div>
+        </div>
 
         <!-- Advanced -->
         <div>

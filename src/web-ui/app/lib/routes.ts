@@ -27,13 +27,17 @@ export const ApiRoutes = {
     refresh: '/api/Auth/refresh'
   },
 
+  Users: {
+    search: (query: string, limit = 10, excludeProjectId?: string) =>
+      `/api/Users/search?q=${encodeURIComponent(query)}&limit=${limit}${excludeProjectId ? `&excludeProjectId=${excludeProjectId}` : ''}`
+  },
+
   Projects: {
     list: () => '/api/Projects',
     create: () => '/api/Projects',
     detail: (projectId: string) => `/api/Projects/${projectId}`,
     update: (projectId: string) => `/api/Projects/${projectId}`,
-    archive: (projectId: string) => `/api/Projects/${projectId}/archive`,
-    restore: (projectId: string) => `/api/Projects/${projectId}/restore`,
+    toggleArchive: (projectId: string) => `/api/Projects/${projectId}/toggle-archive`,
     members: (projectId: string) => `/api/Projects/${projectId}/members`,
     member: (projectId: string, memberId: string) => `/api/Projects/${projectId}/members/${memberId}`
   },

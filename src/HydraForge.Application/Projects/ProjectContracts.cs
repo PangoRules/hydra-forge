@@ -19,9 +19,7 @@ public record UpdateProjectCommand(
     string? GitProvider
 );
 
-public record ArchiveProjectCommand(Guid ProjectId, Guid ActorId);
-
-public record DeleteProjectCommand(Guid ProjectId, Guid ActorId);
+public record ToggleProjectArchiveCommand(Guid ProjectId, Guid ActorId);
 
 public record AddProjectMemberCommand(
     Guid ProjectId,

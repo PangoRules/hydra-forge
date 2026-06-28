@@ -94,7 +94,7 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ArchivedProject_ReturnsArchived()
+    public async Task GetByIdAsync_ArchivedProject_ReturnsProject()
     {
         var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
         var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
@@ -105,8 +105,8 @@ public class ProjectServiceTests
 
         var result = await handler.GetByIdAsync(projectId, userId);
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Projects.Archived, result.Error.Code);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value.ArchivedAt);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class ProjectServiceTests
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
 
-        var result = await handler.ArchiveAsync(new ArchiveProjectCommand(projectId, ownerId));
+        var result = await handler.ToggleArchiveAsync(new ToggleProjectArchiveCommand(projectId, ownerId));
 
         Assert.True(result.IsSuccess);
         Assert.Contains(projectId, chatService.ArchivedProjectIds);
@@ -178,7 +178,7 @@ public class ProjectServiceTests
         repo.Projects.Add(new Project { Id = projectId, Name = "To Archive" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
 
-        var result = await handler.ArchiveAsync(new ArchiveProjectCommand(projectId, ownerId));
+        var result = await handler.ToggleArchiveAsync(new ToggleProjectArchiveCommand(projectId, ownerId));
 
         Assert.True(result.IsSuccess);
         var log = Assert.Single(auditWriter.Writes);
@@ -187,28 +187,6 @@ public class ProjectServiceTests
         Assert.Equal("Project", log.EntityType);
         Assert.Equal(projectId, log.EntityId);
         Assert.Equal("Archived", log.Action);
-        Assert.Equal(projectId, log.ProjectId);
-    }
-
-    [Fact]
-    public async Task DeleteProject_WritesAuditLog()
-    {
-        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
-        var projectId = Guid.NewGuid();
-        var ownerId = Guid.NewGuid();
-        repo.Projects.Add(new Project { Id = projectId, Name = "To Delete" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-
-        var result = await handler.DeleteAsync(new DeleteProjectCommand(projectId, ownerId));
-
-        Assert.True(result.IsSuccess);
-        var log = Assert.Single(auditWriter.Writes);
-        Assert.Equal(AuditLogScope.Project, log.Scope);
-        Assert.Equal(ownerId, log.ActorId);
-        Assert.Equal("Project", log.EntityType);
-        Assert.Equal(projectId, log.EntityId);
-        Assert.Equal("Deleted", log.Action);
         Assert.Equal(projectId, log.ProjectId);
     }
 
@@ -252,7 +230,7 @@ internal class InMemoryProjectRepository : IProjectRepository
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(Projects.FirstOrDefault(p => p.Id == id));
 
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Project>>(Projects);
 
     public Task UpdateAsync(Project project, CancellationToken ct = default)
@@ -398,8 +376,8 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
     public Task<HydraForge.Domain.Entities.Auth.User?> FindByUsernameAsync(string username)
         => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
 
-    public Task<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<string, HydraForge.Domain.Entities.Auth.User>());
+    public Task<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+=> Task.FromResult<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<string, HydraForge.Domain.Entities.Auth.User>());
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
         => Task.CompletedTask;

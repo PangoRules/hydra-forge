@@ -215,6 +215,6 @@ no auth
 
 # ── Cleanup ─────────────────────────────────────────────────
 
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/toggle-archive HTTP/1.1
 Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-att-016

@@ -10,6 +10,7 @@ type CardResponse = components['schemas']['CardResponse']
 const props = defineProps<{
   cardId: string
   projectId: string
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,8 +25,10 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const isArchived = computed(() => !!card.value?.archivedAt)
-const toast = useToast()
+const isReadonly = computed(() => props.readonly || isArchived.value)
+const toast = useAppToast()
 const showArchiveConfirm = ref(false)
+const checklistRefresh = ref(0)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
 
@@ -34,6 +37,12 @@ const tabs = [
   { label: 'Checklist', value: 'checklist' as const },
   { label: 'Comments', value: 'comments' as const },
   { label: 'Related', value: 'related' as const }
+]
+
+const desktopTabs = [
+  { label: 'Details', value: 'details' as const },
+  { label: 'Checklist', value: 'checklist' as const },
+  { label: 'Comments', value: 'comments' as const }
 ]
 
 const api = useApi()
@@ -69,11 +78,11 @@ async function confirmArchive() {
     await api.POST(ApiRoutes.Cards.archive(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card archived', color: 'success', duration: 4000 })
+    toast.success('Card archived')
     emit('archived')
     closeWithAnimation()
   } catch {
-    toast.add({ title: 'Failed to archive card', color: 'error' })
+    toast.error('Failed to archive card')
   }
 }
 
@@ -82,19 +91,18 @@ async function handleRestore() {
     await api.POST(ApiRoutes.Cards.restore(props.projectId, card.value!.id), {
       body: { version: card.value!.version }
     })
-    toast.add({ title: 'Card restored', color: 'success', duration: 4000 })
+    toast.success('Card restored')
     emit('restored')
     closeWithAnimation()
   } catch {
-    toast.add({ title: 'Failed to restore card', color: 'error' })
+    toast.error('Failed to restore card')
   }
 }
 
 async function fetchCard() {
   loading.value = true
   try {
-    const { data, error: apiError } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
-    if (apiError) throw apiError
+    const { data } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
     card.value = data as CardResponse
   } catch (e: unknown) {
     error.value = e instanceof ApiError ? e.message : 'Failed to load card'
@@ -124,7 +132,7 @@ onMounted(() => fetchCard())
     <template #header-trailing>
       <div class="flex items-center gap-1">
         <UButton
-          v-if="card && !isArchived"
+          v-if="card && !isReadonly && !isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive"
@@ -132,7 +140,7 @@ onMounted(() => fetchCard())
           @click="handleArchive"
         />
         <UButton
-          v-else-if="card && isArchived"
+          v-else-if="card && !isReadonly && isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive-restore"
@@ -144,32 +152,38 @@ onMounted(() => fetchCard())
 
     <template #body>
       <template v-if="card">
-        <!-- Desktop: two-column with tabs in left pane -->
-        <div class="hidden md:flex max-h-[70vh] overflow-hidden">
-          <div class="flex-1 flex flex-col overflow-hidden">
-            <UTabs
-              v-model="activeTab"
-              :items="tabs"
-              class="border-b flex-shrink-0 px-3"
-            />
-            <div class="flex-1 overflow-y-auto p-4">
+        <!-- Desktop: two-column — UModal handles overflow naturally -->
+        <div class="hidden md:flex flex-col">
+          <UTabs
+            v-model="activeTab"
+            :items="desktopTabs"
+            class="border-b px-3"
+          />
+          <div class="flex p-4">
+            <div class="flex-1 pr-4">
               <div v-if="activeTab === 'details'">
                 <CardDescription
                   :card="card"
                   :project-id="projectId"
-                  :is-archived="isArchived"
+                  :is-archived="isReadonly"
                   @update:card="applyCardUpdate"
                 />
               </div>
               <div v-else-if="activeTab === 'checklist'">
-                <p class="text-sm text-muted">
-                  Checklist coming soon
-                </p>
+                <CardChecklist
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                  :refresh-key="checklistRefresh"
+                  @updated="checklistRefresh++"
+                />
               </div>
               <div v-else-if="activeTab === 'comments'">
-                <p class="text-sm text-muted">
-                  Comments coming soon
-                </p>
+                <CardComments
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                />
               </div>
               <div v-else-if="activeTab === 'related'">
                 <div class="space-y-4">
@@ -179,22 +193,48 @@ onMounted(() => fetchCard())
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="w-64 flex-shrink-0 border-l overflow-y-auto p-4">
-            <CardMetadata :card="card" />
+            <div class="w-64 flex-shrink-0 border-l pl-4 space-y-6">
+              <CardMetadata
+                :card="card"
+                :project-id="projectId"
+                :is-archived="isReadonly"
+                @update:card="applyCardUpdate"
+              />
+              <USeparator />
+              <CardChecklist
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+                :refresh-key="checklistRefresh"
+                :visible-limit="4"
+                @updated="checklistRefresh++"
+              />
+              <USeparator />
+              <CardAttachments
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <USeparator />
+              <CardDependencies
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+            </div>
           </div>
         </div>
 
-        <!-- Mobile: tabbed -->
-        <div class="md:hidden flex flex-col max-h-[70vh] overflow-hidden">
+        <!-- Mobile: tabbed — UModal handles overflow naturally -->
+        <div class="md:hidden flex flex-col">
           <UTabs
             v-model="activeTab"
             :items="tabs"
             class="border-b px-3"
           />
 
-          <div class="flex-1 overflow-y-auto p-4">
+          <div class="p-4">
             <div
               v-if="activeTab === 'details'"
               class="space-y-4"
@@ -202,31 +242,48 @@ onMounted(() => fetchCard())
               <CardDescription
                 :card="card"
                 :project-id="projectId"
-                :is-archived="isArchived"
+                :is-archived="isReadonly"
                 @update:card="applyCardUpdate"
               />
-              <CardMetadata :card="card" />
+              <CardMetadata
+                :card="card"
+                :project-id="projectId"
+                :is-archived="isReadonly"
+                @update:card="applyCardUpdate"
+              />
             </div>
 
             <div v-else-if="activeTab === 'checklist'">
-              <p class="text-sm text-muted">
-                Checklist coming soon
-              </p>
+              <CardChecklist
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
             </div>
 
             <div v-else-if="activeTab === 'comments'">
-              <p class="text-sm text-muted">
-                Comments coming soon
-              </p>
+              <CardComments
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
             </div>
 
             <div
               v-else-if="activeTab === 'related'"
               class="space-y-4"
             >
-              <p class="text-sm text-muted">
-                Attachments, dependencies, specs, plans coming soon
-              </p>
+              <CardAttachments
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <USeparator />
+              <CardDependencies
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
             </div>
           </div>
         </div>

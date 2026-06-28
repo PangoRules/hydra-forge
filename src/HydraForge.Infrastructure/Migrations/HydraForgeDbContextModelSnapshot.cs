@@ -1377,7 +1377,8 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SourceCardId", "TargetCardId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ArchivedAt\" IS NULL");
 
                     b.ToTable("card_relationships", (string)null);
                 });
