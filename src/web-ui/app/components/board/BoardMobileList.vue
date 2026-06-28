@@ -2,7 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import { useEventListener } from '@vueuse/core'
+import { useEventListener, onClickOutside } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
@@ -155,6 +155,11 @@ function onHeaderClick(e: Event, colId: string) {
 // Global filter panel visibility
 const showFilters = ref(false)
 
+// Column visibility dropdown
+const showColumnPicker = ref(false)
+const columnPickerRef = ref<HTMLElement | null>(null)
+onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
+
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
@@ -282,23 +287,33 @@ function stripHtml(text: string): string {
       v-if="showFilters"
       class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
-      <!-- Column visibility chips -->
-      <div class="flex flex-col gap-1 w-full">
-        <span class="text-xs text-gray-500">Columns:</span>
-        <div class="flex flex-wrap gap-1">
-          <button
+      <!-- Column visibility dropdown -->
+      <div class="relative" ref="columnPickerRef">
+        <UButton
+          size="sm"
+          variant="outline"
+          data-testid="column-visibility-trigger"
+          @click="showColumnPicker = !showColumnPicker"
+        >
+          {{ columnSelectionActive ? `${visibleColumnIds.length} column${visibleColumnIds.length > 1 ? 's' : ''}` : 'All columns' }}
+        </UButton>
+        <div
+          v-if="showColumnPicker"
+          class="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-2 min-w-[160px]"
+        >
+          <label
             v-for="col in columns"
             :key="col.id"
-            type="button"
-            data-testid="column-chip"
-            class="px-2 py-0.5 rounded-full text-xs border transition-colors"
-            :class="visibleColumnIds.includes(col.id)
-              ? 'bg-primary-500 text-white border-primary-500'
-              : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'"
-            @click="toggleColumnVisibility(col.id)"
+            class="flex items-center gap-2 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer whitespace-nowrap"
           >
+            <input
+              type="checkbox"
+              :checked="visibleColumnIds.includes(col.id)"
+              @change="toggleColumnVisibility(col.id)"
+              class="rounded"
+            >
             {{ col.name }}
-          </button>
+          </label>
         </div>
       </div>
       <select

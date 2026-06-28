@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
+import { onClickOutside } from '@vueuse/core'
 
 type MemberResponse = components['schemas']['MemberResponse']
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -15,6 +16,10 @@ const emit = defineEmits<{
 }>()
 
 const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
+
+const showColumnPicker = ref(false)
+const columnPickerRef = ref<HTMLElement | null>(null)
+onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
 </script>
 
 <template>
@@ -28,22 +33,34 @@ const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumn
       class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
     >
 
-    <!-- Column visibility chips -->
-    <div class="flex items-center gap-1 flex-wrap">
-      <span class="text-xs text-gray-500 whitespace-nowrap">Columns:</span>
-      <button
-        v-for="col in columns"
-        :key="col.id"
-        type="button"
-        data-testid="column-chip"
-        class="px-2 py-0.5 rounded-full text-xs border transition-colors"
-        :class="visibleColumnIds.includes(col.id)
-          ? 'bg-primary-500 text-white border-primary-500'
-          : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'"
-        @click="toggleColumnVisibility(col.id)"
+    <!-- Column visibility dropdown -->
+    <div class="relative" ref="columnPickerRef">
+      <UButton
+        size="sm"
+        variant="outline"
+        data-testid="column-visibility-trigger"
+        @click="showColumnPicker = !showColumnPicker"
       >
-        {{ col.name }}
-      </button>
+        {{ columnSelectionActive ? `${visibleColumnIds.length} column${visibleColumnIds.length > 1 ? 's' : ''}` : 'All columns' }}
+      </UButton>
+      <div
+        v-if="showColumnPicker"
+        class="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-2 min-w-[160px]"
+      >
+        <label
+          v-for="col in columns"
+          :key="col.id"
+          class="flex items-center gap-2 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer whitespace-nowrap"
+        >
+          <input
+            type="checkbox"
+            :checked="visibleColumnIds.includes(col.id)"
+            @change="toggleColumnVisibility(col.id)"
+            class="rounded"
+          >
+          {{ col.name }}
+        </label>
+      </div>
     </div>
 
     <!-- Assignee filter -->
@@ -100,6 +117,7 @@ const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumn
       size="sm"
       icon="i-lucide-plus"
       color="primary"
+      data-testid="add-card-btn"
       @click="emit('add-card')"
     >
       Add card

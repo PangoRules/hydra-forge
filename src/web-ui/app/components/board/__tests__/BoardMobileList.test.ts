@@ -119,7 +119,7 @@ describe('BoardMobileList', () => {
     expect(wrapper.text()).toContain('▶')
   })
 
-  it('renders column chips in filter panel', async () => {
+  it('renders column visibility trigger in filter panel', async () => {
     const columns = [makeColumn('col1', 'Backlog'), makeColumn('col2', 'In Progress')]
     const cardsByColumn = new Map([['col1', []], ['col2', []]])
     const wrapper = await mountSuspended(BoardMobileList, {
@@ -127,13 +127,10 @@ describe('BoardMobileList', () => {
     })
     await wrapper.find('[data-testid="mobile-filter-btn"]').trigger('click')
     await wrapper.vm.$nextTick()
-    const chips = wrapper.findAll('[data-testid="column-chip"]')
-    expect(chips).toHaveLength(2)
-    expect(chips.at(0)!.text()).toBe('Backlog')
-    expect(chips.at(1)!.text()).toBe('In Progress')
+    expect(wrapper.find('[data-testid="column-visibility-trigger"]').exists()).toBe(true)
   })
 
-  it('toggles column chip selected state on click', async () => {
+  it('opens column dropdown with checkboxes on trigger click', async () => {
     const columns = [makeColumn('col1', 'Backlog')]
     const cardsByColumn = new Map([['col1', []]])
     const wrapper = await mountSuspended(BoardMobileList, {
@@ -141,14 +138,11 @@ describe('BoardMobileList', () => {
     })
     await wrapper.find('[data-testid="mobile-filter-btn"]').trigger('click')
     await wrapper.vm.$nextTick()
-    const chip = wrapper.find('[data-testid="column-chip"]')
-    expect(chip.classes()).not.toContain('bg-primary-500')
-    await chip.trigger('click')
+    await wrapper.find('[data-testid="column-visibility-trigger"]').trigger('click')
     await wrapper.vm.$nextTick()
-    expect(chip.classes()).toContain('bg-primary-500')
-    await chip.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect(chip.classes()).not.toContain('bg-primary-500')
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    expect(checkbox.exists()).toBe(true)
+    expect(wrapper.text()).toContain('Backlog')
   })
 
   it('disables hideEmptyColumns when column is selected', async () => {

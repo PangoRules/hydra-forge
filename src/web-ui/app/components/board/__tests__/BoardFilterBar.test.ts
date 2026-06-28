@@ -15,30 +15,27 @@ describe('BoardFilterBar', () => {
     expect(wrapper.find('input[placeholder*="Search"]').exists()).toBe(true)
   })
 
-  it('renders column chips', async () => {
+  it('renders column visibility trigger button', async () => {
     const wrapper = await mountSuspended(BoardFilterBar, {
       props: { members: [], columns: [
         { id: 'c1', name: 'Backlog', position: 0, wipLimit: null, color: null },
-        { id: 'c2', name: 'In Dev', position: 1, wipLimit: null, color: null },
       ]}
     })
-    const chips = wrapper.findAll('[data-testid="column-chip"]')
-    expect(chips).toHaveLength(2)
-    expect(chips.at(0)!.text()).toBe('Backlog')
+    expect(wrapper.find('[data-testid="column-visibility-trigger"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('All columns')
   })
 
-  it('toggles column selection on chip click', async () => {
-    const board = useBoardStore()
+  it('opens dropdown with checkboxes on trigger click', async () => {
     const wrapper = await mountSuspended(BoardFilterBar, {
       props: { members: [], columns: [
         { id: 'c1', name: 'Backlog', position: 0, wipLimit: null, color: null },
       ]}
     })
-    const chip = wrapper.find('[data-testid="column-chip"]')
-    await chip.trigger('click')
-    expect(board.boardFilters.visibleColumnIds).toEqual(['c1'])
-    await chip.trigger('click')
-    expect(board.boardFilters.visibleColumnIds).toEqual([])
+    await wrapper.find('[data-testid="column-visibility-trigger"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    expect(checkbox.exists()).toBe(true)
+    expect(wrapper.text()).toContain('Backlog')
   })
 
   it('disables hideEmptyColumns when column selected', async () => {
@@ -64,7 +61,7 @@ describe('BoardFilterBar', () => {
     const wrapper = await mountSuspended(BoardFilterBar, {
       props: { members: [], columns: [] }
     })
-    await wrapper.find('button').trigger('click')
+    await wrapper.find('[data-testid="add-card-btn"]').trigger('click')
     expect(wrapper.emitted('add-card')).toBeTruthy()
   })
 
