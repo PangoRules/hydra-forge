@@ -66,12 +66,12 @@ describe('CardMetadata', () => {
       props: { card: makeCard({ version: 5 }), projectId: 'p1' }
     })
 
-    await wrapper.findComponent({ name: 'USelect' }).vm.$emit('update:model-value', 'Bug')
+    await wrapper.findComponent({ name: 'USelect' }).vm.$emit('update:model-value', 'Issue')
     await flushPromises()
 
     expect(mockPUT).toHaveBeenCalledWith(
       ApiRoutes.Cards.update('p1', 'c1'),
-      expect.objectContaining({ body: expect.objectContaining({ title: 'Test', version: 5, type: 'Bug' }) })
+      expect.objectContaining({ body: expect.objectContaining({ title: 'Test', version: 5, type: 'Issue' }) })
     )
     expect(wrapper.emitted('update:card')![0]).toEqual([makeCard({ version: 2 })])
   })

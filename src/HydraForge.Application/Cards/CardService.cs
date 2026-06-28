@@ -64,7 +64,7 @@ public class CardService(
                         new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
                     );
 
-var parentError = Card.ValidateParent(
+                var parentError = Card.ValidateParent(
                     new Card
                     {
                         Id = Guid.Empty,
