@@ -4,6 +4,47 @@
  */
 
 export interface paths {
+    "/api/Users/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    limit?: number | string;
+                    excludeProjectId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": unknown[];
+                        "application/json": unknown[];
+                        "text/json": unknown[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}/cards/{cardId}/attachments": {
         parameters: {
             query?: never;
@@ -1632,7 +1673,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    includeArchived?: boolean;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1681,6 +1724,52 @@ export interface paths {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/Projects/{projectId}/toggle-archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1782,37 +1871,7 @@ export interface paths {
             };
         };
         post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    projectId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2320,6 +2379,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/Auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RefreshTokenResponse"];
+                        "application/json": components["schemas"]["RefreshTokenResponse"];
+                        "text/json": components["schemas"]["RefreshTokenResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2330,10 +2437,6 @@ export interface components {
             role: components["schemas"]["MemberRole"];
         };
         ArchiveCardRequest: {
-            /** Format: int32 */
-            version: number | string;
-        };
-        RestoreCardRequest: {
             /** Format: int32 */
             version: number | string;
         };
@@ -2428,8 +2531,7 @@ export interface components {
             parentCardId: null | string;
             /** Format: date-time */
             dueAt: null | string;
-            /** Format: uuid */
-            assigneeUserIds?: string[];
+            assigneeUserIds: null | string[];
         };
         CreateChecklistItemRequest: {
             text: string;
@@ -2537,6 +2639,11 @@ export interface components {
             columns: components["schemas"]["ColumnResponse"][];
             members: components["schemas"]["MemberResponse"][];
         };
+        RefreshTokenResponse: {
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         RelationshipType: number;
         ReorderChecklistItemRequest: {
             /** Format: int32 */
@@ -2544,6 +2651,10 @@ export interface components {
         };
         ReorderColumnsRequest: {
             columnIds: string[];
+        };
+        RestoreCardRequest: {
+            /** Format: int32 */
+            version: number | string;
         };
         RestorePlanVersionRequest: {
             /** Format: int32 */
