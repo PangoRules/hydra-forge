@@ -50,7 +50,7 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
   board.moveCard(cardId, targetColumnId, targetPosition)
 
   try {
-    await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
+    const { data } = await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
       body: {
         targetColumnId,
         targetPosition,
@@ -58,6 +58,10 @@ async function handleCardMove(cardId: string, targetColumnId: string, targetPosi
         version: card.version
       }
     })
+    // Update card metadata (position, version) from server response
+    if (data) {
+      board.updateCard(cardId, data as CardResponse)
+    }
   } catch (error: unknown) {
     board.rollbackMove(projectId)
     if (error instanceof ApiError && error.status === 409) {

@@ -119,7 +119,7 @@ function handleCardDrop(event: DragEvent) {
     @dragend="handleDragEnd"
     @dragover.stop.prevent="handleCardDragOver"
     @dragleave="handleCardDragLeave"
-    @drop.prevent="handleCardDrop"
+    @drop.stop.prevent="handleCardDrop"
   >
     <div class="flex items-start gap-2">
       <input
