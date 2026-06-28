@@ -9,6 +9,13 @@ import MemberManagementPanel from '~/components/project/MemberManagementPanel.vu
 
 definePageMeta({ middleware: ['auth'] })
 
+// Prevent body scroll — columns handle their own overflow
+useHead({
+  bodyAttrs: {
+    class: 'overflow-hidden'
+  }
+})
+
 type CardResponse = components['schemas']['CardResponse']
 
 const route = useRoute()
@@ -188,7 +195,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col">
+  <div class="flex-1 flex flex-col min-h-0">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2 min-w-0">
         <h1 class="text-xl font-bold truncate">
@@ -252,7 +259,7 @@ watch(
     </div>
 
     <!-- Board area — takes remaining height with its own scroll context -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-h-0">
       <!-- Error state — shown above all board content when present -->
       <div
         v-if="board.error"
@@ -275,7 +282,7 @@ watch(
       <!-- Desktop board content — hidden during loading (desktop uses full-height spinner) -->
       <div
         v-else-if="!board.loading"
-        class="hidden md:flex flex-1 flex-col"
+        class="hidden md:flex flex-1 flex-col min-h-0"
       >
         <!-- Bulk action bar for desktop (above board) -->
         <BulkActionBar
