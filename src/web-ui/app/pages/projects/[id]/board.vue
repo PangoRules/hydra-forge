@@ -290,7 +290,7 @@ watch(
       <!-- Mobile board content — always rendered so its inline spinner works -->
       <div
         v-if="!board.error"
-        class="md:hidden flex-1 overflow-x-auto"
+        class="md:hidden flex-1 min-h-0 overflow-auto"
       >
         <BoardMobileList
           :columns="board.columns"
