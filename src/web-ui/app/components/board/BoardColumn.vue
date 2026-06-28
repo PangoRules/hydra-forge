@@ -85,7 +85,7 @@ function handleDrop(event: DragEvent) {
 </script>
 
 <template>
-  <div class="grid grid-rows-[auto_1fr] bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0">
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0">
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
@@ -105,21 +105,23 @@ function handleDrop(event: DragEvent) {
       </template>
     </ColumnHeader>
 
-    <div
-      class="overflow-y-auto p-2 space-y-2 min-h-0"
-      :class="{ 'ring-2 ring-primary/30': isDragOver }"
-      @dragover.prevent="handleDragOver"
-      @dragleave="handleDragLeave"
-      @drop.prevent="handleDrop"
-    >
-      <BoardCard
-        v-for="card in filteredCards"
-        :key="card.id"
-        :card="card"
-        :project-id="projectId"
-        :readonly="readonly"
-        @click="emit('card-click', card)"
-      />
+    <div class="flex-1 relative min-h-0">
+      <div
+        class="absolute inset-0 overflow-y-auto p-2 space-y-2"
+        :class="{ 'ring-2 ring-primary/30': isDragOver }"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
+        <BoardCard
+          v-for="card in filteredCards"
+          :key="card.id"
+          :card="card"
+          :project-id="projectId"
+          :readonly="readonly"
+          @click="emit('card-click', card)"
+        />
+      </div>
     </div>
   </div>
 </template>
