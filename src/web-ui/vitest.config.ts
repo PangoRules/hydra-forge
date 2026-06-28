@@ -8,6 +8,7 @@ export default defineVitestConfig({
         domEnvironment: 'happy-dom'
       }
     },
-    globals: true
+    globals: true,
+    exclude: ['e2e/**', 'node_modules/**']
   }
 })
