@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 
+// Override chromium project's storageState — smoke runs without pre-auth
 test.use({ storageState: undefined })
 
 test('login page renders', async ({ page }) => {
