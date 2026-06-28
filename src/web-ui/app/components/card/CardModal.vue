@@ -132,7 +132,7 @@ onMounted(() => fetchCard())
     <template #header-trailing>
       <div class="flex items-center gap-1">
         <UButton
-          v-if="card && !isReadonly && !isArchived"
+          v-if="card && !props.readonly && !isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive"
@@ -140,7 +140,7 @@ onMounted(() => fetchCard())
           @click="handleArchive"
         />
         <UButton
-          v-else-if="card && !isReadonly && isArchived"
+          v-if="card && !props.readonly && isArchived"
           variant="ghost"
           size="sm"
           icon="i-lucide-archive-restore"
