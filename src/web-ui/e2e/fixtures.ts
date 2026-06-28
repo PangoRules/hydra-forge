@@ -1,5 +1,6 @@
 import { test as base, expect, type APIRequestContext } from '@playwright/test'
 
+// Default matches launchSettings.json (port 5116). CI overrides via E2E_API_BASE_URL.
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:5116'
 
 interface SeededCard {

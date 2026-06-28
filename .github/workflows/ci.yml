@@ -101,6 +101,7 @@ jobs:
       - name: Start API server
         env:
           ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5000
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
         run: |
           dotnet run --project src/HydraForge.Server --no-build --configuration Release &
