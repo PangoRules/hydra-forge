@@ -257,7 +257,10 @@ function handleCardDrop(event: DragEvent) {
           class="text-xs text-primary flex items-center gap-1"
           title="Child of an epic"
         >
-          <UIcon name="i-lucide-layers" class="size-3" />
+          <UIcon
+            name="i-lucide-layers"
+            class="size-3"
+          />
           Epic
         </span>
         <div

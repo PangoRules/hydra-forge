@@ -1,8 +1,5 @@
 import { useBoardStore } from '~/stores/board'
 import { ApiRoutes } from '~/lib/routes'
-import type { components } from '~/types/api'
-
-type ColumnResponse = components['schemas']['ColumnResponse']
 
 export function useColumnReorder(projectId: string) {
   const boardStore = useBoardStore()

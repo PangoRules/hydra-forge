@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
-import { ApiError } from '~/lib/api-error'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'

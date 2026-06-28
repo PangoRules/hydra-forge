@@ -94,7 +94,7 @@ function startMoveToColumn(cardId: string) {
   showMoveToColumn.value = { ...showMoveToColumn.value, [cardId]: true }
 }
 
-function moveToColumn(cardId: string, targetColumnId: string, card: CardResponse) {
+function moveToColumn(cardId: string, targetColumnId: string) {
   const targetPos = 0
   emit('card-move', cardId, targetColumnId, targetPos)
   showMoveToColumn.value = { ...showMoveToColumn.value, [cardId]: false }
@@ -390,7 +390,10 @@ function stripHtml(text: string): string {
               :disabled="colIdx === 0"
               @click.stop="moveColumnLeft(column.id)"
             >
-              <UIcon name="i-lucide-chevron-up" class="size-3" />
+              <UIcon
+                name="i-lucide-chevron-up"
+                class="size-3"
+              />
             </button>
             <button
               type="button"
@@ -399,7 +402,10 @@ function stripHtml(text: string): string {
               :disabled="colIdx === filteredColumns.length - 1"
               @click.stop="moveColumnRight(column.id)"
             >
-              <UIcon name="i-lucide-chevron-down" class="size-3" />
+              <UIcon
+                name="i-lucide-chevron-down"
+                class="size-3"
+              />
             </button>
             <!-- Type filter for this column -->
             <span class="text-xs text-gray-500 shrink-0">Type:</span>
@@ -498,7 +504,10 @@ function stripHtml(text: string): string {
                       @keydown.enter.prevent.stop="openMenu(card.id)"
                       @keydown.space.prevent.stop="openMenu(card.id)"
                     >
-                      <UIcon name="i-lucide-more-horizontal" class="size-4" />
+                      <UIcon
+                        name="i-lucide-more-horizontal"
+                        class="size-4"
+                      />
                     </button>
 
                     <div
@@ -515,7 +524,10 @@ function stripHtml(text: string): string {
                           class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
                           @click.stop="handleRestore(card)"
                         >
-                          <UIcon name="i-lucide-archive-restore" class="size-4" />
+                          <UIcon
+                            name="i-lucide-archive-restore"
+                            class="size-4"
+                          />
                           Restore
                         </button>
                       </template>
@@ -526,7 +538,10 @@ function stripHtml(text: string): string {
                           class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                           @click.stop="handleArchive(card)"
                         >
-                          <UIcon name="i-lucide-archive" class="size-4" />
+                          <UIcon
+                            name="i-lucide-archive"
+                            class="size-4"
+                          />
                           Archive
                         </button>
                         <USeparator class="my-1" />
@@ -536,7 +551,10 @@ function stripHtml(text: string): string {
                           class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                           @click.stop="handleMoveUp(card)"
                         >
-                          <UIcon name="i-lucide-chevron-up" class="size-4" />
+                          <UIcon
+                            name="i-lucide-chevron-up"
+                            class="size-4"
+                          />
                           Move up
                         </button>
                         <button
@@ -545,7 +563,10 @@ function stripHtml(text: string): string {
                           class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                           @click.stop="handleMoveDown(card)"
                         >
-                          <UIcon name="i-lucide-chevron-down" class="size-4" />
+                          <UIcon
+                            name="i-lucide-chevron-down"
+                            class="size-4"
+                          />
                           Move down
                         </button>
                         <button
@@ -554,10 +575,16 @@ function stripHtml(text: string): string {
                           class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                           @click.stop="startMoveToColumn(card.id)"
                         >
-                          <UIcon name="i-lucide-arrow-right" class="size-4" />
+                          <UIcon
+                            name="i-lucide-arrow-right"
+                            class="size-4"
+                          />
                           Move to column...
                         </button>
-                        <div v-if="showMoveToColumn[card.id]" class="border-t mt-1 pt-1">
+                        <div
+                          v-if="showMoveToColumn[card.id]"
+                          class="border-t mt-1 pt-1"
+                        >
                           <button
                             v-for="col in columns"
                             :key="col.id"
@@ -566,9 +593,13 @@ function stripHtml(text: string): string {
                             class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                             :class="{ 'font-semibold': col.id === card.columnId }"
                             :disabled="col.id === card.columnId"
-                            @click.stop="moveToColumn(card.id, col.id, card)"
+                            @click.stop="moveToColumn(card.id, col.id)"
                           >
-                            <div v-if="col.color" class="size-2 rounded-full" :style="{ backgroundColor: col.color }" />
+                            <div
+                              v-if="col.color"
+                              class="size-2 rounded-full"
+                              :style="{ backgroundColor: col.color }"
+                            />
                             {{ col.name }}
                           </button>
                         </div>
@@ -600,7 +631,10 @@ function stripHtml(text: string): string {
                   class="text-xs mt-1"
                   :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
                 >
-                  <UIcon name="i-lucide-calendar" class="size-3 inline mr-0.5" />
+                  <UIcon
+                    name="i-lucide-calendar"
+                    class="size-3 inline mr-0.5"
+                  />
                   {{ formatDueDate(card.dueAt) }}
                 </p>
 
@@ -609,7 +643,10 @@ function stripHtml(text: string): string {
                   v-if="card.parentCardId"
                   class="text-xs mt-1 text-primary flex items-center gap-1"
                 >
-                  <UIcon name="i-lucide-layers" class="size-3" />
+                  <UIcon
+                    name="i-lucide-layers"
+                    class="size-3"
+                  />
                   Epic
                 </p>
               </div>
