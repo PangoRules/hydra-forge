@@ -81,8 +81,8 @@ Each entry has:
 | **Topic** | CardType enum values |
 | **Date** | 2026-06-02 |
 | **Status** | ✅ Settled |
-| **Decision** | **CardType enum:** `Task`, `Bug`, `Epic`, `Spec`, `Idea`. Plans are a **separate entity**, not a card type. |
-| **Rationale** | Epics are cards that group other cards (parent-child). Specs and Plans are rich markdown documents, distinct from cards. Keeping them as separate entities with links is cleaner than overloading Card. |
+| **Decision** | **CardType enum:** `Task`, `Issue`, `Goal`, `Idea`. Plans are a **separate entity**, not a card type. `Spec` card type retired (rows migrated to `Goal`); `Bug` renamed `Issue`; `Epic` renamed `Goal`; parent restriction removed — any card can parent any other card. |
+| **Rationale** | Original types were software-specific. Universal replacements (Goal/Issue/Idea) work across any domain. Epics-only parent restriction was unnecessary — cycle detection already prevents bad hierarchies. |
 | **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are project-level entities owned by cards via `Spec.CardId` and `Plan.CardId` FKs (ownership — one card creates and owns its spec/plan, other cards can read but not edit). `Plan.SpecId` is an optional FK linking a plan to its parent specification. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) storing full document state (title, description, content) for history + restore. |
 
 ---
@@ -203,7 +203,7 @@ Each entry has:
 | D-2 | Dual interface | Full feature parity | ✅ |
 | D-3 | Offline | Rejected — server connection required, TUI locks gracefully | ❌ |
 | D-4 | Personas | 4 personas: Terminal, Team, Manager, AI | ✅ |
-| D-5 | Card types | Enum `Task/Bug/Epic/Spec/Idea`. Plan = own entity | ✅ |
+| D-5 | Card types | Enum `Task/Issue/Goal/Idea`. Plan = own entity. Any card can parent any card. | ✅ |
 | D-6 | Auth | Basic auth, no SSO | ✅ |
 | D-7 | Conflict resolution | Rejected — no offline = no sync conflicts | ❌ |
 | D-8 | Multi-tenant | No — fresh install per team | ✅ |

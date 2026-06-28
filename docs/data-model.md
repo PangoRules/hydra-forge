@@ -115,7 +115,7 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 | CardNumber | int | Sequential per project (e.g. #1, #42) — unique within project, never reused |
 | ProjectId | Guid | FK to Project |
 | ColumnId | Guid | FK to Column |
-| ParentCardId | Guid? | FK to parent card (epic → child) |
+| ParentCardId | Guid? | FK to parent card (any type; cycle detection enforced) |
 | Title | string | |
 | Description | string | Markdown content |
 | Type | CardType | Task / Issue / Goal / Idea |
