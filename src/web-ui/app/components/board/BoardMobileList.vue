@@ -158,7 +158,9 @@ const showFilters = ref(false)
 // Column visibility dropdown
 const showColumnPicker = ref(false)
 const columnPickerRef = ref<HTMLElement | null>(null)
-onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
+onClickOutside(columnPickerRef, () => {
+  showColumnPicker.value = false
+})
 
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, string | null>>({})
@@ -206,7 +208,9 @@ const filteredCardsByColumn = computed(() => {
 })
 
 const filteredColumns = computed(() => {
-  if (board.boardFilters.visibleColumnIds.length > 0) return props.columns
+  if (board.boardFilters.visibleColumnIds.length > 0) {
+    return props.columns.filter(c => board.boardFilters.visibleColumnIds.includes(c.id))
+  }
   if (!hideEmptyColumns.value) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
@@ -288,7 +292,10 @@ function stripHtml(text: string): string {
       class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
       <!-- Column visibility dropdown -->
-      <div class="relative" ref="columnPickerRef">
+      <div
+        ref="columnPickerRef"
+        class="relative"
+      >
         <UButton
           size="sm"
           variant="outline"
@@ -308,9 +315,9 @@ function stripHtml(text: string): string {
           >
             <input
               type="checkbox"
+              class="rounded"
               :checked="visibleColumnIds.includes(col.id)"
               @change="toggleColumnVisibility(col.id)"
-              class="rounded"
             >
             {{ col.name }}
           </label>

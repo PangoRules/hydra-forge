@@ -293,7 +293,7 @@ watch(
         class="md:hidden flex-1 overflow-x-auto"
       >
         <BoardMobileList
-          :columns="board.visibleColumns"
+          :columns="board.columns"
           :cards-by-column="board.cardsByColumn"
           :project-id="projectId"
           :members="board.members"

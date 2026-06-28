@@ -149,7 +149,7 @@ describe('BoardMobileList', () => {
     const columns = [makeColumn('col1', 'Backlog')]
     const cardsByColumn = new Map([['col1', []]])
     const board = useBoardStore()
-    board.boardFilters!.visibleColumnIds = ['col1']
+    board.boardFilters.visibleColumnIds = ['col1']
     const wrapper = await mountSuspended(BoardMobileList, {
       props: { columns, cardsByColumn, projectId: 'p1' }
     })

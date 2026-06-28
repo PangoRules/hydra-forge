@@ -19,7 +19,9 @@ const { search, assigneeUserId, includeArchived, hideEmptyColumns, visibleColumn
 
 const showColumnPicker = ref(false)
 const columnPickerRef = ref<HTMLElement | null>(null)
-onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
+onClickOutside(columnPickerRef, () => {
+  showColumnPicker.value = false
+})
 </script>
 
 <template>
@@ -34,7 +36,10 @@ onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
     >
 
     <!-- Column visibility dropdown -->
-    <div class="relative" ref="columnPickerRef">
+    <div
+      ref="columnPickerRef"
+      class="relative"
+    >
       <UButton
         size="sm"
         variant="outline"
@@ -54,9 +59,9 @@ onClickOutside(columnPickerRef, () => { showColumnPicker.value = false })
         >
           <input
             type="checkbox"
+            class="rounded"
             :checked="visibleColumnIds.includes(col.id)"
             @change="toggleColumnVisibility(col.id)"
-            class="rounded"
           >
           {{ col.name }}
         </label>
