@@ -24,23 +24,36 @@ Works
 
 ### Per-Column Filters (Desktop)
 7. **Column type dropdown**: select "Epic" in column → only Epics in that column shown
+Works
 8. **Column archived checkbox**: check "Archived only" → only archived cards shown in that column
+Works
 9. **Column inline search**: type "fix" → only cards in that column matching "fix" shown
+Works
 10. **Column + Add**: click → CardCreateModal opens with that column preselected and locked
+Works
 
 ### Card Create Modal
 11. **Global + Card → no preselection**: fill title, select column, create → card appears in selected column
+Works
 12. **Column + Add → preselected**: fill title, create → card created in that column (column locked)
+Works
 13. **Validation**: click Create with empty title → button disabled
+Works
 14. **Cancel**: click Cancel → modal closes, no card created
+Works
 15. **Epic parent**: select an Epic as parent, create card → card linked to epic
 
 ### Mobile (viewport <768px)
 16. **Accordion**: columns start collapsed; tap column header → expands showing cards; tap again → collapses
+Works
 17. **Global search**: type text → cards across all columns filter
+Works
 18. **Filter panel**: tap "Filter" → slide-out with type/assignee/archived/hide-empty controls
+Works
 19. **+ Add card**: tap "Add card" → CardCreateModal opens
+Works
 20. **Three-dot menu**: tap ⋮ on a card → dropdown shows Archive/Restore
+Works
 
 ### Combinations & Edge Cases
 21. **Global type + per-column type**: set global filter "Bug" AND per-column filter "Task" → intersection (0 cards likely in that column)

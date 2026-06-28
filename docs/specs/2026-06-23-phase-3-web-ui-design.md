@@ -17,6 +17,7 @@
 - [x] Task 4: Card Modal Panels — Checklist, Comments, Attachments, Dependencies, Metadata
 - [x] Task 4A: Board Filtering & Quick-Add — filter bar, per-column search, archived toggle, card create modal
 - [ ] Task 4C: Board Filter Redesign — replace global card-type filter with column-visibility multi-chip selector
+- [ ] Task 4D: Card-Type-Redesing
 - [ ] Task 4B: E2E Testing Foundation — Playwright setup, auth fixture, save/debounce + archive/restore + concurrency specs, CI job
 - [ ] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
 - [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
