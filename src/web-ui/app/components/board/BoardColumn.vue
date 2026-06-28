@@ -12,13 +12,17 @@ const props = defineProps<{
   projectId: string
   includeArchived: boolean
   readonly?: boolean
+  canMoveLeft?: boolean
+  canMoveRight?: boolean
 }>()
 
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
   'add-card': [columnId: string]
-  'reorder': [draggedColumnId: string, targetColumnId: string]
+  'reorder': [draggedColumnId: string, targetColumnId: string, insertBefore: boolean]
+  'move-left': []
+  'move-right': []
 }>()
 
 // Per-column filter state
@@ -91,10 +95,14 @@ function handleDrop(event: DragEvent) {
       :card-count="filteredCards.length"
       :include-archived="includeArchived"
       :readonly="readonly"
+      :can-move-left="canMoveLeft"
+      :can-move-right="canMoveRight"
       @add-card="emit('add-card', column.id)"
       @filter-type="handleFilterType"
       @filter-archived="handleFilterArchived"
-      @reorder="(a: string, b: string) => emit('reorder', a, b)"
+      @reorder="(a: string, b: string, c: boolean) => emit('reorder', a, b, c)"
+      @move-left="emit('move-left')"
+      @move-right="emit('move-right')"
     >
       <template #filter-row>
         <input

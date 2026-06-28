@@ -9,6 +9,8 @@ const props = defineProps<{
   cardCount: number
   includeArchived: boolean
   readonly?: boolean
+  canMoveLeft?: boolean
+  canMoveRight?: boolean
 }>()
 
 const isDragging = ref(false)
@@ -17,7 +19,9 @@ const emit = defineEmits<{
   'add-card': []
   'filter-type': [value: number | null]
   'filter-archived': [value: boolean]
-  'reorder': [draggedColumnId: string, targetColumnId: string]
+  'reorder': [draggedColumnId: string, targetColumnId: string, insertBefore: boolean]
+  'move-left': []
+  'move-right': []
 }>()
 
 function handleDragStart(event: DragEvent) {
@@ -40,13 +44,18 @@ function handleDrop(event: DragEvent) {
   if (!event.dataTransfer) return
   const draggedColumnId = event.dataTransfer.getData('text/plain')
   if (draggedColumnId === props.column.id) return
-  emit('reorder', draggedColumnId, props.column.id)
+
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const offsetX = event.clientX - rect.left
+  const insertBefore = offsetX < rect.width / 2
+
+  emit('reorder', draggedColumnId, props.column.id, insertBefore)
 }
 </script>
 
 <template>
   <div
-    class="px-2 pt-2 pb-1"
+    class="px-2 pt-2 pb-1 group"
     :class="{ 'opacity-50': isDragging }"
     :draggable="!readonly"
     @dragstart="handleDragStart"
@@ -78,6 +87,24 @@ function handleDrop(event: DragEvent) {
       >
         {{ cardCount }}
       </span>
+      <UButton
+        v-if="canMoveLeft && !readonly"
+        icon="i-lucide-chevron-left"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        class="opacity-0 group-hover:opacity-100 transition-opacity"
+        @click.stop="emit('move-left')"
+      />
+      <UButton
+        v-if="canMoveRight && !readonly"
+        icon="i-lucide-chevron-right"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        class="opacity-0 group-hover:opacity-100 transition-opacity"
+        @click.stop="emit('move-right')"
+      />
       <span
         v-if="column.wipLimit && cardCount > Number(column.wipLimit)"
         class="text-xs text-red-500 font-medium shrink-0"
