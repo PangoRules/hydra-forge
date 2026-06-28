@@ -1,7 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import BoardMobileList from '~/components/board/BoardMobileList.vue'
-
 const makeColumn = (id: string, name: string, wipLimit: number | null = null) => ({
   id,
   name,
@@ -31,6 +30,11 @@ const makeCard = (id: string, columnId: string, title: string, type = 0, assigne
 })
 
 describe('BoardMobileList', () => {
+  beforeEach(() => {
+    const board = useBoardStore()
+    board.boardFilters = { search: '', includeArchived: false, hideEmptyColumns: false, assigneeUserId: null, visibleColumnIds: [] }
+  })
+
   it('renders column headers', async () => {
     const columns = [makeColumn('col1', 'Backlog'), makeColumn('col2', 'Done')]
     const cardsByColumn = new Map([['col1', []], ['col2', []]])
@@ -113,5 +117,45 @@ describe('BoardMobileList', () => {
     })
     expect(wrapper.text()).toContain('Backlog')
     expect(wrapper.text()).toContain('▶')
+  })
+
+  it('renders column visibility trigger in filter panel', async () => {
+    const columns = [makeColumn('col1', 'Backlog'), makeColumn('col2', 'In Progress')]
+    const cardsByColumn = new Map([['col1', []], ['col2', []]])
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: { columns, cardsByColumn, projectId: 'p1' }
+    })
+    await wrapper.find('[data-testid="mobile-filter-btn"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="column-visibility-trigger"]').exists()).toBe(true)
+  })
+
+  it('opens column dropdown with checkboxes on trigger click', async () => {
+    const columns = [makeColumn('col1', 'Backlog')]
+    const cardsByColumn = new Map([['col1', []]])
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: { columns, cardsByColumn, projectId: 'p1' }
+    })
+    await wrapper.find('[data-testid="mobile-filter-btn"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="column-visibility-trigger"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    expect(checkbox.exists()).toBe(true)
+    expect(wrapper.text()).toContain('Backlog')
+  })
+
+  it('disables hideEmptyColumns when column is selected', async () => {
+    const columns = [makeColumn('col1', 'Backlog')]
+    const cardsByColumn = new Map([['col1', []]])
+    const board = useBoardStore()
+    board.boardFilters.visibleColumnIds = ['col1']
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: { columns, cardsByColumn, projectId: 'p1' }
+    })
+    await wrapper.find('[data-testid="mobile-filter-btn"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    const checkbox = wrapper.find('[data-testid="hide-empty-checkbox"]')!
+    expect((checkbox.element as HTMLInputElement).disabled).toBe(true)
   })
 })

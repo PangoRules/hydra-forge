@@ -110,7 +110,7 @@ describe('BoardStore filters', () => {
   it('has default filter state', () => {
     const store = useBoardStore()
     expect(store.boardFilters.search).toBe('')
-    expect(store.boardFilters.type).toBe(null)
+    expect(store.boardFilters.visibleColumnIds).toEqual([])
     expect(store.boardFilters.includeArchived).toBe(false)
     expect(store.boardFilters.hideEmptyColumns).toBe(false)
   })
@@ -128,7 +128,7 @@ describe('BoardStore filters', () => {
     expect(store.visibleColumns.length).toBe(2)
   })
 
-  it('visibleColumns hides empty columns when set', () => {
+  it('visibleColumns hides empty columns when set and no active selection', () => {
     const store = useBoardStore()
     store.columns = [
       { id: 'c1', name: 'Todo', position: 0, wipLimit: null, color: null },
@@ -139,7 +139,24 @@ describe('BoardStore filters', () => {
       ['c2', []]
     ])
     store.boardFilters.hideEmptyColumns = true
+    store.boardFilters.visibleColumnIds = []
     expect(store.visibleColumns.length).toBe(1)
     expect(store.visibleColumns.at(0)?.id).toBe('c1')
+  })
+
+  it('returns only selected columns when visibleColumnIds set (ignores hideEmptyColumns)', () => {
+    const store = useBoardStore()
+    store.columns = [
+      { id: 'c1', name: 'Todo', position: 0, wipLimit: null, color: null },
+      { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
+    ]
+    store.cardsByColumn = new Map([
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c2', []]
+    ])
+    store.boardFilters.visibleColumnIds = ['c2']
+    store.boardFilters.hideEmptyColumns = true
+    // hideEmptyColumns ignored when selection active
+    expect(store.visibleColumns.map(c => c.id)).toEqual(['c2'])
   })
 })

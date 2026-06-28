@@ -9,10 +9,10 @@ type MemberResponse = components['schemas']['MemberResponse']
 
 export interface BoardFilters {
   search: string
-  type: string | null
   includeArchived: boolean
   hideEmptyColumns: boolean
   assigneeUserId: string | null
+  visibleColumnIds: string[]
 }
 
 export const useBoardStore = defineStore('board', () => {
@@ -23,10 +23,10 @@ export const useBoardStore = defineStore('board', () => {
   const error = ref<string | null>(null)
   const boardFilters = ref<BoardFilters>({
     search: '',
-    type: null,
     includeArchived: false,
     hideEmptyColumns: false,
-    assigneeUserId: null
+    assigneeUserId: null,
+    visibleColumnIds: []
   })
 
   const members = ref<MemberResponse[]>([])
@@ -60,7 +60,6 @@ export const useBoardStore = defineStore('board', () => {
         searchParams.set('includeArchived', 'true')
         searchParams.set('archivedLimit', '200')
       }
-      if (boardFilters.value.type !== null) searchParams.set('type', boardFilters.value.type)
       if (boardFilters.value.search) searchParams.set('search', boardFilters.value.search)
       if (boardFilters.value.assigneeUserId) searchParams.set('assigneeUserId', boardFilters.value.assigneeUserId)
       const cardsUrlWithParams = searchParams.size > 0 ? `${cardsUrl}?${searchParams}` : cardsUrl
@@ -148,6 +147,9 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   const visibleColumns = computed(() => {
+    if (boardFilters.value.visibleColumnIds.length > 0) {
+      return columns.value.filter(c => boardFilters.value.visibleColumnIds.includes(c.id))
+    }
     if (!boardFilters.value.hideEmptyColumns) return columns.value
     const colIdsWithCards = new Set<string>()
     for (const [colId, cards] of cardsByColumn.value) {

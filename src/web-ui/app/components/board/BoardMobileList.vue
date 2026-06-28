@@ -2,7 +2,7 @@
 import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import { useEventListener } from '@vueuse/core'
+import { useEventListener, onClickOutside } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
@@ -31,7 +31,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
-const { search, type: filterType, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns } = useBoardFilters()
+const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -155,6 +155,13 @@ function onHeaderClick(e: Event, colId: string) {
 // Global filter panel visibility
 const showFilters = ref(false)
 
+// Column visibility dropdown
+const showColumnPicker = ref(false)
+const columnPickerRef = ref<HTMLElement | null>(null)
+onClickOutside(columnPickerRef, () => {
+  showColumnPicker.value = false
+})
+
 // Per-column type filter state
 const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
@@ -169,10 +176,6 @@ function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
       c.title.toLowerCase().includes(q)
       || String(c.cardNumber).includes(q)
     )
-  }
-  // c.type is number per generated types, but API returns string via JsonStringEnumConverter
-  if (filterType.value !== null) {
-    filtered = filtered.filter(c => String(c.type) === filterType.value)
   }
   if (filterAssignee.value) {
     filtered = filtered.filter(c => c.assignees.some(a => a.userId === filterAssignee.value))
@@ -205,6 +208,9 @@ const filteredCardsByColumn = computed(() => {
 })
 
 const filteredColumns = computed(() => {
+  if (board.boardFilters.visibleColumnIds.length > 0) {
+    return props.columns.filter(c => board.boardFilters.visibleColumnIds.includes(c.id))
+  }
   if (!hideEmptyColumns.value) return props.columns
   return props.columns.filter(c => (filteredCardsByColumn.value.get(c.id)?.length ?? 0) > 0)
 })
@@ -261,6 +267,7 @@ function stripHtml(text: string): string {
       <UButton
         variant="ghost"
         size="sm"
+        data-testid="mobile-filter-btn"
         @click="showFilters = !showFilters"
       >
         Filter
@@ -284,19 +291,38 @@ function stripHtml(text: string): string {
       v-if="showFilters"
       class="flex flex-wrap gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
     >
-      <span class="text-xs text-gray-500 self-center">Type:</span>
-      <select
-        v-model="filterType"
-        class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+      <!-- Column visibility dropdown -->
+      <div
+        ref="columnPickerRef"
+        class="relative"
       >
-        <option
-          v-for="opt in CARD_TYPE_FILTER_OPTIONS"
-          :key="opt.label"
-          :value="opt.value"
+        <UButton
+          size="sm"
+          variant="outline"
+          data-testid="column-visibility-trigger"
+          @click="showColumnPicker = !showColumnPicker"
         >
-          {{ opt.label }}
-        </option>
-      </select>
+          {{ columnSelectionActive ? `${visibleColumnIds.length} column${visibleColumnIds.length > 1 ? 's' : ''}` : 'All columns' }}
+        </UButton>
+        <div
+          v-if="showColumnPicker"
+          class="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-2 min-w-[160px]"
+        >
+          <label
+            v-for="col in columns"
+            :key="col.id"
+            class="flex items-center gap-2 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer whitespace-nowrap"
+          >
+            <input
+              type="checkbox"
+              class="rounded"
+              :checked="visibleColumnIds.includes(col.id)"
+              @change="toggleColumnVisibility(col.id)"
+            >
+            {{ col.name }}
+          </label>
+        </div>
+      </div>
       <select
         v-model="filterAssignee"
         class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
@@ -320,14 +346,23 @@ function stripHtml(text: string): string {
         >
         Include archived
       </label>
-      <label class="flex items-center gap-1 text-xs">
+      <label
+        class="flex items-center gap-1 text-xs"
+        :class="columnSelectionActive ? 'opacity-40 cursor-not-allowed' : ''"
+      >
         <input
           v-model="hideEmptyColumns"
           type="checkbox"
+          data-testid="hide-empty-checkbox"
           class="rounded"
+          :disabled="columnSelectionActive"
         >
         Hide empty
       </label>
+      <span
+        v-if="columnSelectionActive"
+        class="text-xs text-gray-400"
+      >(column selected)</span>
     </div>
 
     <!-- Bulk action bar (shared component) -->
