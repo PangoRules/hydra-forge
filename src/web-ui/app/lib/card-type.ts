@@ -19,10 +19,10 @@ export const CARD_TYPE_ICONS: Record<number, string> = {
  * `apiValue` is the string sent to / received from the API.
  */
 export const CARD_TYPE_OPTIONS = [
-  { value: 0, apiValue: 'Task',  label: 'Task',  color: 'neutral', icon: 'i-lucide-square-check' },
-  { value: 1, apiValue: 'Issue', label: 'Issue', color: 'error',   icon: 'i-lucide-bug' },
-  { value: 2, apiValue: 'Goal',  label: 'Goal',  color: 'primary', icon: 'i-lucide-layers' },
-  { value: 3, apiValue: 'Idea',  label: 'Idea',  color: 'warning', icon: 'i-lucide-lightbulb' },
+  { value: 0, apiValue: 'Task', label: 'Task', color: 'neutral', icon: 'i-lucide-square-check' },
+  { value: 1, apiValue: 'Issue', label: 'Issue', color: 'error', icon: 'i-lucide-bug' },
+  { value: 2, apiValue: 'Goal', label: 'Goal', color: 'primary', icon: 'i-lucide-layers' },
+  { value: 3, apiValue: 'Idea', label: 'Idea', color: 'warning', icon: 'i-lucide-lightbulb' }
 ] as const
 
 /** @deprecated — parent type is no longer restricted; any card can be a parent. */
@@ -30,11 +30,11 @@ export const PARENT_CARD_API_VALUE = ''
 
 /** Per-column filter options. Values are API strings; null means "All". */
 export const CARD_TYPE_FILTER_OPTIONS = [
-  { label: 'All',   value: null },
-  { label: 'Task',  value: 'Task' },
+  { label: 'All', value: null },
+  { label: 'Task', value: 'Task' },
   { label: 'Issue', value: 'Issue' },
-  { label: 'Goal',  value: 'Goal' },
-  { label: 'Idea',  value: 'Idea' },
+  { label: 'Goal', value: 'Goal' },
+  { label: 'Idea', value: 'Idea' }
 ] as const
 
 /**
@@ -57,10 +57,10 @@ export function cardTypeOption(type: number | string) {
 /** Tailwind text-color class for a card type option's color name. */
 export function cardTypeColorClass(option: { color: string }): string {
   switch (option.color) {
-    case 'error':   return 'text-red-500'
+    case 'error': return 'text-red-500'
     case 'warning': return 'text-amber-500'
-    case 'info':    return 'text-blue-500'
+    case 'info': return 'text-blue-500'
     case 'primary': return 'text-primary'
-    default:        return 'text-gray-400'
+    default: return 'text-gray-400'
   }
 }

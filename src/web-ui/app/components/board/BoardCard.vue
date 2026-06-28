@@ -256,7 +256,7 @@ function handleCardDrop(event: DragEvent) {
           v-if="card.parentCardId"
           class="text-xs text-primary flex items-center gap-1"
           title="Has a parent card"
->
+        >
           <UIcon
             name="i-lucide-layers"
             class="size-3"
