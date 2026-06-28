@@ -84,7 +84,7 @@ function onChange(e: Event) {
 
         <select
           :value="bulkTargetColumnId ?? ''"
-          class="text-xs px-2 py-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600"
+          class="text-xs px-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-600 self-center"
           @change="onChange"
         >
           <option value="">
