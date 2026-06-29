@@ -105,7 +105,7 @@ jobs:
           ConnectionStrings__Default: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
         run: |
           dotnet run --project src/HydraForge.Server --no-build --configuration Release &
-          npx wait-on http://localhost:5000/openapi/v1.json --timeout 60000
+          npx wait-on http-get://localhost:5000/openapi/v1.json --timeout 60000
 
       - name: Install web dependencies
         working-directory: src/web-ui
@@ -120,7 +120,7 @@ jobs:
         run: |
           pnpm build
           pnpm preview --port 3000 &
-          npx wait-on http://localhost:3000/login --timeout 60000
+          npx wait-on http-get://localhost:3000/login --timeout 60000
 
       - name: Run Playwright tests
         working-directory: src/web-ui
