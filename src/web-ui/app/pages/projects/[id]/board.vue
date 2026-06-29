@@ -6,6 +6,7 @@ import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
 import { useCardMove } from '~/composables/useCardMove'
+import { onBeforeUnmount } from 'vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -42,6 +43,7 @@ function handleAddCard(columnId?: string) {
 }
 
 const { moveCardToColumn } = useCardMove(projectId)
+const realtime = useRealtime()
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of board.cardsByColumn) {
@@ -113,6 +115,7 @@ async function handleBulkArchive() {
 onMounted(async () => {
   board.fetchBoard(projectId)
   board.fetchMembers(projectId)
+  realtime.connect(projectId)
   const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
     const project = data as components['schemas']['ProjectResponse']
@@ -159,6 +162,10 @@ watch(
     if (newAssignee !== oldAssignee) board.fetchBoard(projectId)
   }
 )
+
+onBeforeUnmount(() => {
+  realtime.disconnect(projectId)
+})
 </script>
 
 <template>
