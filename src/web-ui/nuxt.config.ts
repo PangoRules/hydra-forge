@@ -30,14 +30,12 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-01-15',
 
-  vite: {
-    server: {
-      proxy: {
-        '/hubs': {
-          target: process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000',
-          ws: true,
-          changeOrigin: true
-        }
+  nitro: {
+    devProxy: {
+      '/hubs': {
+        target: process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000',
+        ws: true,
+        changeOrigin: true
       }
     }
   },
