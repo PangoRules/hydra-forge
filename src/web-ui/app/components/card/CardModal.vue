@@ -4,6 +4,8 @@ import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import CardSpec from '~/components/card/CardSpec.vue'
+import CardPlan from '~/components/card/CardPlan.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -30,20 +32,37 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
+const DOCS_CARD_TYPES = ['Goal', 'Idea'] as const
+const PLAN_CARD_TYPES = ['Goal'] as const
 
-const tabs = [
+const hasDocsTab = computed(() =>
+  card.value != null && DOCS_CARD_TYPES.includes(card.value.type as unknown as typeof DOCS_CARD_TYPES[number])
+)
+
+const hasPlan = computed(() =>
+  card.value != null && PLAN_CARD_TYPES.includes(card.value.type as unknown as typeof PLAN_CARD_TYPES[number])
+)
+
+const activeTab = ref<'details' | 'checklist' | 'comments' | 'related' | 'docs'>('details')
+
+const tabs = computed(() => [
   { label: 'Details', value: 'details' as const },
   { label: 'Checklist', value: 'checklist' as const },
   { label: 'Comments', value: 'comments' as const },
-  { label: 'Related', value: 'related' as const }
-]
+  { label: 'Related', value: 'related' as const },
+  ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
+])
 
-const desktopTabs = [
+const desktopTabs = computed(() => [
   { label: 'Details', value: 'details' as const },
   { label: 'Checklist', value: 'checklist' as const },
-  { label: 'Comments', value: 'comments' as const }
-]
+  { label: 'Comments', value: 'comments' as const },
+  ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
+])
+
+watch(hasDocsTab, (has) => {
+  if (!has && activeTab.value === 'docs') activeTab.value = 'details'
+})
 
 const api = useApi()
 
@@ -195,6 +214,24 @@ onMounted(() => fetchCard())
                   </p>
                 </div>
               </div>
+              <div
+                v-else-if="activeTab === 'docs'"
+                class="space-y-8"
+              >
+                <CardSpec
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                />
+                <template v-if="hasPlan">
+                  <USeparator />
+                  <CardPlan
+                    :card-id="card.id"
+                    :project-id="projectId"
+                    :readonly="isReadonly"
+                  />
+                </template>
+              </div>
             </div>
 
             <div class="w-64 flex-shrink-0 border-l pl-4 space-y-6">
@@ -290,6 +327,24 @@ onMounted(() => fetchCard())
                 :project-id="projectId"
                 :readonly="isReadonly"
               />
+            </div>
+            <div
+              v-else-if="activeTab === 'docs'"
+              class="space-y-8"
+            >
+              <CardSpec
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <template v-if="hasPlan">
+                <USeparator />
+                <CardPlan
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                />
+              </template>
             </div>
           </div>
         </div>
