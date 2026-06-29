@@ -68,6 +68,19 @@ services:
       # Odysseus's SearXNG at http://host.docker.internal:8080.
       - "host.docker.internal:host-gateway"
 
+  web:
+    build:
+      context: src/web-ui
+      dockerfile: Dockerfile
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      NUXT_API_BASE_URL: http://server:8080
+      NUXT_PUBLIC_AUTH_COOKIE_SECURE: "false"
+    ports:
+      - "3000:3000"
+
   searxng:
     # Only needed if Odysseus (or another SearXNG instance) is NOT running.
     # Default: reuse Odysseus's SearXNG at http://host.docker.internal:8080.

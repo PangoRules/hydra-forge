@@ -11,6 +11,7 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "generate:api-types": "openapi-typescript http://localhost:5000/openapi/v1.json -o ./app/types/api.d.ts"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
     "@nuxt/test-utils": "^4.0.3",
+    "@playwright/test": "^1.61.1",
     "@types/marked": "^6.0.0",
     "@types/turndown": "^5.0.6",
     "@vue/test-utils": "^2.4.11",

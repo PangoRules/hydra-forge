@@ -77,6 +77,11 @@ coverage/
 *.coverage
 *.coveragexml
 
+# ─── Playwright E2E ──────────────────────────────────────────────────────────
+src/web-ui/playwright-report/
+src/web-ui/test-results/
+src/web-ui/e2e/.auth/
+
 # ─── File storage (runtime uploads — never commit user data) ─────────────────
 .hydraforge/
 uploads/

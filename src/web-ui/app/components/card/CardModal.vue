@@ -153,7 +153,10 @@ onMounted(() => fetchCard())
     <template #body>
       <template v-if="card">
         <!-- Desktop: two-column — UModal handles overflow naturally -->
-        <div class="hidden md:flex flex-col">
+        <div
+          data-testid="card-modal-desktop"
+          class="hidden md:flex flex-col"
+        >
           <UTabs
             v-model="activeTab"
             :items="desktopTabs"
@@ -227,7 +230,10 @@ onMounted(() => fetchCard())
         </div>
 
         <!-- Mobile: tabbed — UModal handles overflow naturally -->
-        <div class="md:hidden flex flex-col">
+        <div
+          data-testid="card-modal-mobile"
+          class="md:hidden flex flex-col"
+        >
           <UTabs
             v-model="activeTab"
             :items="tabs"
