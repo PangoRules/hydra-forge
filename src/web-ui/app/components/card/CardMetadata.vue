@@ -91,9 +91,59 @@ async function persistCardFields(fields: { type?: string, dueAt?: string | null,
 
 async function handleTypeChange(value: string) {
   if (props.isArchived || value === cardTypeToApiString(props.card.type)) return
+
+  const currentType = cardTypeToApiString(props.card.type)
+  const newType = value
+
+  const isGoalOrIdea = (t: string) => t === 'Goal' || t === 'Idea'
+  const isGoal = (t: string) => t === 'Goal'
+
+  const wouldLoseSpec = isGoalOrIdea(currentType) && !isGoalOrIdea(newType)
+  const wouldLosePlan = isGoal(currentType) && !isGoal(newType)
+
+  if (wouldLoseSpec || wouldLosePlan) {
+    const [specsResult, plansResult] = await Promise.all([
+      (async () => {
+        try {
+          return await api.GET<{ specs: { id: string }[] }>(ApiRoutes.Specs.forCard(props.projectId, props.card.id))
+        } catch {
+          return { data: null }
+        }
+      })(),
+      (async () => {
+        try {
+          return await api.GET<{ plans: { id: string }[] }>(ApiRoutes.Plans.forCard(props.projectId, props.card.id))
+        } catch {
+          return { data: null }
+        }
+      })()
+    ])
+
+    const specs = specsResult.data?.specs ?? []
+    const plans = plansResult.data?.plans ?? []
+
+    const actuallyHasSpec = wouldLoseSpec && specs.length > 0
+    const actuallyHasPlan = wouldLosePlan && plans.length > 0
+
+    if (actuallyHasSpec || actuallyHasPlan) {
+      const newTypeLabel = cardTypeOption(newType).label
+      const parts: string[] = []
+      if (actuallyHasSpec && actuallyHasPlan) parts.push('a Spec and a Plan')
+      else if (actuallyHasSpec) parts.push('a Spec')
+      else parts.push('a Plan')
+      const docPhrase = parts.join('')
+      const pronoun = actuallyHasSpec && actuallyHasPlan ? 'them' : 'it'
+      const message = `This card has ${docPhrase}. Changing type to ${newTypeLabel} will hide the Docs tab, making ${pronoun} inaccessible. ${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} will stay in the database if you switch back.`
+      if (!window.confirm(message)) return
+    }
+  }
+
   savingType.value = true
-  await persistCardFields({ type: value })
-  savingType.value = false
+  try {
+    await persistCardFields({ type: value })
+  } finally {
+    savingType.value = false
+  }
 }
 
 async function saveDueDate() {
