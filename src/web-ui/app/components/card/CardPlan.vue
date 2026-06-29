@@ -84,6 +84,7 @@ async function save() {
       })
       plan.value = data ?? null
     }
+    versions.value = [] // invalidate cache so next history toggle re-fetches
     toast.success('Plan saved')
     if (showHistory.value) await fetchVersions()
   } catch {
@@ -126,7 +127,7 @@ async function restore(ver: PlanVersionResponse) {
 
 async function toggleHistory() {
   showHistory.value = !showHistory.value
-  if (showHistory.value && versions.value.length === 0) {
+  if (showHistory.value) {
     await fetchVersions()
   }
 }

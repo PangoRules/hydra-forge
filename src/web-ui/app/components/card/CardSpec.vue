@@ -84,6 +84,7 @@ async function save() {
       })
       spec.value = data ?? null
     }
+    versions.value = [] // invalidate cache so next history toggle re-fetches
     toast.success('Spec saved')
     if (showHistory.value) await fetchVersions()
   } catch {
@@ -126,7 +127,7 @@ async function restore(ver: SpecVersionResponse) {
 
 async function toggleHistory() {
   showHistory.value = !showHistory.value
-  if (showHistory.value && versions.value.length === 0) {
+  if (showHistory.value) {
     await fetchVersions()
   }
 }
