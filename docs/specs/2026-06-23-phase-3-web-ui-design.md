@@ -19,7 +19,7 @@
 - [x] Task 4C: Board Filter Redesign — replace global card-type filter with column-visibility multi-chip selector
 - [x] Task 4D: Card-Type-Redesign
 - [x] Task 4B: E2E Testing Foundation — Playwright setup, auth fixture, save/debounce + archive/restore + concurrency specs, CI job
-- [ ] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
+- [x] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
 - [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
 - [ ] Task 7: Project Management UI — project edit, creation with initial members, project list polish
 
