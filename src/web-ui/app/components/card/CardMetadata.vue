@@ -24,6 +24,9 @@ const typeOption = computed(() => cardTypeOption(props.card.type))
 const typeValue = computed(() => typeOption.value.apiValue)
 const savingType = ref(false)
 const savingColumn = ref(false)
+const showTypeChangeConfirm = ref(false)
+const pendingTypeChange = ref<string | null>(null)
+const typeChangeConfirmMessage = ref('')
 
 const currentColumnOption = computed(() =>
   board.columns.find(c => c.id === props.card.columnId)
@@ -133,11 +136,25 @@ async function handleTypeChange(value: string) {
       else parts.push('a Plan')
       const docPhrase = parts.join('')
       const pronoun = actuallyHasSpec && actuallyHasPlan ? 'them' : 'it'
-      const message = `This card has ${docPhrase}. Changing type to ${newTypeLabel} will hide the Docs tab, making ${pronoun} inaccessible. ${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} will stay in the database if you switch back.`
-      if (!window.confirm(message)) return
+      typeChangeConfirmMessage.value = `This card has ${docPhrase}. Changing type to ${newTypeLabel} will hide the Docs tab, making ${pronoun} inaccessible. ${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} will stay in the database if you switch back.`
+      pendingTypeChange.value = value
+      showTypeChangeConfirm.value = true
+      return
     }
   }
 
+  savingType.value = true
+  try {
+    await persistCardFields({ type: value })
+  } finally {
+    savingType.value = false
+  }
+}
+
+async function confirmTypeChange() {
+  if (!pendingTypeChange.value) return
+  const value = pendingTypeChange.value
+  pendingTypeChange.value = null
   savingType.value = true
   try {
     await persistCardFields({ type: value })
@@ -544,4 +561,13 @@ onMounted(() => {
       </button>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model:open="showTypeChangeConfirm"
+    title="Change card type?"
+    :message="typeChangeConfirmMessage"
+    confirm-text="Change Type"
+    confirm-color="warning"
+    @confirm="confirmTypeChange"
+  />
 </template>
