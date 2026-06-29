@@ -91,8 +91,9 @@ async function fetchVersions() {
   if (!spec.value) return
   loadingVersions.value = true
   try {
-    const { data } = await api.GET<SpecVersionResponse[]>(ApiRoutes.Specs.versions(props.projectId, spec.value.id))
-    versions.value = data ?? []
+    const { data } = await api.GET(ApiRoutes.Specs.versions(props.projectId, spec.value.id))
+    const list = data as { versions: SpecVersionResponse[] } | undefined
+    versions.value = list?.versions ?? []
   } catch {
     // silently fail
   } finally {
@@ -109,6 +110,7 @@ async function restore(ver: SpecVersionResponse) {
     })
     toast.success('Version restored')
     await fetchSpec()
+    if (showHistory.value) await fetchVersions()
   } catch {
     toast.error('Failed to restore version')
   } finally {

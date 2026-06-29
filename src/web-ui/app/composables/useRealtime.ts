@@ -43,6 +43,7 @@ export function useRealtime() {
     })
     connection.onclose(() => {
       isConnected.value = false
+      isReconnecting.value = false
     })
 
     try {

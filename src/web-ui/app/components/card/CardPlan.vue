@@ -91,8 +91,9 @@ async function fetchVersions() {
   if (!plan.value) return
   loadingVersions.value = true
   try {
-    const { data } = await api.GET<PlanVersionResponse[]>(ApiRoutes.Plans.versions(props.projectId, plan.value.id))
-    versions.value = data ?? []
+    const { data } = await api.GET(ApiRoutes.Plans.versions(props.projectId, plan.value.id))
+    const list = data as { versions: PlanVersionResponse[] } | undefined
+    versions.value = list?.versions ?? []
   } catch {
     // silently fail
   } finally {
@@ -109,6 +110,7 @@ async function restore(ver: PlanVersionResponse) {
     })
     toast.success('Version restored')
     await fetchPlan()
+    if (showHistory.value) await fetchVersions()
   } catch {
     toast.error('Failed to restore version')
   } finally {

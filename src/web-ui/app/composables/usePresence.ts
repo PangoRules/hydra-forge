@@ -53,6 +53,8 @@ export function usePresence() {
       await connection.stop()
     }
     connection = null
+    store.setProjectUsers(projectId, [])
+    store.focusedCards.clear()
   }
 
   return { connect, disconnect, focusCard }
