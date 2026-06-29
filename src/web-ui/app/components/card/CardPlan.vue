@@ -37,7 +37,6 @@ const api = useApi()
 
 const plan = ref<PlanResponse | null>(null)
 const title = ref('')
-const description = ref('')
 const content = ref('')
 const loading = ref(true)
 const saving = ref(false)
@@ -55,7 +54,6 @@ async function fetchPlan() {
     plan.value = list?.plans?.[0] ?? null
     if (plan.value) {
       title.value = plan.value.title
-      description.value = plan.value.description ?? ''
       content.value = plan.value.content
     }
   } catch {
@@ -65,17 +63,24 @@ async function fetchPlan() {
   }
 }
 
+/** Extract a short description from content's first paragraph */
+function deriveDescription(md: string): string {
+  const para = md.trim().split('\n\n')[0]
+  return para ? para.slice(0, 200) : ''
+}
+
 async function save() {
   saving.value = true
   try {
+    const desc = deriveDescription(content.value)
     if (plan.value) {
       const { data } = await api.PUT<PlanResponse>(ApiRoutes.Plans.detail(props.projectId, plan.value.id), {
-        body: { title: title.value, description: description.value, content: content.value }
+        body: { title: title.value, description: desc, content: content.value }
       })
       plan.value = data ?? plan.value
     } else {
       const { data } = await api.POST<PlanResponse>(ApiRoutes.Plans.forCard(props.projectId, props.cardId), {
-        body: { title: title.value, description: description.value, content: content.value }
+        body: { title: title.value, description: desc, content: content.value }
       })
       plan.value = data ?? null
     }
@@ -180,13 +185,7 @@ onMounted(() => fetchPlan())
           :disabled="props.readonly"
           size="sm"
         />
-        <UTextarea
-          v-model="description"
-          placeholder="Brief description"
-          :rows="2"
-          :disabled="props.readonly"
-          size="sm"
-        />
+
         <MarkdownEditor
           v-model="content"
           :editable="!props.readonly"

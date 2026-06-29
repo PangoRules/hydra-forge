@@ -37,7 +37,6 @@ const api = useApi()
 
 const spec = ref<SpecResponse | null>(null)
 const title = ref('')
-const description = ref('')
 const content = ref('')
 const loading = ref(true)
 const saving = ref(false)
@@ -55,7 +54,6 @@ async function fetchSpec() {
     spec.value = list?.specs?.[0] ?? null
     if (spec.value) {
       title.value = spec.value.title
-      description.value = spec.value.description ?? ''
       content.value = spec.value.content
     }
   } catch {
@@ -65,17 +63,24 @@ async function fetchSpec() {
   }
 }
 
+/** Extract a short description from content's first paragraph */
+function deriveDescription(md: string): string {
+  const para = md.trim().split('\n\n')[0]
+  return para ? para.slice(0, 200) : ''
+}
+
 async function save() {
   saving.value = true
   try {
+    const desc = deriveDescription(content.value)
     if (spec.value) {
       const { data } = await api.PUT<SpecResponse>(ApiRoutes.Specs.detail(props.projectId, spec.value.id), {
-        body: { title: title.value, description: description.value, content: content.value }
+        body: { title: title.value, description: desc, content: content.value }
       })
       spec.value = data ?? spec.value
     } else {
       const { data } = await api.POST<SpecResponse>(ApiRoutes.Specs.forCard(props.projectId, props.cardId), {
-        body: { title: title.value, description: description.value, content: content.value }
+        body: { title: title.value, description: desc, content: content.value }
       })
       spec.value = data ?? null
     }
@@ -177,13 +182,6 @@ onMounted(() => fetchSpec())
         <UInput
           v-model="title"
           placeholder="Spec title"
-          :disabled="props.readonly"
-          size="sm"
-        />
-        <UTextarea
-          v-model="description"
-          placeholder="Brief description"
-          :rows="2"
           :disabled="props.readonly"
           size="sm"
         />
