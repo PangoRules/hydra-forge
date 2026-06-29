@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 interface PlanResponse {
   id: string
