@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import { CARD_TYPE_OPTIONS, cardTypeOption, cardTypeToApiString } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
