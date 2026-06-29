@@ -44,6 +44,7 @@ function handleAddCard(columnId?: string) {
 
 const { moveCardToColumn } = useCardMove(projectId)
 const realtime = useRealtime()
+const presence = usePresence()
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of board.cardsByColumn) {
@@ -116,6 +117,7 @@ onMounted(async () => {
   board.fetchBoard(projectId)
   board.fetchMembers(projectId)
   realtime.connect(projectId)
+  presence.connect(projectId)
   const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
   if (data) {
     const project = data as components['schemas']['ProjectResponse']
@@ -163,8 +165,13 @@ watch(
   }
 )
 
+watch(selectedCardId, (cardId) => {
+  if (cardId) presence.focusCard(projectId, cardId)
+})
+
 onBeforeUnmount(() => {
   realtime.disconnect(projectId)
+  presence.disconnect(projectId)
 })
 </script>
 
