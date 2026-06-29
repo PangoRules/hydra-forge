@@ -14,8 +14,14 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const config = useRuntimeConfig()
   const { clearToken } = useAuthToken()
 
+  // Server-side (SSR): use private apiBaseUrl (direct backend URL, e.g. http://server:8080).
+  // Client-side: empty string → relative /api/... requests → Nuxt proxy → backend.
+  const baseUrl = import.meta.server
+    ? (config.apiBaseUrl as string)
+    : (config.public.apiBaseUrl as string)
+
   const client = createClient<paths>({
-    baseUrl: config.public.apiBaseUrl as string,
+    baseUrl,
     headers: {
       'Content-Type': 'application/json'
     }

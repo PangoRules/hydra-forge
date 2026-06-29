@@ -13,8 +13,12 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
+    // Private — server-side only. Used by the /api/[...path] proxy route.
+    apiBaseUrl: process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000',
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000',
+      // Empty string → browser sends relative /api/... requests to Nuxt server,
+      // which proxies them via server/routes/api/[...path].ts. No CORS ever.
+      apiBaseUrl: '',
       authCookieMaxAge: parseInt(process.env.NUXT_PUBLIC_AUTH_COOKIE_MAX_AGE ?? '3600', 10),
       authCookieSecure: process.env.NUXT_PUBLIC_AUTH_COOKIE_SECURE === 'true'
     }

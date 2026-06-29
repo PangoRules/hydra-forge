@@ -91,7 +91,7 @@ jobs:
 
       - name: Apply migrations
         env:
-          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
+          ConnectionStrings__Default: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
         run: |
           dotnet tool install --global dotnet-ef
           dotnet ef database update \
@@ -102,7 +102,7 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Development
           ASPNETCORE_URLS: http://localhost:5000
-          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
+          ConnectionStrings__Default: "Host=localhost;Port=5433;Database=hydraforge;Username=hydraforge;Password=hydraforge"
         run: |
           dotnet run --project src/HydraForge.Server --no-build --configuration Release &
           npx wait-on http://localhost:5000/openapi/v1.json --timeout 60000
