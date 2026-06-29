@@ -1,9 +1,9 @@
 # Manual Validation Matrix — Plan 5: Specs/Plans/Realtime
 
 ## Setup
-- [ ] API server running locally (`ASPNETCORE_ENVIRONMENT=Development`)
-- [ ] Web dev server running (`pnpm dev` at `src/web-ui`)
-- [ ] Logged in, project with at least one Goal card and one Idea card (and Task/Issue for negative case)
+- [X] API server running locally (`ASPNETCORE_ENVIRONMENT=Development`)
+- [X] Web dev server running (`pnpm dev` at `src/web-ui`)
+- [X] Logged in, project with at least one Goal card and one Idea card (and Task/Issue for negative case)
 
 ## Task — Type-Conditional Docs Tab (CardModal)
 Goal: Verify the Docs tab shows only on Goal/Idea and Plan only on Goal.

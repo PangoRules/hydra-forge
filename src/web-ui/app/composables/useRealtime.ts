@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr'
 export function useRealtime() {
   const { getToken } = useAuthToken()
   const board = useBoardStore()
+  const config = useRuntimeConfig()
 
   let connection: signalR.HubConnection | null = null
   const isConnected = ref(false)
@@ -12,8 +13,9 @@ export function useRealtime() {
     const token = getToken()
     if (!token) return
 
+    const hubUrl = `${config.public.signalrBaseUrl}/hubs/board`
     connection = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/board', {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()

@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr'
 export function usePresence() {
   const { getToken } = useAuthToken()
   const store = usePresenceStore()
+  const config = useRuntimeConfig()
 
   let connection: signalR.HubConnection | null = null
 
@@ -10,8 +11,9 @@ export function usePresence() {
     const token = getToken()
     if (!token) return
 
+    const hubUrl = `${config.public.signalrBaseUrl}/hubs/presence`
     connection = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/presence', {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
