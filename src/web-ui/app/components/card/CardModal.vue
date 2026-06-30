@@ -32,26 +32,27 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-// C# CardType enum integers (from API): Task=1, Issue=2, Goal=5, Idea=4
-const SPEC_CARD_TYPES = [5, 4, 2] as const // Goal, Idea, Issue
-const PLAN_CARD_TYPES = [5, 2, 1] as const // Goal, Issue, Task
+// API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
+const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
+const PLAN_CARD_TYPES = ['Goal', 'Issue', 'Task'] as const
 
-// DocType enum: Specification=1, Concept=2, Report=3
-const CARD_TYPE_TO_DOC_TYPE: Record<number, number> = { 5: 1, 4: 2, 2: 3 } // Goal→Spec, Idea→Concept, Issue→Report
+// DocType enum (API int): Specification=1, Concept=2, Report=3
+const CARD_TYPE_TO_DOC_TYPE: Record<string, number> = { Goal: 1, Idea: 2, Issue: 3 }
 
 const hasSpec = computed(() =>
-  card.value != null && (SPEC_CARD_TYPES as readonly number[]).includes(card.value.type)
+  card.value != null && (SPEC_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
 )
 
 const hasPlan = computed(() =>
-  card.value != null && (PLAN_CARD_TYPES as readonly number[]).includes(card.value.type)
+  card.value != null && (PLAN_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
 )
 
 const hasDocsTab = computed(() => hasSpec.value || hasPlan.value)
 
-const specDocType = computed(() =>
-  card.value ? (CARD_TYPE_TO_DOC_TYPE[card.value.type] ?? 1) : 1
-)
+const specDocType = computed(() => {
+  if (!card.value) return 1
+  return CARD_TYPE_TO_DOC_TYPE[String(card.value.type)] ?? 1
+})
 
 // Populated by CardSpec after it loads/creates the spec; passed to CardPlan for Goal linking
 const linkedSpecId = ref<string | null>(null)
@@ -287,7 +288,7 @@ const otherViewers = computed(() => {
                   <CardPlan
                     :card-id="card.id"
                     :project-id="projectId"
-                    :spec-id="card.type === 5 ? linkedSpecId : null"
+                    :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                     :readonly="isReadonly"
                   />
                 </template>
@@ -415,7 +416,7 @@ const otherViewers = computed(() => {
                 <CardPlan
                   :card-id="card.id"
                   :project-id="projectId"
-                  :spec-id="card.type === 5 ? linkedSpecId : null"
+                  :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                   :readonly="isReadonly"
                 />
               </template>
