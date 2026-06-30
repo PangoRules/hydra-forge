@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
+import { onMounted, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -26,6 +27,20 @@ const sourceMode = ref(false)
 const sourceText = ref('')
 const editorReady = ref(false)
 const savedOriginalHtml = ref('')
+const isFullscreen = ref(false)
+
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isFullscreen.value) {
+    isFullscreen.value = false
+  }
+}
 
 const turndown = new TurndownService({
   codeBlockStyle: 'fenced',
@@ -152,7 +167,7 @@ function toggleSource() {
 </script>
 
 <template>
-  <div :class="{ 'border rounded-md': editable }">
+  <div :class="{ 'border rounded-md': editable, 'fixed inset-0 z-50 bg-background p-6 overflow-auto': isFullscreen }">
     <!-- Toolbar -->
     <div
       v-if="editable && showToolbar && !sourceMode"
@@ -261,6 +276,13 @@ function toggleSource() {
         :class="{ 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleSource"
       />
+      <UButton
+        :icon="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'"
+        variant="ghost"
+        size="xs"
+        :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+        @click="toggleFullscreen"
+      />
     </div>
 
     <!-- Source mode bar (when in source mode) -->
@@ -285,6 +307,7 @@ function toggleSource() {
       v-show="!sourceMode"
       :editor="editor"
       class="markdown-editor-content"
+      :class="isFullscreen ? 'min-h-[calc(100vh-10rem)]' : ''"
     />
 
     <!-- Source textarea -->
@@ -293,6 +316,7 @@ function toggleSource() {
       v-model="sourceText"
       class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
       :placeholder="props.placeholder"
+      :class="isFullscreen ? 'min-h-[calc(100vh-10rem)]' : ''"
     />
   </div>
 </template>
