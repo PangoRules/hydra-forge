@@ -76,7 +76,6 @@ export function useRealtime() {
   async function disconnect(projectId: string) {
     if (import.meta.client) {
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('focus', onForeground)
     }
     if (pollInterval !== null) {
       clearInterval(pollInterval)
@@ -122,7 +121,6 @@ export function useRealtime() {
 
   if (import.meta.client) {
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('focus', onForeground)
   }
 
   return { connect, disconnect, isConnected, isReconnecting }

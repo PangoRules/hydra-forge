@@ -74,6 +74,17 @@ public class PresenceHub : Hub
         });
     }
 
+    public async Task UnfocusCard(Guid projectId)
+    {
+        var userId = Context.User.GetRequiredUserId();
+        var groupName = BoardHub.ProjectGroup(projectId);
+        await Clients.OthersInGroup(groupName).SendAsync("CardUnfocused", new
+        {
+            UserId = userId,
+            ConnectionId = Context.ConnectionId,
+        });
+    }
+
     public async Task LeaveProject(Guid projectId)
     {
         var groupName = BoardHub.ProjectGroup(projectId);

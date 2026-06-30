@@ -7,6 +7,11 @@ export function usePresence() {
 
   let connection: signalR.HubConnection | null = null
 
+  // Tracks the card focused while the connection was still establishing.
+  // Flushed after JoinProject completes so the broadcast is never silently lost.
+  let pendingFocusProjectId: string | null = null
+  let pendingFocusCardId: string | null = null
+
   async function connect(projectId: string) {
     const token = getToken()
     if (!token) return
@@ -35,27 +40,56 @@ export function usePresence() {
       store.setCardFocus(data.userId, data.cardId)
     })
 
+    connection.on('CardUnfocused', (data: { userId: string }) => {
+      store.clearCardFocus(data.userId)
+    })
+
+    connection.onreconnected(() => {
+      connection?.invoke('JoinProject', projectId)
+      if (pendingFocusProjectId === projectId && pendingFocusCardId) {
+        connection?.invoke('FocusCard', projectId, pendingFocusCardId)
+      }
+    })
+
     try {
       await connection.start()
       await connection.invoke('JoinProject', projectId)
+      // Flush any card focus that was set before the connection was ready.
+      if (pendingFocusProjectId === projectId && pendingFocusCardId) {
+        await connection.invoke('FocusCard', projectId, pendingFocusCardId)
+      }
     } catch {
       // silent — presence is non-critical
     }
   }
 
   async function focusCard(projectId: string, cardId: string) {
+    pendingFocusProjectId = projectId
+    pendingFocusCardId = cardId
     if (connection?.state === signalR.HubConnectionState.Connected) {
       try {
         await connection.invoke('FocusCard', projectId, cardId)
-      } catch (e) {
-        console.warn('[presence] focusCard invoke failed:', e)
+      } catch {
+        // silent — will retry on reconnect
       }
-    } else {
-      console.warn('[presence] focusCard skipped — connection state:', connection?.state)
+    }
+    // If not connected yet, pending vars are flushed after JoinProject in connect()
+  }
+
+  async function unfocusCard(projectId: string) {
+    pendingFocusCardId = null
+    if (connection?.state === signalR.HubConnectionState.Connected) {
+      try {
+        await connection.invoke('UnfocusCard', projectId)
+      } catch {
+        // silent
+      }
     }
   }
 
   async function disconnect(projectId: string) {
+    pendingFocusProjectId = null
+    pendingFocusCardId = null
     if (connection?.state === signalR.HubConnectionState.Connected) {
       try {
         await connection.invoke('LeaveProject', projectId)
@@ -69,5 +103,5 @@ export function usePresence() {
     store.clearAllFocusedCards()
   }
 
-  return { connect, disconnect, focusCard }
+  return { connect, disconnect, focusCard, unfocusCard }
 }

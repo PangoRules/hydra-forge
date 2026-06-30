@@ -167,6 +167,7 @@ watch(
 
 watch(selectedCardId, (cardId) => {
   if (cardId) presence.focusCard(projectId, cardId)
+  else presence.unfocusCard(projectId)
 })
 
 onBeforeUnmount(() => {
