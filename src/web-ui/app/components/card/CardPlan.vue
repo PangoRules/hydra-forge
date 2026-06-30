@@ -42,6 +42,11 @@ const loading = ref(true)
 const saving = ref(false)
 const showHistory = ref(false)
 
+const isDirty = computed(() => {
+  if (!plan.value) return true // create mode — always allow
+  return title.value !== plan.value.title || content.value !== plan.value.content
+})
+
 const versions = ref<PlanVersionResponse[]>([])
 const loadingVersions = ref(false)
 const restoring = ref<string | null>(null)
@@ -70,6 +75,7 @@ function deriveDescription(md: string): string {
 }
 
 async function save() {
+  if (!isDirty.value) return
   saving.value = true
   try {
     const desc = deriveDescription(content.value)
@@ -163,6 +169,7 @@ onMounted(() => fetchPlan())
           v-if="!props.readonly"
           size="xs"
           :loading="saving"
+          :disabled="plan !== null && !isDirty"
           @click="save"
         >
           {{ plan ? 'Save' : 'Create' }}
