@@ -240,11 +240,16 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("{planId:guid}/activate")]
-    public async Task<IActionResult> Activate(Guid projectId, Guid planId, CancellationToken ct)
+    [HttpPatch("{planId:guid}/status")]
+    public async Task<IActionResult> SetStatus(
+        Guid projectId,
+        Guid planId,
+        [FromBody] SetPlanStatusRequest request,
+        CancellationToken ct
+    )
     {
         var actorId = User.GetRequiredUserId();
-        var result = await planService.ActivateAsync(new ActivatePlanCommand(projectId, planId, actorId), ct);
+        var result = await planService.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, request.Status), ct);
         if (!result.IsSuccess)
             return this.ToProblemResult(result.Error);
         var response = new PlanResponse(
@@ -265,78 +270,4 @@ public class PlansController(PlanService planService) : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("{planId:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid projectId, Guid planId, CancellationToken ct)
-    {
-        var actorId = User.GetRequiredUserId();
-        var result = await planService.CompleteAsync(new CompletePlanCommand(projectId, planId, actorId), ct);
-        if (!result.IsSuccess)
-            return this.ToProblemResult(result.Error);
-        var response = new PlanResponse(
-            result.Value.Id,
-            result.Value.ProjectId,
-            result.Value.CardId,
-            result.Value.Title,
-            result.Value.Description,
-            result.Value.Content,
-            result.Value.Version,
-            result.Value.CreatedByUserId,
-            result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.SpecId,
-            result.Value.Status,
-            result.Value.Position
-        );
-        return Ok(response);
-    }
-
-    [HttpPost("{planId:guid}/reactivate")]
-    public async Task<IActionResult> Reactivate(Guid projectId, Guid planId, CancellationToken ct)
-    {
-        var actorId = User.GetRequiredUserId();
-        var result = await planService.ReactivateAsync(new ReactivatePlanCommand(projectId, planId, actorId), ct);
-        if (!result.IsSuccess)
-            return this.ToProblemResult(result.Error);
-        var response = new PlanResponse(
-            result.Value.Id,
-            result.Value.ProjectId,
-            result.Value.CardId,
-            result.Value.Title,
-            result.Value.Description,
-            result.Value.Content,
-            result.Value.Version,
-            result.Value.CreatedByUserId,
-            result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.SpecId,
-            result.Value.Status,
-            result.Value.Position
-        );
-        return Ok(response);
-    }
-
-    [HttpPost("{planId:guid}/reopen")]
-    public async Task<IActionResult> Reopen(Guid projectId, Guid planId, CancellationToken ct)
-    {
-        var actorId = User.GetRequiredUserId();
-        var result = await planService.ReopenAsync(new ReopenPlanCommand(projectId, planId, actorId), ct);
-        if (!result.IsSuccess)
-            return this.ToProblemResult(result.Error);
-        var response = new PlanResponse(
-            result.Value.Id,
-            result.Value.ProjectId,
-            result.Value.CardId,
-            result.Value.Title,
-            result.Value.Description,
-            result.Value.Content,
-            result.Value.Version,
-            result.Value.CreatedByUserId,
-            result.Value.CreatedAt,
-            result.Value.UpdatedAt,
-            result.Value.SpecId,
-            result.Value.Status,
-            result.Value.Position
-        );
-        return Ok(response);
-    }
 }

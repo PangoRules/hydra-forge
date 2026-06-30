@@ -13,13 +13,7 @@ public record CreatePlanCommand(
     int Position = 0
 );
 
-public record ActivatePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
-
-public record CompletePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
-
-public record ReactivatePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
-
-public record ReopenPlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
+public record SetPlanStatusCommand(Guid ProjectId, Guid PlanId, Guid ActorId, PlanStatus Status);
 
 public record UpdatePlanCommand(
     Guid ProjectId,
@@ -82,6 +76,10 @@ public record UpdatePlanRequest(
 
 public record RestorePlanVersionRequest(
     int Version
+);
+
+public record SetPlanStatusRequest(
+    PlanStatus Status
 );
 
 public record PlanResponse(
