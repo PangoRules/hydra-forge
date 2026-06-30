@@ -221,7 +221,7 @@ const otherViewers = computed(() => {
         <!-- Desktop: two-column — UModal handles overflow naturally -->
         <div
           data-testid="card-modal-desktop"
-          class="hidden md:flex flex-col"
+          class="hidden md:flex flex-col relative"
         >
           <div
             v-if="otherViewers.length > 0"

@@ -167,7 +167,7 @@ function toggleSource() {
 </script>
 
 <template>
-  <div :class="{ 'border rounded-md': editable, 'fixed inset-0 z-50 bg-background p-6 overflow-auto': isFullscreen }">
+  <div :class="isFullscreen ? 'absolute inset-0 z-10 bg-default flex flex-col' : 'border rounded-md'">
     <!-- Toolbar -->
     <div
       v-if="editable && showToolbar && !sourceMode"
@@ -303,25 +303,37 @@ function toggleSource() {
     </div>
 
     <!-- WYSIWYG editor -->
-    <EditorContent
-      v-show="!sourceMode"
-      :editor="editor"
-      class="markdown-editor-content"
-      :class="isFullscreen ? 'min-h-[calc(100vh-10rem)]' : ''"
-    />
+    <div :class="isFullscreen ? 'flex-1 flex flex-col overflow-y-auto' : 'max-h-[280px] overflow-y-auto'">
+      <EditorContent
+        v-show="!sourceMode"
+        :editor="editor"
+        :class="isFullscreen ? 'markdown-editor-content markdown-editor-fullscreen' : 'markdown-editor-content'"
+      />
 
-    <!-- Source textarea -->
-    <textarea
-      v-if="sourceMode"
-      v-model="sourceText"
-      class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
-      :placeholder="props.placeholder"
-      :class="isFullscreen ? 'min-h-[calc(100vh-10rem)]' : ''"
-    />
+      <!-- Source textarea -->
+      <textarea
+        v-if="sourceMode"
+        v-model="sourceText"
+        class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
+        :placeholder="props.placeholder"
+        :class="isFullscreen ? 'h-full' : ''"
+      />
+    </div>
   </div>
 </template>
 
 <style>
+/* Fullscreen: editor fills available height, scrolls when content overflows */
+.markdown-editor-fullscreen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.markdown-editor-fullscreen .ProseMirror {
+  flex: 1;
+  min-height: unset;
+}
+
 /* Editor content typography — replaces broken prose plugin */
 .markdown-editor-content {
   line-height: 1.625;

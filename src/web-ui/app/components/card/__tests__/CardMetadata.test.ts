@@ -56,9 +56,9 @@ describe('CardMetadata', () => {
     expect(wrapper.text()).toContain('Task')
   })
 
-  it('shows None for missing due date', async () => {
+  it('shows Set due date for missing due date', async () => {
     const wrapper = await mountSuspended(CardMetadata, { props: { card: makeCard(), projectId: 'p1' } })
-    expect(wrapper.text()).toContain('None')
+    expect(wrapper.text()).toContain('Set due date')
   })
 
   it('sends the full update body including the current version on a type change', async () => {
@@ -84,7 +84,9 @@ describe('CardMetadata', () => {
     })
     const wrapper = await mountSuspended(CardMetadata, { props: { card: makeCard(), projectId: 'p1' } })
 
-    await (wrapper.findAll('select')[1]!).setValue('u1')
+    const assigneeMenu = wrapper.findAllComponents({ name: 'USelectMenu' })
+      .find(c => String(c.props('placeholder')).includes('Add assignee'))
+    await assigneeMenu!.vm.$emit('update:modelValue', 'u1')
     await flushPromises()
 
     expect(mockPOST).toHaveBeenCalledWith(ApiRoutes.Cards.assignees('p1', 'c1'), { body: { assigneeUserId: 'u1' } })

@@ -221,7 +221,7 @@ async function fetchParentCandidates() {
   }
 }
 
-async function handleParentChange(value: string | null) {
+async function handleParentChange(value: string) {
   if (props.isArchived) return
   const newParentId = value || null
   if (newParentId === props.card.parentCardId) return
@@ -376,19 +376,41 @@ onMounted(() => {
         <p class="text-xs font-medium text-muted uppercase mb-1">
           Parent
         </p>
-        <USelect
+        <div
           v-if="!isArchived"
-          :model-value="card.parentCardId ?? null"
-          :items="[{ label: 'None', value: null }, ...parentCandidates.map(c => ({ label: c.title, value: c.id }))]"
-          :loading="savingParent"
-          size="xs"
-          class="w-full"
-          @update:model-value="handleParentChange"
-        />
+          class="space-y-1"
+        >
+          <div
+            v-if="parentCard"
+            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
+          >
+            {{ `#${parentCard.cardNumber} — ${parentCard.title}` }}
+            <button
+              class="ml-0.5 text-gray-400 hover:text-red-500"
+              :disabled="savingParent"
+              @click="handleParentChange('')"
+            >
+              <UIcon
+                name="i-lucide-x"
+                class="size-3"
+              />
+            </button>
+          </div>
+          <USelectMenu
+            :model-value="''"
+            :items="parentCandidates.map(c => ({ label: `#${c.cardNumber} — ${c.title}`, value: c.id }))"
+            :loading="savingParent"
+            value-key="value"
+            size="xs"
+            class="w-full"
+            :placeholder="parentCard ? 'Change parent...' : 'Search cards...'"
+            @update:model-value="(v: string) => v && handleParentChange(v)"
+          />
+        </div>
         <span
           v-else
           class="text-sm"
-        >{{ parentCard?.title ?? 'None' }}</span>
+        >{{ parentCard?.title ?? '—' }}</span>
       </div>
 
       <!-- Children -->
@@ -426,57 +448,32 @@ onMounted(() => {
               </button>
             </span>
           </div>
-          <p
-            v-else
-            class="text-xs text-gray-400"
-          >
-            None
-          </p>
-          <select
-            class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-            :value="''"
+          <USelectMenu
+            :model-value="''"
+            :items="addChildCandidates.map(c => ({ label: `${cardTypeOption(c.type).label} #${c.cardNumber} — ${c.title}`, value: c.id }))"
+            value-key="value"
+            size="xs"
+            class="w-full"
+            placeholder="Add child..."
             :disabled="savingChild"
-            @change="(e: Event) => addChild((e.target as HTMLSelectElement).value)"
-          >
-            <option
-              value=""
-              disabled
-            >
-              Add child...
-            </option>
-            <option
-              v-for="c in addChildCandidates"
-              :key="c.id"
-              :value="c.id"
-            >
-              {{ cardTypeOption(c.type).label }} #{{ c.cardNumber }} — {{ c.title }}
-            </option>
-          </select>
+            @update:model-value="(v: string) => v && addChild(v)"
+          />
         </div>
         <div
           v-else
-          class="space-y-1"
+          class="flex flex-wrap gap-1.5"
         >
           <span
-            v-if="childCards.length === 0"
-            class="text-sm text-muted"
-          >None</span>
-          <div
-            v-else
-            class="flex flex-wrap gap-1.5"
+            v-for="child in childCards"
+            :key="child.id"
+            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600"
           >
-            <span
-              v-for="child in childCards"
-              :key="child.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600"
-            >
-              <UIcon
-                :name="cardTypeOption(child.type).icon"
-                class="size-3"
-              />
-              {{ cardTypeOption(child.type).label }} #{{ child.cardNumber }}
-            </span>
-          </div>
+            <UIcon
+              :name="cardTypeOption(child.type).icon"
+              class="size-3"
+            />
+            {{ cardTypeOption(child.type).label }} #{{ child.cardNumber }}
+          </span>
         </div>
       </div>
     </div>
@@ -486,7 +483,10 @@ onMounted(() => {
       <p class="text-xs font-medium text-muted uppercase mb-1.5">
         Assignees
       </p>
-      <div class="flex flex-wrap gap-1.5 mb-2">
+      <div
+        v-if="card.assignees?.length"
+        class="flex flex-wrap gap-1.5 mb-2"
+      >
         <span
           v-for="a in card.assignees"
           :key="a.userId"
@@ -499,27 +499,17 @@ onMounted(() => {
             @click="handleUnassign(a.userId)"
           >×</button>
         </span>
-        <span
-          v-if="!card.assignees?.length"
-          class="text-xs text-muted"
-        >None</span>
       </div>
-      <select
+      <USelectMenu
         v-if="!isArchived && availableMembers.length > 0"
-        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-        @change="(e: Event) => { const s = e.target as HTMLSelectElement; if (s.value) handleAssign(s.value); s.value = '' }"
-      >
-        <option value="">
-          + Add assignee
-        </option>
-        <option
-          v-for="m in availableMembers"
-          :key="m.userId"
-          :value="m.userId"
-        >
-          {{ m.username }}
-        </option>
-      </select>
+        :model-value="''"
+        :items="availableMembers.map(m => ({ label: m.username, value: m.userId }))"
+        value-key="value"
+        size="xs"
+        class="w-full"
+        placeholder="+ Add assignee"
+        @update:model-value="(v: string) => v && handleAssign(v)"
+      />
     </div>
 
     <!-- Due Date -->
@@ -550,16 +540,26 @@ onMounted(() => {
           @click="cancelDueDateEdit"
         />
       </div>
-      <button
-        v-else
-        type="button"
-        class="text-sm text-left"
-        :class="[isOverdue(card.dueAt) ? 'text-red-500 font-medium' : '', isArchived ? 'cursor-default' : 'hover:underline']"
-        :disabled="isArchived"
-        @click="editingDueDate = true"
-      >
-        {{ formatDueDate(card.dueAt) ?? 'None' }}
-      </button>
+      <div v-else>
+        <UButton
+          v-if="!isArchived"
+          variant="soft"
+          color="neutral"
+          size="xs"
+          icon="i-lucide-calendar"
+          :class="isOverdue(card.dueAt) ? '!text-red-500' : ''"
+          @click="editingDueDate = true"
+        >
+          {{ formatDueDate(card.dueAt) ?? 'Set due date' }}
+        </UButton>
+        <span
+          v-else
+          class="text-sm"
+          :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : ''"
+        >
+          {{ formatDueDate(card.dueAt) ?? '—' }}
+        </span>
+      </div>
     </div>
   </div>
 
