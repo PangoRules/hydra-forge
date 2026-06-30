@@ -137,15 +137,18 @@ function applyCardUpdate(updated: CardResponse) {
 onMounted(() => fetchCard())
 
 // Presence indicator
-const { user: currentUser } = useAuthStore()
+const authStore = useAuthStore()
 const presenceStore = usePresenceStore()
 const boardStore = useBoardStore()
 
+const currentUserId = computed(() => authStore.user?.userId)
+
 const otherViewers = computed(() => {
-  if (!currentUser) return []
+  const myId = currentUserId.value
+  if (!myId) return []
   const viewers: string[] = []
   for (const [userId, cardId] of presenceStore.focusedCards) {
-    if (cardId === props.cardId && userId !== currentUser.userId) {
+    if (cardId === props.cardId && userId !== myId) {
       const member = boardStore.members.find(m => m.userId === userId)
       if (member) viewers.push(member.username)
     }
