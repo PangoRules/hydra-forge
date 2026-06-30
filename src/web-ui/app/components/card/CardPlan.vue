@@ -198,7 +198,7 @@ onMounted(() => fetchPlan())
 
       <div
         v-if="showHistory && plan"
-        class="w-52 flex-shrink-0 border-l pl-4 space-y-2"
+        class="w-52 flex-shrink-0 border-l pl-4 space-y-2 max-h-80 overflow-y-auto"
       >
         <p class="text-xs font-medium text-muted uppercase">
           History
