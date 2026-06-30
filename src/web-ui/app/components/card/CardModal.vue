@@ -32,16 +32,29 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-const DOCS_CARD_TYPES = ['Goal', 'Idea'] as const
-const PLAN_CARD_TYPES = ['Goal'] as const
+// Card type numeric values from card-type.ts: Task=0, Issue=1, Goal=2, Idea=3
+const SPEC_CARD_TYPES = [2, 3, 1] as const // Goal, Idea, Issue
+const PLAN_CARD_TYPES = [2, 1, 0] as const // Goal, Issue, Task
 
-const hasDocsTab = computed(() =>
-  card.value != null && DOCS_CARD_TYPES.includes(card.value.type as unknown as typeof DOCS_CARD_TYPES[number])
+// DocType enum: Specification=1, Concept=2, Report=3
+const CARD_TYPE_TO_DOC_TYPE: Record<number, number> = { 2: 1, 3: 2, 1: 3 } // Goal→Spec, Idea→Concept, Issue→Report
+
+const hasSpec = computed(() =>
+  card.value != null && (SPEC_CARD_TYPES as readonly number[]).includes(card.value.type)
 )
 
 const hasPlan = computed(() =>
-  card.value != null && PLAN_CARD_TYPES.includes(card.value.type as unknown as typeof PLAN_CARD_TYPES[number])
+  card.value != null && (PLAN_CARD_TYPES as readonly number[]).includes(card.value.type)
 )
+
+const hasDocsTab = computed(() => hasSpec.value || hasPlan.value)
+
+const specDocType = computed(() =>
+  card.value ? (CARD_TYPE_TO_DOC_TYPE[card.value.type] ?? 1) : 1
+)
+
+// Populated by CardSpec after it loads/creates the spec; passed to CardPlan for Goal linking
+const linkedSpecId = ref<string | null>(null)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related' | 'docs'>('details')
 
@@ -134,7 +147,10 @@ function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
 
-onMounted(() => fetchCard())
+onMounted(() => {
+  fetchCard()
+  linkedSpecId.value = null
+})
 
 // Presence indicator
 const authStore = useAuthStore()
@@ -259,15 +275,19 @@ const otherViewers = computed(() => {
                 class="space-y-8"
               >
                 <CardSpec
+                  v-if="hasSpec"
                   :card-id="card.id"
                   :project-id="projectId"
+                  :doc-type="specDocType"
                   :readonly="isReadonly"
+                  @update:spec-id="linkedSpecId = $event"
                 />
                 <template v-if="hasPlan">
-                  <USeparator />
+                  <USeparator v-if="hasSpec" />
                   <CardPlan
                     :card-id="card.id"
                     :project-id="projectId"
+                    :spec-id="card.type === 2 ? linkedSpecId : null"
                     :readonly="isReadonly"
                   />
                 </template>
@@ -383,15 +403,19 @@ const otherViewers = computed(() => {
               class="space-y-8"
             >
               <CardSpec
+                v-if="hasSpec"
                 :card-id="card.id"
                 :project-id="projectId"
+                :doc-type="specDocType"
                 :readonly="isReadonly"
+                @update:spec-id="linkedSpecId = $event"
               />
               <template v-if="hasPlan">
-                <USeparator />
+                <USeparator v-if="hasSpec" />
                 <CardPlan
                   :card-id="card.id"
                   :project-id="projectId"
+                  :spec-id="card.type === 2 ? linkedSpecId : null"
                   :readonly="isReadonly"
                 />
               </template>

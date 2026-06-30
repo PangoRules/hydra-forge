@@ -2,10 +2,13 @@
 import { ApiRoutes } from '~/lib/routes'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
+const DOC_TYPE_LABELS: Record<number, string> = { 1: 'Specification', 2: 'Concept', 3: 'Report' }
+
 interface SpecResponse {
   id: string
   projectId: string
   cardId: string
+  docType: number
   title: string
   description: string | null
   content: string
@@ -26,10 +29,15 @@ interface SpecVersionResponse {
   createdByUserId: string
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   cardId: string
   projectId: string
+  docType?: number
   readonly?: boolean
+}>(), { docType: 1 })
+
+const emit = defineEmits<{
+  'update:specId': [string | null]
 }>()
 
 const toast = useAppToast()
@@ -61,6 +69,7 @@ async function fetchSpec() {
       title.value = spec.value.title
       content.value = spec.value.content
     }
+    emit('update:specId', spec.value?.id ?? null)
   } catch {
     // No spec yet — that's fine, user can create one
   } finally {
@@ -86,10 +95,11 @@ async function save() {
       spec.value = data ?? spec.value
     } else {
       const { data } = await api.POST<SpecResponse>(ApiRoutes.Specs.forCard(props.projectId, props.cardId), {
-        body: { title: title.value, description: desc, content: content.value }
+        body: { docType: props.docType, title: title.value, description: desc, content: content.value }
       })
       spec.value = data ?? null
     }
+    emit('update:specId', spec.value?.id ?? null)
     versions.value = [] // invalidate cache so next history toggle re-fetches
     toast.success('Spec saved')
     if (showHistory.value) await fetchVersions()
@@ -155,7 +165,7 @@ onMounted(() => fetchSpec())
   <div class="space-y-3">
     <div class="flex items-center justify-between">
       <p class="text-xs font-medium text-muted uppercase tracking-wide">
-        Spec
+        {{ DOC_TYPE_LABELS[props.docType] ?? 'Spec' }}
       </p>
       <div class="flex items-center gap-1">
         <UButton
