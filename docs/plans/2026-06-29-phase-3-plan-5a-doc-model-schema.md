@@ -3,7 +3,7 @@
 **Parent branch:** `feat/phase-3-web-ui`
 **Parent spec:** N/A — implements D-44 (Doc Model Redesign); plan 5b covers the UI.
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add `DocType` to `Spec`, add `Status` and `Position` to `Plan`, add `SpawnedFrom` to `RelationshipType`, wire EF config + migration, enforce `PlanStatus.Done` read-only in the service layer, expose new fields through DTOs and controllers.
 
@@ -38,7 +38,7 @@
 - Modify: `src/HydraForge.Domain/Entities/ProjectSpace/Spec.cs`
 - Modify: `src/HydraForge.Domain/Entities/ProjectSpace/Plan.cs`
 
-- [ ] **Step 1: Create DocType enum**
+- [x] **Step 1: Create DocType enum**
 
 Create `src/HydraForge.Domain/Enums/DocType.cs`:
 
@@ -53,7 +53,7 @@ public enum DocType
 }
 ```
 
-- [ ] **Step 2: Create PlanStatus enum**
+- [x] **Step 2: Create PlanStatus enum**
 
 Create `src/HydraForge.Domain/Enums/PlanStatus.cs`:
 
@@ -68,7 +68,7 @@ public enum PlanStatus
 }
 ```
 
-- [ ] **Step 3: Add SpawnedFrom to RelationshipType**
+- [x] **Step 3: Add SpawnedFrom to RelationshipType**
 
 Open `src/HydraForge.Domain/Enums/RelationshipType.cs`. Current content:
 
@@ -97,7 +97,7 @@ public enum RelationshipType
 }
 ```
 
-- [ ] **Step 4: Add DocType to Spec entity**
+- [x] **Step 4: Add DocType to Spec entity**
 
 Open `src/HydraForge.Domain/Entities/ProjectSpace/Spec.cs`. Add `DocType` property and lifecycle methods:
 
@@ -122,7 +122,7 @@ public class Spec
 }
 ```
 
-- [ ] **Step 5: Add Status and Position to Plan entity + lifecycle methods**
+- [x] **Step 5: Add Status and Position to Plan entity + lifecycle methods**
 
 Open `src/HydraForge.Domain/Entities/ProjectSpace/Plan.cs`. Add `Status`, `Position`, and lifecycle methods:
 
@@ -157,7 +157,7 @@ public class Plan
 }
 ```
 
-- [ ] **Step 6: Build — zero errors**
+- [x] **Step 6: Build — zero errors**
 
 ```bash
 dotnet build
@@ -165,7 +165,7 @@ dotnet build
 
 Expected: Build succeeded, 0 errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/HydraForge.Domain/Enums/DocType.cs \
@@ -185,7 +185,7 @@ git commit -m "feat(domain): DocType + PlanStatus enums, Spec.DocType, Plan.Stat
 - Auto-generated: migration files under `src/HydraForge.Infrastructure/Migrations/`
 - Modify: test files (model contract assertions)
 
-- [ ] **Step 1: Update DbContext — Spec config**
+- [x] **Step 1: Update DbContext — Spec config**
 
 Open `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`.
 
@@ -208,7 +208,7 @@ ConfigureEntity<Spec>(modelBuilder, "specs", b =>
 
 Add `using HydraForge.Domain.Enums;` at the top of the file if not already present.
 
-- [ ] **Step 2: Update DbContext — Plan config**
+- [x] **Step 2: Update DbContext — Plan config**
 
 Find the `ConfigureEntity<Plan>` block (currently lines 140–149). Replace with:
 
@@ -234,7 +234,7 @@ ConfigureEntity<Plan>(modelBuilder, "plans", b =>
 });
 ```
 
-- [ ] **Step 3: Add EF migration**
+- [x] **Step 3: Add EF migration**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" \
@@ -248,7 +248,7 @@ Open the generated migration file and verify it contains:
 - `AddColumn` for `status` on `plans` table (default 1)
 - `AddColumn` for `position` on `plans` table (default 0)
 
-- [ ] **Step 4: Verify no pending model changes**
+- [x] **Step 4: Verify no pending model changes**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" \
@@ -259,7 +259,7 @@ PATH="$PATH:/home/pango/.dotnet/tools" \
 
 Expected: `No pending model changes detected.` (exit 0)
 
-- [ ] **Step 5: Run build + tests**
+- [x] **Step 5: Run build + tests**
 
 ```bash
 dotnet build && dotnet test
@@ -267,7 +267,7 @@ dotnet build && dotnet test
 
 Expected: Build succeeded, all tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs \
@@ -287,7 +287,7 @@ git commit -m "feat(infra): EF config + migration for DocType, PlanStatus, Plan.
 - Modify: `src/HydraForge.Application/Plans/PlanService.cs`
 - Create or modify: test files for service layer
 
-- [ ] **Step 1: Add PLAN_EDIT_FORBIDDEN_WHEN_DONE error code**
+- [x] **Step 1: Add PLAN_EDIT_FORBIDDEN_WHEN_DONE error code**
 
 Open `src/HydraForge.Domain/Common/DomainErrorCodes.cs`. Find the `Plans` class and add:
 
@@ -302,7 +302,7 @@ public static class Plans
 }
 ```
 
-- [ ] **Step 2: Update SpecModels.cs — add DocType everywhere**
+- [x] **Step 2: Update SpecModels.cs — add DocType everywhere**
 
 Open `src/HydraForge.Application/Specs/SpecModels.cs`. Replace the full file:
 
@@ -411,7 +411,7 @@ public record SpecListResponse(IReadOnlyList<SpecResponse> Specs);
 public record SpecVersionListResponse(IReadOnlyList<SpecVersionResponse> Versions);
 ```
 
-- [ ] **Step 3: Update PlanModels.cs — add Status, Position, ReactivatePlanCommand**
+- [x] **Step 3: Update PlanModels.cs — add Status, Position, ReactivatePlanCommand**
 
 Open `src/HydraForge.Application/Plans/PlanModels.cs`. Replace the full file:
 
@@ -544,7 +544,7 @@ public record PlanListResponse(IReadOnlyList<PlanResponse> Plans);
 public record PlanVersionListResponse(IReadOnlyList<PlanVersionResponse> Versions);
 ```
 
-- [ ] **Step 4: Update SpecService — pass DocType on create + MapToDto**
+- [x] **Step 4: Update SpecService — pass DocType on create + MapToDto**
 
 Open `src/HydraForge.Application/Specs/SpecService.cs`.
 
@@ -586,7 +586,7 @@ private static SpecDto MapToDto(Spec spec) =>
     );
 ```
 
-- [ ] **Step 5: Update PlanService — Status/Position on create, Done guard on update, lifecycle methods**
+- [x] **Step 5: Update PlanService — Status/Position on create, Done guard on update, lifecycle methods**
 
 Open `src/HydraForge.Application/Plans/PlanService.cs`.
 
@@ -723,7 +723,7 @@ private static PlanDto MapToDto(Plan plan) =>
     );
 ```
 
-- [ ] **Step 6: Write failing service tests**
+- [x] **Step 6: Write failing service tests**
 
 Find or create the test file for PlanService (check `tests/HydraForge.Application.Tests/Plans/PlanServiceTests.cs` or equivalent path).
 
@@ -771,7 +771,7 @@ public async Task CreateAsync_SetsStatusToPending()
 }
 ```
 
-- [ ] **Step 7: Run tests (expect new tests to fail — stubs not yet wired)**
+- [x] **Step 7: Run tests (expect new tests to fail — stubs not yet wired)**
 
 ```bash
 dotnet build && dotnet test
@@ -779,7 +779,7 @@ dotnet build && dotnet test
 
 Fix any compilation errors from the DTO/service changes. New service tests will fail if stubs aren't in place — wire them using the existing test patterns in the test project.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/HydraForge.Domain/Common/DomainErrorCodes.cs \
@@ -800,11 +800,11 @@ git commit -m "feat(app): DocType in SpecService, PlanStatus lifecycle + Done gu
 - Modify: `src/HydraForge.Server/Controllers/Projects/PlansController.cs`
 - Modify: `src/web-ui/app/lib/routes.ts` (add reactivate/activate/complete endpoints)
 
-- [ ] **Step 1: Read the current SpecsController**
+- [x] **Step 1: Read the current SpecsController**
 
 Read `src/HydraForge.Server/Controllers/Projects/SpecsController.cs` in full before editing.
 
-- [ ] **Step 2: Update SpecsController — pass DocType from request to command**
+- [x] **Step 2: Update SpecsController — pass DocType from request to command**
 
 In the `POST` (create) action, pass `request.DocType` to `CreateSpecCommand`:
 
@@ -838,11 +838,11 @@ new SpecResponse(
 )
 ```
 
-- [ ] **Step 3: Read the current PlansController**
+- [x] **Step 3: Read the current PlansController**
 
 Read `src/HydraForge.Server/Controllers/Projects/PlansController.cs` in full before editing.
 
-- [ ] **Step 4: Update PlansController — Status, Position in responses + new lifecycle endpoints**
+- [x] **Step 4: Update PlansController — Status, Position in responses + new lifecycle endpoints**
 
 In the create action, pass `Position` and `SpecId` from request:
 
@@ -915,7 +915,7 @@ public async Task<IActionResult> Reactivate(Guid projectId, Guid planId, Cancell
 
 Where `MapToResponse` extracts the existing inline mapping into a private static helper (refactor as part of this step if it isn't already).
 
-- [ ] **Step 5: Add new plan endpoints to ApiRoutes in routes.ts**
+- [x] **Step 5: Add new plan endpoints to ApiRoutes in routes.ts**
 
 Open `src/web-ui/app/lib/routes.ts`. In the `Plans` block add:
 
@@ -931,7 +931,7 @@ Plans: {
 },
 ```
 
-- [ ] **Step 6: Build + tests + EF drift check**
+- [x] **Step 6: Build + tests + EF drift check**
 
 ```bash
 dotnet build && dotnet test
@@ -951,7 +951,7 @@ cd src/web-ui && pnpm typecheck && pnpm lint
 
 Expected: zero errors.
 
-- [ ] **Step 7: Verify via Scalar UI**
+- [x] **Step 7: Verify via Scalar UI**
 
 Start the dev server (`dotnet run --project src/HydraForge.Server`) and open `http://localhost:5000/scalar/v1`. Confirm:
 - `POST /api/projects/{projectId}/cards/{cardId}/Plans` request body includes `specId`, `position`.
@@ -959,7 +959,7 @@ Start the dev server (`dotnet run --project src/HydraForge.Server`) and open `ht
 - `POST .../Plans/{planId}/activate`, `.../complete`, `.../reactivate` are listed.
 - `POST /api/projects/{projectId}/cards/{cardId}/Specs` request body includes `docType`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/HydraForge.Server/Controllers/Projects/SpecsController.cs \
