@@ -135,6 +135,23 @@ function applyCardUpdate(updated: CardResponse) {
 }
 
 onMounted(() => fetchCard())
+
+// Presence indicator
+const { user: currentUser } = useAuthStore()
+const presenceStore = usePresenceStore()
+const boardStore = useBoardStore()
+
+const otherViewers = computed(() => {
+  if (!currentUser) return []
+  const viewers: string[] = []
+  for (const [userId, cardId] of presenceStore.focusedCards) {
+    if (cardId === props.cardId && userId !== currentUser.userId) {
+      const member = boardStore.members.find(m => m.userId === userId)
+      if (member) viewers.push(member.username)
+    }
+  }
+  return viewers
+})
 </script>
 
 <template>
@@ -176,6 +193,16 @@ onMounted(() => fetchCard())
           data-testid="card-modal-desktop"
           class="hidden md:flex flex-col"
         >
+          <div
+            v-if="otherViewers.length > 0"
+            class="px-4 py-1.5 text-xs text-muted italic border-b"
+          >
+            <UIcon
+              name="i-lucide-eye"
+              class="size-3 inline mr-1"
+            />
+            {{ otherViewers.join(', ') }} {{ otherViewers.length === 1 ? 'is' : 'are' }} viewing
+          </div>
           <UTabs
             v-model="activeTab"
             :items="desktopTabs"
@@ -271,6 +298,16 @@ onMounted(() => fetchCard())
           data-testid="card-modal-mobile"
           class="md:hidden flex flex-col"
         >
+          <div
+            v-if="otherViewers.length > 0"
+            class="px-4 py-1.5 text-xs text-muted italic border-b"
+          >
+            <UIcon
+              name="i-lucide-eye"
+              class="size-3 inline mr-1"
+            />
+            {{ otherViewers.join(', ') }} {{ otherViewers.length === 1 ? 'is' : 'are' }} viewing
+          </div>
           <UTabs
             v-model="activeTab"
             :items="tabs"

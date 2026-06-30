@@ -173,6 +173,21 @@ onBeforeUnmount(() => {
   realtime.disconnect(projectId)
   presence.disconnect(projectId)
 })
+
+// Presence indicator
+const presenceStore = usePresenceStore()
+const onlineUsers = computed(() => {
+  const users = presenceStore.onlineUsers.get(projectId)
+  return users ? users : []
+})
+
+// Helper function to generate consistent avatar colors based on user ID
+const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6']
+function hashColor(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash += id.charCodeAt(i)
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length]!
+}
 </script>
 
 <template>
@@ -192,6 +207,20 @@ onBeforeUnmount(() => {
         </UBadge>
       </div>
       <div class="flex items-center gap-1">
+        <div
+          v-if="onlineUsers.length > 0"
+          class="flex items-center -space-x-1.5 ml-2"
+        >
+          <span
+            v-for="u in onlineUsers"
+            :key="u.userId"
+            :title="u.username"
+            class="inline-flex items-center justify-center size-6 rounded-full text-xs font-medium text-white ring-2 ring-white dark:ring-gray-900"
+            :style="{ backgroundColor: hashColor(u.userId) }"
+          >
+            {{ (u.username[0] ?? '').toUpperCase() }}
+          </span>
+        </div>
         <UButton
           v-if="projectArchived"
           variant="ghost"
