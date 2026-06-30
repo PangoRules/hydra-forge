@@ -134,34 +134,23 @@ function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
 
-onMounted(() => {
-  fetchCard()
-  console.log('[presence] CardModal mounted, cardId:', props.cardId, 'focusedCards:', [...presenceStore.focusedCards.entries()])
-})
+onMounted(() => fetchCard())
 
 // Presence indicator
 const authStore = useAuthStore()
 const presenceStore = usePresenceStore()
-const boardStore = useBoardStore()
 
 const currentUserId = computed(() => authStore.user?.userId)
 
-watch(() => [...presenceStore.focusedCards.entries()], (entries) => {
-  console.log('[presence] focusedCards for', props.cardId, ':', entries)
-  console.log('[presence] otherViewers computed would show:', computeOtherViewers(entries))
-})
-
-function computeOtherViewers(entries: [string, string][]) {
-  const myId = currentUserId.value
-  if (!myId) return []
-  const viewers: string[] = []
-  for (const [userId, cardId] of entries) {
-    if (cardId === props.cardId && userId !== myId) {
-      const member = boardStore.members.find(m => m.userId === userId)
-      if (member) viewers.push(member.username)
-    }
+/** Look up username from presence store (online users) instead of
+ *  boardStore.members — members may not be loaded yet when CardModal
+ *  mounts, but online presence data is always available for connected users. */
+function viewerName(userId: string): string | undefined {
+  for (const users of presenceStore.onlineUsers.values()) {
+    const found = users.find(u => u.userId === userId)
+    if (found) return found.username
   }
-  return viewers
+  return undefined
 }
 
 const otherViewers = computed(() => {
@@ -170,8 +159,8 @@ const otherViewers = computed(() => {
   const viewers: string[] = []
   for (const [userId, cardId] of presenceStore.focusedCards) {
     if (cardId === props.cardId && userId !== myId) {
-      const member = boardStore.members.find(m => m.userId === userId)
-      if (member) viewers.push(member.username)
+      const name = viewerName(userId)
+      if (name) viewers.push(name)
     }
   }
   return viewers
