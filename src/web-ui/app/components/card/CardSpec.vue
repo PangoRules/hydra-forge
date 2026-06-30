@@ -136,8 +136,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleString()
 }
 
-function shortUser(guid: string) {
-  return guid.slice(0, 8) + '...'
+const board = useBoardStore()
+
+function shortUser(userId: string) {
+  return board.members.find(m => m.userId === userId)?.username ?? userId.slice(0, 8) + '...'
 }
 
 onMounted(() => fetchSpec())
