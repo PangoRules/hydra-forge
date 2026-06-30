@@ -24,11 +24,12 @@ public class PlansController(PlanService planService) : ControllerBase
         var cmd = new CreatePlanCommand(
             projectId,
             cardId,
-            null,
+            request.SpecId,
             userId,
             request.Title,
             request.Description,
-            request.Content
+            request.Content,
+            request.Position
         );
 
         var result = await planService.CreateAsync(cmd);
@@ -48,7 +49,10 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
         );
 
         return CreatedAtAction(
@@ -86,7 +90,10 @@ public class PlansController(PlanService planService) : ControllerBase
                 p.Version,
                 p.CreatedByUserId,
                 p.CreatedAt,
-                p.UpdatedAt
+                p.UpdatedAt,
+                p.SpecId,
+                p.Status,
+                p.Position
             )),
         ]);
 
@@ -115,7 +122,10 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
         );
 
         return Ok(response);
@@ -156,7 +166,10 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
         );
 
         return Ok(response);
@@ -218,9 +231,87 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
-            result.Value.UpdatedAt
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
         );
 
+        return Ok(response);
+    }
+
+    [HttpPost("{planId:guid}/activate")]
+    public async Task<IActionResult> Activate(Guid projectId, Guid planId, CancellationToken ct)
+    {
+        var actorId = User.GetRequiredUserId();
+        var result = await planService.ActivateAsync(new ActivatePlanCommand(projectId, planId, actorId), ct);
+        if (!result.IsSuccess)
+            return this.ToProblemResult(result.Error);
+        var response = new PlanResponse(
+            result.Value.Id,
+            result.Value.ProjectId,
+            result.Value.CardId,
+            result.Value.Title,
+            result.Value.Description,
+            result.Value.Content,
+            result.Value.Version,
+            result.Value.CreatedByUserId,
+            result.Value.CreatedAt,
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
+        );
+        return Ok(response);
+    }
+
+    [HttpPost("{planId:guid}/complete")]
+    public async Task<IActionResult> Complete(Guid projectId, Guid planId, CancellationToken ct)
+    {
+        var actorId = User.GetRequiredUserId();
+        var result = await planService.CompleteAsync(new CompletePlanCommand(projectId, planId, actorId), ct);
+        if (!result.IsSuccess)
+            return this.ToProblemResult(result.Error);
+        var response = new PlanResponse(
+            result.Value.Id,
+            result.Value.ProjectId,
+            result.Value.CardId,
+            result.Value.Title,
+            result.Value.Description,
+            result.Value.Content,
+            result.Value.Version,
+            result.Value.CreatedByUserId,
+            result.Value.CreatedAt,
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
+        );
+        return Ok(response);
+    }
+
+    [HttpPost("{planId:guid}/reactivate")]
+    public async Task<IActionResult> Reactivate(Guid projectId, Guid planId, CancellationToken ct)
+    {
+        var actorId = User.GetRequiredUserId();
+        var result = await planService.ReactivateAsync(new ReactivatePlanCommand(projectId, planId, actorId), ct);
+        if (!result.IsSuccess)
+            return this.ToProblemResult(result.Error);
+        var response = new PlanResponse(
+            result.Value.Id,
+            result.Value.ProjectId,
+            result.Value.CardId,
+            result.Value.Title,
+            result.Value.Description,
+            result.Value.Content,
+            result.Value.Version,
+            result.Value.CreatedByUserId,
+            result.Value.CreatedAt,
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
+        );
         return Ok(response);
     }
 }
