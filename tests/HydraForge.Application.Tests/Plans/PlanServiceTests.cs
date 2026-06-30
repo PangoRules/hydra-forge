@@ -223,7 +223,7 @@ public class PlanServiceTests
     }
 
     [Fact]
-    public async Task ReactivateAsync_WhenPlanIsDone_TransitionsToActive()
+    public async Task SetStatusAsync_DoneToActive_TransitionsToActive()
     {
         var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
         var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
@@ -235,10 +235,85 @@ public class PlanServiceTests
         planRepo.Add(plan);
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.ReactivateAsync(new ReactivatePlanCommand(projectId, planId, actorId));
+        var result = await service.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, PlanStatus.Active));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(PlanStatus.Active, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task SetStatusAsync_DoneToPending_TransitionsToPending()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Done, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, PlanStatus.Pending));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PlanStatus.Pending, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task SetStatusAsync_ActiveToPending_TransitionsToPending()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Active, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, PlanStatus.Pending));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PlanStatus.Pending, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task SetStatusAsync_SameStatus_ReturnsSuccessWithNoChange()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Active, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, PlanStatus.Active));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PlanStatus.Active, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task SetStatusAsync_WhenUserHasNoMembership_ReturnsAccessDenied()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Done, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+
+        var result = await service.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, PlanStatus.Pending));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
     }
 
     [Fact]
