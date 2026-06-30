@@ -334,6 +334,7 @@ onMounted(() => fetchPlans())
             style="min-width: 8rem"
             :disabled="props.readonly || plan.status === 'Done'"
             size="sm"
+            @click.stop
           />
           <div class="flex items-center gap-1 shrink-0 flex-wrap">
             <USelectMenu
@@ -341,7 +342,9 @@ onMounted(() => fetchPlans())
               :model-value="plan.status"
               :disabled="props.readonly"
               size="xs"
+              :search-input="false"
               @update:model-value="(val: string) => setStatus(plan, val)"
+              @click.stop
             >
               <UBadge
                 :color="STATUS_COLORS[plan.status] ?? 'neutral'"
