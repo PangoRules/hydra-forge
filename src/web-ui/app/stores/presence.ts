@@ -11,28 +11,42 @@ export const usePresenceStore = defineStore('presence', () => {
   const focusedCards = ref<Map<string, string>>(new Map()) // userId → cardId
 
   function setProjectUsers(projectId: string, users: PresenceUser[]) {
-    onlineUsers.value.set(projectId, users)
+    const updated = new Map(onlineUsers.value)
+    updated.set(projectId, users)
+    onlineUsers.value = updated
   }
 
   function addUser(projectId: string, user: PresenceUser) {
-    const users = onlineUsers.value.get(projectId) ?? []
+    const updated = new Map(onlineUsers.value)
+    const users = updated.get(projectId) ?? []
     if (!users.find(u => u.userId === user.userId)) {
-      onlineUsers.value.set(projectId, [...users, user])
+      updated.set(projectId, [...users, user])
+      onlineUsers.value = updated
     }
   }
 
   function removeUser(projectId: string, connectionId: string) {
-    const users = onlineUsers.value.get(projectId) ?? []
-    onlineUsers.value.set(projectId, users.filter(u => u.connectionId !== connectionId))
+    const updated = new Map(onlineUsers.value)
+    const users = updated.get(projectId) ?? []
+    updated.set(projectId, users.filter(u => u.connectionId !== connectionId))
+    onlineUsers.value = updated
   }
 
   function setCardFocus(userId: string, cardId: string) {
-    focusedCards.value.set(userId, cardId)
+    const updated = new Map(focusedCards.value)
+    updated.set(userId, cardId)
+    focusedCards.value = updated
   }
 
   function clearCardFocus(userId: string) {
-    focusedCards.value.delete(userId)
+    const updated = new Map(focusedCards.value)
+    updated.delete(userId)
+    focusedCards.value = updated
   }
 
-  return { onlineUsers, focusedCards, setProjectUsers, addUser, removeUser, setCardFocus, clearCardFocus }
+  function clearAllFocusedCards() {
+    focusedCards.value = new Map()
+  }
+
+  return { onlineUsers, focusedCards, setProjectUsers, addUser, removeUser, setCardFocus, clearCardFocus, clearAllFocusedCards }
 })
