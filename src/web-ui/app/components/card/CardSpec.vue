@@ -100,7 +100,7 @@ async function fetchVersions() {
   try {
     const { data } = await api.GET(ApiRoutes.Specs.versions(props.projectId, spec.value.id))
     const list = data as { versions: SpecVersionResponse[] } | undefined
-    versions.value = list?.versions ?? []
+    versions.value = (list?.versions ?? []).sort((a, b) => b.version - a.version)
   } catch {
     // silently fail
   } finally {
@@ -215,13 +215,13 @@ onMounted(() => fetchSpec())
           No versions yet
         </div>
         <div
-          v-for="(v, i) in versions"
+          v-for="v in versions"
           :key="v.id"
           class="flex items-center justify-between gap-1 text-xs py-1"
         >
           <div class="min-w-0">
             <p class="truncate">
-              v{{ versions.length - i }} · {{ formatDate(v.createdAt) }}
+              v{{ v.version }} · {{ formatDate(v.createdAt) }}
             </p>
             <p class="text-muted truncate">
               {{ shortUser(v.createdByUserId) }}
