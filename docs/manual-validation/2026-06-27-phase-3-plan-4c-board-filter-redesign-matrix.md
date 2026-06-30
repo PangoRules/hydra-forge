@@ -10,18 +10,29 @@ Column visibility controlled via dropdown multi-select. Card-type filter stays p
 
 ### Happy Path — Column Visibility Dropdown
 1. Desktop: load board → all columns render → filter bar shows "All columns" button
+Wroks
 2. Desktop: click "All columns" button → dropdown opens with checkboxes for every column
+Works
 3. Desktop: uncheck "Backlog" → dropdown closes → board hides Backlog column → button updates to "1 column"
+Works
 4. Desktop: reopen dropdown → uncheck "Done" → both Backlog and Done hidden → button shows "2 columns"
+Works
 5. Desktop: reopen dropdown → recheck "Backlog" → Backlog reappears → button shows "1 column"
+Works
 6. Desktop: reopen dropdown → check all → "All columns" button text returns
+Works
 7. Mobile: open Filter panel → tap "All columns" → dropdown with checkboxes renders for every column → tapping toggles visibility same as desktop
+Works
 
 ### Bug Fix — hideEmptyColumns vs Column Selection
 8. Desktop: uncheck a column → `Hide empty` checkbox becomes disabled (greyed, `not-allowed` cursor) → "(column selected)" hint appears
+Works
 9. Desktop: uncheck a column + verify an unselected empty column stays visible (the regression — previously `hideEmptyColumns` would still strip it)
+Works
 10. Mobile: open filter panel → toggle a column off → `Hide empty` checkbox disabled, hint visible
+Works
 11. Recheck all columns → `Hide empty` checkbox re-enables; flipping it on collapses empty columns as before
+Works
 
 ### Edge Cases
 12. Project with 1 column → dropdown shows single checkbox → unchecking it leaves board empty but `Hide empty` disables

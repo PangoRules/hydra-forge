@@ -19,6 +19,10 @@ export default defineNuxtConfig({
       // Empty string → browser sends relative /api/... requests to Nuxt server,
       // which proxies them via server/routes/api/[...path].ts. No CORS ever.
       apiBaseUrl: '',
+      // Empty → relative /hubs/... (nginx handles in Docker).
+      // Set NUXT_PUBLIC_SIGNALR_BASE_URL=http://localhost:5000 for local dev
+      // to get direct WebSocket (bypasses Nuxt devProxy, avoids WS errors).
+      signalrBaseUrl: process.env.NUXT_PUBLIC_SIGNALR_BASE_URL ?? '',
       authCookieMaxAge: parseInt(process.env.NUXT_PUBLIC_AUTH_COOKIE_MAX_AGE ?? '3600', 10),
       authCookieSecure: process.env.NUXT_PUBLIC_AUTH_COOKIE_SECURE === 'true'
     }
@@ -29,6 +33,16 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2025-01-15',
+
+  nitro: {
+    devProxy: {
+      '/hubs': {
+        target: `${process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000'}/hubs`,
+        ws: true,
+        changeOrigin: true
+      }
+    }
+  },
 
   eslint: {
     config: {

@@ -58,6 +58,8 @@ services:
       FileStorage__S3__BucketName: ${MINIO_BUCKET:-hydraforge-attachments}
       FileStorage__S3__Region: ${MINIO_REGION:-us-east-1}
       FileStorage__S3__ForcePathStyle: "true"
+      # Allow both nginx (port 80) and direct Nuxt access (port 3000) as origins.
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:3000}
     ports:
       # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
       - "5000:8080"
@@ -78,8 +80,25 @@ services:
     environment:
       NUXT_API_BASE_URL: http://server:8080
       NUXT_PUBLIC_AUTH_COOKIE_SECURE: "false"
+      # Point SignalR at nginx so /hubs/ gets proxied even if user hits port 3000 directly.
+      # Override in .env if nginx is on a non-standard port.
+      NUXT_PUBLIC_SIGNALR_BASE_URL: ${APP_BASE_URL:-http://localhost}
     ports:
       - "3000:3000"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      # Full Docker stack defaults. For hybrid mode (API + UI running locally),
+      # set in .env: BACKEND_HOST=host.docker.internal:5000  NUXT_HOST=host.docker.internal:3000
+      BACKEND_HOST: ${BACKEND_HOST:-server:8080}
+      NUXT_HOST: ${NUXT_HOST:-web:3000}
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   searxng:
     # Only needed if Odysseus (or another SearXNG instance) is NOT running.

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Claims;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Infrastructure.Realtime;
@@ -25,9 +26,9 @@ public class PresenceHub : Hub
 
     public async Task JoinProject(Guid projectId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
 
-        var isAdmin = Context.User.IsInRole("Admin");
+        var isAdmin = Context.User!.IsInRole("Admin");
         if (!isAdmin)
         {
             var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId);
@@ -40,10 +41,18 @@ public class PresenceHub : Hub
         var groupName = BoardHub.ProjectGroup(projectId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
 
-        var username = Context.User.Identity?.Name ?? "unknown";
+        var username = Context.User!.FindFirstValue("name") ?? "unknown";
 
         var projectEntries = _projectPresence.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, PresenceEntry>());
         projectEntries[Context.ConnectionId] = new PresenceEntry(userId, username, Context.ConnectionId, DateTime.UtcNow);
+
+        // Send current user list to the new joiner so they know who's already here
+        var currentUsers = projectEntries.Values
+            .Where(e => e.ConnectionId != Context.ConnectionId)
+            .Select(e => new { e.UserId, e.Username, e.ConnectionId })
+            .ToList();
+
+        await Clients.Caller.SendAsync("CurrentUsers", currentUsers);
 
         await Clients.OthersInGroup(groupName).SendAsync("UserJoined", new
         {
@@ -55,12 +64,23 @@ public class PresenceHub : Hub
 
     public async Task FocusCard(Guid projectId, Guid cardId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients.OthersInGroup(groupName).SendAsync("CardFocused", new
         {
             UserId = userId,
             CardId = cardId,
+            ConnectionId = Context.ConnectionId,
+        });
+    }
+
+    public async Task UnfocusCard(Guid projectId)
+    {
+        var userId = Context.User!.GetRequiredUserId();
+        var groupName = BoardHub.ProjectGroup(projectId);
+        await Clients.OthersInGroup(groupName).SendAsync("CardUnfocused", new
+        {
+            UserId = userId,
             ConnectionId = Context.ConnectionId,
         });
     }
@@ -75,8 +95,8 @@ public class PresenceHub : Hub
             projectEntries.TryRemove(Context.ConnectionId, out _);
         }
 
-        var userId = Context.User.GetRequiredUserId();
-        var username = Context.User.Identity?.Name ?? "unknown";
+        var userId = Context.User!.GetRequiredUserId();
+        var username = Context.User!.FindFirstValue("name") ?? "unknown";
 
         await Clients.OthersInGroup(groupName).SendAsync("UserLeft", new
         {

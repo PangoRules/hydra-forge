@@ -502,10 +502,10 @@
 - [x] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
 - [x] Blocked card lock icon + badge on board (always visible)
 - [x] Soft warning modal on column move when blocked (points to blocking card)
-- [ ] Spec editor: versioned markdown, version history sidebar, restore
-- [ ] Plan editor: numbered steps markdown, version history
-- [ ] Real-time board updates via SignalR (no page refresh)
-- [ ] Presence dots on board and card detail
+- [x] Spec editor: versioned markdown, version history sidebar, restore
+- [x] Plan editor: numbered steps markdown, version history
+- [x] Real-time board updates via SignalR (no page refresh)
+- [x] Presence dots on board and card detail
 - [ ] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
 - [ ] Keyboard shortcut reference overlay (`?`)
 - [ ] ARIA labels, focus management, WCAG AA color contrast (built in from day one)

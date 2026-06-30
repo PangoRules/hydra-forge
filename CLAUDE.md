@@ -127,7 +127,8 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - On Column: `UpdateDetails`, `AssignPosition(position)`
 - On ProjectMember: `ChangeRole(role)`
 - Services call these methods instead of `entity.Property = value`
-- **Spec/Plan ownership:** `Spec.CardId` and `Plan.CardId` are ownership FKs — the card that created the doc owns it. Other cards read but don't edit. No link/unlink.
+- **Spec/Plan ownership:** `Spec.CardId` owns the Spec (max 1 per Card; Goal/Idea/Issue only — Task has none). `Plan.CardId` owns the Plan; `Plan.SpecId` (nullable) groups Goal plans under their Spec. Card-type rules: Goal→Spec(DocType=Specification)+Plans via SpecId, Idea→Spec(DocType=Concept) only, Issue→Spec(DocType=Report)+Plans direct, Task→Plans direct only. No link/unlink. See D-44.
+- **Plan lifecycle:** `PlanStatus` — `Pending → Active → Done`. Done plans are read-only; `Reactivate` transitions Done→Active. Services must reject edits on Done plans.
 - **Version snapshots:** `SpecVersion` and `PlanVersion` store `Title`, `Description`, `Content` — full document state at each snapshot. Restore reverts all three.
 
 **Controller routing:**

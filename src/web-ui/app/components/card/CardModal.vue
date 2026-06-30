@@ -4,6 +4,8 @@ import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import CardSpec from '~/components/card/CardSpec.vue'
+import CardPlan from '~/components/card/CardPlan.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -30,20 +32,37 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-const activeTab = ref<'details' | 'checklist' | 'comments' | 'related'>('details')
+const DOCS_CARD_TYPES = ['Goal', 'Idea'] as const
+const PLAN_CARD_TYPES = ['Goal'] as const
 
-const tabs = [
+const hasDocsTab = computed(() =>
+  card.value != null && DOCS_CARD_TYPES.includes(card.value.type as unknown as typeof DOCS_CARD_TYPES[number])
+)
+
+const hasPlan = computed(() =>
+  card.value != null && PLAN_CARD_TYPES.includes(card.value.type as unknown as typeof PLAN_CARD_TYPES[number])
+)
+
+const activeTab = ref<'details' | 'checklist' | 'comments' | 'related' | 'docs'>('details')
+
+const tabs = computed(() => [
   { label: 'Details', value: 'details' as const },
   { label: 'Checklist', value: 'checklist' as const },
   { label: 'Comments', value: 'comments' as const },
-  { label: 'Related', value: 'related' as const }
-]
+  { label: 'Related', value: 'related' as const },
+  ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
+])
 
-const desktopTabs = [
+const desktopTabs = computed(() => [
   { label: 'Details', value: 'details' as const },
   { label: 'Checklist', value: 'checklist' as const },
-  { label: 'Comments', value: 'comments' as const }
-]
+  { label: 'Comments', value: 'comments' as const },
+  ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
+])
+
+watch(hasDocsTab, (has) => {
+  if (!has && activeTab.value === 'docs') activeTab.value = 'details'
+})
 
 const api = useApi()
 
@@ -116,6 +135,36 @@ function applyCardUpdate(updated: CardResponse) {
 }
 
 onMounted(() => fetchCard())
+
+// Presence indicator
+const authStore = useAuthStore()
+const presenceStore = usePresenceStore()
+
+const currentUserId = computed(() => authStore.user?.userId)
+
+/** Look up username from presence store (online users) instead of
+ *  boardStore.members — members may not be loaded yet when CardModal
+ *  mounts, but online presence data is always available for connected users. */
+function viewerName(userId: string): string | undefined {
+  for (const users of presenceStore.onlineUsers.values()) {
+    const found = users.find(u => u.userId === userId)
+    if (found) return found.username
+  }
+  return undefined
+}
+
+const otherViewers = computed(() => {
+  const myId = currentUserId.value
+  if (!myId) return []
+  const viewers: string[] = []
+  for (const [userId, cardId] of presenceStore.focusedCards) {
+    if (cardId === props.cardId && userId !== myId) {
+      const name = viewerName(userId)
+      if (name) viewers.push(name)
+    }
+  }
+  return viewers
+})
 </script>
 
 <template>
@@ -157,6 +206,16 @@ onMounted(() => fetchCard())
           data-testid="card-modal-desktop"
           class="hidden md:flex flex-col"
         >
+          <div
+            v-if="otherViewers.length > 0"
+            class="px-4 py-1.5 text-xs text-muted italic border-b"
+          >
+            <UIcon
+              name="i-lucide-eye"
+              class="size-3 inline mr-1"
+            />
+            {{ otherViewers.join(', ') }} {{ otherViewers.length === 1 ? 'is' : 'are' }} viewing
+          </div>
           <UTabs
             v-model="activeTab"
             :items="desktopTabs"
@@ -194,6 +253,24 @@ onMounted(() => fetchCard())
                     Attachments, dependencies, specs, plans coming soon
                   </p>
                 </div>
+              </div>
+              <div
+                v-else-if="activeTab === 'docs'"
+                class="space-y-8"
+              >
+                <CardSpec
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                />
+                <template v-if="hasPlan">
+                  <USeparator />
+                  <CardPlan
+                    :card-id="card.id"
+                    :project-id="projectId"
+                    :readonly="isReadonly"
+                  />
+                </template>
               </div>
             </div>
 
@@ -234,6 +311,16 @@ onMounted(() => fetchCard())
           data-testid="card-modal-mobile"
           class="md:hidden flex flex-col"
         >
+          <div
+            v-if="otherViewers.length > 0"
+            class="px-4 py-1.5 text-xs text-muted italic border-b"
+          >
+            <UIcon
+              name="i-lucide-eye"
+              class="size-3 inline mr-1"
+            />
+            {{ otherViewers.join(', ') }} {{ otherViewers.length === 1 ? 'is' : 'are' }} viewing
+          </div>
           <UTabs
             v-model="activeTab"
             :items="tabs"
@@ -290,6 +377,24 @@ onMounted(() => fetchCard())
                 :project-id="projectId"
                 :readonly="isReadonly"
               />
+            </div>
+            <div
+              v-else-if="activeTab === 'docs'"
+              class="space-y-8"
+            >
+              <CardSpec
+                :card-id="card.id"
+                :project-id="projectId"
+                :readonly="isReadonly"
+              />
+              <template v-if="hasPlan">
+                <USeparator />
+                <CardPlan
+                  :card-id="card.id"
+                  :project-id="projectId"
+                  :readonly="isReadonly"
+                />
+              </template>
             </div>
           </div>
         </div>

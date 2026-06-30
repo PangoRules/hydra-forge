@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import { CARD_TYPE_OPTIONS, cardTypeOption, cardTypeToApiString } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -24,6 +25,9 @@ const typeOption = computed(() => cardTypeOption(props.card.type))
 const typeValue = computed(() => typeOption.value.apiValue)
 const savingType = ref(false)
 const savingColumn = ref(false)
+const showTypeChangeConfirm = ref(false)
+const pendingTypeChange = ref<string | null>(null)
+const typeChangeConfirmMessage = ref('')
 
 const currentColumnOption = computed(() =>
   board.columns.find(c => c.id === props.card.columnId)
@@ -91,9 +95,73 @@ async function persistCardFields(fields: { type?: string, dueAt?: string | null,
 
 async function handleTypeChange(value: string) {
   if (props.isArchived || value === cardTypeToApiString(props.card.type)) return
+
+  const currentType = cardTypeToApiString(props.card.type)
+  const newType = value
+
+  const isGoalOrIdea = (t: string) => t === 'Goal' || t === 'Idea'
+  const isGoal = (t: string) => t === 'Goal'
+
+  const wouldLoseSpec = isGoalOrIdea(currentType) && !isGoalOrIdea(newType)
+  const wouldLosePlan = isGoal(currentType) && !isGoal(newType)
+
+  if (wouldLoseSpec || wouldLosePlan) {
+    const [specsResult, plansResult] = await Promise.all([
+      (async () => {
+        try {
+          return await api.GET<{ specs: { id: string }[] }>(ApiRoutes.Specs.forCard(props.projectId, props.card.id))
+        } catch {
+          return { data: null }
+        }
+      })(),
+      (async () => {
+        try {
+          return await api.GET<{ plans: { id: string }[] }>(ApiRoutes.Plans.forCard(props.projectId, props.card.id))
+        } catch {
+          return { data: null }
+        }
+      })()
+    ])
+
+    const specs = specsResult.data?.specs ?? []
+    const plans = plansResult.data?.plans ?? []
+
+    const actuallyHasSpec = wouldLoseSpec && specs.length > 0
+    const actuallyHasPlan = wouldLosePlan && plans.length > 0
+
+    if (actuallyHasSpec || actuallyHasPlan) {
+      const newTypeLabel = cardTypeOption(newType).label
+      const parts: string[] = []
+      if (actuallyHasSpec && actuallyHasPlan) parts.push('a Spec and a Plan')
+      else if (actuallyHasSpec) parts.push('a Spec')
+      else parts.push('a Plan')
+      const docPhrase = parts.join('')
+      const pronoun = actuallyHasSpec && actuallyHasPlan ? 'them' : 'it'
+      typeChangeConfirmMessage.value = `This card has ${docPhrase}. Changing type to ${newTypeLabel} will hide the Docs tab, making ${pronoun} inaccessible. ${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} will stay in the database if you switch back.`
+      pendingTypeChange.value = value
+      showTypeChangeConfirm.value = true
+      return
+    }
+  }
+
   savingType.value = true
-  await persistCardFields({ type: value })
-  savingType.value = false
+  try {
+    await persistCardFields({ type: value })
+  } finally {
+    savingType.value = false
+  }
+}
+
+async function confirmTypeChange() {
+  if (!pendingTypeChange.value) return
+  const value = pendingTypeChange.value
+  pendingTypeChange.value = null
+  savingType.value = true
+  try {
+    await persistCardFields({ type: value })
+  } finally {
+    savingType.value = false
+  }
 }
 
 async function saveDueDate() {
@@ -494,4 +562,13 @@ onMounted(() => {
       </button>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-model:open="showTypeChangeConfirm"
+    title="Change card type?"
+    :message="typeChangeConfirmMessage"
+    confirm-text="Change Type"
+    confirm-color="warning"
+    @confirm="confirmTypeChange"
+  />
 </template>

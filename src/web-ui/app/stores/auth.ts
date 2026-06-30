@@ -23,6 +23,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   function restoreToken(savedToken: string) {
     token.value = savedToken
+    try {
+      const payload = JSON.parse(atob(savedToken.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')))
+      user.value = {
+        userId: payload.sub,
+        username: payload.name,
+        isAdmin: payload.is_admin === 'true'
+      }
+    } catch {
+      // malformed token — auth middleware will redirect to login
+    }
   }
 
   return { token, user, isAuthenticated, setAuth, clearAuth, restoreToken }
