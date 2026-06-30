@@ -399,6 +399,29 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
+    public async Task<Result<PlanDto>> ReopenAsync(
+        ReopenPlanCommand cmd,
+        CancellationToken ct = default
+    )
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+
+        var plan = await _planRepo.GetByIdAsync(cmd.PlanId, ct);
+        if (plan == null || plan.ProjectId != cmd.ProjectId)
+            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Plan not found."));
+
+        plan.Reopen();
+        plan.UpdatedAt = DateTime.UtcNow;
+
+        await _planRepo.UpdateAsync(plan, ct);
+        await _planRepo.SaveChangesAsync(ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+
+        return Result<PlanDto>.Success(MapToDto(plan));
+    }
+
     private async Task PublishAsync(Guid projectId, Guid planId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(

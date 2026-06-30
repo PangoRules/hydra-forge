@@ -314,4 +314,29 @@ public class PlansController(PlanService planService) : ControllerBase
         );
         return Ok(response);
     }
+
+    [HttpPost("{planId:guid}/reopen")]
+    public async Task<IActionResult> Reopen(Guid projectId, Guid planId, CancellationToken ct)
+    {
+        var actorId = User.GetRequiredUserId();
+        var result = await planService.ReopenAsync(new ReopenPlanCommand(projectId, planId, actorId), ct);
+        if (!result.IsSuccess)
+            return this.ToProblemResult(result.Error);
+        var response = new PlanResponse(
+            result.Value.Id,
+            result.Value.ProjectId,
+            result.Value.CardId,
+            result.Value.Title,
+            result.Value.Description,
+            result.Value.Content,
+            result.Value.Version,
+            result.Value.CreatedByUserId,
+            result.Value.CreatedAt,
+            result.Value.UpdatedAt,
+            result.Value.SpecId,
+            result.Value.Status,
+            result.Value.Position
+        );
+        return Ok(response);
+    }
 }

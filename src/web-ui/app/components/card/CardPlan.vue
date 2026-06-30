@@ -123,8 +123,9 @@ async function fetchPlans() {
     const list = data as { plans: PlanResponse[] } | undefined
     plans.value = (list?.plans ?? []).sort((a, b) => a.position - b.position)
     for (const p of plans.value) initEditState(p)
-  } catch {
-    // silent
+  } catch (error) {
+    console.error('Failed to fetch plans:', error)
+    toast.error('Failed to load plans')
   } finally {
     loading.value = false
   }
@@ -152,7 +153,8 @@ async function savePlan(plan: PlanResponse) {
       if (showHistoryId.value === plan.id) await fetchVersions(plan.id)
     }
     toast.success('Plan saved')
-  } catch {
+  } catch (error) {
+    console.error('Failed to save plan:', error)
     toast.error('Failed to save plan')
   } finally {
     savingId.value = null
@@ -181,7 +183,8 @@ async function createPlan() {
     newContent.value = ''
     showNewPlan.value = false
     toast.success('Plan created')
-  } catch {
+  } catch (error) {
+    console.error('Failed to create plan:', error)
     toast.error('Failed to create plan')
   } finally {
     creating.value = false
@@ -196,7 +199,8 @@ async function activate(plan: PlanResponse) {
       const idx = plans.value.findIndex(p => p.id === plan.id)
       if (idx >= 0) plans.value[idx] = data
     }
-  } catch {
+  } catch (error) {
+    console.error('Failed to activate plan:', error)
     toast.error('Failed to activate plan')
   } finally {
     actionId.value = null
@@ -211,7 +215,8 @@ async function complete(plan: PlanResponse) {
       const idx = plans.value.findIndex(p => p.id === plan.id)
       if (idx >= 0) plans.value[idx] = data
     }
-  } catch {
+  } catch (error) {
+    console.error('Failed to complete plan:', error)
     toast.error('Failed to complete plan')
   } finally {
     actionId.value = null
@@ -226,7 +231,8 @@ async function reactivate(plan: PlanResponse) {
       const idx = plans.value.findIndex(p => p.id === plan.id)
       if (idx >= 0) plans.value[idx] = data
     }
-  } catch {
+  } catch (error) {
+    console.error('Failed to reactivate plan:', error)
     toast.error('Failed to reactivate plan')
   } finally {
     actionId.value = null
@@ -239,8 +245,9 @@ async function fetchVersions(planId: string) {
     const { data } = await api.GET(ApiRoutes.Plans.versions(props.projectId, planId))
     const list = data as { versions: PlanVersionResponse[] } | undefined
     versionsCache.value[planId] = (list?.versions ?? []).sort((a, b) => b.version - a.version)
-  } catch {
-    // silent
+  } catch (error) {
+    console.error('Failed to fetch plan versions:', error)
+    toast.error('Failed to load version history')
   } finally {
     loadingVersionsId.value = null
   }
@@ -264,7 +271,8 @@ async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
     toast.success('Version restored')
     await fetchPlans()
     if (showHistoryId.value === plan.id) await fetchVersions(plan.id)
-  } catch {
+  } catch (error) {
+    console.error('Failed to restore plan version:', error)
     toast.error('Failed to restore version')
   } finally {
     restoringId.value = null

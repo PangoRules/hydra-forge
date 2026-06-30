@@ -25,4 +25,6 @@ public class Plan
     public void Complete() => Status = PlanStatus.Done;
 
     public void Reactivate() => Status = PlanStatus.Active;
+
+    public void Reopen() => Status = PlanStatus.Pending;
 }

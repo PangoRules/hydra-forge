@@ -19,6 +19,8 @@ public record CompletePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
 
 public record ReactivatePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
 
+public record ReopenPlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
+
 public record UpdatePlanCommand(
     Guid ProjectId,
     Guid PlanId,
