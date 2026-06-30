@@ -32,12 +32,12 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-// Card type numeric values from card-type.ts: Task=0, Issue=1, Goal=2, Idea=3
-const SPEC_CARD_TYPES = [2, 3, 1] as const // Goal, Idea, Issue
-const PLAN_CARD_TYPES = [2, 1, 0] as const // Goal, Issue, Task
+// C# CardType enum integers (from API): Task=1, Issue=2, Goal=5, Idea=4
+const SPEC_CARD_TYPES = [5, 4, 2] as const // Goal, Idea, Issue
+const PLAN_CARD_TYPES = [5, 2, 1] as const // Goal, Issue, Task
 
 // DocType enum: Specification=1, Concept=2, Report=3
-const CARD_TYPE_TO_DOC_TYPE: Record<number, number> = { 2: 1, 3: 2, 1: 3 } // Goal→Spec, Idea→Concept, Issue→Report
+const CARD_TYPE_TO_DOC_TYPE: Record<number, number> = { 5: 1, 4: 2, 2: 3 } // Goal→Spec, Idea→Concept, Issue→Report
 
 const hasSpec = computed(() =>
   card.value != null && (SPEC_CARD_TYPES as readonly number[]).includes(card.value.type)
@@ -287,7 +287,7 @@ const otherViewers = computed(() => {
                   <CardPlan
                     :card-id="card.id"
                     :project-id="projectId"
-                    :spec-id="card.type === 2 ? linkedSpecId : null"
+                    :spec-id="card.type === 5 ? linkedSpecId : null"
                     :readonly="isReadonly"
                   />
                 </template>
@@ -415,7 +415,7 @@ const otherViewers = computed(() => {
                 <CardPlan
                   :card-id="card.id"
                   :project-id="projectId"
-                  :spec-id="card.type === 2 ? linkedSpecId : null"
+                  :spec-id="card.type === 5 ? linkedSpecId : null"
                   :readonly="isReadonly"
                 />
               </template>
