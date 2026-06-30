@@ -26,9 +26,9 @@ public class PresenceHub : Hub
 
     public async Task JoinProject(Guid projectId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
 
-        var isAdmin = Context.User.IsInRole("Admin");
+        var isAdmin = Context.User!.IsInRole("Admin");
         if (!isAdmin)
         {
             var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId);
@@ -41,7 +41,7 @@ public class PresenceHub : Hub
         var groupName = BoardHub.ProjectGroup(projectId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
 
-        var username = Context.User.FindFirstValue("name") ?? "unknown";
+        var username = Context.User!.FindFirstValue("name") ?? "unknown";
 
         var projectEntries = _projectPresence.GetOrAdd(projectId, _ => new ConcurrentDictionary<string, PresenceEntry>());
         projectEntries[Context.ConnectionId] = new PresenceEntry(userId, username, Context.ConnectionId, DateTime.UtcNow);
@@ -64,7 +64,7 @@ public class PresenceHub : Hub
 
     public async Task FocusCard(Guid projectId, Guid cardId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients.OthersInGroup(groupName).SendAsync("CardFocused", new
         {
@@ -76,7 +76,7 @@ public class PresenceHub : Hub
 
     public async Task UnfocusCard(Guid projectId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients.OthersInGroup(groupName).SendAsync("CardUnfocused", new
         {
@@ -95,8 +95,8 @@ public class PresenceHub : Hub
             projectEntries.TryRemove(Context.ConnectionId, out _);
         }
 
-        var userId = Context.User.GetRequiredUserId();
-        var username = Context.User.FindFirstValue("name") ?? "unknown";
+        var userId = Context.User!.GetRequiredUserId();
+        var username = Context.User!.FindFirstValue("name") ?? "unknown";
 
         await Clients.OthersInGroup(groupName).SendAsync("UserLeft", new
         {
