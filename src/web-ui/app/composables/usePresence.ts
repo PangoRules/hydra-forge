@@ -23,6 +23,10 @@ export function usePresence() {
       store.addUser(projectId, user)
     })
 
+    connection.on('CurrentUsers', (users: { userId: string, username: string, connectionId: string }[]) => {
+      store.setProjectUsers(projectId, users)
+    })
+
     connection.on('UserLeft', (user: { userId: string, username: string, connectionId: string }) => {
       store.removeUser(projectId, user.connectionId)
     })
