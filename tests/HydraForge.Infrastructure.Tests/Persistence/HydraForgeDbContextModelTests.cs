@@ -200,11 +200,11 @@ public class HydraForgeDbContextModelTests
 
         var spec = model.FindEntityType(typeof(Spec));
         Assert.NotNull(spec);
-        AssertProperties(spec, "Title", "Content", "Version", "CreatedByUserId");
+        AssertProperties(spec, "Title", "Content", "Version", "CreatedByUserId", "DocType");
 
         var plan = model.FindEntityType(typeof(Plan));
         Assert.NotNull(plan);
-        AssertProperties(plan, "Title", "Content", "Version", "CreatedByUserId");
+        AssertProperties(plan, "Title", "Content", "Version", "CreatedByUserId", "Status", "Position");
 
         var specVersion = model.FindEntityType(typeof(SpecVersion));
         Assert.NotNull(specVersion);
