@@ -134,7 +134,10 @@ function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
 
-onMounted(() => fetchCard())
+onMounted(() => {
+  fetchCard()
+  console.log('[presence] CardModal mounted, cardId:', props.cardId, 'focusedCards:', [...presenceStore.focusedCards.entries()])
+})
 
 // Presence indicator
 const authStore = useAuthStore()
@@ -142,6 +145,24 @@ const presenceStore = usePresenceStore()
 const boardStore = useBoardStore()
 
 const currentUserId = computed(() => authStore.user?.userId)
+
+watch(() => [...presenceStore.focusedCards.entries()], (entries) => {
+  console.log('[presence] focusedCards for', props.cardId, ':', entries)
+  console.log('[presence] otherViewers computed would show:', computeOtherViewers(entries))
+})
+
+function computeOtherViewers(entries: [string, string][]) {
+  const myId = currentUserId.value
+  if (!myId) return []
+  const viewers: string[] = []
+  for (const [userId, cardId] of entries) {
+    if (cardId === props.cardId && userId !== myId) {
+      const member = boardStore.members.find(m => m.userId === userId)
+      if (member) viewers.push(member.username)
+    }
+  }
+  return viewers
+}
 
 const otherViewers = computed(() => {
   const myId = currentUserId.value

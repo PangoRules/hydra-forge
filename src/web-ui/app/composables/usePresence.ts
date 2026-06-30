@@ -45,7 +45,13 @@ export function usePresence() {
 
   async function focusCard(projectId: string, cardId: string) {
     if (connection?.state === signalR.HubConnectionState.Connected) {
-      await connection.invoke('FocusCard', projectId, cardId)
+      try {
+        await connection.invoke('FocusCard', projectId, cardId)
+      } catch (e) {
+        console.warn('[presence] focusCard invoke failed:', e)
+      }
+    } else {
+      console.warn('[presence] focusCard skipped — connection state:', connection?.state)
     }
   }
 
