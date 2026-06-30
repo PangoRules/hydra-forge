@@ -1,9 +1,12 @@
 namespace HydraForge.Application.Specs;
 
+using HydraForge.Domain.Enums;
+
 public record CreateSpecCommand(
     Guid ProjectId,
     Guid CardId,
     Guid ActorId,
+    DocType DocType,
     string Title,
     string? Description,
     string Content
@@ -29,6 +32,7 @@ public record SpecDto(
     Guid Id,
     Guid ProjectId,
     Guid CardId,
+    DocType DocType,
     string Title,
     string? Description,
     string Content,
@@ -52,6 +56,7 @@ public record SpecVersionDto(
 public record SpecListFilter(bool IncludeArchived = false);
 
 public record CreateSpecRequest(
+    DocType DocType,
     string Title,
     string? Description,
     string Content
@@ -71,6 +76,7 @@ public record SpecResponse(
     Guid Id,
     Guid ProjectId,
     Guid CardId,
+    DocType DocType,
     string Title,
     string? Description,
     string Content,

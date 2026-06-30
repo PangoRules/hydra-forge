@@ -183,6 +183,81 @@ public class PlanServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
+    [Fact]
+    public async Task UpdateAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Done, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UpdateAsync(new UpdatePlanCommand(projectId, planId, actorId, "New Title", null, "content"));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DomainErrorCodes.Plans.EditForbiddenWhenDone, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RestoreVersionAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Done, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        planRepo.AddVersion(new PlanVersion { Id = NewId(), PlanId = planId, Version = 1, Content = "V1", CreatedByUserId = actorId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreVersionAsync(new RestorePlanVersionCommand(projectId, planId, 1, actorId));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DomainErrorCodes.Plans.EditForbiddenWhenDone, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task ReactivateAsync_WhenPlanIsDone_TransitionsToActive()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var planId = NewId();
+
+        var plan = new Plan { Id = planId, Status = PlanStatus.Done, ProjectId = projectId, CardId = NewId() };
+        planRepo.Add(plan);
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.ReactivateAsync(new ReactivatePlanCommand(projectId, planId, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PlanStatus.Active, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SetsStatusToPending()
+    {
+        var (planRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new PlanService(planRepo, memberRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.CreateAsync(new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(PlanStatus.Pending, result.Value.Status);
+    }
+
     private static (
         InMemoryPlanRepository planRepo,
         InMemoryProjectMemberRepository memberRepo,

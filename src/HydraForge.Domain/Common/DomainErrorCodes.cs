@@ -94,6 +94,7 @@ public static class DomainErrorCodes
         public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
         public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
         public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
+        public const string EditForbiddenWhenDone = "PLAN_EDIT_FORBIDDEN_WHEN_DONE";
     }
 
     public static class Relationships

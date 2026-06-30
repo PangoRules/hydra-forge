@@ -1,5 +1,7 @@
 namespace HydraForge.Application.Plans;
 
+using HydraForge.Domain.Enums;
+
 public record CreatePlanCommand(
     Guid ProjectId,
     Guid CardId,
@@ -7,8 +9,15 @@ public record CreatePlanCommand(
     Guid ActorId,
     string Title,
     string? Description,
-    string Content
+    string Content,
+    int Position = 0
 );
+
+public record ActivatePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
+
+public record CompletePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
+
+public record ReactivatePlanCommand(Guid ProjectId, Guid PlanId, Guid ActorId);
 
 public record UpdatePlanCommand(
     Guid ProjectId,
@@ -30,9 +39,12 @@ public record PlanDto(
     Guid Id,
     Guid ProjectId,
     Guid CardId,
+    Guid? SpecId,
     string Title,
     string? Description,
     string Content,
+    PlanStatus Status,
+    int Position,
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
@@ -55,7 +67,9 @@ public record PlanListFilter(bool IncludeArchived = false);
 public record CreatePlanRequest(
     string Title,
     string? Description,
-    string Content
+    string Content,
+    Guid? SpecId = null,
+    int Position = 0
 );
 
 public record UpdatePlanRequest(
@@ -78,7 +92,10 @@ public record PlanResponse(
     int Version,
     Guid CreatedByUserId,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    Guid? SpecId,
+    PlanStatus Status,
+    int Position
 );
 
 public record PlanVersionResponse(
