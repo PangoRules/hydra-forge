@@ -8,6 +8,7 @@ const STATUS_COLORS: Record<string, 'neutral' | 'primary' | 'success'> = {
   Active: 'primary',
   Done: 'success'
 }
+const STATUS_OPTIONS = ['Pending', 'Active', 'Done']
 
 interface PlanResponse {
   id: string
@@ -49,6 +50,7 @@ const board = useBoardStore()
 
 const plans = ref<PlanResponse[]>([])
 const loading = ref(true)
+const expandedPlans = ref<Set<string>>(new Set())
 
 // Per-plan edit state: title + content mirroring server state
 const editState = ref<Record<string, { title: string, content: string }>>({})
@@ -75,6 +77,43 @@ function isPlanDirty(plan: PlanResponse): boolean {
 
 function initEditState(plan: PlanResponse) {
   editState.value[plan.id] = { title: plan.title, content: plan.content }
+}
+
+function toggleExpand(planId: string) {
+  const expanded = expandedPlans.value
+  if (expanded.has(planId)) {
+    expanded.delete(planId)
+  } else {
+    expanded.add(planId)
+  }
+  expandedPlans.value = new Set(expanded) // Trigger reactivity
+}
+
+function isExpanded(planId: string): boolean {
+  return expandedPlans.value.has(planId)
+}
+
+function setStatus(plan: PlanResponse, newStatus: string) {
+  if (plan.status === newStatus) return
+
+  if (newStatus === 'Pending') {
+    toast.error('Cannot revert to Pending. Create a new plan instead.')
+    return
+  }
+
+  if (newStatus === 'Active') {
+    if (plan.status === 'Pending') {
+      activate(plan)
+    } else if (plan.status === 'Done') {
+      reactivate(plan)
+    }
+  } else if (newStatus === 'Done') {
+    if (plan.status === 'Active') {
+      complete(plan)
+    } else if (plan.status === 'Pending') {
+      activate(plan).then(() => complete(plan))
+    }
+  }
 }
 
 async function fetchPlans() {
@@ -279,7 +318,15 @@ onMounted(() => fetchPlans())
         :class="plan.status === 'Done' ? 'opacity-75' : ''"
       >
         <!-- Plan header row -->
-        <div class="flex items-center gap-2 flex-wrap">
+        <div
+          class="flex items-center gap-2 flex-wrap cursor-pointer"
+          @click="toggleExpand(plan.id)"
+        >
+          <UIcon
+            name="i-lucide-chevron-down"
+            :class="isExpanded(plan.id) ? 'rotate-180' : ''"
+            class="transition-transform duration-200"
+          />
           <UInput
             v-if="editState[plan.id]"
             v-model="editState[plan.id]!.title"
@@ -289,19 +336,28 @@ onMounted(() => fetchPlans())
             size="sm"
           />
           <div class="flex items-center gap-1 shrink-0 flex-wrap">
-            <UBadge
-              :color="STATUS_COLORS[plan.status] ?? 'neutral'"
-              variant="subtle"
+            <USelectMenu
+              :items="STATUS_OPTIONS.filter(s => s !== plan.status)"
+              :model-value="plan.status"
+              :disabled="props.readonly"
               size="xs"
+              @update:model-value="(val: string) => setStatus(plan, val)"
             >
-              {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
-            </UBadge>
+              <UBadge
+                :color="STATUS_COLORS[plan.status] ?? 'neutral'"
+                variant="subtle"
+                size="xs"
+                class="cursor-pointer"
+              >
+                {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
+              </UBadge>
+            </USelectMenu>
             <UButton
               v-if="!props.readonly && plan.status === 'Pending'"
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
-              @click="activate(plan)"
+              @click.stop="activate(plan)"
             >
               Activate
             </UButton>
@@ -310,7 +366,7 @@ onMounted(() => fetchPlans())
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
-              @click="complete(plan)"
+              @click.stop="complete(plan)"
             >
               Complete
             </UButton>
@@ -319,7 +375,7 @@ onMounted(() => fetchPlans())
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
-              @click="reactivate(plan)"
+              @click.stop="reactivate(plan)"
             >
               Reactivate
             </UButton>
@@ -327,14 +383,14 @@ onMounted(() => fetchPlans())
               size="xs"
               variant="ghost"
               :label="showHistoryId === plan.id ? 'Hide history' : 'History'"
-              @click="toggleHistory(plan.id)"
+              @click.stop="toggleHistory(plan.id)"
             />
             <UButton
               v-if="!props.readonly && plan.status !== 'Done'"
               size="xs"
               :loading="savingId === plan.id"
               :disabled="!isPlanDirty(plan)"
-              @click="savePlan(plan)"
+              @click.stop="savePlan(plan)"
             >
               Save
             </UButton>
@@ -342,7 +398,10 @@ onMounted(() => fetchPlans())
         </div>
 
         <!-- Editor + optional history panel -->
-        <div class="flex gap-4">
+        <div
+          v-if="isExpanded(plan.id)"
+          class="flex gap-4 mt-3"
+        >
           <div class="flex-1 min-w-0">
             <MarkdownEditor
               v-if="editState[plan.id]"
@@ -388,7 +447,7 @@ onMounted(() => fetchPlans())
                 variant="ghost"
                 :loading="restoringId === v.id"
                 :disabled="!!restoringId || plan.status === 'Done'"
-                @click="restore(plan, v)"
+                @click.stop="restore(plan, v)"
               >
                 Restore
               </UButton>
