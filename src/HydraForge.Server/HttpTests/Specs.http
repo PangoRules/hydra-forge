@@ -87,6 +87,7 @@ Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-spec-005
 
 {
+  "docType": 1,
   "content": "# Spec v1\n\nInitial specification content.",
   "description": "API specification document",
   "title": "API Spec"

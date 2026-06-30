@@ -198,6 +198,26 @@ X-Correlation-Id: smoke-relation-012
 
 ###
 
+
+# ── Create SpawnedFrom Relationship (type 4) ─────────────────
+# SpawnedFrom tracks Idea → Goal lineage
+
+# @name createSpawnedFrom
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-relation-015
+
+{
+  "targetCardId": "{{createCardB.response.body.$.id}}",
+  "type": 4
+}
+
+
+###
+
+
 # ── Delete Relationship ─────────────────────────────────────
 
 DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createCardA.response.body.$.id}}/cardrelationships/{{createRelationship.response.body.$.id}} HTTP/1.1
