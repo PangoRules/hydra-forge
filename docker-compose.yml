@@ -58,8 +58,8 @@ services:
       FileStorage__S3__BucketName: ${MINIO_BUCKET:-hydraforge-attachments}
       FileStorage__S3__Region: ${MINIO_REGION:-us-east-1}
       FileStorage__S3__ForcePathStyle: "true"
-      # nginx origin — browser talks to port 80, CORS must allow it
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      # Allow both nginx (port 80) and direct Nuxt access (port 3000) as origins.
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:3000}
     ports:
       # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
       - "5000:8080"
@@ -80,7 +80,9 @@ services:
     environment:
       NUXT_API_BASE_URL: http://server:8080
       NUXT_PUBLIC_AUTH_COOKIE_SECURE: "false"
-      # NUXT_PUBLIC_SIGNALR_BASE_URL intentionally unset — nginx handles /hubs/
+      # Point SignalR at nginx so /hubs/ gets proxied even if user hits port 3000 directly.
+      # Override in .env if nginx is on a non-standard port.
+      NUXT_PUBLIC_SIGNALR_BASE_URL: ${APP_BASE_URL:-http://localhost}
     ports:
       - "3000:3000"
 
