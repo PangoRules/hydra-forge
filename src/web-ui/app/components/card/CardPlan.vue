@@ -93,27 +93,9 @@ function isExpanded(planId: string): boolean {
   return expandedPlans.value.has(planId)
 }
 
-function setStatus(plan: PlanResponse, newStatus: string) {
+async function setStatus(plan: PlanResponse, newStatus: string) {
   if (plan.status === newStatus) return
-
-  if (newStatus === 'Pending') {
-    toast.error('Cannot revert to Pending. Create a new plan instead.')
-    return
-  }
-
-  if (newStatus === 'Active') {
-    if (plan.status === 'Pending') {
-      activate(plan)
-    } else if (plan.status === 'Done') {
-      reactivate(plan)
-    }
-  } else if (newStatus === 'Done') {
-    if (plan.status === 'Active') {
-      complete(plan)
-    } else if (plan.status === 'Pending') {
-      activate(plan).then(() => complete(plan))
-    }
-  }
+  await updatePlanStatus(plan, newStatus)
 }
 
 async function fetchPlans() {
@@ -191,49 +173,19 @@ async function createPlan() {
   }
 }
 
-async function activate(plan: PlanResponse) {
+async function updatePlanStatus(plan: PlanResponse, newStatus: string) {
   actionId.value = plan.id
   try {
-    const { data } = await api.POST<PlanResponse>(ApiRoutes.Plans.activate(props.projectId, plan.id))
+    const { data } = await api.PATCH<PlanResponse>(ApiRoutes.Plans.updateStatus(props.projectId, plan.id), {
+      body: { status: newStatus }
+    })
     if (data) {
       const idx = plans.value.findIndex(p => p.id === plan.id)
       if (idx >= 0) plans.value[idx] = data
     }
   } catch (error) {
-    console.error('Failed to activate plan:', error)
-    toast.error('Failed to activate plan')
-  } finally {
-    actionId.value = null
-  }
-}
-
-async function complete(plan: PlanResponse) {
-  actionId.value = plan.id
-  try {
-    const { data } = await api.POST<PlanResponse>(ApiRoutes.Plans.complete(props.projectId, plan.id))
-    if (data) {
-      const idx = plans.value.findIndex(p => p.id === plan.id)
-      if (idx >= 0) plans.value[idx] = data
-    }
-  } catch (error) {
-    console.error('Failed to complete plan:', error)
-    toast.error('Failed to complete plan')
-  } finally {
-    actionId.value = null
-  }
-}
-
-async function reactivate(plan: PlanResponse) {
-  actionId.value = plan.id
-  try {
-    const { data } = await api.POST<PlanResponse>(ApiRoutes.Plans.reactivate(props.projectId, plan.id))
-    if (data) {
-      const idx = plans.value.findIndex(p => p.id === plan.id)
-      if (idx >= 0) plans.value[idx] = data
-    }
-  } catch (error) {
-    console.error('Failed to reactivate plan:', error)
-    toast.error('Failed to reactivate plan')
+    console.error('Failed to update plan status:', error)
+    toast.error('Failed to update plan status')
   } finally {
     actionId.value = null
   }
@@ -318,7 +270,11 @@ onMounted(() => fetchPlans())
       v-else
       class="space-y-4"
     >
-      <!-- Plan list -->
+      <!-- Plan list — scrollable when many plans -->
+      <div
+        v-if="plans.length > 0"
+        class="space-y-3 max-h-[28rem] overflow-y-auto pr-1"
+      >
       <div
         v-for="plan in plans"
         :key="plan.id"
@@ -363,33 +319,6 @@ onMounted(() => fetchPlans())
                 {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
               </UBadge>
             </USelectMenu>
-            <UButton
-              v-if="!props.readonly && plan.status === 'Pending'"
-              size="xs"
-              variant="ghost"
-              :loading="actionId === plan.id"
-              @click.stop="activate(plan)"
-            >
-              Activate
-            </UButton>
-            <UButton
-              v-if="!props.readonly && plan.status === 'Active'"
-              size="xs"
-              variant="ghost"
-              :loading="actionId === plan.id"
-              @click.stop="complete(plan)"
-            >
-              Complete
-            </UButton>
-            <UButton
-              v-if="!props.readonly && plan.status === 'Done'"
-              size="xs"
-              variant="ghost"
-              :loading="actionId === plan.id"
-              @click.stop="reactivate(plan)"
-            >
-              Reactivate
-            </UButton>
             <UButton
               size="xs"
               variant="ghost"
@@ -465,6 +394,7 @@ onMounted(() => fetchPlans())
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- Empty state -->
