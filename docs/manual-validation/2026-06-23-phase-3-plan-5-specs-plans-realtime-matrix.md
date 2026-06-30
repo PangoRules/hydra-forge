@@ -9,10 +9,15 @@
 Goal: Verify the Docs tab shows only on Goal/Idea and Plan only on Goal.
 
 1. Open a Task card modal → tabs: Details, Checklist, Comments, Related. No "Docs" tab.
+No related, why is this mentioned, other than tat it works.
 2. Open an Issue card modal → tabs same as Task. No "Docs" tab.
+Like wise no docs tab. Works
 3. Open an Idea card modal → "Docs" tab present; clicking it shows Spec editor only (no Plan section, no `USeparator`).
+Yep i see Spec editor this works I believe
 4. Open a Goal card modal → "Docs" tab present; clicking it shows Spec editor, `USeparator`, then Plan editor.
+Yep I can see spec and plans! this works
 5. With Goal modal open and Docs tab active → switch card type to Task via metadata panel → active tab auto-resets to Details, Docs tab disappears.
+
 
 ## Task — CardSpec Inline Editor (ownership card)
 6. On Goal card → Docs tab → Spec editor visible with title/description/content fields and Save button.

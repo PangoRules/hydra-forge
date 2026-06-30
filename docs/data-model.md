@@ -57,8 +57,14 @@ Card (1) ──┬── (N) Comment
            ├── (N) CardWatcher
            ├── (N) CardRelationship (as source)
            ├── (N) CardRelationship (as target)
-           ├── (N) Spec (ownership via Spec.CardId)
-           └── (N) Plan (ownership via Plan.CardId)
+           ├── (0..1) Spec (ownership via Spec.CardId — Goal/Idea/Issue only; Task has none)
+           └── (N) Plan (ownership via Plan.CardId — Task/Issue direct; Goal plans owned via Spec)
+
+Card-type doc rules:
+- Goal  → Spec (DocType=Specification) + Plans via Spec.Id
+- Idea  → Spec (DocType=Concept) only — no Plans; Tiptap description handles freeform exploration
+- Issue → Spec (DocType=Report) + Plans via Card.Id (no Spec needed for plans)
+- Task  → Plans via Card.Id only — no Spec
 
 ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
                  └── (N) ChatSession
@@ -191,12 +197,15 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 
 ### Spec
 
+One Spec per Card maximum. `DocType` drives the UI label — the entity structure is identical across card types.
+
 | Field | Type | Description |
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
-| CardId | Guid | FK to Card — owning card (the card that created this spec) |
-| Title | string | Display name, e.g. "Auth Module Spec" |
+| CardId | Guid | FK to Card — owning card |
+| DocType | DocType | `Specification` (Goal), `Concept` (Idea), `Report` (Issue) |
+| Title | string | Display name |
 | Description | string? | Optional description |
 | Content | string | Current markdown content |
 | Version | int | Increments on each edit |
@@ -219,14 +228,18 @@ FeatureRoutingConfig — routing policy row per AiFeature, derived from default 
 
 ### Plan
 
+A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Spec (`SpecId` set). For Task and Issue cards, Plans attach directly to the Card (`SpecId` null). Plans have a status lifecycle — Done plans are read-only; reactivation required to edit.
+
 | Field | Type | Description |
 |---|---|---|
 | Id | Guid | |
 | ProjectId | Guid | FK to Project |
-| CardId | Guid | FK to Card — owning card (the card that created this plan) |
-| SpecId | Guid? | FK to Spec — optional parent specification |
-| Title | string | Display name, e.g. "Auth Implementation Plan" |
+| CardId | Guid | FK to Card — owning card |
+| SpecId | Guid? | FK to Spec — set for Goal plans, null for Task/Issue direct plans |
+| Title | string | Display name |
 | Content | string | Current markdown (numbered steps) |
+| Status | PlanStatus | `Pending` → `Active` → `Done` (read-only when Done) |
+| Position | int | Order within the Spec or Card's plan list |
 | Version | int | Increments on each edit |
 | CreatedByUserId | Guid | |
 | CreatedAt | DateTime | |
@@ -719,8 +732,31 @@ Singleton row (Id = `00000000-0000-0000-0000-000000000001`) holding admin-config
 
 > Value 3 (Spec) was retired in migration `MigrateSpecCardsToGoal`; existing rows moved to Goal (5).
 
+### DocType
+Discriminator on the `Spec` entity. Controls the UI label shown to users — the underlying entity structure is identical.
+
+| Value | Name | Used on card type | UI label |
+|---|---|---|---|
+| 1 | Specification | Goal | Specification |
+| 2 | Concept | Idea | Concept |
+| 3 | Report | Issue | Report |
+
+### PlanStatus
+Lifecycle state for `Plan`. Done plans are read-only; a `Reactivate` action transitions Done → Active.
+
+| Value | Name | Description |
+|---|---|---|
+| 1 | Pending | Created, not yet picked up |
+| 2 | Active | In progress — editable |
+| 3 | Done | Completed — read-only until reactivated |
+
 ### RelationshipType
-`BlockedBy`, `Precedes`, `Relates`
+| Value | Name | Description |
+|---|---|---|
+| 1 | BlockedBy | Source is blocked by Target |
+| 2 | Precedes | Source must complete before Target |
+| 3 | Relates | Generic link |
+| 4 | SpawnedFrom | Source (Goal) was created from Target (Idea) |
 
 ### MessageRole
 `User`, `Assistant`, `System`
