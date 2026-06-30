@@ -36,8 +36,8 @@ const checklistRefresh = ref(0)
 const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
 const PLAN_CARD_TYPES = ['Goal', 'Issue', 'Task'] as const
 
-// DocType enum (API int): Specification=1, Concept=2, Report=3
-const CARD_TYPE_TO_DOC_TYPE: Record<string, number> = { Goal: 1, Idea: 2, Issue: 3 }
+// DocType from API (JsonStringEnumConverter): 'Specification', 'Concept', 'Report'
+const CARD_TYPE_TO_DOC_TYPE: Record<string, string> = { Goal: 'Specification', Idea: 'Concept', Issue: 'Report' }
 
 const hasSpec = computed(() =>
   card.value != null && (SPEC_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
@@ -50,8 +50,8 @@ const hasPlan = computed(() =>
 const hasDocsTab = computed(() => hasSpec.value || hasPlan.value)
 
 const specDocType = computed(() => {
-  if (!card.value) return 1
-  return CARD_TYPE_TO_DOC_TYPE[String(card.value.type)] ?? 1
+  if (!card.value) return 'Specification'
+  return CARD_TYPE_TO_DOC_TYPE[String(card.value.type)] ?? 'Specification'
 })
 
 // Populated by CardSpec after it loads/creates the spec; passed to CardPlan for Goal linking

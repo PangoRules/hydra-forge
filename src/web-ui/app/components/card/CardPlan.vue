@@ -2,11 +2,11 @@
 import { ApiRoutes } from '~/lib/routes'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
-const STATUS_LABELS: Record<number, string> = { 1: 'Pending', 2: 'Active', 3: 'Done' }
-const STATUS_COLORS: Record<number, 'neutral' | 'primary' | 'success'> = {
-  1: 'neutral',
-  2: 'primary',
-  3: 'success'
+const STATUS_LABELS: Record<string, string> = { Pending: 'Pending', Active: 'Active', Done: 'Done' }
+const STATUS_COLORS: Record<string, 'neutral' | 'primary' | 'success'> = {
+  Pending: 'neutral',
+  Active: 'primary',
+  Done: 'success'
 }
 
 interface PlanResponse {
@@ -17,7 +17,7 @@ interface PlanResponse {
   title: string
   description: string | null
   content: string
-  status: number
+  status: string
   position: number
   version: number
   createdByUserId: string
@@ -276,7 +276,7 @@ onMounted(() => fetchPlans())
         v-for="plan in plans"
         :key="plan.id"
         class="border rounded-md p-3 space-y-3"
-        :class="plan.status === 3 ? 'opacity-75' : ''"
+        :class="plan.status === 'Done' ? 'opacity-75' : ''"
       >
         <!-- Plan header row -->
         <div class="flex items-center gap-2 flex-wrap">
@@ -285,7 +285,7 @@ onMounted(() => fetchPlans())
             v-model="editState[plan.id]!.title"
             class="flex-1"
             style="min-width: 8rem"
-            :disabled="props.readonly || plan.status === 3"
+            :disabled="props.readonly || plan.status === 'Done'"
             size="sm"
           />
           <div class="flex items-center gap-1 shrink-0 flex-wrap">
@@ -297,7 +297,7 @@ onMounted(() => fetchPlans())
               {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
             </UBadge>
             <UButton
-              v-if="!props.readonly && plan.status === 1"
+              v-if="!props.readonly && plan.status === 'Pending'"
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
@@ -306,7 +306,7 @@ onMounted(() => fetchPlans())
               Activate
             </UButton>
             <UButton
-              v-if="!props.readonly && plan.status === 2"
+              v-if="!props.readonly && plan.status === 'Active'"
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
@@ -315,7 +315,7 @@ onMounted(() => fetchPlans())
               Complete
             </UButton>
             <UButton
-              v-if="!props.readonly && plan.status === 3"
+              v-if="!props.readonly && plan.status === 'Done'"
               size="xs"
               variant="ghost"
               :loading="actionId === plan.id"
@@ -330,7 +330,7 @@ onMounted(() => fetchPlans())
               @click="toggleHistory(plan.id)"
             />
             <UButton
-              v-if="!props.readonly && plan.status !== 3"
+              v-if="!props.readonly && plan.status !== 'Done'"
               size="xs"
               :loading="savingId === plan.id"
               :disabled="!isPlanDirty(plan)"
@@ -347,7 +347,7 @@ onMounted(() => fetchPlans())
             <MarkdownEditor
               v-if="editState[plan.id]"
               v-model="editState[plan.id]!.content"
-              :editable="!props.readonly && plan.status !== 3"
+              :editable="!props.readonly && plan.status !== 'Done'"
               placeholder="Describe this plan step by step..."
             />
           </div>
@@ -387,7 +387,7 @@ onMounted(() => fetchPlans())
                 size="xs"
                 variant="ghost"
                 :loading="restoringId === v.id"
-                :disabled="!!restoringId || plan.status === 3"
+                :disabled="!!restoringId || plan.status === 'Done'"
                 @click="restore(plan, v)"
               >
                 Restore

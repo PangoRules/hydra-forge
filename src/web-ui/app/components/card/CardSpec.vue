@@ -2,13 +2,13 @@
 import { ApiRoutes } from '~/lib/routes'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
-const DOC_TYPE_LABELS: Record<number, string> = { 1: 'Specification', 2: 'Concept', 3: 'Report' }
+const DOC_TYPE_LABELS: Record<string, string> = { Specification: 'Specification', Concept: 'Concept', Report: 'Report' }
 
 interface SpecResponse {
   id: string
   projectId: string
   cardId: string
-  docType: number
+  docType: string
   title: string
   description: string | null
   content: string
@@ -32,9 +32,9 @@ interface SpecVersionResponse {
 const props = withDefaults(defineProps<{
   cardId: string
   projectId: string
-  docType?: number
+  docType?: string
   readonly?: boolean
-}>(), { docType: 1 })
+}>(), { docType: 'Specification' })
 
 const emit = defineEmits<{
   'update:specId': [string | null]
