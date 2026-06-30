@@ -28,10 +28,10 @@
 13. [ ] **Active → Done via dropdown** → plan status Active → dropdown → select "Done" → API call fires, badge changes to "Done", editor becomes read-only
 14. [ ] **Done → Active via dropdown** → plan status Done → dropdown → select "Active" → API call fires, badge changes to "Active", editor becomes editable
 15. [ ] **Pending → Done via dropdown** → plan status Pending → dropdown → select "Done" → BOTH activate and complete fire sequentially, final status is "Done"
-16. [ ] **Revert to Pending not supported** → click "Pending" in dropdown → error toast "Cannot revert to Pending. Create a new plan instead." (red toast, 6s)
+16. [ ] **Revert to Pending via reopen API** → plan status Active → dropdown → select "Pending" → API call fires, badge changes to "Pending", editor stays editable
 17. [ ] **Dropdown disabled in readonly mode** → open archived card → status badge not clickable, no menu opens
 18. [ ] **Search input hidden** → open dropdown → no search text input visible (just the 2 status options)
-19. [ ] **Failed activate** → simulate 500 error → error toast "Failed to activate plan", plan status remains unchanged
+19. [ ] **Failed reopen** → simulate 500 error → error toast "Failed to reopen plan", plan status remains unchanged
 
 ### Fullscreen Toggle on MarkdownEditor
 
@@ -43,12 +43,18 @@
 25. [ ] **Minimize button exits** → click minimize icon → editor returns to inline mode
 26. [ ] **Fullscreen works in CardSpec** → open spec, click fullscreen → spec editor fills viewport, Escape exits
 27. [ ] **Multiple editors, only one fullscreen at a time** → expand plan A fullscreen → expand plan B → each editor has its own fullscreen state independently
+28. [ ] **Fullscreen has backdrop overlay** → enter fullscreen → background content (other plans, card panels) is obscured by semi-transparent backdrop
+29. [ ] **Backdrop click exits fullscreen** → enter fullscreen → click on dark backdrop area (outside editor panel) → editor returns to inline mode
 
 ### Regressions
 
-28. [ ] **Save plan still works** → expand plan → edit title/content → click Save → toast success, version increments
-29. [ ] **Activate/Complete/Reactivate buttons still work** → click button (not dropdown) → same API behavior
-30. [ ] **History panel still works** → click History → versions panel renders, Restore still works
-31. [ ] **Plan create form still works** → click Add Plan → inline form appears, Create button works
-32. [ ] **Spec section unaffected** → Spec section above plans still renders, edits still save
-33. [ ] **No console errors** → open card modal → no Vue warnings in dev console
+30. [ ] **Save plan still works** → expand plan → edit title/content → click Save → toast success, version increments
+31. [ ] **History panel still works** → click History → versions panel renders, Restore still works
+32. [ ] **Plan create form still works** → click Add Plan → inline form appears, Create button works
+33. [ ] **Spec section unaffected** → Spec section above plans still renders, edits still save
+34. [ ] **No console errors** → open card modal → no Vue warnings in dev console
+
+### Editor Scroll
+
+35. [ ] **Editor has max-height with scroll** → expand plan → type enough content to exceed ~400px → editor shows scrollbar, does NOT grow infinitely
+36. [ ] **Fullscreen editor has full height** → enter fullscreen → editor fills available space with scroll on content overflow
