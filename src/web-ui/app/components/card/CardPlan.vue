@@ -275,126 +275,126 @@ onMounted(() => fetchPlans())
         v-if="plans.length > 0"
         class="space-y-3 max-h-[28rem] overflow-y-auto pr-1"
       >
-      <div
-        v-for="plan in plans"
-        :key="plan.id"
-        class="border rounded-md p-3 space-y-3"
-        :class="plan.status === 'Done' ? 'opacity-75' : ''"
-      >
-        <!-- Plan header row -->
         <div
-          class="flex items-center gap-2 flex-wrap cursor-pointer"
-          @click="toggleExpand(plan.id)"
+          v-for="plan in plans"
+          :key="plan.id"
+          class="border rounded-md p-3 space-y-3"
+          :class="plan.status === 'Done' ? 'opacity-75' : ''"
         >
-          <UIcon
-            name="i-lucide-chevron-down"
-            :class="isExpanded(plan.id) ? 'rotate-180' : ''"
-            class="transition-transform duration-200"
-          />
-          <UInput
-            v-if="editState[plan.id]"
-            v-model="editState[plan.id]!.title"
-            class="flex-1"
-            style="min-width: 8rem"
-            :disabled="props.readonly || plan.status === 'Done'"
-            size="sm"
-            @click.stop
-          />
-          <div class="flex items-center gap-1 shrink-0 flex-wrap">
-            <USelectMenu
-              :items="STATUS_OPTIONS.filter(s => s !== plan.status)"
-              :model-value="plan.status"
-              :disabled="props.readonly"
-              size="xs"
-              :search-input="false"
-              @update:model-value="(val: string) => setStatus(plan, val)"
-              @click.stop
-            >
-              <UBadge
-                :color="STATUS_COLORS[plan.status] ?? 'neutral'"
-                variant="subtle"
-                size="xs"
-                class="cursor-pointer"
-              >
-                {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
-              </UBadge>
-            </USelectMenu>
-            <UButton
-              size="xs"
-              variant="ghost"
-              :label="showHistoryId === plan.id ? 'Hide history' : 'History'"
-              @click.stop="toggleHistory(plan.id)"
-            />
-            <UButton
-              v-if="!props.readonly && plan.status !== 'Done'"
-              size="xs"
-              :loading="savingId === plan.id"
-              :disabled="!isPlanDirty(plan)"
-              @click.stop="savePlan(plan)"
-            >
-              Save
-            </UButton>
-          </div>
-        </div>
-
-        <!-- Editor + optional history panel -->
-        <div
-          v-if="isExpanded(plan.id)"
-          class="flex gap-4 mt-3"
-        >
-          <div class="flex-1 min-w-0">
-            <MarkdownEditor
-              v-if="editState[plan.id]"
-              v-model="editState[plan.id]!.content"
-              :editable="!props.readonly && plan.status !== 'Done'"
-              placeholder="Describe this plan step by step..."
-            />
-          </div>
+          <!-- Plan header row -->
           <div
-            v-if="showHistoryId === plan.id"
-            class="w-44 flex-shrink-0 border-l pl-4 space-y-2 max-h-80 overflow-y-auto"
+            class="flex items-center gap-2 flex-wrap cursor-pointer"
+            @click="toggleExpand(plan.id)"
           >
-            <p class="text-xs font-medium text-muted uppercase">
-              History
-            </p>
-            <div
-              v-if="loadingVersionsId === plan.id"
-              class="text-xs text-muted"
-            >
-              Loading...
-            </div>
-            <div
-              v-else-if="!versionsCache[plan.id]?.length"
-              class="text-xs text-muted"
-            >
-              No versions yet
-            </div>
-            <div
-              v-for="v in versionsCache[plan.id]"
-              :key="v.id"
-              class="flex items-center justify-between gap-1 text-xs py-1"
-            >
-              <div class="min-w-0">
-                <p class="truncate">
-                  v{{ v.version }} · {{ formatDate(v.createdAt) }}
-                </p>
-                <p class="text-muted truncate">
-                  {{ shortUser(v.createdByUserId) }}
-                </p>
-              </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              :class="isExpanded(plan.id) ? 'rotate-180' : ''"
+              class="transition-transform duration-200"
+            />
+            <UInput
+              v-if="editState[plan.id]"
+              v-model="editState[plan.id]!.title"
+              class="flex-1"
+              style="min-width: 8rem"
+              :disabled="props.readonly || plan.status === 'Done'"
+              size="sm"
+              @click.stop
+            />
+            <div class="flex items-center gap-1 shrink-0 flex-wrap">
+              <USelectMenu
+                :items="STATUS_OPTIONS.filter(s => s !== plan.status)"
+                :model-value="plan.status"
+                :disabled="props.readonly"
+                size="xs"
+                :search-input="false"
+                @update:model-value="(val: string) => setStatus(plan, val)"
+                @click.stop
+              >
+                <UBadge
+                  :color="STATUS_COLORS[plan.status] ?? 'neutral'"
+                  variant="subtle"
+                  size="xs"
+                  class="cursor-pointer"
+                >
+                  {{ STATUS_LABELS[plan.status] ?? 'Unknown' }}
+                </UBadge>
+              </USelectMenu>
               <UButton
                 size="xs"
                 variant="ghost"
-                :loading="restoringId === v.id"
-                :disabled="!!restoringId || plan.status === 'Done'"
-                @click.stop="restore(plan, v)"
+                :label="showHistoryId === plan.id ? 'Hide history' : 'History'"
+                @click.stop="toggleHistory(plan.id)"
+              />
+              <UButton
+                v-if="!props.readonly && plan.status !== 'Done'"
+                size="xs"
+                :loading="savingId === plan.id"
+                :disabled="!isPlanDirty(plan)"
+                @click.stop="savePlan(plan)"
               >
-                Restore
+                Save
               </UButton>
             </div>
           </div>
+
+          <!-- Editor + optional history panel -->
+          <div
+            v-if="isExpanded(plan.id)"
+            class="flex gap-4 mt-3"
+          >
+            <div class="flex-1 min-w-0">
+              <MarkdownEditor
+                v-if="editState[plan.id]"
+                v-model="editState[plan.id]!.content"
+                :editable="!props.readonly && plan.status !== 'Done'"
+                placeholder="Describe this plan step by step..."
+              />
+            </div>
+            <div
+              v-if="showHistoryId === plan.id"
+              class="w-44 flex-shrink-0 border-l pl-4 space-y-2 max-h-80 overflow-y-auto"
+            >
+              <p class="text-xs font-medium text-muted uppercase">
+                History
+              </p>
+              <div
+                v-if="loadingVersionsId === plan.id"
+                class="text-xs text-muted"
+              >
+                Loading...
+              </div>
+              <div
+                v-else-if="!versionsCache[plan.id]?.length"
+                class="text-xs text-muted"
+              >
+                No versions yet
+              </div>
+              <div
+                v-for="v in versionsCache[plan.id]"
+                :key="v.id"
+                class="flex items-center justify-between gap-1 text-xs py-1"
+              >
+                <div class="min-w-0">
+                  <p class="truncate">
+                    v{{ v.version }} · {{ formatDate(v.createdAt) }}
+                  </p>
+                  <p class="text-muted truncate">
+                    {{ shortUser(v.createdByUserId) }}
+                  </p>
+                </div>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :loading="restoringId === v.id"
+                  :disabled="!!restoringId || plan.status === 'Done'"
+                  @click.stop="restore(plan, v)"
+                >
+                  Restore
+                </UButton>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
       </div>
 
       <!-- Empty state -->
