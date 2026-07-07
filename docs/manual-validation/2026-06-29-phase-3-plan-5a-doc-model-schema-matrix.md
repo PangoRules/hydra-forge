@@ -46,8 +46,8 @@
 
 ### UI — Multi-Plan
 
-20. [ ] **Goal card Docs tab** → shows both Spec (labeled "Specification") and Plans section with "Add Plan" button
-21. [ ] **Idea card Docs tab** → shows Spec only (labeled "Concept"), no Plans section
+20. [X] **Goal card Docs tab** → shows both Spec (labeled "Specification") and Plans section with "Add Plan" button
+21. [X] **Idea card Docs tab** → shows Spec only (labeled "Concept"), no Plans section
 22. [ ] **Issue card Docs tab** → shows Spec (labeled "Report") and Plans section
 23. [ ] **Task card Docs tab** → shows Plans only (no Spec section), with "Add Plan" button
 24. [ ] **Plan status badge** → newly created plan shows "Pending" badge, Activate button visible
