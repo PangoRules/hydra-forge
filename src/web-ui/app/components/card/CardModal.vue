@@ -269,10 +269,10 @@ function trapFocus(event: KeyboardEvent) {
   if (event.key === 'Tab') {
     if (event.shiftKey && document.activeElement === firstElement) {
       event.preventDefault()
-      lastElement.focus()
+      lastElement?.focus()
     } else if (!event.shiftKey && document.activeElement === lastElement) {
       event.preventDefault()
-      firstElement.focus()
+      firstElement?.focus()
     }
   }
 }
