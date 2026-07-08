@@ -1664,6 +1664,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{projectId}/Plans/{planId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetPlanStatusRequest"];
+                    "text/json": components["schemas"]["SetPlanStatusRequest"];
+                    "application/*+json": components["schemas"]["SetPlanStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/Projects": {
         parameters: {
             query?: never;
@@ -2521,6 +2563,8 @@ export interface components {
             wipLimit: null | number | string;
             color: null | string;
         };
+        /** @default 2 */
+        ColumnTemplate: number;
         CreateCardRequest: {
             /** Format: uuid */
             columnId: string;
@@ -2553,12 +2597,20 @@ export interface components {
             title: string;
             description: null | string;
             content: string;
+            /** Format: uuid */
+            specId?: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            position: number | string;
         };
         CreateProjectRequest: {
             name: string;
             description: string;
             gitRemoteUrl: null | string;
             gitProvider: null | string;
+            template?: components["schemas"]["ColumnTemplate"];
         };
         CreateRelationshipRequest: {
             /** Format: uuid */
@@ -2566,10 +2618,12 @@ export interface components {
             type: components["schemas"]["RelationshipType"];
         };
         CreateSpecRequest: {
+            docType: components["schemas"]["DocType"];
             title: string;
             description: null | string;
             content: string;
         };
+        DocType: number;
         LoginRequest: {
             username: string;
             password: string;
@@ -2603,6 +2657,7 @@ export interface components {
             /** Format: int32 */
             version: number | string;
         };
+        PlanStatus: number;
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -2663,6 +2718,9 @@ export interface components {
         RestoreSpecVersionRequest: {
             /** Format: int32 */
             version: number | string;
+        };
+        SetPlanStatusRequest: {
+            status: components["schemas"]["PlanStatus"];
         };
         UpdateCardRequest: {
             title: string;
