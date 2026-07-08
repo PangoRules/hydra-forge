@@ -59,7 +59,7 @@ export function useKeyboard() {
   }
 
   // Only attach the global listener once
-  if (!globalListenerAttached) {
+  if (import.meta.client && !globalListenerAttached) {
     window.addEventListener('keydown', handleKeyDown)
     globalListenerAttached = true
   }
