@@ -37,7 +37,8 @@ X-Correlation-Id: smoke-test-col-002
   "description": "Project for column smoke test",
   "gitProvider": "github",
   "gitRemoteUrl": "https://github.com/test/test.git",
-  "name": "Column Smoke Test Project"
+  "name": "Column Smoke Test Project",
+  "template": "Software"
 }
 
 
