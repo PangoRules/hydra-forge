@@ -199,13 +199,6 @@ onMounted(() => {
       handleArchive()
     }
   }, 'Archive card')
-
-  keyboard.register('Card', '?', (e) => {
-    e.preventDefault()
-    // Show keyboard shortcuts overlay
-    // This would need to be handled differently since we're in a modal
-    // For now, we'll just show a message or handle it in the parent
-  }, 'Show keyboard shortcuts')
 })
 
 // Presence indicator

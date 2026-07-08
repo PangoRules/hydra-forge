@@ -50,8 +50,23 @@ export function useAppToast() {
         actions: [
           {
             label: 'Copy Correlation ID',
-            onClick: () => {
-              navigator.clipboard.writeText(error.correlationId)
+            onClick: async () => {
+              try {
+                await navigator.clipboard.writeText(error.correlationId)
+                add({
+                  title: 'Correlation ID copied',
+                  color: 'success',
+                  type: 'foreground' as const,
+                  duration: 2000
+                })
+              } catch {
+                add({
+                  title: 'Failed to copy — ID: ' + error.correlationId.slice(0, 8) + '.',
+                  color: 'error',
+                  type: 'foreground' as const,
+                  duration: 4000
+                })
+              }
             }
           }
         ]

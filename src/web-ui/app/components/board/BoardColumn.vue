@@ -145,6 +145,7 @@ onMounted(() => {
           :card="card"
           :project-id="projectId"
           :readonly="readonly"
+          :blocked="false"
           @click="emit('card-click', card)"
           @move-up="(id) => emit('card-move', id, column.id, Math.max(0, Number(card.position) - 1))"
           @move-down="(id) => emit('card-move', id, column.id, Math.min(filteredCards.length - 1, Number(card.position) + 1))"
