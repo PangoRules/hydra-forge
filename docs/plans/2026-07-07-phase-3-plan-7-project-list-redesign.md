@@ -1,4 +1,7 @@
-# Project List Redesign Implementation Plan
+# Plan 7: Project List Redesign — Search, Sort, Role Filter, Pagination
+**Branch:** `task/phase-3-project-list-redesign`
+**Parent branch:** `feat/phase-3-web-ui`
+**Parent spec:** `2026-07-07-project-list-redesign-design.md`
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
