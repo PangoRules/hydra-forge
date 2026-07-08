@@ -4,6 +4,7 @@ import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import ArchiveCardWarning from '~/components/card/ArchiveCardWarning.vue'
 import CardSpec from '~/components/card/CardSpec.vue'
 import CardPlan from '~/components/card/CardPlan.vue'
 import { useKeyboard } from '~/composables/useKeyboard'
@@ -31,6 +32,8 @@ const isArchived = computed(() => !!card.value?.archivedAt)
 const isReadonly = computed(() => props.readonly || isArchived.value)
 const toast = useAppToast()
 const showArchiveConfirm = ref(false)
+const showArchiveWarning = ref(false)
+const archiveDependents = ref<{ id: string; title: string; type: string }[]>([])
 const checklistRefresh = ref(0)
 
 // API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
@@ -105,7 +108,42 @@ function handleOpenChange(val: boolean) {
 }
 
 function handleArchive() {
-  showArchiveConfirm.value = true
+  if (card.value) {
+    // Check for dependents before showing confirmation
+    fetchCardRelationships()
+  } else {
+    showArchiveConfirm.value = true
+  }
+}
+
+async function fetchCardRelationships() {
+  try {
+    const response = await api.GET(
+      ApiRoutes.Relationships.list(props.projectId, card.value!.id)
+    )
+    
+    // Type assertion for the response data
+    const data = response.data as { relationships: Array<{ sourceCardId: string; targetCardId: string; targetCardTitle: string; type: string }> }
+    
+    // Filter relationships where this card is the source (blocking others)
+    const dependents = data.relationships
+      .filter((rel: { sourceCardId: string }) => rel.sourceCardId === card.value!.id)
+      .map((rel: { targetCardId: string; targetCardTitle: string; type: string }) => ({
+        id: rel.targetCardId,
+        title: rel.targetCardTitle,
+        type: rel.type
+      }))
+    
+    if (dependents.length > 0) {
+      archiveDependents.value = dependents
+      showArchiveWarning.value = true
+    } else {
+      showArchiveConfirm.value = true
+    }
+  } catch {
+    // If we can't fetch relationships, proceed with normal archive
+    showArchiveConfirm.value = true
+  }
 }
 
 async function confirmArchive() {
@@ -217,6 +255,81 @@ const otherViewers = computed(() => {
   }
   return viewers
 })
+
+// Focus trap implementation
+const modalRef = ref<HTMLElement | null>(null)
+const focusableElements = ref<HTMLElement[]>([])
+
+function trapFocus(event: KeyboardEvent) {
+  if (!modalRef.value || !focusableElements.value.length) return
+  
+  const firstElement = focusableElements.value[0]
+  const lastElement = focusableElements.value[focusableElements.value.length - 1]
+  
+  if (event.key === 'Tab') {
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault()
+      lastElement.focus()
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault()
+      firstElement.focus()
+    }
+  }
+}
+
+onMounted(() => {
+  fetchCard()
+  linkedSpecId.value = null
+
+  // Keyboard shortcuts
+  keyboard.register('Card', 'a', (e) => {
+    if (!isArchived.value && !props.readonly) {
+      e.preventDefault()
+      handleArchive()
+    }
+  }, 'Archive card')
+
+  keyboard.register('Card', 'Tab', (e) => {
+    if (e.shiftKey) {
+      // Navigate to previous tab
+      const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : desktopTabs.value.length - 1
+      if (desktopTabs.value[prevIndex]?.value) {
+        activeTab.value = desktopTabs.value[prevIndex].value
+      }
+    } else {
+      // Navigate to next tab
+      const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
+      const nextIndex = currentIndex < desktopTabs.value.length - 1 ? currentIndex + 1 : 0
+      if (desktopTabs.value[nextIndex]?.value) {
+        activeTab.value = desktopTabs.value[nextIndex].value
+      }
+    }
+  }, 'Navigate tabs')
+
+  keyboard.register('Card', '?', (e) => {
+    e.preventDefault()
+    // Show keyboard shortcuts overlay
+    // This would need to be handled differently since we're in a modal
+    // For now, we'll just show a message or handle it in the parent
+  }, 'Show keyboard shortcuts')
+  
+  // Set up focus trap
+  const modalElement = modalRef.value
+  if (modalElement) {
+    const focusable = modalElement.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    focusableElements.value = Array.from(focusable) as HTMLElement[]
+    
+    // Add event listener for tab key
+    document.addEventListener('keydown', trapFocus)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', trapFocus)
+})
 </script>
 
 <template>
@@ -229,6 +342,7 @@ const otherViewers = computed(() => {
     :show-close="!!card"
     @update:open="handleOpenChange"
     @close="onClose"
+    ref="modalRef"
   >
     <template #header-trailing>
       <div class="flex items-center gap-1">
@@ -468,5 +582,12 @@ const otherViewers = computed(() => {
     :message="card ? `Archive #${card.cardNumber} ${card.title}?` : ''"
     confirm-text="Archive"
     @confirm="confirmArchive"
+  />
+
+  <ArchiveCardWarning
+    v-if="showArchiveWarning"
+    :dependents="archiveDependents"
+    @confirm="confirmArchive"
+    @cancel="showArchiveWarning = false"
   />
 </template>

@@ -12,6 +12,7 @@ const props = defineProps<{
   card: CardResponse
   projectId: string
   readonly?: boolean
+  blocked?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -172,6 +173,9 @@ function handleCardDrop(event: DragEvent) {
             :class="cardTypeColorClass(typeOption)"
           >
             {{ typeOption.label }}
+          </span>
+          <span v-if="blocked" class="text-warning flex items-center gap-0.5" title="Card is blocked">
+            <UIcon name="i-lucide-lock" class="size-3" />
           </span>
         </div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">

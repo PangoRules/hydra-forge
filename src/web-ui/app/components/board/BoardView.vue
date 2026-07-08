@@ -78,6 +78,7 @@ onMounted(() => {
       @move-right="() => moveColumnRight(col.id)"
       @update-column="(columnId: string, name: string, color: string | null, wipLimit: number | null) => updateColumn(columnId, name, color, wipLimit)"
       @delete-column="(columnId: string) => deleteColumn(columnId)"
+      class="w-64 md:w-72 lg:w-80"
     />
     <div
       v-if="!readonly"
