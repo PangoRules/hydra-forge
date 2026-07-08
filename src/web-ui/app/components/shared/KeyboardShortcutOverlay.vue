@@ -27,7 +27,7 @@ const shortcutsByScope = computed(() => {
     if (!groups[shortcut.scope]) {
       groups[shortcut.scope] = []
     }
-    groups[shortcut.scope].push({ key: shortcut.key, description: shortcut.description })
+    groups[shortcut.scope]!.push({ key: shortcut.key, description: shortcut.description })
   }
 
   return groups
