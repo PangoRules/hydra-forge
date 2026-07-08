@@ -35,23 +35,23 @@ Goal/Issue/Task — so every type gets a Docs tab, but the sections inside diffe
 
 ### UI — Plans section (Goal / Issue / Task)
 
-11. [ ] **Add Plan** → click "Add Plan" → inline form (title + editor + Create/Cancel) appears
-12. [ ] **Create disabled until titled** → Create button disabled while title is empty
-13. [ ] **Create plan** → fill title + content, click Create → plan appears in list with "Pending" badge, toast "Plan created"
-14. [ ] **Expand/collapse** → click a plan's header row → chevron rotates, editor (and history panel if open) shows/hides
-15. [ ] **Status dropdown** → click the status badge → dropdown lists the other two statuses only (e.g. from Pending: Active, Done)
-16. [ ] **Set Active** → pick Active from dropdown → badge updates to "Active" immediately, no page reload
-17. [ ] **Set Done** → pick Done from dropdown → badge "Done", editor becomes read-only, Save button disappears, plan row dims (opacity)
-18. [ ] **Done → Pending/Active directly** → from a Done plan, status dropdown still works and allows jumping straight back to Pending or Active (no separate "Reactivate" button — single dropdown handles all transitions)
-19. [ ] **Save gated by dirty state** → Save button disabled until title or content actually changes; disabled entirely while status is Done
-20. [ ] **Multiple plans** → create 2+ plans on one card → all shown stacked, ordered by position, each independently expandable/editable
-21. [ ] **Version history per plan** → click History on one plan → panel shows versions for that plan only (not other plans)
-22. [ ] **Restore blocked on Done** → open history on a Done plan → Restore button disabled
-23. [ ] **Restore on non-Done plan** → Restore an older version → content reverts, toast "Version restored"
-24. [ ] **Readonly (archived card)** → no "Add Plan" button, status dropdown disabled, no Save buttons
+11. [x] **Add Plan** → click "Add Plan" → inline form (title + editor + Create/Cancel) appears
+12. [x] **Create disabled until titled** → Create button disabled while title is empty
+13. [x] **Create plan** → fill title + content, click Create → plan appears in list with "Pending" badge, toast "Plan created"
+14. [x] **Expand/collapse** → click a plan's header row → chevron rotates, editor (and history panel if open) shows/hides
+15. [x] **Status dropdown** → click the status badge → dropdown lists the other two statuses only (e.g. from Pending: Active, Done)
+16. [x] **Set Active** → pick Active from dropdown → badge updates to "Active" immediately, no page reload
+17. [x] **Set Done** → pick Done from dropdown → badge "Done", editor becomes read-only, Save button disappears, plan row dims (opacity)
+18. [x] **Done → Pending/Active directly** → from a Done plan, status dropdown still works and allows jumping straight back to Pending or Active (no separate "Reactivate" button — single dropdown handles all transitions)
+19. [x] **Save gated by dirty state** → Save button disabled until title or content actually changes; disabled entirely while status is Done
+20. [x] **Multiple plans** → create 2+ plans on one card → all shown stacked, ordered by position, each independently expandable/editable
+21. [x] **Version history per plan** → click History on one plan → panel shows versions for that plan only (not other plans)
+22. [x] **Restore blocked on Done** → open history on a Done plan → Restore button disabled
+23. [x] **Restore on non-Done plan** → Restore an older version → content reverts, toast "Version restored"
+24. [x] **Readonly (archived card)** → no "Add Plan" button, status dropdown disabled, no Save buttons
 
 ### Regressions (UI)
 
-25. [ ] **Tab switch preserves data** → edit a Spec/Plan without saving, switch to another tab and back → unsaved edits still present (no unexpected refetch wipes them)
-26. [ ] **Closing and reopening the card** → re-fetches fresh Spec/Plan state from the server (saved changes persist, no stale cache)
-27. [ ] **Idea card never shows a Plans section** → confirms no regression of the Idea-has-no-plans rule (D-44) after any of the above interactions
+25. [x] **Tab switch preserves data** → edit a Spec/Plan without saving, switch to another tab and back → unsaved edits still present (no unexpected refetch wipes them)
+26. [x] **Closing and reopening the card** → re-fetches fresh Spec/Plan state from the server (saved changes persist, no stale cache)
+27. [x] **Idea card never shows a Plans section** → confirms no regression of the Idea-has-no-plans rule (D-44) after any of the above interactions
