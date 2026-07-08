@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { onClickOutside } from '@vueuse/core'
+import { onUnmounted } from 'vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 
@@ -36,6 +37,10 @@ const editWipLimitStr = ref(props.column.wipLimit != null ? String(props.column.
 const showDeleteConfirm = ref(false)
 
 onClickOutside(editPanelRef, () => {
+  showEdit.value = false
+})
+
+onUnmounted(() => {
   showEdit.value = false
 })
 
@@ -117,6 +122,24 @@ function handleDrop(event: DragEvent) {
       >
         {{ cardCount }}
       </span>
+      <UButton
+        v-if="canMoveLeft && !readonly"
+        icon="i-lucide-chevron-left"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        class="opacity-0 group-hover:opacity-100 transition-opacity"
+        @click.stop="emit('move-left')"
+      />
+      <UButton
+        v-if="canMoveRight && !readonly"
+        icon="i-lucide-chevron-right"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        class="opacity-0 group-hover:opacity-100 transition-opacity"
+        @click.stop="emit('move-right')"
+      />
       <div
         v-if="!readonly"
         ref="editPanelRef"
@@ -148,11 +171,25 @@ function handleDrop(event: DragEvent) {
           </label>
           <label class="flex items-center justify-between text-xs text-gray-500">
             Color
-            <input
-              v-model="editColor"
-              type="color"
-              class="h-6 w-10 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-            >
+            <div class="flex items-center gap-1">
+              <input
+                v-model="editColor"
+                type="color"
+                class="h-6 w-10 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              >
+              <button
+                v-if="editColor"
+                class="text-gray-400 hover:text-red-500"
+                title="Reset color"
+                type="button"
+                @click="editColor = ''"
+              >
+                <UIcon
+                  name="i-lucide-x"
+                  class="size-3"
+                />
+              </button>
+            </div>
           </label>
           <label class="block text-xs text-gray-500">
             WIP limit
@@ -181,24 +218,6 @@ function handleDrop(event: DragEvent) {
           </div>
         </div>
       </div>
-      <UButton
-        v-if="canMoveLeft && !readonly"
-        icon="i-lucide-chevron-left"
-        size="xs"
-        variant="ghost"
-        color="neutral"
-        class="opacity-0 group-hover:opacity-100 transition-opacity"
-        @click.stop="emit('move-left')"
-      />
-      <UButton
-        v-if="canMoveRight && !readonly"
-        icon="i-lucide-chevron-right"
-        size="xs"
-        variant="ghost"
-        color="neutral"
-        class="opacity-0 group-hover:opacity-100 transition-opacity"
-        @click.stop="emit('move-right')"
-      />
       <span
         v-if="column.wipLimit && cardCount > Number(column.wipLimit)"
         class="text-xs text-red-500 font-medium shrink-0"
