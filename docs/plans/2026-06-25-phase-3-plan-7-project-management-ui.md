@@ -11,6 +11,14 @@
 
 **Tech Stack:** ASP.NET Core, Nuxt 4, Nuxt UI v4, Pinia
 
+> **Pre-execution note (2026-07-07):** Reality has moved past this plan since it was written — verified against current code, not assumption:
+> - **Task 1** (backend `InitialMemberUsernames`) — never happened this way, and doesn't need to. `ProjectCreateModal.vue` already lets you search existing users by username and adds each via `POST .../members` right after project creation succeeds. Functionally equivalent, arguably safer (validates real users via search instead of silently skipping typo'd raw strings) — **skip Task 1 and Task 3 (member picker) entirely.**
+> - **Task 2** (`ProjectEditModal.vue`) — already exists (328 lines), already wired: `ProjectCard.vue` has a three-dot menu with Edit → emits up through `ProjectList.vue` to the projects page. **Skip.**
+> - **Task 4** (list polish) — already done: `ProjectCard.vue` has the archived badge, member-count badge, and the three-dot menu. The only genuinely missing piece is the relative-date ("2 weeks ago") display — that's a few-line addition to `ProjectCard.vue`, not a rewrite.
+> - **Task 5** (hand-edit `api.d.ts`) — stale process. Types are now regenerated via `pnpm run generate:api-types` against a running dev server (see `docs/plans/2026-07-07-editable-columns-and-project-templates.md` Task 2 for the exact steps) — never hand-edit the generated file.
+>
+> **Net: this plan is ~95% already shipped under a different implementation than written.** The only real remaining work is the relative-date polish. Recommend closing this plan file without further execution rather than running it task-by-task — confirm with the project owner before deleting outright, since "already implemented, not by this plan" isn't the same as "plan file has no historical value."
+
 ---
 
 ## File Map

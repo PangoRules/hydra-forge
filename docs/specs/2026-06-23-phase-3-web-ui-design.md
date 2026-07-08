@@ -159,11 +159,11 @@ Lock in **port 5000** as the canonical API URL. Docker Compose exposes 5000. `nu
 ### Desktop: Two-Column Split
 - **Left (60%):** Description (Tiptap editor) + Comments (list + input)
 - **Right (40%):** Metadata sidebar
-  - Type selector (Task/Bug/Epic)
+  - Type selector (Task/Issue/Goal/Idea)
   - Column selector (move card)
   - Assignees (add/remove)
   - Due date picker
-  - Parent Epic link
+  - Parent link (any card type may parent any other, per D-44/Plan 4D — no longer Epic-only)
   - Checklist (collapsible)
   - Attachments (list + upload)
   - Specs (linked list + create)

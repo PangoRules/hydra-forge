@@ -15,6 +15,19 @@
 
 **Spec ref:** Sections 5 (tablet), 6 (blocked cards, archive), 11 (error handling), 12 (keyboard shortcuts), 16 (tablet responsive), 17 (PWA)
 
+> **Pre-execution note (2026-07-07):** Verified against current code before running this task-by-task:
+> - **Task 21** (keyboard shortcuts) — not built, still needed as written.
+> - **Task 22** (`useErrorToast`) — **do not create this composable.** `useAppToast.ts` already exists and is the established toast wrapper used everywhere in the codebase (`success`/`error`, `type: 'foreground'`, duration defaults baked in). Adapt this task to extend `useAppToast` with a correlationId-copy action if that's still wanted, rather than building a second, competing toast composable.
+> - **Task 23** (blocked card indicator + move warning) — partially done, but not as described, and one piece needs a decision before continuing:
+>   - `useCardMove.ts` already catches the `409` and toasts "Cannot move blocked card" — but `confirmBlockedMove` is hardcoded `false` with no retry path, so a blocked move can currently never succeed from the UI even with user confirmation. That contradicts CLAUDE.md's documented intent ("Client retries with `confirmBlockedMove=true` after user confirms. Never hard-blocked."). **Needs a decision: build the full confirm-and-retry flow, or is toast-and-block the intended final UX?**
+>   - `BoardCard.vue` has no visual blocked indicator at all (no lock icon) — this part is still needed.
+>   - The plan's proposed `card.isBlocked` / `card.blockedByCount` fields **do not exist** on `CardResponse` in the current API schema. This task can't be implemented as literally written without either a backend change to expose those fields, or deriving blocked status client-side from the relationships endpoint. Flag before starting — this may need a backend sub-task first.
+> - **Task 24** (archive with dependents warning) — not built (current archive flow in `CardModal.vue` is a plain confirm, no dependents fetch/list). Still needed as written.
+> - **Task 25** (ARIA) — not verified in depth; treat as still open, spec still calls for it.
+> - **Task 26** (tablet pass + `ProjectSidebar.vue`) — not built. Worth confirming the persistent-sidebar nav (spec section 4) is still the intended pattern before building it — the current app has no sidebar at all (just a top header + mobile view), so this would be a first-time navigation change, not incremental hardening.
+> - **Task 27** (PWA manifest) — not built (`@vite-pwa/nuxt` absent from `package.json`), still needed as written.
+> - **Task 29** (archive/restore project) — **already fully implemented.** `projects/index.vue` + `ProjectList.vue` + `ProjectCard.vue` have the toggle, confirm dialog, filter toggle, and toasts. **Skip this task.**
+
 ---
 
 ## Task 21: Keyboard Shortcuts + Overlay
