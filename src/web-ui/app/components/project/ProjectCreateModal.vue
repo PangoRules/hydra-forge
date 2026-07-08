@@ -32,6 +32,13 @@ const gitProviders = [
   { label: 'Self-hosted', value: 'self-hosted' }
 ]
 
+const template = ref('General')
+const templates = [
+  { label: 'General', value: 'General' },
+  { label: 'Software', value: 'Software' },
+  { label: 'Blank', value: 'Blank' }
+]
+
 const api = useApi()
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -45,6 +52,7 @@ function resetForm() {
   description.value = ''
   gitRemoteUrl.value = ''
   gitProvider.value = undefined
+  template.value = 'General'
   showAdvanced.value = false
   error.value = null
   selectedMembers.value = []
@@ -98,7 +106,8 @@ async function handleSubmit() {
         name: name.value,
         description: description.value,
         gitRemoteUrl: gitRemoteUrl.value || null,
-        gitProvider: gitProvider.value ?? null
+        gitProvider: gitProvider.value ?? null,
+        template: template.value
       }
     })
 
@@ -216,6 +225,17 @@ async function handleSubmit() {
             </UBadge>
           </div>
         </div>
+
+        <!-- Template -->
+        <UFormField
+          label="Column Template"
+        >
+          <USelect
+            v-model="template"
+            :items="templates"
+            class="w-full"
+          />
+        </UFormField>
 
         <!-- Advanced -->
         <div>
