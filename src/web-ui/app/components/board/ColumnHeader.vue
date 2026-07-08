@@ -35,7 +35,9 @@ const editColor = ref(props.column.color ?? '#94a3b8')
 const editWipLimitStr = ref(props.column.wipLimit != null ? String(props.column.wipLimit) : '')
 const showDeleteConfirm = ref(false)
 
-onClickOutside(editPanelRef, () => { showEdit.value = false })
+onClickOutside(editPanelRef, () => {
+  showEdit.value = false
+})
 
 function openEdit() {
   editName.value = props.column.name
