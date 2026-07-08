@@ -20,13 +20,5 @@ public class Plan
 
     public bool IsDone => Status == PlanStatus.Done;
 
-    public void Activate() => Status = PlanStatus.Active;
-
-    public void Complete() => Status = PlanStatus.Done;
-
-    public void Reactivate() => Status = PlanStatus.Active;
-
-    public void Reopen() => Status = PlanStatus.Pending;
-
     public void SetStatus(PlanStatus status) => Status = status;
 }
