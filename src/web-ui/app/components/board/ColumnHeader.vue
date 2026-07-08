@@ -122,108 +122,111 @@ function handleDrop(event: DragEvent) {
       >
         {{ cardCount }}
       </span>
-      <UButton
-        v-if="canMoveLeft && !readonly"
-        icon="i-lucide-chevron-left"
-        size="xs"
-        variant="ghost"
-        color="neutral"
-        class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-        @click.stop="emit('move-left')"
-      />
-      <UButton
-        v-if="canMoveRight && !readonly"
-        icon="i-lucide-chevron-right"
-        size="xs"
-        variant="ghost"
-        color="neutral"
-        class="opacity-0 group-hover:opacity-100 transition-opacity"
-        @click.stop="emit('move-right')"
-      />
-      <div
-        v-if="!readonly"
-        ref="editPanelRef"
-        class="relative shrink-0"
-      >
-        <button
-          class="text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
-          title="Edit column"
-          data-testid="column-edit-trigger"
-          @click.stop="showEdit ? (showEdit = false) : openEdit()"
-        >
-          <UIcon
-            name="i-lucide-settings"
-            class="size-4"
-          />
-        </button>
-        <div
-          v-if="showEdit"
-          class="absolute z-20 top-full right-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3 space-y-2"
-          @mousedown.stop
-        >
-          <label class="block text-xs text-gray-500">
-            Name
-            <input
-              v-model="editName"
-              data-testid="column-name-input"
-              class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-            >
-          </label>
-          <label class="flex items-center justify-between text-xs text-gray-500">
-            Color
-            <div class="flex items-center gap-1">
-              <input
-                v-model="editColor"
-                type="color"
-                class="h-6 w-10 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-              >
-              <button
-                v-if="editColor"
-                class="text-gray-400 hover:text-red-500"
-                title="Reset color"
-                type="button"
-                @click="editColor = ''"
-              >
-                <UIcon
-                  name="i-lucide-x"
-                  class="size-3"
-                />
-              </button>
-            </div>
-          </label>
-          <label class="block text-xs text-gray-500">
-            WIP limit
-            <input
-              v-model="editWipLimitStr"
-              type="number"
-              min="0"
-              class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-            >
-          </label>
-          <div class="flex items-center justify-between pt-1">
-            <button
-              class="text-xs text-red-500 hover:text-red-600"
-              data-testid="column-delete-trigger"
-              @click="showDeleteConfirm = true"
-            >
-              Delete
-            </button>
-            <UButton
-              size="xs"
-              data-testid="column-save-trigger"
-              @click="saveEdit"
-            >
-              Save
-            </UButton>
-          </div>
-        </div>
-      </div>
       <span
         v-if="column.wipLimit && cardCount > Number(column.wipLimit)"
         class="text-xs text-red-500 font-medium shrink-0"
       >
         WIP {{ column.wipLimit }}
       </span>
+
+      <div class="ml-auto flex items-center gap-1 shrink-0">
+        <UButton
+          v-if="canMoveLeft && !readonly"
+          icon="i-lucide-chevron-left"
+          size="xs"
+          variant="ghost"
+          color="neutral"
+          class="opacity-0 group-hover:opacity-100 transition-opacity"
+          @click.stop="emit('move-left')"
+        />
+        <UButton
+          v-if="canMoveRight && !readonly"
+          icon="i-lucide-chevron-right"
+          size="xs"
+          variant="ghost"
+          color="neutral"
+          class="opacity-0 group-hover:opacity-100 transition-opacity"
+          @click.stop="emit('move-right')"
+        />
+        <div
+          v-if="!readonly"
+          ref="editPanelRef"
+          class="relative shrink-0 flex items-center"
+        >
+          <button
+            class="text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Edit column"
+            data-testid="column-edit-trigger"
+            @click.stop="showEdit ? (showEdit = false) : openEdit()"
+          >
+            <UIcon
+              name="i-lucide-settings"
+              class="size-4"
+            />
+          </button>
+          <div
+            v-if="showEdit"
+            class="absolute z-20 top-full right-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3 space-y-2"
+            @mousedown.stop
+          >
+            <label class="block text-xs text-gray-500">
+              Name
+              <input
+                v-model="editName"
+                data-testid="column-name-input"
+                class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              >
+            </label>
+            <label class="flex items-center justify-between text-xs text-gray-500">
+              Color
+              <div class="flex items-center gap-1">
+                <input
+                  v-model="editColor"
+                  type="color"
+                  class="h-6 w-10 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                >
+                <button
+                  v-if="editColor"
+                  class="text-gray-400 hover:text-red-500"
+                  title="Reset color"
+                  type="button"
+                  @click="editColor = ''"
+                >
+                  <UIcon
+                    name="i-lucide-x"
+                    class="size-3"
+                  />
+                </button>
+              </div>
+            </label>
+            <label class="block text-xs text-gray-500">
+              WIP limit
+              <input
+                v-model="editWipLimitStr"
+                type="number"
+                min="0"
+                class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              >
+            </label>
+            <div class="flex items-center justify-between pt-1">
+              <button
+                class="text-xs text-red-500 hover:text-red-600"
+                data-testid="column-delete-trigger"
+                @click="showDeleteConfirm = true"
+              >
+                Delete
+              </button>
+              <UButton
+                size="xs"
+                data-testid="column-save-trigger"
+                @click="saveEdit"
+              >
+                Save
+              </UButton>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Row 2: filter controls -->
