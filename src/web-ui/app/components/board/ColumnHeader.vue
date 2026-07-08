@@ -128,7 +128,7 @@ function handleDrop(event: DragEvent) {
         size="xs"
         variant="ghost"
         color="neutral"
-        class="opacity-0 group-hover:opacity-100 transition-opacity"
+        class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
         @click.stop="emit('move-left')"
       />
       <UButton
