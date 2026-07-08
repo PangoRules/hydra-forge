@@ -22,7 +22,7 @@
 - [x] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
 - [x] Task 5a: Specs, Plan Schema changes.
 - [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
-- [ ] Task 7: Project Management UI — project edit, creation with initial members, project list polish
+- [ ] Task 7: Project List Redesign — edit modal, member picker, and list polish shipped already (different mechanism than originally planned); remaining scope is table view + search/sort/role filter + real pagination (see `docs/specs/2026-07-07-project-list-redesign-design.md`)
 
 ---
 
