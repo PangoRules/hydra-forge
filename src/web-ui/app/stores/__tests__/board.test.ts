@@ -100,6 +100,32 @@ describe('useBoardStore', () => {
 
     expect(board.cardsByColumn.get('col1')!.length).toBe(0)
   })
+
+  it('addColumn appends a column to the end', () => {
+    const board = useBoardStore()
+    board.columns = [{ id: 'col1', name: 'Backlog', position: 0, wipLimit: null, color: null }]
+    board.addColumn({ id: 'col2', name: 'Done', position: 1, wipLimit: null, color: null })
+    expect(board.columns.map(c => c.id)).toEqual(['col1', 'col2'])
+  })
+
+  it('updateColumnInStore merges updates into the matching column', () => {
+    const board = useBoardStore()
+    board.columns = [{ id: 'col1', name: 'Backlog', position: 0, wipLimit: null, color: null }]
+    board.updateColumnInStore('col1', { name: 'Renamed', color: '#ff0000' })
+    expect(board.columns[0]).toMatchObject({ id: 'col1', name: 'Renamed', color: '#ff0000' })
+  })
+
+  it('removeColumnFromStore removes the column and its cards map entry', () => {
+    const board = useBoardStore()
+    board.columns = [
+      { id: 'col1', name: 'Backlog', position: 0, wipLimit: null, color: null },
+      { id: 'col2', name: 'Done', position: 1, wipLimit: null, color: null }
+    ]
+    board.cardsByColumn = new Map([['col1', []], ['col2', []]])
+    board.removeColumnFromStore('col1')
+    expect(board.columns.map(c => c.id)).toEqual(['col2'])
+    expect(board.cardsByColumn.has('col1')).toBe(false)
+  })
 })
 
 describe('BoardStore filters', () => {
