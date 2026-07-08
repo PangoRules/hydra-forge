@@ -245,6 +245,7 @@ onMounted(() => fetchSpec())
             </p>
           </div>
           <UButton
+            v-if="!props.readonly"
             size="xs"
             variant="ghost"
             :loading="restoring === v.id"

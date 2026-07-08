@@ -21,17 +21,17 @@ Goal/Issue/Task — so every type gets a Docs tab, but the sections inside diffe
 
 1. [X] **Goal card → Docs tab** → Spec section labeled "Specification" + Plans section with "Add Plan"
 2. [X] **Idea card → Docs tab** → Spec section labeled "Concept" only, no Plans section
-3. [ ] **Issue card → Docs tab** → Spec section labeled "Report" + Plans section with "Add Plan"
-4. [ ] **Task card → Docs tab** → Plans section only (no Spec section), "Add Plan" present
+3. [x] **Issue card → Docs tab** → Spec section labeled "Report" + Plans section with "Add Plan"
+4. [x] **Task card → Docs tab** → Plans section only (no Spec section), "Add Plan" present
 
 ### UI — Spec section (Goal / Idea / Issue)
 
-5. [ ] **Create spec (empty state)** → title input + editor + "Create" button; fill both, click Create → spec saves, toast "Spec saved", button label switches to "Save"
-6. [ ] **Save disabled when clean** → immediately after create/load, Save is disabled (nothing edited yet)
-7. [ ] **Edit spec** → change title or content → Save enables → click Save → toast "Spec saved"
-8. [ ] **Version history** → click "History" → versions panel opens showing past versions with author + timestamp
-9. [ ] **Restore version** → click Restore on an older version → title/content revert, toast "Version restored", history refreshes
-10. [ ] **Readonly (archived card)** → no Create/Save button, no title/content editing
+5. [x] **Create spec (empty state)** → title input + editor + "Create" button; fill both, click Create → spec saves, toast "Spec saved", button label switches to "Save"
+6. [x] **Save disabled when clean** → immediately after create/load, Save is disabled (nothing edited yet)
+7. [x] **Edit spec** → change title or content → Save enables → click Save → toast "Spec saved"
+8. [x] **Version history** → click "History" → versions panel opens showing past versions with author + timestamp
+9. [x] **Restore version** → click Restore on an older version → title/content revert, toast "Version restored", history refreshes
+10. [X] **Readonly (archived card)** → no Create/Save button, no title/content editing
 
 ### UI — Plans section (Goal / Issue / Task)
 
