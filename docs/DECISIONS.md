@@ -737,3 +737,17 @@ Chats
 | **Alternatives considered** | 1. Keep D-44's three dedicated actions and add a fourth for arbitrary reopen (rejected — grows the action surface further for a state machine that turned out not to need enforced ordering). 2. Enforce valid transitions server-side (e.g. reject Done→Pending without going through Active) (rejected — no product requirement surfaced for this, and it would need a real reason to justify the extra validation code and error states). |
 | **Impact** | `Plan.Reopen()` (added under D-44, sets status back to `Pending`) is now dead code — nothing calls it; `SetStatus` bypasses it entirely. Confirm before deleting it, or fold its intent into `SetStatus` if a distinct "reopen" semantic (vs. arbitrary status assignment) still turns out to matter. Any future plan/task lifecycle work should default to this single-setter pattern rather than reintroducing per-transition actions unless a concrete need for enforced ordering appears. |
 
+---
+
+## D-46: Blocked Card Move — No UI Override, Toast-and-Stop Is Final
+
+| Field | Value |
+|---|---|
+| **Topic** | Whether the Web UI should expose a way to force a card move past a `409 Conflict` blocked-move rejection, given the API supports `confirmBlockedMove=true` |
+| **Date** | 2026-07-07 |
+| **Status** | ✅ Settled |
+| **Decision** | **The Web UI never sends `confirmBlockedMove=true`. On `409`, `useCardMove.ts` rolls back the optimistic move and toasts "Cannot move blocked card" — full stop, no confirm-and-retry modal.** |
+| **Rationale** | Resolving a blocked card means resolving the actual blocking dependency (finish/unblock the card it's waiting on), not force-moving past the block. `confirmBlockedMove` exists as an API-level capability — any client could use it — but the Web UI intentionally chooses not to expose an override, keeping the blocked-move rule meaningful rather than a dismissible warning. |
+| **Alternatives considered** | 1. Build a confirm-and-retry modal (Plan 6's original Task 23 design) that resends the move with `confirmBlockedMove=true` after user confirmation (rejected — the whole point of a blocked-move rule is undermined if the UI trains users to just click through it). |
+| **Impact** | Plan 6 Task 23's "move warning modal" sub-scope is dropped — only the `BoardCard.vue` visual blocked indicator (lock icon) remains from that task. Do not read CLAUDE.md's `confirmBlockedMove=true` API-contract line as a requirement to build UI for it. |
+
