@@ -2,6 +2,7 @@
 import type { components } from '~/types/api'
 import BoardColumn from '~/components/board/BoardColumn.vue'
 import { useColumnReorder } from '~/composables/useColumnReorder'
+import { useColumnManage } from '~/composables/useColumnManage'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const { reorderColumns, moveColumnLeft, moveColumnRight } = useColumnReorder(props.projectId)
+const { createColumn, updateColumn, deleteColumn, saving } = useColumnManage(props.projectId)
 
 function handleCardMove(cardId: string, targetColumnId: string, targetPosition: number) {
   emit('card-move', cardId, targetColumnId, targetPosition)
@@ -28,6 +30,18 @@ function handleCardMove(cardId: string, targetColumnId: string, targetPosition: 
 
 function handleCardClick(card: CardResponse) {
   emit('card-click', card)
+}
+
+const showAddColumn = ref(false)
+const newColumnName = ref('')
+
+async function handleAddColumn() {
+  if (!newColumnName.value.trim()) return
+  const ok = await createColumn(newColumnName.value.trim(), null, null)
+  if (ok) {
+    newColumnName.value = ''
+    showAddColumn.value = false
+  }
 }
 </script>
 
@@ -49,6 +63,48 @@ function handleCardClick(card: CardResponse) {
       @reorder="reorderColumns"
       @move-left="() => moveColumnLeft(col.id)"
       @move-right="() => moveColumnRight(col.id)"
+      @update-column="(columnId: string, name: string, color: string | null, wipLimit: number | null) => updateColumn(columnId, name, color, wipLimit)"
+      @delete-column="(columnId: string) => deleteColumn(columnId)"
     />
+    <div
+      v-if="!readonly"
+      class="shrink-0 w-[220px]"
+    >
+      <UButton
+        v-if="!showAddColumn"
+        variant="ghost"
+        icon="i-lucide-plus"
+        @click="showAddColumn = true"
+      >
+        Add Column
+      </UButton>
+      <div
+        v-else
+        class="flex flex-col gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
+      >
+        <input
+          v-model="newColumnName"
+          placeholder="Column name"
+          class="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+          @keyup.enter="handleAddColumn"
+        >
+        <div class="flex gap-2">
+          <UButton
+            size="xs"
+            :loading="saving"
+            @click="handleAddColumn"
+          >
+            Add
+          </UButton>
+          <UButton
+            size="xs"
+            variant="ghost"
+            @click="showAddColumn = false; newColumnName = ''"
+          >
+            Cancel
+          </UButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

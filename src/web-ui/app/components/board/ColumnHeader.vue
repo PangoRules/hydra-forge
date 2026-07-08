@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { CARD_TYPE_FILTER_OPTIONS } from '~/lib/card-type'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import { onClickOutside } from '@vueuse/core'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 
@@ -22,7 +24,38 @@ const emit = defineEmits<{
   'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
   'move-right': []
+  'update-column': [name: string, color: string | null, wipLimit: number | null]
+  'delete-column': []
 }>()
+
+const showEdit = ref(false)
+const editPanelRef = ref<HTMLElement | null>(null)
+const editName = ref(props.column.name)
+const editColor = ref(props.column.color ?? '#94a3b8')
+const editWipLimitStr = ref(props.column.wipLimit != null ? String(props.column.wipLimit) : '')
+const showDeleteConfirm = ref(false)
+
+onClickOutside(editPanelRef, () => { showEdit.value = false })
+
+function openEdit() {
+  editName.value = props.column.name
+  editColor.value = props.column.color ?? '#94a3b8'
+  editWipLimitStr.value = props.column.wipLimit != null ? String(props.column.wipLimit) : ''
+  showEdit.value = true
+}
+
+function saveEdit() {
+  if (!editName.value.trim()) return
+  const parsed = editWipLimitStr.value.trim() === '' ? null : Number(editWipLimitStr.value)
+  const wipLimit = parsed !== null && !Number.isNaN(parsed) && parsed > 0 ? parsed : null
+  emit('update-column', editName.value.trim(), editColor.value || null, wipLimit)
+  showEdit.value = false
+}
+
+function confirmDelete() {
+  emit('delete-column')
+  showDeleteConfirm.value = false
+}
 
 function handleDragStart(event: DragEvent) {
   if (!event.dataTransfer) return
@@ -82,6 +115,70 @@ function handleDrop(event: DragEvent) {
       >
         {{ cardCount }}
       </span>
+      <div
+        v-if="!readonly"
+        ref="editPanelRef"
+        class="relative shrink-0"
+      >
+        <button
+          class="text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Edit column"
+          data-testid="column-edit-trigger"
+          @click.stop="showEdit ? (showEdit = false) : openEdit()"
+        >
+          <UIcon
+            name="i-lucide-settings"
+            class="size-4"
+          />
+        </button>
+        <div
+          v-if="showEdit"
+          class="absolute z-20 top-full right-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3 space-y-2"
+          @mousedown.stop
+        >
+          <label class="block text-xs text-gray-500">
+            Name
+            <input
+              v-model="editName"
+              data-testid="column-name-input"
+              class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            >
+          </label>
+          <label class="flex items-center justify-between text-xs text-gray-500">
+            Color
+            <input
+              v-model="editColor"
+              type="color"
+              class="h-6 w-10 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            >
+          </label>
+          <label class="block text-xs text-gray-500">
+            WIP limit
+            <input
+              v-model="editWipLimitStr"
+              type="number"
+              min="0"
+              class="mt-0.5 w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            >
+          </label>
+          <div class="flex items-center justify-between pt-1">
+            <button
+              class="text-xs text-red-500 hover:text-red-600"
+              data-testid="column-delete-trigger"
+              @click="showDeleteConfirm = true"
+            >
+              Delete
+            </button>
+            <UButton
+              size="xs"
+              data-testid="column-save-trigger"
+              @click="saveEdit"
+            >
+              Save
+            </UButton>
+          </div>
+        </div>
+      </div>
       <UButton
         v-if="canMoveLeft && !readonly"
         icon="i-lucide-chevron-left"
@@ -146,5 +243,15 @@ function handleDrop(event: DragEvent) {
 
     <!-- Row 3: inline search slot -->
     <slot name="filter-row" />
+
+    <ConfirmDialog
+      :open="showDeleteConfirm"
+      title="Delete column"
+      :message="`Delete '${column.name}'? This only works if the column has no cards.`"
+      confirm-text="Delete"
+      confirm-color="error"
+      @update:open="showDeleteConfirm = $event"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
