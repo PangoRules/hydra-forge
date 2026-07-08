@@ -16,12 +16,15 @@ export function useKeyboard() {
   }
 
   function unregister(scope: string) {
-    const initialLength = shortcuts.length
+    // Filter out all shortcuts with the given scope
     const filtered = shortcuts.filter(s => s.scope !== scope)
-    if (filtered.length !== initialLength) {
-      shortcuts.length = 0
-      shortcuts.push(...filtered)
-    }
+    // Replace the shortcuts array with the filtered array
+    shortcuts.length = 0
+    shortcuts.push(...filtered)
+  }
+
+  function clear() {
+    shortcuts.length = 0
   }
 
   function getShortcuts(scope: string) {
@@ -65,6 +68,7 @@ export function useKeyboard() {
   return {
     register,
     unregister,
+    clear,
     getShortcuts,
     getAllShortcuts
   }

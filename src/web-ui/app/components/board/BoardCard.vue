@@ -174,8 +174,15 @@ function handleCardDrop(event: DragEvent) {
           >
             {{ typeOption.label }}
           </span>
-          <span v-if="blocked" class="text-warning flex items-center gap-0.5" title="Card is blocked">
-            <UIcon name="i-lucide-lock" class="size-3" />
+          <span
+            v-if="blocked"
+            class="text-warning flex items-center gap-0.5"
+            title="Card is blocked"
+          >
+            <UIcon
+              name="i-lucide-lock"
+              class="size-3"
+            />
           </span>
         </div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
