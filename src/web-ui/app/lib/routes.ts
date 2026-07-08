@@ -114,7 +114,8 @@ export const ApiRoutes = {
     forCard: (projectId: string, cardId: string) => `/api/projects/${projectId}/Plans/cards/${cardId}`,
     detail: (projectId: string, planId: string) => `/api/projects/${projectId}/Plans/${planId}`,
     restore: (projectId: string, planId: string) => `/api/projects/${projectId}/Plans/${planId}/restore`,
-    versions: (projectId: string, planId: string) => `/api/projects/${projectId}/Plans/${planId}/versions`
+    versions: (projectId: string, planId: string) => `/api/projects/${projectId}/Plans/${planId}/versions`,
+    updateStatus: (projectId: string, planId: string) => `/api/projects/${projectId}/Plans/${planId}/status` as const
   },
 
   ProjectSnapshot: {

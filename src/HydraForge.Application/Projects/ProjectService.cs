@@ -21,15 +21,7 @@ public class ProjectService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
-    private static readonly string[] DefaultColumnNames =
-    [
-        "Backlog",
-        "Spec-ing",
-        "Planned",
-        "In Dev",
-        "In Review",
-        "Done",
-    ];
+    
 
     public async Task<Result<ProjectDto>> CreateAsync(
         CreateProjectCommand cmd,
@@ -59,7 +51,7 @@ public class ProjectService(
         };
         await memberRepo.AddMemberAsync(ownerMember, ct);
 
-        var columns = DefaultColumnNames
+        var columns = ColumnTemplates.Get(cmd.Template)
             .Select(
                 (name, index) =>
                     new Column

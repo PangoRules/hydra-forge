@@ -9,7 +9,7 @@ namespace HydraForge.Application.Tests.Projects;
 public class ProjectServiceTests
 {
     private static CreateProjectCommand DefaultCreateCmd(Guid ownerId) =>
-        new(ownerId, "Test Project", "A test project", null, null);
+        new(ownerId, "Test Project", "A test project", null, null, ColumnTemplate.General);
 
     [Fact]
     public async Task CreateAsync_ValidCommand_ReturnsProjectWithOwnerMember()
@@ -27,7 +27,7 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_InsertsSixDefaultColumns()
+    public async Task CreateAsync_DefaultTemplate_InsertsFourGeneralColumns()
     {
         var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
         var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
@@ -36,9 +36,41 @@ public class ProjectServiceTests
         var result = await handler.CreateAsync(cmd);
 
         Assert.True(result.IsSuccess);
+        Assert.Equal(4, result.Value.Columns.Count);
+        Assert.Equal("Backlog", result.Value.Columns[0].Name);
+        Assert.Equal("Done", result.Value.Columns[3].Name);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SoftwareTemplate_InsertsSixColumns()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
+        var cmd = DefaultCreateCmd(Guid.NewGuid());
+        cmd = cmd with { Template = ColumnTemplate.Software };
+
+        var result = await handler.CreateAsync(cmd);
+
+        Assert.True(result.IsSuccess);
         Assert.Equal(6, result.Value.Columns.Count);
         Assert.Equal("Backlog", result.Value.Columns[0].Name);
         Assert.Equal("Done", result.Value.Columns[5].Name);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BlankTemplate_InsertsTwoColumns()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
+        var cmd = DefaultCreateCmd(Guid.NewGuid());
+        cmd = cmd with { Template = ColumnTemplate.Blank };
+
+        var result = await handler.CreateAsync(cmd);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.Columns.Count);
+        Assert.Equal("To Do", result.Value.Columns[0].Name);
+        Assert.Equal("Done", result.Value.Columns[1].Name);
     }
 
     [Fact]

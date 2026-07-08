@@ -51,6 +51,8 @@ public class PlanService(
             Title = cmd.Title,
             Description = cmd.Description,
             Content = cmd.Content,
+            Status = PlanStatus.Pending,
+            Position = cmd.Position,
             Version = 1,
             CreatedByUserId = cmd.ActorId,
             CreatedAt = DateTime.UtcNow,
@@ -169,6 +171,11 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.NotFound, "Plan not found.")
             );
 
+        if (plan.IsDone)
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+            );
+
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<PlanDto>.Failure(
                 new Error(
@@ -270,6 +277,11 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.NotFound, "Plan not found.")
             );
 
+        if (plan.IsDone)
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+            );
+
         var oldVersion = await _planRepo.GetVersionAsync(cmd.PlanId, cmd.Version, ct);
         if (oldVersion == null)
             return Result<PlanDto>.Failure(
@@ -318,6 +330,32 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
+    public async Task<Result<PlanDto>> SetStatusAsync(
+        SetPlanStatusCommand cmd,
+        CancellationToken ct = default
+    )
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+
+        var plan = await _planRepo.GetByIdAsync(cmd.PlanId, ct);
+        if (plan == null || plan.ProjectId != cmd.ProjectId)
+            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Plan not found."));
+
+        if (plan.Status == cmd.Status)
+            return Result<PlanDto>.Success(MapToDto(plan));
+
+        plan.SetStatus(cmd.Status);
+        plan.UpdatedAt = DateTime.UtcNow;
+
+        await _planRepo.UpdateAsync(plan, ct);
+        await _planRepo.SaveChangesAsync(ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+
+        return Result<PlanDto>.Success(MapToDto(plan));
+    }
+
     private async Task PublishAsync(Guid projectId, Guid planId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
@@ -338,9 +376,12 @@ public class PlanService(
             plan.Id,
             plan.ProjectId,
             plan.CardId,
+            plan.SpecId,
             plan.Title,
             plan.Description,
             plan.Content,
+            plan.Status,
+            plan.Position,
             plan.Version,
             plan.CreatedByUserId,
             plan.CreatedAt,

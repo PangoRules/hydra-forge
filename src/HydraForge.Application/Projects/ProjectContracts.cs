@@ -7,7 +7,8 @@ public record CreateProjectCommand(
     string Name,
     string Description,
     string? GitRemoteUrl,
-    string? GitProvider
+    string? GitProvider,
+    ColumnTemplate Template = ColumnTemplate.General
 );
 
 public record UpdateProjectCommand(

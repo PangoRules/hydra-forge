@@ -32,16 +32,30 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const checklistRefresh = ref(0)
 
-const DOCS_CARD_TYPES = ['Goal', 'Idea'] as const
-const PLAN_CARD_TYPES = ['Goal'] as const
+// API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
+const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
+const PLAN_CARD_TYPES = ['Goal', 'Issue', 'Task'] as const
 
-const hasDocsTab = computed(() =>
-  card.value != null && DOCS_CARD_TYPES.includes(card.value.type as unknown as typeof DOCS_CARD_TYPES[number])
+// DocType from API (JsonStringEnumConverter): 'Specification', 'Concept', 'Report'
+const CARD_TYPE_TO_DOC_TYPE: Record<string, string> = { Goal: 'Specification', Idea: 'Concept', Issue: 'Report' }
+
+const hasSpec = computed(() =>
+  card.value != null && (SPEC_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
 )
 
 const hasPlan = computed(() =>
-  card.value != null && PLAN_CARD_TYPES.includes(card.value.type as unknown as typeof PLAN_CARD_TYPES[number])
+  card.value != null && (PLAN_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
 )
+
+const hasDocsTab = computed(() => hasSpec.value || hasPlan.value)
+
+const specDocType = computed(() => {
+  if (!card.value) return 'Specification'
+  return CARD_TYPE_TO_DOC_TYPE[String(card.value.type)] ?? 'Specification'
+})
+
+// Populated by CardSpec after it loads/creates the spec; passed to CardPlan for Goal linking
+const linkedSpecId = ref<string | null>(null)
 
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related' | 'docs'>('details')
 
@@ -134,7 +148,10 @@ function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
 
-onMounted(() => fetchCard())
+onMounted(() => {
+  fetchCard()
+  linkedSpecId.value = null
+})
 
 // Presence indicator
 const authStore = useAuthStore()
@@ -204,7 +221,7 @@ const otherViewers = computed(() => {
         <!-- Desktop: two-column — UModal handles overflow naturally -->
         <div
           data-testid="card-modal-desktop"
-          class="hidden md:flex flex-col"
+          class="hidden md:flex flex-col relative"
         >
           <div
             v-if="otherViewers.length > 0"
@@ -259,15 +276,19 @@ const otherViewers = computed(() => {
                 class="space-y-8"
               >
                 <CardSpec
+                  v-if="hasSpec"
                   :card-id="card.id"
                   :project-id="projectId"
+                  :doc-type="specDocType"
                   :readonly="isReadonly"
+                  @update:spec-id="linkedSpecId = $event"
                 />
                 <template v-if="hasPlan">
-                  <USeparator />
+                  <USeparator v-if="hasSpec" />
                   <CardPlan
                     :card-id="card.id"
                     :project-id="projectId"
+                    :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                     :readonly="isReadonly"
                   />
                 </template>
@@ -383,15 +404,19 @@ const otherViewers = computed(() => {
               class="space-y-8"
             >
               <CardSpec
+                v-if="hasSpec"
                 :card-id="card.id"
                 :project-id="projectId"
+                :doc-type="specDocType"
                 :readonly="isReadonly"
+                @update:spec-id="linkedSpecId = $event"
               />
               <template v-if="hasPlan">
-                <USeparator />
+                <USeparator v-if="hasSpec" />
                 <CardPlan
                   :card-id="card.id"
                   :project-id="projectId"
+                  :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                   :readonly="isReadonly"
                 />
               </template>

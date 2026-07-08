@@ -23,6 +23,8 @@ const emit = defineEmits<{
   'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
   'move-right': []
+  'update-column': [columnId: string, name: string, color: string | null, wipLimit: number | null]
+  'delete-column': [columnId: string]
 }>()
 
 // Per-column filter state
@@ -104,6 +106,8 @@ function handleDrop(event: DragEvent) {
       @reorder="(a: string, b: string) => emit('reorder', a, b)"
       @move-left="emit('move-left')"
       @move-right="emit('move-right')"
+      @update-column="(name: string, color: string | null, wipLimit: number | null) => emit('update-column', column.id, name, color, wipLimit)"
+      @delete-column="() => emit('delete-column', column.id)"
     >
       <template #filter-row>
         <input

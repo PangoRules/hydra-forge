@@ -25,7 +25,7 @@ describe('CardPlan', () => {
     expect(wrapper.text()).toContain('Plan')
   })
 
-  it('shows Create button when no plan exists', async () => {
+  it('shows Add Plan button when no plan exists', async () => {
     mockGET.mockResolvedValue({ data: { plans: [] }, error: undefined })
     const wrapper = await mountSuspended(CardPlan, {
       props: { cardId: 'c1', projectId: 'p1' },
@@ -35,10 +35,10 @@ describe('CardPlan', () => {
         }
       }
     })
-    expect(wrapper.text()).toContain('Create')
+    expect(wrapper.text()).toContain('Add Plan')
   })
 
-  it('hides Create button in readonly mode', async () => {
+  it('hides Add Plan button in readonly mode', async () => {
     mockGET.mockResolvedValue({ data: { plans: [] }, error: undefined })
     const wrapper = await mountSuspended(CardPlan, {
       props: { cardId: 'c1', projectId: 'p1', readonly: true },
@@ -48,7 +48,7 @@ describe('CardPlan', () => {
         }
       }
     })
-    expect(wrapper.text()).not.toContain('Create')
+    expect(wrapper.text()).not.toContain('Add Plan')
     expect(wrapper.text()).not.toContain('Save')
   })
 })

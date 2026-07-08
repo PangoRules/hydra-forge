@@ -1,58 +1,109 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
+import { h } from 'vue'
+import CardModal from '~/components/card/CardModal.vue'
+import type { components } from '~/types/api'
 
-// Card types that get the Docs tab at all
-const DOCS_CARD_TYPES = ['Goal', 'Idea'] as const
-// Card types that get the Plan section within Docs
-const PLAN_CARD_TYPES = ['Goal'] as const
+type CardResponse = components['schemas']['CardResponse']
 
-function makeCard(type: string) {
+const mockGET = vi.fn()
+
+mockNuxtImport('useApi', () => () => ({
+  GET: mockGET,
+  POST: vi.fn(),
+  PUT: vi.fn(),
+  DELETE: vi.fn()
+}))
+
+mockNuxtImport('useToast', () => () => ({ add: vi.fn() }))
+
+// API sends CardType as a string (JsonStringEnumConverter) — the generated
+// CardResponse['type'] is typed as number, but the real runtime value is one
+// of 'Task' | 'Issue' | 'Idea' | 'Goal'. Cast through unknown like CardModal.vue does.
+function makeCard(type: string): CardResponse {
   return {
-    id: 'card-1',
+    id: 'c1',
+    projectId: 'p1',
+    columnId: 'col1',
     cardNumber: 1,
     title: 'Test card',
-    type,
-    description: null,
-    archivedAt: null,
-    version: 1,
-    columnId: 'col-1',
+    description: '',
+    type: type as unknown as CardResponse['type'],
     position: 0,
-    projectId: 'proj-1',
-    assignees: [],
-    labels: [],
+    dueAt: null,
+    version: 1,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    movedAt: '2024-01-01T00:00:00Z',
+    archivedAt: null,
     parentCardId: null,
-    dueDate: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    assignees: [],
+    watchers: []
   }
 }
 
-describe('CardModal Docs tab visibility', () => {
-  it('shows Docs tab for Goal cards', () => {
-    const card = makeCard('Goal')
-    const hasDocsTab = DOCS_CARD_TYPES.includes(card.type as typeof DOCS_CARD_TYPES[number])
-    expect(hasDocsTab).toBe(true)
+async function mountForType(type: string) {
+  mockGET.mockResolvedValue({ data: makeCard(type), error: undefined })
+  const wrapper = await mountSuspended(CardModal, {
+    props: { cardId: 'c1', projectId: 'p1' },
+    global: {
+      stubs: {
+        AppModal: {
+          render() {
+            return h('div', { 'data-testid': 'app-modal' }, this.$slots.body?.())
+          }
+        },
+        CardDescription: true,
+        CardMetadata: true,
+        CardChecklist: true,
+        CardComments: true,
+        CardAttachments: true,
+        CardDependencies: true,
+        CardSpec: true,
+        CardPlan: true
+      }
+    }
+  })
+  await flushPromises()
+  ;(wrapper.vm as any).activeTab = 'docs'
+  await flushPromises()
+  return wrapper
+}
+
+describe('CardModal Docs tab visibility (real component, not duplicated constants)', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
   })
 
-  it('shows Docs tab for Idea cards', () => {
-    const card = makeCard('Idea')
-    const hasDocsTab = DOCS_CARD_TYPES.includes(card.type as typeof DOCS_CARD_TYPES[number])
-    expect(hasDocsTab).toBe(true)
+  it('Goal: Docs tab present, Spec labeled Specification, Plan present', async () => {
+    const wrapper = await mountForType('Goal')
+    expect((wrapper.vm as any).hasDocsTab).toBe(true)
+    expect(wrapper.find('card-spec-stub').exists()).toBe(true)
+    expect(wrapper.find('card-spec-stub').attributes('doctype')).toBe('Specification')
+    expect(wrapper.find('card-plan-stub').exists()).toBe(true)
   })
 
-  it('does not show Docs tab for Task cards', () => {
-    const card = makeCard('Task')
-    const hasDocsTab = DOCS_CARD_TYPES.includes(card.type as typeof DOCS_CARD_TYPES[number])
-    expect(hasDocsTab).toBe(false)
+  it('Idea: Docs tab present, Spec labeled Concept, no Plan', async () => {
+    const wrapper = await mountForType('Idea')
+    expect((wrapper.vm as any).hasDocsTab).toBe(true)
+    expect(wrapper.find('card-spec-stub').exists()).toBe(true)
+    expect(wrapper.find('card-spec-stub').attributes('doctype')).toBe('Concept')
+    expect(wrapper.find('card-plan-stub').exists()).toBe(false)
   })
 
-  it('does not show Docs tab for Issue cards', () => {
-    const card = makeCard('Issue')
-    const hasDocsTab = DOCS_CARD_TYPES.includes(card.type as typeof DOCS_CARD_TYPES[number])
-    expect(hasDocsTab).toBe(false)
+  it('Issue: Docs tab present, Spec labeled Report, Plan present', async () => {
+    const wrapper = await mountForType('Issue')
+    expect((wrapper.vm as any).hasDocsTab).toBe(true)
+    expect(wrapper.find('card-spec-stub').exists()).toBe(true)
+    expect(wrapper.find('card-spec-stub').attributes('doctype')).toBe('Report')
+    expect(wrapper.find('card-plan-stub').exists()).toBe(true)
   })
 
-  it('Plan only shown for Goal, not Idea', () => {
-    expect(PLAN_CARD_TYPES.includes('Goal')).toBe(true)
-    expect(PLAN_CARD_TYPES.includes('Idea' as typeof PLAN_CARD_TYPES[number])).toBe(false)
+  it('Task: Docs tab present, no Spec, Plan present', async () => {
+    const wrapper = await mountForType('Task')
+    expect((wrapper.vm as any).hasDocsTab).toBe(true)
+    expect(wrapper.find('card-spec-stub').exists()).toBe(false)
+    expect(wrapper.find('card-plan-stub').exists()).toBe(true)
   })
 })

@@ -146,6 +146,19 @@ export const useBoardStore = defineStore('board', () => {
     columns.value = newOrder
   }
 
+  function addColumn(column: ColumnResponse) {
+    columns.value = [...columns.value, column]
+  }
+
+  function updateColumnInStore(columnId: string, updates: Partial<ColumnResponse>) {
+    columns.value = columns.value.map(c => (c.id === columnId ? { ...c, ...updates } : c))
+  }
+
+  function removeColumnFromStore(columnId: string) {
+    columns.value = columns.value.filter(c => c.id !== columnId)
+    cardsByColumn.value.delete(columnId)
+  }
+
   const visibleColumns = computed(() => {
     if (boardFilters.value.visibleColumnIds.length > 0) {
       return columns.value.filter(c => boardFilters.value.visibleColumnIds.includes(c.id))
@@ -168,6 +181,7 @@ export const useBoardStore = defineStore('board', () => {
   return {
     project, columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard, setColumnOrder,
+    addColumn, updateColumnInStore, removeColumnFromStore,
     boardFilters, visibleColumns,
     members, fetchMembers,
     selectedCardIds, selectedCount, toggleSelectCard, clearSelection

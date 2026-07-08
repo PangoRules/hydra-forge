@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
+import { onMounted, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -26,6 +27,20 @@ const sourceMode = ref(false)
 const sourceText = ref('')
 const editorReady = ref(false)
 const savedOriginalHtml = ref('')
+const isFullscreen = ref(false)
+
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isFullscreen.value) {
+    isFullscreen.value = false
+  }
+}
 
 const turndown = new TurndownService({
   codeBlockStyle: 'fenced',
@@ -152,7 +167,7 @@ function toggleSource() {
 </script>
 
 <template>
-  <div :class="{ 'border rounded-md': editable }">
+  <div :class="isFullscreen ? 'absolute inset-0 z-10 bg-default flex flex-col' : 'border rounded-md'">
     <!-- Toolbar -->
     <div
       v-if="editable && showToolbar && !sourceMode"
@@ -261,6 +276,13 @@ function toggleSource() {
         :class="{ 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1': true }"
         @click="toggleSource"
       />
+      <UButton
+        :icon="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'"
+        variant="ghost"
+        size="xs"
+        :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+        @click="toggleFullscreen"
+      />
     </div>
 
     <!-- Source mode bar (when in source mode) -->
@@ -281,23 +303,37 @@ function toggleSource() {
     </div>
 
     <!-- WYSIWYG editor -->
-    <EditorContent
-      v-show="!sourceMode"
-      :editor="editor"
-      class="markdown-editor-content"
-    />
+    <div :class="isFullscreen ? 'flex-1 flex flex-col overflow-y-auto' : 'max-h-[280px] overflow-y-auto'">
+      <EditorContent
+        v-show="!sourceMode"
+        :editor="editor"
+        :class="isFullscreen ? 'markdown-editor-content markdown-editor-fullscreen' : 'markdown-editor-content'"
+      />
 
-    <!-- Source textarea -->
-    <textarea
-      v-if="sourceMode"
-      v-model="sourceText"
-      class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
-      :placeholder="props.placeholder"
-    />
+      <!-- Source textarea -->
+      <textarea
+        v-if="sourceMode"
+        v-model="sourceText"
+        class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
+        :placeholder="props.placeholder"
+        :class="isFullscreen ? 'h-full' : ''"
+      />
+    </div>
   </div>
 </template>
 
 <style>
+/* Fullscreen: editor fills available height, scrolls when content overflows */
+.markdown-editor-fullscreen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.markdown-editor-fullscreen .ProseMirror {
+  flex: 1;
+  min-height: unset;
+}
+
 /* Editor content typography — replaces broken prose plugin */
 .markdown-editor-content {
   line-height: 1.625;

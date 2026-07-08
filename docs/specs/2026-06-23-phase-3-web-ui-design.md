@@ -20,9 +20,9 @@
 - [x] Task 4D: Card-Type-Redesign
 - [x] Task 4B: E2E Testing Foundation — Playwright setup, auth fixture, save/debounce + archive/restore + concurrency specs, CI job
 - [x] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
-- [ ] Task 5a: Specs, Plan Schema changes.
+- [x] Task 5a: Specs, Plan Schema changes.
 - [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
-- [ ] Task 7: Project Management UI — project edit, creation with initial members, project list polish
+- [ ] Task 7: Project List Redesign — edit modal, member picker, and list polish shipped already (different mechanism than originally planned); remaining scope is table view + search/sort/role filter + real pagination (see `docs/specs/2026-07-07-project-list-redesign-design.md`)
 
 ---
 
@@ -159,11 +159,11 @@ Lock in **port 5000** as the canonical API URL. Docker Compose exposes 5000. `nu
 ### Desktop: Two-Column Split
 - **Left (60%):** Description (Tiptap editor) + Comments (list + input)
 - **Right (40%):** Metadata sidebar
-  - Type selector (Task/Bug/Epic)
+  - Type selector (Task/Issue/Goal/Idea)
   - Column selector (move card)
   - Assignees (add/remove)
   - Due date picker
-  - Parent Epic link
+  - Parent link (any card type may parent any other, per D-44/Plan 4D — no longer Epic-only)
   - Checklist (collapsible)
   - Attachments (list + upload)
   - Specs (linked list + create)

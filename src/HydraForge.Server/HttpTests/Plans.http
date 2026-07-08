@@ -89,7 +89,8 @@ X-Correlation-Id: smoke-plan-005
 {
   "content": "# Plan v1\n\nInitial plan content.",
   "description": "Implementation plan document",
-  "title": "Implementation Plan"
+  "title": "Implementation Plan",
+  "position": 1
 }
 
 
@@ -180,6 +181,120 @@ X-Correlation-Id: smoke-plan-012
 
 
 ###
+
+# ═══════════════════════════════════════════════════════════
+# PLAN LIFECYCLE
+# ═══════════════════════════════════════════════════════════
+
+# ── Verify plan status is Pending (1) ──────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-021
+
+###
+
+
+# ── Activate Plan ───────────────────────────────────────────
+# POST /api/projects/{projectId}/plans/{planId}/activate
+
+# @name activatePlan
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/activate HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-022
+
+
+###
+
+# ── Verify Plan is Active (2) ──────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-023
+
+
+###
+
+
+# ── Complete Plan ──────────────────────────────────────────
+# POST /api/projects/{projectId}/plans/{planId}/complete
+
+# @name completePlan
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/complete HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-024
+
+
+###
+
+# ── Verify Plan is Done (3) ────────────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-025
+
+
+###
+
+
+# ── Update Done Plan — expect error ─────────────────────────
+# Done plans are read-only — PUT should return error PLAN_EDIT_FORBIDDEN_WHEN_DONE
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-026
+
+{
+  "content": "# Should fail",
+  "description": null,
+  "title": "Should not work"
+}
+
+
+###
+
+
+# ── Reactivate Plan ────────────────────────────────────────
+# POST /api/projects/{projectId}/plans/{planId}/reactivate
+
+# @name reactivatePlan
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}}/reactivate HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-027
+
+
+###
+
+# ── Verify Plan is Active (2) again ────────────────────────
+
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-028
+
+
+###
+
+
+# ── Update Reactivated Plan — should succeed ───────────────
+
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/plans/{{createPlan.response.body.$.id}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-plan-029
+
+{
+  "content": "# Plan v3\n\nEditing after reactivation.",
+  "description": "Updated after reactivation",
+  "title": "Implementation Plan Reactivated"
+}
+
+
+###
+
 
 # ═══════════════════════════════════════════════════════════
 # ERROR CASES

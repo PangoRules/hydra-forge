@@ -27,7 +27,8 @@ public class ProjectsController(
             request.Name,
             request.Description,
             request.GitRemoteUrl,
-            request.GitProvider
+            request.GitProvider,
+            request.Template
         );
         var result = await projectService.CreateAsync(cmd);
 
