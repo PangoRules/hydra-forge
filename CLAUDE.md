@@ -203,9 +203,10 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Branch:** `feat/phase-3-web-ui`
 - **Plan 1** (auth + scaffold) ✅ — login page, auth middleware, JWT token management
 - **Plan 2** (project list + board) ✅ — Pinia board store, project list, create modal (with git fields), board view (desktop kanban + mobile list), project name in header
-- **Plan 3** (card modal core) ✅ — CardModal desktop/mobile layouts, Tiptap editor, archive/restore, 53 component tests
-- **Plans 4-7 + hardening + E2E** 🔲 — see `docs/plans/` for pending plan files
-- **67 vitest tests** across stores, composables, components, middleware, pages
+- **Plan 3** (card modal core) ✅ — CardModal desktop/mobile layouts, Tiptap editor, archive/restore
+- **Tasks 3A-5a** ✅ — card modal hardening, card modal panels, board filtering/quick-add/filter redesign, card type redesign (Task/Issue/Goal/Idea), E2E Playwright foundation, Specs/Plans/Realtime, doc model schema (DocType/PlanStatus/multi-plan, D-44) + its UX-polish follow-up. Editable columns + project templates also shipped ahead of Task 6/7.
+- **Task 6** (Polish & Hardening) and **Task 7** (Project Management UI) 🔲 — see `docs/plans/`; both carry a 2026-07-07 pre-execution note — verify against current code before running, several sub-tasks are already done or superseded
+- **141 vitest tests** across stores, composables, components, middleware, pages
 
 ### Nuxt UI v4 patterns
 
@@ -217,6 +218,8 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Shared card-type / due-date utilities** — `app/lib/card-type.ts` (`CARD_TYPE_OPTIONS`, `cardTypeToApiString`, `cardTypeOption`) and `app/lib/date.ts` (`formatDueDate`, `isOverdue`) are the single source of truth for the numeric-`CardType` → API-string-enum map and due-date formatting. These were hand-copied into three components before being consolidated — import from `~/lib/card-type` / `~/lib/date`, never redefine the map.
 - **Shared filter state & logic via composables** (D-43) — Any filter state or logic shared between desktop and mobile views (like global board filters) MUST be extracted into a shared composable (e.g. `useBoardFilters.ts`) that directly reads/writes the Pinia store. Do not duplicate state with local refs or use watchers to sync them — this causes double-fetching, race conditions, and synchronization bugs.
 - **E2E tests** — `src/web-ui/e2e/` (Playwright, D-42). Specs drive a real browser against the real running stack (`pnpm dev` + the .NET API in `Development`) and seed their own data via the API with random-suffixed titles — there is no per-test database reset. Run with `pnpm test:e2e`.
+- **Test what a component actually does, not a copy of its logic** — `CardModal.docs.test.ts` originally hardcoded its own `DOCS_CARD_TYPES`/`PLAN_CARD_TYPES` constants instead of mounting `CardModal.vue`, so it silently drifted from the real `hasSpec`/`hasPlan` computed values (which already supported Issue and Task) and never caught it — the test always passed by checking itself, not the component. When a test needs to assert on a component's conditional-rendering logic, mount the component and assert on its actual output/props, not a hand-copied duplicate of the condition.
+- **Vue Test Utils stub gotchas** (found writing the fix above): (1) `global.stubs: { AppModal: { render() { return h('div', {}, this.$slots.default?.()) } } }` renders nothing if the real usage puts content in a named slot — `AppModal.vue` uses `#body`, so the stub must render `this.$slots.body?.()`, not `default`. (2) Auto-stubbed components (`ComponentName: true`) serialize props to attributes in all-lowercase with no hyphen — a `:doc-type="..."` prop shows up as `wrapper.find('component-name-stub').attributes('doctype')`, not `'doc-type'`.
 
 ## Housekeeping & archive
 
