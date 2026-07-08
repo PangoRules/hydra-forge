@@ -6,6 +6,8 @@ import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import CardSpec from '~/components/card/CardSpec.vue'
 import CardPlan from '~/components/card/CardPlan.vue'
+import { useKeyboard } from '~/composables/useKeyboard'
+import { useCardMove } from '~/composables/useCardMove'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -151,6 +153,29 @@ function applyCardUpdate(updated: CardResponse) {
 onMounted(() => {
   fetchCard()
   linkedSpecId.value = null
+  
+  // Keyboard shortcuts
+  const { addShortcut } = useKeyboard()
+  addShortcut(['ctrl', 'shift', 'a'], () => {
+    if (!isArchived.value && !props.readonly) {
+      handleArchive()
+    }
+  })
+  
+  // Add keyboard navigation for tabs
+  addShortcut(['ctrl', 'shift', 'tab'], (e: KeyboardEvent) => {
+    if (e.shiftKey) {
+      // Navigate to previous tab
+      const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : desktopTabs.value.length - 1
+      activeTab.value = desktopTabs.value[prevIndex].value
+    } else {
+      // Navigate to next tab
+      const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
+      const nextIndex = currentIndex < desktopTabs.value.length - 1 ? currentIndex + 1 : 0
+      activeTab.value = desktopTabs.value[nextIndex].value
+    }
+  })
 })
 
 // Presence indicator

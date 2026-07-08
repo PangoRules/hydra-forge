@@ -138,12 +138,16 @@ function handleCardDrop(event: DragEvent) {
     class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow group"
     :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver }"
     draggable="true"
+    role="button"
+    tabindex="0"
     @click="emit('click', card)"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @dragover.stop.prevent="handleCardDragOver"
     @dragleave="handleCardDragLeave"
     @drop.stop.prevent="handleCardDrop"
+    @keydown.enter="emit('click', card)"
+    @keydown.space="emit('click', card)"
   >
     <div class="flex items-start gap-2">
       <input
@@ -151,7 +155,7 @@ function handleCardDrop(event: DragEvent) {
         type="checkbox"
         class="mr-2 shrink-0 hidden md:block"
         :checked="!!board.selectedCardIds[card.id]"
-        aria-label="Select card"
+        :aria-label="`Select card ${card.title}`"
         @click.stop="board.toggleSelectCard(card.id)"
         @keydown.stop.prevent="board.toggleSelectCard(card.id)"
       >
@@ -213,58 +217,62 @@ function handleCardDrop(event: DragEvent) {
       </div>
 
       <!-- Drag handle + three-dot menu -->
-      <div
-        v-if="!readonly"
-        class="flex items-center shrink-0 relative"
-      >
-        <span
-          class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
-          @mousedown.stop
-          @touchstart.stop
-        >
-          <UIcon
-            name="i-lucide-grip-vertical"
-            class="size-4"
-          />
-        </span>
-        <span ref="menuButtonRef">
-          <UButton
-            icon="i-lucide-ellipsis-vertical"
-            variant="ghost"
-            size="xs"
-            @click.stop="toggleMenu"
-          />
-        </span>
         <div
-          v-if="showMenu"
-          ref="menuRef"
-          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
-          @click.stop
+          v-if="!readonly"
+          class="flex items-center shrink-0 relative"
         >
-          <button
-            v-if="card.archivedAt"
-            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
-            @click="handleRestore"
+          <span
+            class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
+            @mousedown.stop
+            @touchstart.stop
           >
             <UIcon
-              name="i-lucide-archive-restore"
+              name="i-lucide-grip-vertical"
               class="size-4"
+              aria-hidden="true"
             />
-            Restore
-          </button>
-          <button
-            v-else
-            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
-            @click="handleArchive"
+          </span>
+          <span ref="menuButtonRef">
+            <UButton
+              icon="i-lucide-ellipsis-vertical"
+              variant="ghost"
+              size="xs"
+              :aria-label="`Card menu for ${card.title}`"
+              @click.stop="toggleMenu"
+            />
+          </span>
+          <div
+            v-if="showMenu"
+            ref="menuRef"
+            class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
+            @click.stop
           >
-            <UIcon
-              name="i-lucide-archive"
-              class="size-4"
-            />
-            Archive
-          </button>
+            <button
+              v-if="card.archivedAt"
+              class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+              @click="handleRestore"
+            >
+              <UIcon
+                name="i-lucide-archive-restore"
+                class="size-4"
+                aria-hidden="true"
+              />
+              Restore
+            </button>
+            <button
+              v-else
+              class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+              @click="handleArchive"
+            >
+              <UIcon
+                name="i-lucide-archive"
+                class="size-4"
+                aria-hidden="true"
+              />
+              Archive
+            </button>
+          </div>
         </div>
-      </div>
     </div>
 
     <div class="flex items-center justify-between mt-2">
