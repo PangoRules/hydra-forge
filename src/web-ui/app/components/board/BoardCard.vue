@@ -217,62 +217,62 @@ function handleCardDrop(event: DragEvent) {
       </div>
 
       <!-- Drag handle + three-dot menu -->
-        <div
-          v-if="!readonly"
-          class="flex items-center shrink-0 relative"
+      <div
+        v-if="!readonly"
+        class="flex items-center shrink-0 relative"
+      >
+        <span
+          class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
+          @mousedown.stop
+          @touchstart.stop
         >
-          <span
-            class="touch-none select-none cursor-grab text-gray-300 hover:text-gray-500"
-            @mousedown.stop
-            @touchstart.stop
+          <UIcon
+            name="i-lucide-grip-vertical"
+            class="size-4"
+            aria-hidden="true"
+          />
+        </span>
+        <span ref="menuButtonRef">
+          <UButton
+            icon="i-lucide-ellipsis-vertical"
+            variant="ghost"
+            size="xs"
+            :aria-label="`Card menu for ${card.title}`"
+            @click.stop="toggleMenu"
+          />
+        </span>
+        <div
+          v-if="showMenu"
+          ref="menuRef"
+          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
+          @click.stop
+        >
+          <button
+            v-if="card.archivedAt"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
+            @click="handleRestore"
           >
             <UIcon
-              name="i-lucide-grip-vertical"
+              name="i-lucide-archive-restore"
               class="size-4"
               aria-hidden="true"
             />
-          </span>
-          <span ref="menuButtonRef">
-            <UButton
-              icon="i-lucide-ellipsis-vertical"
-              variant="ghost"
-              size="xs"
-              :aria-label="`Card menu for ${card.title}`"
-              @click.stop="toggleMenu"
-            />
-          </span>
-          <div
-            v-if="showMenu"
-            ref="menuRef"
-            class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50 min-w-44 whitespace-nowrap"
-            @click.stop
+            Restore
+          </button>
+          <button
+            v-else
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+            @click="handleArchive"
           >
-            <button
-              v-if="card.archivedAt"
-              class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
-              @click="handleRestore"
-            >
-              <UIcon
-                name="i-lucide-archive-restore"
-                class="size-4"
-                aria-hidden="true"
-              />
-              Restore
-            </button>
-            <button
-              v-else
-              class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
-              @click="handleArchive"
-            >
-              <UIcon
-                name="i-lucide-archive"
-                class="size-4"
-                aria-hidden="true"
-              />
-              Archive
-            </button>
-          </div>
+            <UIcon
+              name="i-lucide-archive"
+              class="size-4"
+              aria-hidden="true"
+            />
+            Archive
+          </button>
         </div>
+      </div>
     </div>
 
     <div class="flex items-center justify-between mt-2">

@@ -6,7 +6,8 @@ import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
 import { useCardMove } from '~/composables/useCardMove'
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useKeyboard } from '~/composables/useKeyboard'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -35,6 +36,7 @@ const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 const showMembersPanel = ref(false)
+const showShortcutOverlay = ref(false)
 
 function handleAddCard(columnId?: string) {
   if (projectArchived.value) return
@@ -42,9 +44,14 @@ function handleAddCard(columnId?: string) {
   showCreateModal.value = true
 }
 
+// Board navigation tracking
+const selectedColumnIndex = ref(0)
+const selectedCardIndex = ref(0)
+
 const { moveCardToColumn } = useCardMove(projectId)
 const realtime = useRealtime()
 const presence = usePresence()
+const keyboard = useKeyboard()
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of board.cardsByColumn) {
@@ -124,6 +131,79 @@ onMounted(async () => {
     projectName.value = project.name
     projectArchived.value = !!project.archivedAt
   }
+
+  // Register board shortcuts
+  keyboard.register('Board', 'j', (e) => {
+    e.preventDefault()
+    // Navigate to next card in current column
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    const currentColumn = columns[selectedColumnIndex.value]
+    if (!currentColumn) return
+    const cards = board.cardsByColumn.get(currentColumn.id) || []
+    if (cards.length === 0) return
+    selectedCardIndex.value = (selectedCardIndex.value + 1) % cards.length
+  }, 'Next card')
+
+  keyboard.register('Board', 'k', (e) => {
+    e.preventDefault()
+    // Navigate to previous card in current column
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    const currentColumn = columns[selectedColumnIndex.value]
+    if (!currentColumn) return
+    const cards = board.cardsByColumn.get(currentColumn.id) || []
+    if (cards.length === 0) return
+    selectedCardIndex.value = (selectedCardIndex.value - 1 + cards.length) % cards.length
+  }, 'Previous card')
+
+  keyboard.register('Board', 'l', (e) => {
+    e.preventDefault()
+    // Navigate to next column
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    selectedColumnIndex.value = (selectedColumnIndex.value + 1) % columns.length
+  }, 'Next column')
+
+  keyboard.register('Board', 'h', (e) => {
+    e.preventDefault()
+    // Navigate to previous column
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    selectedColumnIndex.value = (selectedColumnIndex.value - 1 + columns.length) % columns.length
+  }, 'Previous column')
+
+  keyboard.register('Board', '?', (e) => {
+    e.preventDefault()
+    // Show keyboard shortcuts overlay
+    showShortcutOverlay.value = true
+  }, 'Show keyboard shortcuts')
+
+  keyboard.register('Board', 'n', (e) => {
+    e.preventDefault()
+    // Create new card in current column
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    const currentColumn = columns[selectedColumnIndex.value]
+    if (currentColumn && !projectArchived.value) {
+      handleAddCard(currentColumn.id)
+    }
+  }, 'Create new card')
+
+  keyboard.register('Board', 'Enter', (e) => {
+    e.preventDefault()
+    // Open selected card
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    const currentColumn = columns[selectedColumnIndex.value]
+    if (!currentColumn) return
+    const cards = board.cardsByColumn.get(currentColumn.id) || []
+    if (cards.length === 0) return
+    const card = cards[selectedCardIndex.value]
+    if (card) {
+      handleCardClick(card)
+    }
+  }, 'Open card')
 })
 
 async function handleRestore() {
@@ -173,6 +253,8 @@ watch(selectedCardId, (cardId) => {
 onBeforeUnmount(() => {
   realtime.disconnect(projectId)
   presence.disconnect(projectId)
+  // Unregister board shortcuts
+  keyboard.unregister('Board')
 })
 
 // Presence indicator
@@ -367,6 +449,12 @@ function hashColor(id: string): string {
       :preselected-column-id="createColumnId ?? undefined"
       @close="showCreateModal = false"
       @created="board.fetchBoard(projectId)"
+    />
+
+    <KeyboardShortcutOverlay
+      v-if="showShortcutOverlay"
+      :open="showShortcutOverlay"
+      @close="showShortcutOverlay = false"
     />
   </div>
 </template>

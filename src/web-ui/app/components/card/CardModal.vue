@@ -7,7 +7,6 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import CardSpec from '~/components/card/CardSpec.vue'
 import CardPlan from '~/components/card/CardPlan.vue'
 import { useKeyboard } from '~/composables/useKeyboard'
-import { useCardMove } from '~/composables/useCardMove'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -81,6 +80,7 @@ watch(hasDocsTab, (has) => {
 })
 
 const api = useApi()
+const keyboard = useKeyboard()
 
 /** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
 function closeWithAnimation() {
@@ -153,29 +153,39 @@ function applyCardUpdate(updated: CardResponse) {
 onMounted(() => {
   fetchCard()
   linkedSpecId.value = null
-  
+
   // Keyboard shortcuts
-  const { addShortcut } = useKeyboard()
-  addShortcut(['ctrl', 'shift', 'a'], () => {
+  keyboard.register('Card', 'a', (e) => {
     if (!isArchived.value && !props.readonly) {
+      e.preventDefault()
       handleArchive()
     }
-  })
-  
-  // Add keyboard navigation for tabs
-  addShortcut(['ctrl', 'shift', 'tab'], (e: KeyboardEvent) => {
+  }, 'Archive card')
+
+  keyboard.register('Card', 'Tab', (e) => {
     if (e.shiftKey) {
       // Navigate to previous tab
       const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
       const prevIndex = currentIndex > 0 ? currentIndex - 1 : desktopTabs.value.length - 1
-      activeTab.value = desktopTabs.value[prevIndex].value
+      if (desktopTabs.value[prevIndex]?.value) {
+        activeTab.value = desktopTabs.value[prevIndex].value
+      }
     } else {
       // Navigate to next tab
       const currentIndex = desktopTabs.value.findIndex(tab => tab.value === activeTab.value)
       const nextIndex = currentIndex < desktopTabs.value.length - 1 ? currentIndex + 1 : 0
-      activeTab.value = desktopTabs.value[nextIndex].value
+      if (desktopTabs.value[nextIndex]?.value) {
+        activeTab.value = desktopTabs.value[nextIndex].value
+      }
     }
-  })
+  }, 'Navigate tabs')
+
+  keyboard.register('Card', '?', (e) => {
+    e.preventDefault()
+    // Show keyboard shortcuts overlay
+    // This would need to be handled differently since we're in a modal
+    // For now, we'll just show a message or handle it in the parent
+  }, 'Show keyboard shortcuts')
 })
 
 // Presence indicator

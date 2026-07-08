@@ -46,14 +46,15 @@ async function handleAddColumn() {
 }
 
 // Keyboard shortcuts
-const { addShortcut } = useKeyboard()
+const keyboard = useKeyboard()
 
 onMounted(() => {
-  addShortcut(['ctrl', 'shift', 'n'], () => {
-    if (props.columns.length > 0) {
+  keyboard.register('BoardView', 'n', (e) => {
+    e.preventDefault()
+    if (props.columns.length > 0 && props.columns[0]) {
       emit('add-card', props.columns[0].id)
     }
-  })
+  }, 'Add card to first column')
 })
 </script>
 

@@ -92,14 +92,15 @@ function handleDrop(event: DragEvent) {
 }
 
 // Keyboard shortcuts
-const { addShortcut } = useKeyboard()
+const keyboard = useKeyboard()
 
 onMounted(() => {
-  addShortcut(['ctrl', 'shift', 'n'], () => {
+  keyboard.register('Column', 'n', (e) => {
     if (!props.readonly) {
+      e.preventDefault()
       emit('add-card', props.column.id)
     }
-  })
+  }, 'Create new card')
 })
 </script>
 
