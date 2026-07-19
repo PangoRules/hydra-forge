@@ -10,8 +10,8 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [projectId: string]
-  edit: [projectId: string]
+  'select': [projectId: string]
+  'edit': [projectId: string]
   'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]
 }>()
 

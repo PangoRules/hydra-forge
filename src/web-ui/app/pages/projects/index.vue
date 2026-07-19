@@ -55,7 +55,7 @@ async function fetchProjects() {
 
     const { data } = await api.GET<ProjectListPageResponse>(`${ApiRoutes.Projects.list()}?${params}`)
     projects.value = data?.items ?? []
-    totalCount.value = data?.totalCount ?? 0
+    totalCount.value = data?.totalCount !== undefined ? Number(data.totalCount) : 0
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Failed to load projects'
     toast.error(message)
@@ -92,10 +92,22 @@ async function confirmArchive() {
   }
 }
 
-watch(showArchived, () => { page.value = 1; fetchProjects() })
-watch(role, () => { page.value = 1; fetchProjects() })
-watch(sortBy, () => { page.value = 1; fetchProjects() })
-watch(sortDescending, () => { page.value = 1; fetchProjects() })
+watch(showArchived, () => {
+  page.value = 1
+  fetchProjects()
+})
+watch(role, () => {
+  page.value = 1
+  fetchProjects()
+})
+watch(sortBy, () => {
+  page.value = 1
+  fetchProjects()
+})
+watch(sortDescending, () => {
+  page.value = 1
+  fetchProjects()
+})
 watch(page, () => fetchProjects())
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
