@@ -73,7 +73,7 @@ onClickOutside(columnPickerRef, () => {
       <span class="text-xs text-gray-500 whitespace-nowrap">Assignee:</span>
       <select
         :value="assigneeUserId ?? ''"
-        class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 max-w-[140px]"
+        class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 w-[140px]"
         @change="assigneeUserId = ($event.target as HTMLSelectElement).value || null"
       >
         <option value="">
