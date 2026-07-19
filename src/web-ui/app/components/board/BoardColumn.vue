@@ -2,7 +2,6 @@
 import type { components } from '~/types/api'
 import ColumnHeader from '~/components/board/ColumnHeader.vue'
 import BoardCard from '~/components/board/BoardCard.vue'
-import { useKeyboard } from '~/composables/useKeyboard'
 
 type CardResponse = components['schemas']['CardResponse']
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -92,18 +91,6 @@ function handleDrop(event: DragEvent) {
   if (!cardId) return
   emit('card-move', cardId, props.column.id, filteredCards.value.length)
 }
-
-// Keyboard shortcuts
-const keyboard = useKeyboard()
-
-onMounted(() => {
-  keyboard.register('Column', 'n', (e) => {
-    if (!props.readonly) {
-      e.preventDefault()
-      emit('add-card', props.column.id)
-    }
-  }, 'Create new card')
-})
 </script>
 
 <template>

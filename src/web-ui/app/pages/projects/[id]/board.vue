@@ -76,6 +76,16 @@ function handleCardClick(card: CardResponse) {
   selectedCard.value = card
   selectedCardId.value = card.id
   showCardModal.value = true
+  // Sync keyboard selection state to match the clicked card
+  for (const [colIdx, col] of board.visibleColumns.entries()) {
+    const cards = board.cardsByColumn.get(col.id) ?? []
+    const cardIdx = cards.findIndex(c => c.id === card.id)
+    if (cardIdx !== -1) {
+      selectedColumnIndex.value = colIdx
+      selectedCardIndex.value = cardIdx
+      break
+    }
+  }
 }
 
 function handleCardModalClose() {
