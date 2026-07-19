@@ -21,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'column-click': [columnId: string]
   'add-card': [columnId: string]
   'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
@@ -97,6 +98,7 @@ function handleDrop(event: DragEvent) {
   <div
     class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0"
     :class="{ 'ring-2 ring-primary/40': selected }"
+    @click.stop="emit('column-click', column.id)"
   >
     <ColumnHeader
       :column="column"

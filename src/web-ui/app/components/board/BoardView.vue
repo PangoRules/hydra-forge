@@ -21,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'column-click': [columnId: string]
   'add-card': [columnId: string]
 }>()
 
@@ -77,6 +78,7 @@ onMounted(() => {
       class="w-64 md:w-72 lg:w-80"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
+      @column-click="(colId: string) => emit('column-click', colId)"
       @add-card="(colId: string) => emit('add-card', colId)"
       @reorder="reorderColumns"
       @move-left="() => moveColumnLeft(col.id)"

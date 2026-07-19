@@ -88,6 +88,14 @@ function handleCardClick(card: CardResponse) {
   }
 }
 
+function handleColumnClick(columnId: string) {
+  const idx = board.visibleColumns.findIndex(c => c.id === columnId)
+  if (idx !== -1) {
+    selectedColumnIndex.value = idx
+    selectedCardIndex.value = 0
+  }
+}
+
 function handleCardModalClose() {
   selectedCardId.value = null
   board.fetchBoard(projectId)
@@ -420,6 +428,7 @@ function hashColor(id: string): string {
             :selected-column-index="selectedColumnIndex"
             @card-move="moveCardToColumn"
             @card-click="handleCardClick"
+            @column-click="handleColumnClick"
             @add-card="handleAddCard"
           />
         </div>
