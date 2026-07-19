@@ -1157,8 +1157,8 @@ to:
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
             :readonly="projectArchived"
-            :selected-card-id="nav.selectedCardId"
-            :selected-column-index="nav.selectedColumnIndex"
+            :selected-card-id="nav.selectedCardId.value"
+            :selected-column-index="nav.selectedColumnIndex.value"
             @card-move="moveCardToColumn"
             @card-click="handleCardClick"
             @column-click="nav.syncToColumn"
@@ -1166,6 +1166,8 @@ to:
             @container-focus="nav.clampSelection"
           />
 ```
+
+Note: `.value` is required here — Vue's template ref auto-unwrapping only applies to top-level bindings in scope (like the old `selectedCardIdForKeyboard`), not to nested property access like `nav.selectedCardId`. Omitting `.value` type-checks as a mismatch (`ComputedRef<string | null>` is not assignable to `string`).
 
 - [ ] **Step 7: Typecheck and lint**
 
