@@ -141,7 +141,6 @@ function handleCardDrop(event: DragEvent) {
     :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver, 'ring-2 ring-primary': selected }"
     draggable="true"
     role="button"
-    tabindex="0"
     @click="emit('click', card)"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
@@ -155,6 +154,7 @@ function handleCardDrop(event: DragEvent) {
       <input
         v-if="!readonly"
         type="checkbox"
+        tabindex="-1"
         class="mr-2 shrink-0 hidden md:block"
         :checked="!!board.selectedCardIds[card.id]"
         :aria-label="`Select card ${card.title}`"
@@ -209,6 +209,7 @@ function handleCardDrop(event: DragEvent) {
       >
         <div class="flex flex-col">
           <UButton
+            tabindex="-1"
             icon="i-lucide-chevron-up"
             size="xs"
             variant="ghost"
@@ -217,6 +218,7 @@ function handleCardDrop(event: DragEvent) {
             @click.stop="emit('move-up', card.id)"
           />
           <UButton
+            tabindex="-1"
             icon="i-lucide-chevron-down"
             size="xs"
             variant="ghost"
@@ -245,6 +247,7 @@ function handleCardDrop(event: DragEvent) {
         </span>
         <span ref="menuButtonRef">
           <UButton
+            tabindex="-1"
             icon="i-lucide-ellipsis-vertical"
             variant="ghost"
             size="xs"
@@ -260,6 +263,7 @@ function handleCardDrop(event: DragEvent) {
         >
           <button
             v-if="card.archivedAt"
+            tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
             @click="handleRestore"
           >
@@ -272,6 +276,7 @@ function handleCardDrop(event: DragEvent) {
           </button>
           <button
             v-else
+            tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
             @click="handleArchive"
           >

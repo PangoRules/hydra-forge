@@ -49,7 +49,10 @@ async function handleAddColumn() {
 </script>
 
 <template>
-  <div class="flex gap-4 pb-4 flex-1 min-h-0">
+  <div
+    tabindex="0"
+    class="flex gap-4 pb-4 flex-1 min-h-0 focus:ring-2 focus:ring-primary/30 focus:ring-inset rounded-lg outline-none"
+  >
     <BoardColumn
       v-for="(col, idx) in columns"
       :key="col.id"
