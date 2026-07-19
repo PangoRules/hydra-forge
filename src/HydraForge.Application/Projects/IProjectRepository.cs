@@ -1,12 +1,32 @@
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Projects;
+
+public enum ProjectSortField
+{
+    Name,
+    CreatedAt,
+    UpdatedAt,
+}
+
+public record ProjectListPage(IReadOnlyList<Project> Items, int TotalCount);
 
 public interface IProjectRepository
 {
     Task AddAsync(Project project, CancellationToken ct = default);
     Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default);
+    Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    );
     Task UpdateAsync(Project project, CancellationToken ct = default);
 }
 

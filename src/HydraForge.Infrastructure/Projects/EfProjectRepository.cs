@@ -1,5 +1,6 @@
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,22 +21,56 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
             .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
-    public async Task<IReadOnlyList<Project>> ListByUserIdAsync(
+    public async Task<ProjectListPage> ListByUserIdAsync(
         Guid userId,
-        bool includeArchived = false,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
         CancellationToken ct = default
     )
     {
-        var projectIds = await context
-            .ProjectMembers.Where(m => m.UserId == userId)
-            .Select(m => m.ProjectId)
-            .ToListAsync(ct);
+        var query =
+            from p in context.Projects
+            join m in context.ProjectMembers on p.Id equals m.ProjectId
+            where m.UserId == userId
+            select new { Project = p, MemberRole = m.Role };
 
-        var query = context.Projects.Where(p => projectIds.Contains(p.Id));
         if (!includeArchived)
-            query = query.Where(p => p.ArchivedAt == null);
+            query = query.Where(x => x.Project.ArchivedAt == null);
 
-        return await query.ToListAsync(ct);
+        if (role.HasValue)
+            query = query.Where(x => x.MemberRole == role.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(x =>
+                EF.Functions.ILike(x.Project.Name, $"%{search}%")
+                || (x.Project.Description != null && EF.Functions.ILike(x.Project.Description, $"%{search}%"))
+            );
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        query = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending
+                ? query.OrderByDescending(x => x.Project.Name)
+                : query.OrderBy(x => x.Project.Name),
+            ProjectSortField.UpdatedAt => sortDescending
+                ? query.OrderByDescending(x => x.Project.UpdatedAt)
+                : query.OrderBy(x => x.Project.UpdatedAt),
+            _ => sortDescending
+                ? query.OrderByDescending(x => x.Project.CreatedAt)
+                : query.OrderBy(x => x.Project.CreatedAt),
+        };
+
+        var items = await query.Skip(skip).Take(take).Select(x => x.Project).ToListAsync(ct);
+
+        return new ProjectListPage(items, totalCount);
     }
 
     public async Task UpdateAsync(Project project, CancellationToken ct = default)
@@ -171,6 +206,24 @@ public class EfProjectMemberRepository(HydraForgeDbContext context) : IProjectMe
             .ToListAsync(ct);
 
         return counts.ToDictionary(x => x.ProjectId, x => x.Count);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        var idList = projectIds.ToList();
+        if (idList.Count == 0)
+            return new Dictionary<Guid, MemberRole>();
+
+        var roles = await context
+            .ProjectMembers.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .Select(m => new { m.ProjectId, m.Role })
+            .ToListAsync(ct);
+
+        return roles.ToDictionary(x => x.ProjectId, x => x.Role);
     }
 
     private static Dictionary<Guid, int> EmptyDictionary() => [];
