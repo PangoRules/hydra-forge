@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
+import { useMediaQuery } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import ProjectFilterBar from '~/components/project/ProjectFilterBar.vue'
 import ProjectListTable from '~/components/project/ProjectListTable.vue'
 
-definePageMeta({ middleware: ['auth'], ssr: false })
+definePageMeta({ middleware: ['auth'] })
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 type ProjectListPageResponse = components['schemas']['ProjectListPageResponse']
@@ -21,7 +22,8 @@ const role = ref('all')
 const sortBy = ref('CreatedAt')
 const sortDescending = ref(true)
 const page = ref(1)
-const pageSize = ref(10)
+const isMobile = useMediaQuery('(max-width: 767px)')
+const pageSize = ref(isMobile.value ? 5 : 10)
 const pageSizeOptions = [5, 10, 15]
 
 const api = useApi()
@@ -179,27 +181,28 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
 
         <div
           v-if="totalCount > 0"
-          class="flex items-center justify-between py-6 border-t border-gray-200 dark:border-gray-700"
+          class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
+              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Rows per page:</span>
               <USelect
                 :model-value="pageSize"
                 :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
-                class="w-20"
+                class="w-16 sm:w-20"
                 @update:model-value="pageSize = Number($event)"
               />
+              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
+              </span>
             </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
-            </span>
+            <UPagination
+              v-model:page="page"
+              :total="totalCount"
+              :items-per-page="pageSize"
+              size="sm"
+            />
           </div>
-          <UPagination
-            v-model:page="page"
-            :total="totalCount"
-            :items-per-page="pageSize"
-          />
         </div>
       </div>
     </div>
