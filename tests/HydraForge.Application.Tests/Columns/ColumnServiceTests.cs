@@ -479,6 +479,18 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
 
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = Members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
+    }
+
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
         Members.Add(member);

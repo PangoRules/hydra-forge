@@ -131,31 +131,50 @@ public class ProjectService(
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
-    public async Task<Result<IReadOnlyList<ProjectListDto>>> GetAllAsync(
+    public async Task<Result<ProjectListPageDto>> GetAllAsync(
         Guid requestUserId,
-        bool includeArchived = false,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
         CancellationToken ct = default
     )
     {
-        var projects = await projectRepo.ListByUserIdAsync(requestUserId, includeArchived, ct);
+        var clampedSkip = Math.Max(skip, 0);
+        var clampedTake = Math.Clamp(take, 1, 100);
 
-        var memberCounts = await memberRepo.GetMemberCountsAsync(
-            projects.Select(p => p.Id),
+        var page = await projectRepo.ListByUserIdAsync(
+            requestUserId,
+            includeArchived,
+            search,
+            sortBy,
+            sortDescending,
+            role,
+            clampedSkip,
+            clampedTake,
             ct
         );
 
-        var result = projects
-            .Select(project => new ProjectListDto(
+        var projectIds = page.Items.Select(p => p.Id).ToList();
+        var memberCounts = await memberRepo.GetMemberCountsAsync(projectIds, ct);
+        var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
+
+        var result = page
+            .Items.Select(project => new ProjectListDto(
                 project.Id,
                 project.Name,
                 project.Description,
                 project.CreatedAt,
                 project.ArchivedAt,
-                memberCounts.GetValueOrDefault(project.Id, 0)
+                memberCounts.GetValueOrDefault(project.Id, 0),
+                myRoles.GetValueOrDefault(project.Id, MemberRole.Member)
             ))
             .ToList();
 
-        return Result<IReadOnlyList<ProjectListDto>>.Success(result);
+        return Result<ProjectListPageDto>.Success(new ProjectListPageDto(result, page.TotalCount));
     }
 
     public async Task<Result<ProjectDto>> UpdateAsync(
