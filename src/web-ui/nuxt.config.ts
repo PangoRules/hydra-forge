@@ -45,6 +45,20 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@microsoft/signalr',
+        '@tiptap/extension-placeholder',
+        '@tiptap/starter-kit',
+        '@tiptap/vue-3',
+        '@vueuse/core',
+        'marked',
+        'turndown'
+      ]
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
