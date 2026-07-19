@@ -1,5 +1,6 @@
 using HydraForge.Application.Projects;
 using HydraForge.Application.Auth;
+using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -70,28 +71,49 @@ public class ProjectsController(
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<ProjectListResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> List([FromQuery] bool includeArchived = false)
+    [ProducesResponseType(typeof(ProjectListPageResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> List(
+        [FromQuery] bool includeArchived = false,
+        [FromQuery] string? search = null,
+        [FromQuery] ProjectSortField sortBy = ProjectSortField.CreatedAt,
+        [FromQuery] bool sortDescending = true,
+        [FromQuery] MemberRole? role = null,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 20
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await projectService.GetAllAsync(userId, includeArchived);
+        var result = await projectService.GetAllAsync(
+            userId,
+            includeArchived,
+            search,
+            sortBy,
+            sortDescending,
+            role,
+            skip,
+            take
+        );
 
         if (result.IsFailure)
         {
             return this.ToProblemResult(result.Error);
         }
 
-        var response = result
-            .Value.Select(p => new ProjectListResponse(
-                p.Id,
-                p.Name,
-                p.Description,
-                p.CreatedAt,
-                p.ArchivedAt,
-                p.MemberCount
-            ))
-            .ToList();
+        var response = new ProjectListPageResponse(
+            [
+                .. result.Value.Items.Select(p => new ProjectListResponse(
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.CreatedAt,
+                    p.ArchivedAt,
+                    p.MemberCount,
+                    p.MyRole
+                )),
+            ],
+            result.Value.TotalCount
+        );
         return Ok(response);
     }
 

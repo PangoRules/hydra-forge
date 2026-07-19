@@ -364,8 +364,25 @@ internal class PlansTestProjectRepository : IProjectRepository
     public Task AddAsync(Project project, CancellationToken ct = default) { _projects.Add(project); return Task.CompletedTask; }
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_projects.FirstOrDefault(p => p.Id == id));
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Project>>(_projects);
+    public Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var filtered = _projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        var all = filtered.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
         var idx = _projects.FindIndex(p => p.Id == project.Id);
@@ -460,6 +477,15 @@ internal class PlansTestMemberRepository : IProjectMemberRepository
         var idList = projectIds.ToList();
         var counts = _members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
+    }
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = _members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { _members.Add(member); return Task.CompletedTask; }
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)

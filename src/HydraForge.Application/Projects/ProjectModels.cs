@@ -65,5 +65,8 @@ public record ProjectListResponse(
     string? Description,
     DateTime CreatedAt,
     DateTime? ArchivedAt,
-    int MemberCount
+    int MemberCount,
+    MemberRole MyRole
 );
+
+public record ProjectListPageResponse(IReadOnlyList<ProjectListResponse> Items, int TotalCount);
