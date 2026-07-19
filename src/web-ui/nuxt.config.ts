@@ -71,11 +71,9 @@ export default defineNuxtConfig({
         }
       ]
     },
-    devOptions: {
-      enabled: false
-    },
     workbox: {
       navigateFallback: '/',
+      navigateFallbackAllowlist: [/^\/$/, /^\/projects/, /^\/login/],
       globPatterns: ['**/*.{js,css,html,png,svg,ico}']
     }
   }
