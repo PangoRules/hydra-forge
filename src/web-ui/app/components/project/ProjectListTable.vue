@@ -26,6 +26,13 @@ const columns: TableColumn<ProjectListResponse>[] = [
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
+
+function displayRole(role: number | string): string {
+  if (typeof role === 'string') return role
+  // MemberRole enum: Owner=0, Member=1 — but check the actual enum values
+  const roles: Record<number, string> = { 0: 'Owner', 1: 'Member' }
+  return roles[role] ?? String(role)
+}
 </script>
 
 <template>
@@ -48,6 +55,9 @@ function formatDate(iso: string): string {
           Archived
         </UBadge>
       </div>
+    </template>
+    <template #myRole-cell="{ row }">
+      {{ displayRole(row.original.myRole) }}
     </template>
     <template #createdAt-cell="{ row }">
       {{ formatDate(row.original.createdAt) }}

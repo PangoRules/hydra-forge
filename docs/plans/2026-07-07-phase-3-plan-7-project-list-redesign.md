@@ -3,7 +3,7 @@
 **Parent branch:** `feat/phase-3-web-ui`
 **Parent spec:** `2026-07-07-project-list-redesign-design.md`
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the unbounded project list (loads every project into memory, no search/sort/filter, infinite card grid) with a server-paginated list: table on desktop, existing card grid on mobile, search + sort + "my role" filter + archived toggle.
 
@@ -35,7 +35,7 @@
 - Produces: `ProjectSortField` enum (`Name, CreatedAt, UpdatedAt`), `ProjectListPage(IReadOnlyList<Project> Items, int TotalCount)` record — both in `HydraForge.Application.Projects`. `IProjectRepository.ListByUserIdAsync(Guid userId, bool includeArchived, string? search, ProjectSortField sortBy, bool sortDescending, MemberRole? role, int skip, int take, CancellationToken ct = default) : Task<ProjectListPage>` — consumed by Task 2 (`ProjectService`).
 - Produces: `IProjectMemberRepository.GetRolesByProjectAndUserAsync(IEnumerable<Guid> projectIds, Guid userId, CancellationToken ct = default) : Task<IReadOnlyDictionary<Guid, MemberRole>>` — consumed by Task 2.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/HydraForge.Infrastructure.Tests/Projects/EfProjectRepositoryTests.cs`, inside `EfProjectRepositoryTests`:
 
@@ -152,14 +152,14 @@ Add to `tests/HydraForge.Infrastructure.Tests/Projects/EfProjectMemberRepository
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they compile and (if `HYDRAFORGE_TEST_CONNECTION_STRING` is set) fail**
+- [x] **Step 2: Run tests to verify they compile and (if `HYDRAFORGE_TEST_CONNECTION_STRING` is set) fail**
 
 ```bash
 dotnet test tests/HydraForge.Infrastructure.Tests --filter "FullyQualifiedName~EfProjectRepositoryTests|FullyQualifiedName~EfProjectMemberRepositoryTests"
 ```
 Expected: compile error (`ProjectSortField`/`ProjectListPage`/`GetRolesByProjectAndUserAsync` don't exist yet).
 
-- [ ] **Step 3: Add `ProjectSortField` and `ProjectListPage`, update `IProjectRepository`**
+- [x] **Step 3: Add `ProjectSortField` and `ProjectListPage`, update `IProjectRepository`**
 
 In `src/HydraForge.Application/Projects/IProjectRepository.cs`, find:
 
@@ -213,7 +213,7 @@ public interface IProjectRepository
 }
 ```
 
-- [ ] **Step 4: Add `GetRolesByProjectAndUserAsync` to `IProjectMemberRepository`**
+- [x] **Step 4: Add `GetRolesByProjectAndUserAsync` to `IProjectMemberRepository`**
 
 In the same file, find:
 
@@ -246,7 +246,7 @@ public interface IProjectMemberRepository
 }
 ```
 
-- [ ] **Step 5: Implement `EfProjectRepository.ListByUserIdAsync`**
+- [x] **Step 5: Implement `EfProjectRepository.ListByUserIdAsync`**
 
 In `src/HydraForge.Infrastructure/Projects/EfProjectRepository.cs`, find:
 
@@ -326,7 +326,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 6: Implement `EfProjectMemberRepository.GetRolesByProjectAndUserAsync`**
+- [x] **Step 6: Implement `EfProjectMemberRepository.GetRolesByProjectAndUserAsync`**
 
 In the same file, find the `EfProjectMemberRepository` class's `GetMemberCountsAsync` method and add this method right after it:
 
@@ -352,21 +352,21 @@ In the same file, find the `EfProjectMemberRepository` class's `GetMemberCountsA
 
 Add `using HydraForge.Domain.Enums;` to the top of `EfProjectRepository.cs` if not already present (check first — `MemberRole` is referenced by the new signature).
 
-- [ ] **Step 7: Run `dotnet build` — this will show every other call site that needs updating**
+- [x] **Step 7: Run `dotnet build` — this will show every other call site that needs updating**
 
 ```bash
 dotnet build
 ```
 Expected: errors in `ProjectService.cs` (still calls the old `ListByUserIdAsync` signature) and the test fakes (`InMemoryProjectRepository`, `TestProjectRepository`, both `IProjectMemberRepository` fakes) — these are fixed in Tasks 2 and 3. Confirm the errors are ONLY in those files, not in `EfProjectRepository.cs`/`EfProjectMemberRepository.cs`/`IProjectRepository.cs` themselves.
 
-- [ ] **Step 8: Run the new infrastructure tests**
+- [x] **Step 8: Run the new infrastructure tests**
 
 ```bash
 dotnet test tests/HydraForge.Infrastructure.Tests --filter "FullyQualifiedName~EfProjectRepositoryTests|FullyQualifiedName~EfProjectMemberRepositoryTests"
 ```
 Expected: if `HYDRAFORGE_TEST_CONNECTION_STRING` is unset, all pass trivially (early return). If set, all PASS against real Postgres.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/HydraForge.Application/Projects/IProjectRepository.cs \
@@ -388,7 +388,7 @@ git commit -m "feat(api): move project list search/sort/role-filter/pagination i
 - Consumes: `IProjectRepository.ListByUserIdAsync` (Task 1), `IProjectMemberRepository.GetRolesByProjectAndUserAsync` (Task 1).
 - Produces: `ProjectListDto` gains `MemberRole MyRole` (last field). New `ProjectListPageDto(IReadOnlyList<ProjectListDto> Items, int TotalCount)`. `ProjectService.GetAllAsync(Guid requestUserId, bool includeArchived, string? search, ProjectSortField sortBy, bool sortDescending, MemberRole? role, int skip, int take, CancellationToken ct = default) : Task<Result<ProjectListPageDto>>` — consumed by Task 3 (`ProjectsController`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Replace the existing `GetAllAsync` section (there is none dedicated yet) — add to `tests/HydraForge.Application.Tests/Projects/ProjectServiceTests.cs`, after `CreateAsync_CreatesProjectChatFolder`:
 
@@ -425,14 +425,14 @@ Replace the existing `GetAllAsync` section (there is none dedicated yet) — add
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 dotnet test tests/HydraForge.Application.Tests --filter "FullyQualifiedName~ProjectServiceTests"
 ```
 Expected: compile errors — `GetAllAsync` still has the old signature, `repo.LastTake` doesn't exist, `MyRole` doesn't exist on `ProjectListDto`.
 
-- [ ] **Step 3: Add `MyRole` to `ProjectListDto`, add `ProjectListPageDto`**
+- [x] **Step 3: Add `MyRole` to `ProjectListDto`, add `ProjectListPageDto`**
 
 In `src/HydraForge.Application/Projects/ProjectContracts.cs`, find:
 
@@ -463,7 +463,7 @@ public record ProjectListDto(
 public record ProjectListPageDto(IReadOnlyList<ProjectListDto> Items, int TotalCount);
 ```
 
-- [ ] **Step 4: Rewrite `ProjectService.GetAllAsync`**
+- [x] **Step 4: Rewrite `ProjectService.GetAllAsync`**
 
 In `src/HydraForge.Application/Projects/ProjectService.cs`, find:
 
@@ -546,7 +546,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 5: Update `InMemoryProjectRepository` and `InMemoryProjectMemberRepository` fakes**
+- [x] **Step 5: Update `InMemoryProjectRepository` and `InMemoryProjectMemberRepository` fakes**
 
 In `tests/HydraForge.Application.Tests/Projects/ProjectServiceTests.cs`, find:
 
@@ -613,7 +613,7 @@ Find `internal class InMemoryProjectMemberRepository` and its `GetMemberCountsAs
     }
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 ```bash
 dotnet test tests/HydraForge.Application.Tests --filter "FullyQualifiedName~ProjectServiceTests"
@@ -625,7 +625,7 @@ dotnet build
 ```
 Expected: only `ProjectsController.cs` and `tests/HydraForge.Server.Tests/Projects/ProjectsControllerTests.cs` should still have errors (fixed in Task 3).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/HydraForge.Application/Projects/ProjectContracts.cs \
@@ -647,7 +647,7 @@ git commit -m "feat(api): thread search/sort/role/pagination through ProjectServ
 - Consumes: `ProjectService.GetAllAsync` (Task 2).
 - Produces: `ProjectListResponse` gains `MemberRole MyRole` (last field). New `ProjectListPageResponse(IReadOnlyList<ProjectListResponse> Items, int TotalCount)`. `GET /api/Projects` now accepts `includeArchived`, `search`, `sortBy`, `sortDescending`, `role`, `skip`, `take` query params and returns `ProjectListPageResponse`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `tests/HydraForge.Server.Tests/Projects/ProjectsControllerTests.cs` (find the existing test class with `[Fact]` methods for this controller and add alongside them):
 
@@ -676,14 +676,14 @@ Add to `tests/HydraForge.Server.Tests/Projects/ProjectsControllerTests.cs` (find
     }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 dotnet test tests/HydraForge.Server.Tests --filter "FullyQualifiedName~List_ReturnsPagedResponseWithMyRole"
 ```
 Expected: compile error — `ProjectListPageResponse` doesn't exist, `ListByUserIdAsync`/fakes still on old signature.
 
-- [ ] **Step 3: Add `MyRole` to `ProjectListResponse`, add `ProjectListPageResponse`**
+- [x] **Step 3: Add `MyRole` to `ProjectListResponse`, add `ProjectListPageResponse`**
 
 In `src/HydraForge.Application/Projects/ProjectModels.cs`, find:
 
@@ -714,7 +714,7 @@ public record ProjectListResponse(
 public record ProjectListPageResponse(IReadOnlyList<ProjectListResponse> Items, int TotalCount);
 ```
 
-- [ ] **Step 4: Update `ProjectsController.List`**
+- [x] **Step 4: Update `ProjectsController.List`**
 
 In `src/HydraForge.Server/Controllers/Projects/ProjectsController.cs`, find:
 
@@ -797,7 +797,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 5: Update `TestProjectRepository` and `TestProjectMemberRepository` fakes**
+- [x] **Step 5: Update `TestProjectRepository` and `TestProjectMemberRepository` fakes**
 
 In `tests/HydraForge.Server.Tests/Projects/ProjectsControllerTests.cs`, find:
 
@@ -853,7 +853,7 @@ Find `internal class TestProjectMemberRepository`'s `GetMemberCountsAsync` metho
     }
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 ```bash
 dotnet test tests/HydraForge.Server.Tests --filter "FullyQualifiedName~List_ReturnsPagedResponseWithMyRole"
@@ -865,7 +865,7 @@ dotnet build && dotnet test
 ```
 Expected: full solution builds, all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/HydraForge.Application/Projects/ProjectModels.cs \
@@ -881,26 +881,26 @@ git commit -m "feat(api): GET /api/Projects accepts search/sort/role/pagination,
 **Files:**
 - Modify: `src/web-ui/app/types/api.d.ts` (generated — regenerate, do not hand-edit)
 
-- [ ] **Step 1: Start Postgres + MinIO**
+- [x] **Step 1: Start Postgres + MinIO**
 
 ```bash
 docker compose up -d postgres minio
 ```
 
-- [ ] **Step 2: Start the server in Development**
+- [x] **Step 2: Start the server in Development**
 
 ```bash
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/HydraForge.Server &
 ```
 Wait for `Now listening on: http://localhost:5000`.
 
-- [ ] **Step 3: Regenerate the types**
+- [x] **Step 3: Regenerate the types**
 
 ```bash
 cd src/web-ui && pnpm run generate:api-types && cd -
 ```
 
-- [ ] **Step 4: Verify the new fields are present**
+- [x] **Step 4: Verify the new fields are present**
 
 ```bash
 grep -A 8 'ProjectListResponse:' src/web-ui/app/types/api.d.ts
@@ -908,13 +908,13 @@ grep -B2 -A 4 'ProjectListPageResponse:' src/web-ui/app/types/api.d.ts
 ```
 Expected: `myRole` field on `ProjectListResponse`; `ProjectListPageResponse` schema with `items`/`totalCount`.
 
-- [ ] **Step 5: Stop the server**
+- [x] **Step 5: Stop the server**
 
 ```bash
 kill %1
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/web-ui/app/types/api.d.ts
@@ -932,7 +932,7 @@ git commit -m "chore: regenerate API types for paged project list"
 **Interfaces:**
 - Produces: `ProjectFilterBar` component, props `{ search: string, role: string, sortBy: string, sortDescending: boolean, showArchived: boolean }` (role uses `''` for "all roles", never `null`, per CLAUDE.md's `USelect` note), emits `'update:search'`, `'update:role'`, `'update:sortBy'`, `'update:sortDescending'`, `'update:showArchived'`. Consumed by Task 7 (`projects/index.vue`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/components/project/__tests__/ProjectFilterBar.test.ts`:
 
@@ -964,14 +964,14 @@ describe('ProjectFilterBar', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 cd src/web-ui && pnpm vitest run components/project/__tests__/ProjectFilterBar.test.ts
 ```
 Expected: FAIL — cannot find module `~/components/project/ProjectFilterBar.vue`.
 
-- [ ] **Step 3: Implement `ProjectFilterBar.vue`**
+- [x] **Step 3: Implement `ProjectFilterBar.vue`**
 
 Create `src/web-ui/app/components/project/ProjectFilterBar.vue`:
 
@@ -1051,14 +1051,14 @@ const sortValue = computed({
 </template>
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 ```bash
 cd src/web-ui && pnpm vitest run components/project/__tests__/ProjectFilterBar.test.ts
 ```
 Expected: PASS (both tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/project/ProjectFilterBar.vue src/web-ui/app/components/project/__tests__/ProjectFilterBar.test.ts
@@ -1076,7 +1076,7 @@ git commit -m "feat(web): add ProjectFilterBar (search/role/sort/archived)"
 **Interfaces:**
 - Produces: `ProjectListTable` component, props `{ projects: ProjectListResponse[], loading: boolean }`, emits `'select': [projectId: string]`, `'edit': [projectId: string]`, `'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]`. Consumed by Task 7.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/components/project/__tests__/ProjectListTable.test.ts`:
 
@@ -1122,14 +1122,14 @@ describe('ProjectListTable', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 cd src/web-ui && pnpm vitest run components/project/__tests__/ProjectListTable.test.ts
 ```
 Expected: FAIL — cannot find module.
 
-- [ ] **Step 3: Implement `ProjectListTable.vue`**
+- [x] **Step 3: Implement `ProjectListTable.vue`**
 
 Create `src/web-ui/app/components/project/ProjectListTable.vue`:
 
@@ -1213,14 +1213,14 @@ function formatDate(iso: string): string {
 </template>
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 ```bash
 cd src/web-ui && pnpm vitest run components/project/__tests__/ProjectListTable.test.ts
 ```
 Expected: PASS (all 3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/project/ProjectListTable.vue src/web-ui/app/components/project/__tests__/ProjectListTable.test.ts
@@ -1237,7 +1237,7 @@ git commit -m "feat(web): add ProjectListTable desktop view"
 **Interfaces:**
 - Consumes: `ProjectFilterBar` (Task 5), `ProjectListTable` (Task 6), existing `ProjectList` (mobile, unchanged).
 
-- [ ] **Step 1: Rewrite `projects/index.vue`**
+- [x] **Step 1: Rewrite `projects/index.vue`**
 
 Replace the full contents of `src/web-ui/app/pages/projects/index.vue`:
 
@@ -1442,7 +1442,7 @@ onMounted(() => fetchProjects())
 </template>
 ```
 
-- [ ] **Step 2: Write the failing test for debounced search + filter refetch**
+- [x] **Step 2: Write the failing test for debounced search + filter refetch**
 
 Create `src/web-ui/app/pages/projects/__tests__/index.test.ts`:
 
@@ -1524,25 +1524,25 @@ describe('projects/index.vue', () => {
 })
 ```
 
-- [ ] **Step 3: Run the test to verify it fails or passes against the rewrite**
+- [x] **Step 3: Run the test to verify it fails or passes against the rewrite**
 
 ```bash
 cd src/web-ui && pnpm vitest run pages/projects/__tests__/index.test.ts
 ```
 Expected: PASS — Step 1 already implemented the debounce/fetch logic this test exercises. If it fails, the mismatch is between this test's expectations and the Step 1 implementation; fix `projects/index.vue` to match (do not weaken the test).
 
-- [ ] **Step 4: Typecheck + lint**
+- [x] **Step 4: Typecheck + lint**
 
 ```bash
 cd src/web-ui && pnpm run typecheck && pnpm run lint
 ```
 Expected: zero errors.
 
-- [ ] **Step 5: Manual verification**
+- [x] **Step 5: Manual verification**
 
 Run the full stack (`docker compose up -d postgres minio`, `dotnet run --project src/HydraForge.Server` in Development, `cd src/web-ui && pnpm dev`). In a browser: open `/projects` — desktop shows the table, mobile viewport shows the existing card grid. Type in search — list filters after ~300ms. Switch role filter to "Owner" — only owned projects show. Change sort — order changes. Create 25+ projects (or lower `pageSize` temporarily to test with fewer) and confirm pagination controls appear and page through correctly. Toggle "Show archived" — archived projects appear with the badge. Edit and archive/restore still work from both the table and mobile card menu.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/web-ui/app/pages/projects/index.vue src/web-ui/app/pages/projects/__tests__/index.test.ts
@@ -1553,7 +1553,7 @@ git commit -m "feat(web): wire paginated/filterable project list into projects p
 
 ### Task 8: Full verification pass
 
-- [ ] **Step 1: Backend**
+- [x] **Step 1: Backend**
 
 ```bash
 dotnet build
@@ -1561,14 +1561,14 @@ dotnet test
 ```
 Expected: 0 errors, all tests pass.
 
-- [ ] **Step 2: Frontend**
+- [x] **Step 2: Frontend**
 
 ```bash
 cd src/web-ui && pnpm run typecheck && pnpm run lint && pnpm test && pnpm run build
 ```
 Expected: 0 errors, all tests pass, production build succeeds.
 
-- [ ] **Step 3: Manual regression check**
+- [x] **Step 3: Manual regression check**
 
 Confirm project creation, edit, archive/restore, and navigating into a project's board still all work end to end — this task changed the list endpoint's response shape (`List<ProjectListResponse>` → `ProjectListPageResponse`), so any other consumer of `GET /api/Projects` (there should be none besides `projects/index.vue`) would break silently otherwise.
 

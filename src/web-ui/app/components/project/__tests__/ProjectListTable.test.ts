@@ -9,7 +9,7 @@ const makeProject = (overrides = {}) => ({
   createdAt: new Date().toISOString(),
   archivedAt: null,
   memberCount: 3,
-  myRole: 'Owner',
+  myRole: 'Owner' as any,
   ...overrides
 })
 
