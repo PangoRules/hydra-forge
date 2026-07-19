@@ -133,6 +133,9 @@ function onProjectCreated() {
 }
 
 onMounted(() => fetchProjects())
+
+const rangeStart = computed(() => totalCount.value === 0 ? 0 : (page.value - 1) * pageSize.value + 1)
+const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount.value))
 </script>
 
 <template>
@@ -175,17 +178,22 @@ onMounted(() => fetchProjects())
         />
 
         <div
-          v-if="totalCount > pageSize"
-          class="flex items-center justify-between py-6"
+          v-if="totalCount > 0"
+          class="flex items-center justify-between py-6 border-t border-gray-200 dark:border-gray-700"
         >
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500 dark:text-gray-400">Per page:</span>
-            <USelect
-              :model-value="pageSize"
-              :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
-              class="w-20"
-              @update:model-value="pageSize = Number($event)"
-            />
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
+              <USelect
+                :model-value="pageSize"
+                :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
+                class="w-20"
+                @update:model-value="pageSize = Number($event)"
+              />
+            </div>
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
+            </span>
           </div>
           <UPagination
             v-model:page="page"
