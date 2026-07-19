@@ -67,7 +67,7 @@ Composes two `useRovingFocus` instances: one over `board.visibleColumns` (column
 - All `keyboard.register('Board', ...)` calls currently inline in `board.vue`'s `onMounted` (hjkl, `?`, `n`, `Enter`, `a`, Ctrl+Shift+Arrow move/reorder) — moved verbatim in behavior, guarded via the new `enabled` predicate instead of inline `isModalOpen()` checks.
 - `moveSelectedCard`/`reorderSelectedCard` — calls `useCardMove(projectId)` itself rather than requiring the caller to wire it through.
 - `syncToCard(card)` / `syncToColumn(columnId)` — the logic currently in `board.vue`'s `handleCardClick`/`handleColumnClick` (walk `board.visibleColumns`/`cardsByColumn` to find index, write back into selection state). Single owner of selection state now, instead of two independent write paths.
-- Registration lifecycle: calls `onMounted`/`onBeforeUnmount` internally (same pattern already used by `useRealtime.connect/disconnect`), so `board.vue` doesn't manage `keyboard.unregister('Board')` itself.
+- Registration lifecycle: exposes `activate()`/`deactivate()` functions that `board.vue` calls from its own `onMounted`/`onBeforeUnmount` — the same pattern `board.vue` already uses for `realtime.connect(projectId)`/`realtime.disconnect(projectId)` and `presence.connect(projectId)`/`presence.disconnect(projectId)`. (Note: the composable cannot call `onMounted` internally itself — `onMounted` is a no-op when there's no active component instance on the call stack, so registration must be triggered from the consuming component's own lifecycle hook, not the composable's setup body.)
 
 Signature:
 ```ts
@@ -78,12 +78,16 @@ useBoardKeyboardNav(options: {
   onOpenCard: (card: CardResponse) => void
   onCreateCard: (columnId?: string) => void
   onArchiveCard: (card: CardResponse) => void
+  onShowShortcuts: () => void
 }): {
   selectedColumnIndex: Ref<number>
   selectedCardIndex: Ref<number>
   selectedCardId: ComputedRef<string | null>
   syncToCard: (card: CardResponse) => void
   syncToColumn: (columnId: string) => void
+  clampSelection: () => void
+  activate: () => void
+  deactivate: () => void
 }
 ```
 
