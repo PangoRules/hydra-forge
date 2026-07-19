@@ -150,14 +150,19 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
         </UButton>
       </div>
 
-      <ProjectFilterBar
-        v-model:search="search"
-        v-model:role="role"
-        v-model:sort-by="sortBy"
-        v-model:sort-descending="sortDescending"
-        v-model:show-archived="showArchived"
-        class="mb-6"
-      />
+      <ClientOnly>
+        <ProjectFilterBar
+          v-model:search="search"
+          v-model:role="role"
+          v-model:sort-by="sortBy"
+          v-model:sort-descending="sortDescending"
+          v-model:show-archived="showArchived"
+          class="mb-6"
+        />
+        <template #fallback>
+          <div class="mb-6 h-10" />
+        </template>
+      </ClientOnly>
 
       <div class="flex-1">
         <ProjectListTable
@@ -177,30 +182,32 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
           @edit="handleEditProject"
         />
 
-        <div
-          v-if="totalCount > 0"
-          class="flex items-center justify-between py-6 border-t border-gray-200 dark:border-gray-700"
-        >
-          <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
-              <USelect
-                :model-value="pageSize"
-                :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
-                class="w-20"
-                @update:model-value="pageSize = Number($event)"
-              />
+        <ClientOnly>
+          <div
+            v-if="totalCount > 0"
+            class="flex items-center justify-between py-6 border-t border-gray-200 dark:border-gray-700"
+          >
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
+                <USelect
+                  :model-value="pageSize"
+                  :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
+                  class="w-20"
+                  @update:model-value="pageSize = Number($event)"
+                />
+              </div>
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
+              </span>
             </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">
-              {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
-            </span>
+            <UPagination
+              v-model:page="page"
+              :total="totalCount"
+              :items-per-page="pageSize"
+            />
           </div>
-          <UPagination
-            v-model:page="page"
-            :total="totalCount"
-            :items-per-page="pageSize"
-          />
-        </div>
+        </ClientOnly>
       </div>
     </div>
 
