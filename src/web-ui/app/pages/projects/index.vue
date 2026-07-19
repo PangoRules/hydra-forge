@@ -21,7 +21,8 @@ const role = ref('all')
 const sortBy = ref('CreatedAt')
 const sortDescending = ref(true)
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(10)
+const pageSizeOptions = [5, 10, 15]
 
 const api = useApi()
 const toast = useAppToast()
@@ -50,8 +51,8 @@ async function fetchProjects() {
     if (role.value && role.value !== 'all') params.set('role', role.value)
     params.set('sortBy', sortBy.value)
     params.set('sortDescending', String(sortDescending.value))
-    params.set('skip', String((page.value - 1) * pageSize))
-    params.set('take', String(pageSize))
+    params.set('skip', String((page.value - 1) * pageSize.value))
+    params.set('take', String(pageSize.value))
 
     const { data } = await api.GET<ProjectListPageResponse>(`${ApiRoutes.Projects.list()}?${params}`)
     projects.value = data?.items ?? []
@@ -109,6 +110,7 @@ watch(sortDescending, () => {
   fetchProjects()
 })
 watch(page, () => fetchProjects())
+watch(pageSize, () => { page.value = 1; fetchProjects() })
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(search, () => {
@@ -174,8 +176,17 @@ onMounted(() => fetchProjects())
 
         <div
           v-if="totalCount > pageSize"
-          class="flex justify-center py-6"
+          class="flex items-center justify-between py-6"
         >
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Per page:</span>
+            <USelect
+              :model-value="pageSize"
+              :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
+              class="w-20"
+              @update:model-value="pageSize = Number($event)"
+            />
+          </div>
           <UPagination
             v-model:page="page"
             :total="totalCount"

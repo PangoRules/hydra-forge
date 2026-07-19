@@ -41,7 +41,7 @@ function displayRole(role: number | string): string {
     :columns="columns"
     :loading="loading"
     class="w-full"
-    :ui="{ tr: 'cursor-pointer' }"
+    :meta="{ class: { tr: 'cursor-pointer' } }"
     @select="(_e, row) => emit('select', row.original.id)"
   >
     <template #name-cell="{ row }">

@@ -42,7 +42,7 @@ describe('projects/index.vue', () => {
     expect(mockGET).toHaveBeenCalledTimes(1)
     const [url] = mockGET.mock.calls[0]!
     expect(url).toContain('skip=0')
-    expect(url).toContain('take=20')
+    expect(url).toContain('take=10')
     expect(url).toContain('sortBy=CreatedAt')
   })
 
