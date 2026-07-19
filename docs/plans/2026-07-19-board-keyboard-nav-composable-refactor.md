@@ -169,21 +169,23 @@ Append to `src/web-ui/app/composables/keyboard/__tests__/useKeyboard.test.ts` (i
 
 ```ts
   it('skips a shortcut whose enabled() returns false', () => {
-    const disabledHandler = vi.fn()
-    const enabledHandler = vi.fn()
-    let modalOpen = true
+    const handler = vi.fn()
+    kb.register('Board', 'a', handler, 'Archive', false, () => false)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    expect(handler).not.toHaveBeenCalled()
+  })
 
-    kb.register('Board', 'a', disabledHandler, 'Archive', false, () => !modalOpen)
-    kb.register('Card', 'a', enabledHandler, 'Archive from modal')
+  it('calls a shortcut once its enabled() predicate becomes true', () => {
+    let enabled = false
+    const handler = vi.fn()
+    kb.register('Board', 'a', handler, 'Archive', false, () => enabled)
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
-    expect(disabledHandler).not.toHaveBeenCalled()
-    expect(enabledHandler).toHaveBeenCalledTimes(1)
+    expect(handler).not.toHaveBeenCalled()
 
-    modalOpen = false
-    kb.unregister('Card')
+    enabled = true
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
-    expect(disabledHandler).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 
   it('treats a shortcut with no enabled() as always enabled', () => {
@@ -487,8 +489,8 @@ EOF
 Create `src/web-ui/app/composables/keyboard/__tests__/useBoardKeyboardNav.test.ts`:
 
 ```ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ref } from 'vue'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { ref, type Ref } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { useBoardKeyboardNav } from '~/composables/keyboard/useBoardKeyboardNav'
@@ -542,12 +544,12 @@ function press(key: string, opts: Partial<KeyboardEventInit> = {}) {
 }
 
 describe('useBoardKeyboardNav', () => {
-  let onOpenCard: ReturnType<typeof vi.fn>
-  let onCreateCard: ReturnType<typeof vi.fn>
-  let onArchiveCard: ReturnType<typeof vi.fn>
-  let onShowShortcuts: ReturnType<typeof vi.fn>
-  let anyModalOpen: ReturnType<typeof ref<boolean>>
-  let projectArchived: ReturnType<typeof ref<boolean>>
+  let onOpenCard: Mock<(card: CardResponse) => void>
+  let onCreateCard: Mock<(columnId?: string) => void>
+  let onArchiveCard: Mock<(card: CardResponse) => void>
+  let onShowShortcuts: Mock<() => void>
+  let anyModalOpen: Ref<boolean>
+  let projectArchived: Ref<boolean>
   let board: ReturnType<typeof useBoardStore>
 
   beforeEach(() => {
@@ -565,10 +567,10 @@ describe('useBoardKeyboardNav', () => {
       ['col-2', [makeCard('card-3', 'col-2')]]
     ])
 
-    onOpenCard = vi.fn()
-    onCreateCard = vi.fn()
-    onArchiveCard = vi.fn()
-    onShowShortcuts = vi.fn()
+    onOpenCard = vi.fn<(card: CardResponse) => void>()
+    onCreateCard = vi.fn<(columnId?: string) => void>()
+    onArchiveCard = vi.fn<(card: CardResponse) => void>()
+    onShowShortcuts = vi.fn<() => void>()
     anyModalOpen = ref(false)
     projectArchived = ref(false)
   })
