@@ -7,7 +7,7 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import ArchiveCardWarning from '~/components/card/ArchiveCardWarning.vue'
 import CardSpec from '~/components/card/CardSpec.vue'
 import CardPlan from '~/components/card/CardPlan.vue'
-import { useKeyboard } from '~/composables/useKeyboard'
+import { useKeyboard } from '~/composables/keyboard/useKeyboard'
 
 type CardResponse = components['schemas']['CardResponse']
 

@@ -9,7 +9,7 @@ import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
 import { onBeforeUnmount, onMounted } from 'vue'
-import { useKeyboard } from '~/composables/useKeyboard'
+import { useKeyboard } from '~/composables/keyboard/useKeyboard'
 
 definePageMeta({ middleware: ['auth'] })
 

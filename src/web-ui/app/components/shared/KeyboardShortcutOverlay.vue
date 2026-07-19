@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useKeyboard } from '~/composables/useKeyboard'
+import { useKeyboard } from '~/composables/keyboard/useKeyboard'
 
 const props = defineProps<{
   open: boolean

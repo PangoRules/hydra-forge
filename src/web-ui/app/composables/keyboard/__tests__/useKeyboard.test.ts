@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useKeyboard } from '~/composables/useKeyboard'
+import { useKeyboard } from '~/composables/keyboard/useKeyboard'
 
 describe('useKeyboard', () => {
   let kb: ReturnType<typeof useKeyboard>
@@ -36,5 +36,32 @@ describe('useKeyboard', () => {
     kb.register('Modal', 'Escape', vi.fn(), 'Close')
 
     expect(kb.getAllShortcuts().length).toBe(2)
+  })
+
+  it('skips a shortcut whose enabled() returns false', () => {
+    const handler = vi.fn()
+    kb.register('Board', 'a', handler, 'Archive', false, () => false)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('calls a shortcut once its enabled() predicate becomes true', () => {
+    let enabled = false
+    const handler = vi.fn()
+    kb.register('Board', 'a', handler, 'Archive', false, () => enabled)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    expect(handler).not.toHaveBeenCalled()
+
+    enabled = true
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a shortcut with no enabled() as always enabled', () => {
+    const handler = vi.fn()
+    kb.register('Board', 'z', handler, 'Zoom')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z' }))
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 })
