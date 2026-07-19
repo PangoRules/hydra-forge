@@ -16,7 +16,7 @@
 **Spec ref:** Sections 5 (tablet), 6 (blocked cards, archive), 11 (error handling), 12 (keyboard shortcuts), 16 (tablet responsive), 17 (PWA)
 
 > **Pre-execution note (2026-07-07):** Verified against current code before running this task-by-task:
-> - **Task 21** (keyboard shortcuts) — not built, still needed as written.
+> - **Task 21** (keyboard shortcuts) — built (across 5 commits `5f4835f`..`09f39f1`), then refactored into `app/composables/keyboard/` (`useKeyboard.ts` + new `useRovingFocus.ts`/`useBoardKeyboardNav.ts`) per `docs/specs/2026-07-19-board-keyboard-nav-composable-refactor-design.md` and D-47 — superseding this task's original inline-in-`board.vue` Step 3 sketch. Nothing further needed here.
 > - **Task 22** (`useErrorToast`) — **do not create this composable.** `useAppToast.ts` already exists and is the established toast wrapper used everywhere in the codebase (`success`/`error`, `type: 'foreground'`, duration defaults baked in). Adapt this task to extend `useAppToast` with a correlationId-copy action if that's still wanted, rather than building a second, competing toast composable.
 > - **Task 23** (blocked card indicator + move warning) — partially done, not as described:
 >   - `useCardMove.ts` already catches the `409` and toasts "Cannot move blocked card"; `confirmBlockedMove` stays hardcoded `false`, no override UI. **Confirmed (2026-07-07): this is the intended final UX, not a gap.** Resolving a block means resolving the actual blocking card, not force-overriding the move — CLAUDE.md's `confirmBlockedMove=true` capability describes the API contract (available to any client), it does not mandate this UI expose a bypass. **Drop the "move warning modal" sub-scope from this task entirely** — only the indicator work below remains.

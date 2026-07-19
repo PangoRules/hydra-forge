@@ -25,6 +25,7 @@ Open `http://localhost:3000`, login as `testadmin` / `TestAdmin123!`, open a pro
 |---|---|---|---|
 | 1.1 | Land on board with cards in ≥1 column | Page loads with no `ReferenceError: window is not defined` errors in console | ☐ |
 | 1.2 | Press `j` in board area (focus on body, not in an input) | Highlight on next card in current column | ☐ |
+| 1.2a | Press Tab repeatedly until focus reaches the board area, observe the board | Only the existing column/card selection ring is visible — no separate/misaligned ring appears around the whole column row | ☐ |
 | 1.3 | Press `k` | Highlight moves to previous card | ☐ |
 | 1.4 | Press `h` / `l` | Highlight moves between columns left/right | ☐ |
 | 1.5 | Press `Enter` on highlighted card | Card detail modal opens | ☐ |
