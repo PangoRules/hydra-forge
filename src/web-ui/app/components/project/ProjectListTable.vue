@@ -41,7 +41,6 @@ function displayRole(role: number | string): string {
     :columns="columns"
     :loading="loading"
     class="w-full"
-    :ui="{ body: { row: { base: 'cursor-pointer' } } }"
     @select="(_e, row) => emit('select', row.original.id)"
   >
     <template #name-cell="{ row }">
@@ -86,3 +85,9 @@ function displayRole(role: number | string): string {
     </template>
   </UTable>
 </template>
+
+<style scoped>
+:deep(table tbody tr) {
+  cursor: pointer;
+}
+</style>

@@ -37,10 +37,6 @@ const sortValue = computed({
     emit('update:sortDescending', desc === 'true')
   }
 })
-
-function handleRoleUpdate(event: string) {
-  emit('update:role', event === 'all' ? '' : String(event))
-}
 </script>
 
 <template>
@@ -58,7 +54,7 @@ function handleRoleUpdate(event: string) {
       :items="roleOptions"
       class="w-36"
       data-testid="project-role-select"
-      @update:model-value="handleRoleUpdate($event)"
+      @update:model-value="emit('update:role', String($event))"
     />
     <USelect
       v-model="sortValue"
