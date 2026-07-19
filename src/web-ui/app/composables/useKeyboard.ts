@@ -3,25 +3,26 @@ interface Shortcut {
   handler: (e: KeyboardEvent) => void
   description: string
   scope: string
+  allowWhileEditing?: boolean
 }
 
 // Module-level shortcuts list so all instances share the same list
 const shortcuts: Shortcut[] = []
 
 function handleKeyDown(event: KeyboardEvent) {
-  // Skip shortcuts when typing in INPUT/TEXTAREA/contentEditable (except Escape)
-  if ((event.target instanceof HTMLElement)
-    && (['INPUT', 'TEXTAREA'].includes(event.target.nodeName)
-      || event.target.isContentEditable)) {
-    if (event.key !== 'Escape') {
-      return
-    }
-  }
-
   // Find the last registered shortcut that matches (last wins for same key)
   const matchingShortcut = [...shortcuts]
     .reverse()
     .find((s: Shortcut) => s.key === event.key)
+
+  // Skip shortcuts when focus is in INPUT/TEXTAREA/contentEditable (except Escape, or shortcut opts in)
+  if (matchingShortcut && !matchingShortcut.allowWhileEditing && event.key !== 'Escape') {
+    if ((event.target instanceof HTMLElement)
+      && (['INPUT', 'TEXTAREA'].includes(event.target.nodeName)
+        || event.target.isContentEditable)) {
+      return
+    }
+  }
 
   if (matchingShortcut) {
     event.preventDefault()
@@ -34,8 +35,8 @@ function handleKeyDown(event: KeyboardEvent) {
 let globalListenerAttached = false
 
 export function useKeyboard() {
-  function register(scope: string, key: string, handler: (e: KeyboardEvent) => void, description: string) {
-    shortcuts.push({ key, handler, description, scope })
+  function register(scope: string, key: string, handler: (e: KeyboardEvent) => void, description: string, allowWhileEditing?: boolean) {
+    shortcuts.push({ key, handler, description, scope, allowWhileEditing })
   }
 
   function unregister(scope: string) {

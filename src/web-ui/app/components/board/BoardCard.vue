@@ -159,7 +159,6 @@ function handleCardDrop(event: DragEvent) {
         :checked="!!board.selectedCardIds[card.id]"
         :aria-label="`Select card ${card.title}`"
         @click.stop="board.toggleSelectCard(card.id)"
-        @keydown.stop.prevent="board.toggleSelectCard(card.id)"
       >
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">

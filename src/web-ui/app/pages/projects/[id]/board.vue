@@ -6,6 +6,7 @@ import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
 import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useKeyboard } from '~/composables/useKeyboard'
@@ -38,6 +39,35 @@ const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 const showMembersPanel = ref(false)
 const showShortcutOverlay = ref(false)
+
+// Board-level archive state
+const showArchiveConfirm = ref(false)
+const archiveTargetCard = ref<CardResponse | null>(null)
+
+// Block board shortcuts when any modal overlay is open
+const anyModalOpen = computed(() =>
+  !!selectedCardId.value
+  || showCreateModal.value
+  || showArchiveConfirm.value
+  || showShortcutOverlay.value
+  || showMembersPanel.value
+)
+
+async function confirmArchive() {
+  const card = archiveTargetCard.value
+  if (!card) return
+  try {
+    await api.POST(ApiRoutes.Cards.archive(projectId, card.id), {
+      body: { version: card.version }
+    })
+    toast.success('Card archived')
+    board.fetchBoard(projectId)
+  } catch {
+    toast.error('Failed to archive card')
+  }
+  showArchiveConfirm.value = false
+  archiveTargetCard.value = null
+}
 
 function handleAddCard(columnId?: string) {
   if (projectArchived.value) return
@@ -162,9 +192,14 @@ onMounted(async () => {
   }
 
   // Register board shortcuts
+  // All Board shortcuts guarded by anyModalOpen — prevent background navigation when overlay open
+  function isModalOpen() {
+    return anyModalOpen.value
+  }
+
   keyboard.register('Board', 'j', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Navigate to next card in current column
     const columns = board.visibleColumns
     if (columns.length === 0) return
     const currentColumn = columns[selectedColumnIndex.value]
@@ -175,8 +210,8 @@ onMounted(async () => {
   }, 'Next card')
 
   keyboard.register('Board', 'k', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Navigate to previous card in current column
     const columns = board.visibleColumns
     if (columns.length === 0) return
     const currentColumn = columns[selectedColumnIndex.value]
@@ -187,30 +222,32 @@ onMounted(async () => {
   }, 'Previous card')
 
   keyboard.register('Board', 'l', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Navigate to next column
     const columns = board.visibleColumns
     if (columns.length === 0) return
     selectedColumnIndex.value = (selectedColumnIndex.value + 1) % columns.length
+    selectedCardIndex.value = 0
   }, 'Next column')
 
   keyboard.register('Board', 'h', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Navigate to previous column
     const columns = board.visibleColumns
     if (columns.length === 0) return
     selectedColumnIndex.value = (selectedColumnIndex.value - 1 + columns.length) % columns.length
+    selectedCardIndex.value = 0
   }, 'Previous column')
 
   keyboard.register('Board', '?', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Show keyboard shortcuts overlay
     showShortcutOverlay.value = true
   }, 'Show keyboard shortcuts')
 
   keyboard.register('Board', 'n', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Create new card in current column
     const columns = board.visibleColumns
     if (columns.length === 0) return
     const currentColumn = columns[selectedColumnIndex.value]
@@ -220,8 +257,8 @@ onMounted(async () => {
   }, 'Create new card')
 
   keyboard.register('Board', 'Enter', (e) => {
+    if (isModalOpen()) return
     e.preventDefault()
-    // Open selected card
     const columns = board.visibleColumns
     if (columns.length === 0) return
     const currentColumn = columns[selectedColumnIndex.value]
@@ -233,6 +270,84 @@ onMounted(async () => {
       handleCardClick(card)
     }
   }, 'Open card')
+
+  keyboard.register('Board', 'a', (e) => {
+    if (isModalOpen()) return
+    e.preventDefault()
+    if (projectArchived.value) return
+    const columns = board.visibleColumns
+    if (columns.length === 0) return
+    const currentColumn = columns[selectedColumnIndex.value]
+    if (!currentColumn) return
+    const cards = board.cardsByColumn.get(currentColumn.id) || []
+    if (cards.length === 0) return
+    const card = cards[selectedCardIndex.value]
+    if (card && !card.archivedAt) {
+      archiveTargetCard.value = card
+      showArchiveConfirm.value = true
+    }
+  }, 'Archive card')
+
+  // Move highlighted card between columns: Ctrl+Shift+Left/Right
+  function moveSelectedCard(direction: -1 | 1) {
+    if (anyModalOpen.value || projectArchived.value) return
+    const columns = board.visibleColumns
+    if (columns.length < 2) return
+    const fromCol = columns[selectedColumnIndex.value]
+    if (!fromCol) return
+    const cards = board.cardsByColumn.get(fromCol.id) ?? []
+    const card = cards[selectedCardIndex.value]
+    if (!card) return
+    const targetIdx = selectedColumnIndex.value + direction
+    if (targetIdx < 0 || targetIdx >= columns.length) return
+    const toCol = columns[targetIdx]
+    if (!toCol) return
+    const targetCards = board.cardsByColumn.get(toCol.id) ?? []
+    const newPos = targetCards.length // append at end
+    moveCardToColumn(card.id, toCol.id, newPos)
+    // Select the moved card at its new position
+    selectedColumnIndex.value = targetIdx
+    selectedCardIndex.value = newPos
+  }
+
+  // Reorder card within column: Ctrl+Shift+Up/Down
+  function reorderSelectedCard(direction: -1 | 1) {
+    if (anyModalOpen.value || projectArchived.value) return
+    const col = board.visibleColumns[selectedColumnIndex.value]
+    if (!col) return
+    const cards = board.cardsByColumn.get(col.id) ?? []
+    if (cards.length < 2) return
+    const card = cards[selectedCardIndex.value]
+    if (!card) return
+    const newPos = selectedCardIndex.value + direction
+    if (newPos < 0 || newPos >= cards.length) return
+    moveCardToColumn(card.id, col.id, newPos)
+    selectedCardIndex.value = newPos
+  }
+
+  keyboard.register('Board', 'ArrowRight', (e) => {
+    if (!e.ctrlKey || !e.shiftKey) return
+    e.preventDefault()
+    moveSelectedCard(1)
+  }, 'Move card right')
+
+  keyboard.register('Board', 'ArrowLeft', (e) => {
+    if (!e.ctrlKey || !e.shiftKey) return
+    e.preventDefault()
+    moveSelectedCard(-1)
+  }, 'Move card left')
+
+  keyboard.register('Board', 'ArrowUp', (e) => {
+    if (!e.ctrlKey || !e.shiftKey) return
+    e.preventDefault()
+    reorderSelectedCard(-1)
+  }, 'Move card up')
+
+  keyboard.register('Board', 'ArrowDown', (e) => {
+    if (!e.ctrlKey || !e.shiftKey) return
+    e.preventDefault()
+    reorderSelectedCard(1)
+  }, 'Move card down')
 })
 
 async function handleRestore() {
@@ -487,6 +602,14 @@ function hashColor(id: string): string {
       v-if="showShortcutOverlay"
       :open="showShortcutOverlay"
       @close="showShortcutOverlay = false"
+    />
+
+    <ConfirmDialog
+      v-model:open="showArchiveConfirm"
+      title="Archive card"
+      :message="archiveTargetCard ? `Archive #${archiveTargetCard.cardNumber} ${archiveTargetCard.title}?` : ''"
+      confirm-text="Archive"
+      @confirm="confirmArchive"
     />
   </div>
 </template>

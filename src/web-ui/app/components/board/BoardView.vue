@@ -3,7 +3,6 @@ import type { components } from '~/types/api'
 import BoardColumn from '~/components/board/BoardColumn.vue'
 import { useColumnReorder } from '~/composables/useColumnReorder'
 import { useColumnManage } from '~/composables/useColumnManage'
-import { useKeyboard } from '~/composables/useKeyboard'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -47,18 +46,6 @@ async function handleAddColumn() {
     showAddColumn.value = false
   }
 }
-
-// Keyboard shortcuts
-const keyboard = useKeyboard()
-
-onMounted(() => {
-  keyboard.register('BoardView', 'n', (e) => {
-    e.preventDefault()
-    if (props.columns.length > 0 && props.columns[0]) {
-      emit('add-card', props.columns[0].id)
-    }
-  }, 'Add card to first column')
-})
 </script>
 
 <template>

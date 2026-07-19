@@ -198,7 +198,11 @@ onMounted(() => {
       e.preventDefault()
       handleArchive()
     }
-  }, 'Archive card')
+  }, 'Archive card', true /** allowWhileEditing */)
+})
+
+onBeforeUnmount(() => {
+  keyboard.unregister('Card')
 })
 
 // Presence indicator
