@@ -9,7 +9,7 @@ import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
 import { onBeforeUnmount, onMounted } from 'vue'
-import { useKeyboard } from '~/composables/keyboard/useKeyboard'
+import { useBoardKeyboardNav } from '~/composables/keyboard/useBoardKeyboardNav'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -75,24 +75,9 @@ function handleAddCard(columnId?: string) {
   showCreateModal.value = true
 }
 
-// Board navigation tracking
-const selectedColumnIndex = ref(0)
-const selectedCardIndex = ref(0)
-
-const selectedCardIdForKeyboard = computed(() => {
-  const columns = board.visibleColumns
-  if (!columns.length) return null
-  const col = columns[selectedColumnIndex.value]
-  if (!col) return null
-  const cards = board.cardsByColumn.get(col.id) ?? []
-  const card = cards[selectedCardIndex.value]
-  return card?.id ?? null
-})
-
 const { moveCardToColumn } = useCardMove(projectId)
 const realtime = useRealtime()
 const presence = usePresence()
-const keyboard = useKeyboard()
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of board.cardsByColumn) {
@@ -102,28 +87,30 @@ function findCard(cardId: string): CardResponse | undefined {
   return undefined
 }
 
-function handleCardClick(card: CardResponse) {
+function openCardModal(card: CardResponse) {
   selectedCard.value = card
   selectedCardId.value = card.id
   showCardModal.value = true
-  // Sync keyboard selection state to match the clicked card
-  for (const [colIdx, col] of board.visibleColumns.entries()) {
-    const cards = board.cardsByColumn.get(col.id) ?? []
-    const cardIdx = cards.findIndex(c => c.id === card.id)
-    if (cardIdx !== -1) {
-      selectedColumnIndex.value = colIdx
-      selectedCardIndex.value = cardIdx
-      break
-    }
-  }
 }
 
-function handleColumnClick(columnId: string) {
-  const idx = board.visibleColumns.findIndex(c => c.id === columnId)
-  if (idx !== -1) {
-    selectedColumnIndex.value = idx
-    selectedCardIndex.value = 0
-  }
+function requestArchive(card: CardResponse) {
+  archiveTargetCard.value = card
+  showArchiveConfirm.value = true
+}
+
+const nav = useBoardKeyboardNav({
+  projectId,
+  anyModalOpen,
+  projectArchived,
+  onOpenCard: openCardModal,
+  onCreateCard: handleAddCard,
+  onArchiveCard: requestArchive,
+  onShowShortcuts: () => { showShortcutOverlay.value = true }
+})
+
+function handleCardClick(card: CardResponse) {
+  openCardModal(card)
+  nav.syncToCard(card)
 }
 
 function handleCardModalClose() {
@@ -190,164 +177,7 @@ onMounted(async () => {
     projectName.value = project.name
     projectArchived.value = !!project.archivedAt
   }
-
-  // Register board shortcuts
-  // All Board shortcuts guarded by anyModalOpen — prevent background navigation when overlay open
-  function isModalOpen() {
-    return anyModalOpen.value
-  }
-
-  keyboard.register('Board', 'j', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    const currentColumn = columns[selectedColumnIndex.value]
-    if (!currentColumn) return
-    const cards = board.cardsByColumn.get(currentColumn.id) || []
-    if (cards.length === 0) return
-    selectedCardIndex.value = (selectedCardIndex.value + 1) % cards.length
-  }, 'Next card')
-
-  keyboard.register('Board', 'k', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    const currentColumn = columns[selectedColumnIndex.value]
-    if (!currentColumn) return
-    const cards = board.cardsByColumn.get(currentColumn.id) || []
-    if (cards.length === 0) return
-    selectedCardIndex.value = (selectedCardIndex.value - 1 + cards.length) % cards.length
-  }, 'Previous card')
-
-  keyboard.register('Board', 'l', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    selectedColumnIndex.value = (selectedColumnIndex.value + 1) % columns.length
-    selectedCardIndex.value = 0
-  }, 'Next column')
-
-  keyboard.register('Board', 'h', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    selectedColumnIndex.value = (selectedColumnIndex.value - 1 + columns.length) % columns.length
-    selectedCardIndex.value = 0
-  }, 'Previous column')
-
-  keyboard.register('Board', '?', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    showShortcutOverlay.value = true
-  }, 'Show keyboard shortcuts')
-
-  keyboard.register('Board', 'n', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    const currentColumn = columns[selectedColumnIndex.value]
-    if (currentColumn && !projectArchived.value) {
-      handleAddCard(currentColumn.id)
-    }
-  }, 'Create new card')
-
-  keyboard.register('Board', 'Enter', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    const currentColumn = columns[selectedColumnIndex.value]
-    if (!currentColumn) return
-    const cards = board.cardsByColumn.get(currentColumn.id) || []
-    if (cards.length === 0) return
-    const card = cards[selectedCardIndex.value]
-    if (card) {
-      handleCardClick(card)
-    }
-  }, 'Open card')
-
-  keyboard.register('Board', 'a', (e) => {
-    if (isModalOpen()) return
-    e.preventDefault()
-    if (projectArchived.value) return
-    const columns = board.visibleColumns
-    if (columns.length === 0) return
-    const currentColumn = columns[selectedColumnIndex.value]
-    if (!currentColumn) return
-    const cards = board.cardsByColumn.get(currentColumn.id) || []
-    if (cards.length === 0) return
-    const card = cards[selectedCardIndex.value]
-    if (card && !card.archivedAt) {
-      archiveTargetCard.value = card
-      showArchiveConfirm.value = true
-    }
-  }, 'Archive card')
-
-  // Move highlighted card between columns: Ctrl+Shift+Left/Right
-  function moveSelectedCard(direction: -1 | 1) {
-    if (anyModalOpen.value || projectArchived.value) return
-    const columns = board.visibleColumns
-    if (columns.length < 2) return
-    const fromCol = columns[selectedColumnIndex.value]
-    if (!fromCol) return
-    const cards = board.cardsByColumn.get(fromCol.id) ?? []
-    const card = cards[selectedCardIndex.value]
-    if (!card) return
-    const targetIdx = selectedColumnIndex.value + direction
-    if (targetIdx < 0 || targetIdx >= columns.length) return
-    const toCol = columns[targetIdx]
-    if (!toCol) return
-    const targetCards = board.cardsByColumn.get(toCol.id) ?? []
-    const newPos = targetCards.length // append at end
-    moveCardToColumn(card.id, toCol.id, newPos)
-    // Select the moved card at its new position
-    selectedColumnIndex.value = targetIdx
-    selectedCardIndex.value = newPos
-  }
-
-  // Reorder card within column: Ctrl+Shift+Up/Down
-  function reorderSelectedCard(direction: -1 | 1) {
-    if (anyModalOpen.value || projectArchived.value) return
-    const col = board.visibleColumns[selectedColumnIndex.value]
-    if (!col) return
-    const cards = board.cardsByColumn.get(col.id) ?? []
-    if (cards.length < 2) return
-    const card = cards[selectedCardIndex.value]
-    if (!card) return
-    const newPos = selectedCardIndex.value + direction
-    if (newPos < 0 || newPos >= cards.length) return
-    moveCardToColumn(card.id, col.id, newPos)
-    selectedCardIndex.value = newPos
-  }
-
-  keyboard.register('Board', 'ArrowRight', (e) => {
-    if (!e.ctrlKey || !e.shiftKey) return
-    e.preventDefault()
-    moveSelectedCard(1)
-  }, 'Move card right')
-
-  keyboard.register('Board', 'ArrowLeft', (e) => {
-    if (!e.ctrlKey || !e.shiftKey) return
-    e.preventDefault()
-    moveSelectedCard(-1)
-  }, 'Move card left')
-
-  keyboard.register('Board', 'ArrowUp', (e) => {
-    if (!e.ctrlKey || !e.shiftKey) return
-    e.preventDefault()
-    reorderSelectedCard(-1)
-  }, 'Move card up')
-
-  keyboard.register('Board', 'ArrowDown', (e) => {
-    if (!e.ctrlKey || !e.shiftKey) return
-    e.preventDefault()
-    reorderSelectedCard(1)
-  }, 'Move card down')
+  nav.activate()
 })
 
 async function handleRestore() {
@@ -397,8 +227,7 @@ watch(selectedCardId, (cardId) => {
 onBeforeUnmount(() => {
   realtime.disconnect(projectId)
   presence.disconnect(projectId)
-  // Unregister board shortcuts
-  keyboard.unregister('Board')
+  nav.deactivate()
 })
 
 // Presence indicator
@@ -539,12 +368,13 @@ function hashColor(id: string): string {
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
             :readonly="projectArchived"
-            :selected-card-id="selectedCardIdForKeyboard"
-            :selected-column-index="selectedColumnIndex"
+            :selected-card-id="nav.selectedCardId.value"
+            :selected-column-index="nav.selectedColumnIndex.value"
             @card-move="moveCardToColumn"
             @card-click="handleCardClick"
-            @column-click="handleColumnClick"
+            @column-click="nav.syncToColumn"
             @add-card="handleAddCard"
+            @container-focus="nav.clampSelection"
           />
         </div>
       </div>
