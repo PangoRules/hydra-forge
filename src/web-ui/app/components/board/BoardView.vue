@@ -22,6 +22,7 @@ const emit = defineEmits<{
   'card-click': [card: CardResponse]
   'column-click': [columnId: string]
   'add-card': [columnId: string]
+  'container-focus': []
 }>()
 
 const { reorderColumns, moveColumnLeft, moveColumnRight } = useColumnReorder(props.projectId)
@@ -51,7 +52,9 @@ async function handleAddColumn() {
 <template>
   <div
     tabindex="0"
-    class="flex gap-4 pb-4 flex-1 min-h-0 focus:ring-2 focus:ring-primary/30 focus:ring-inset rounded-lg outline-none"
+    class="flex gap-4 pb-4 flex-1 min-h-0 rounded-lg outline-none"
+    aria-label="Board columns — use h j k l to navigate, Enter to open, ? for shortcuts"
+    @focus="emit('container-focus')"
   >
     <BoardColumn
       v-for="(col, idx) in columns"
