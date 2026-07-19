@@ -13,6 +13,7 @@ const props = defineProps<{
   projectId: string
   readonly?: boolean
   blocked?: boolean
+  selected?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -137,7 +138,7 @@ function handleCardDrop(event: DragEvent) {
 <template>
   <div
     class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow group"
-    :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver }"
+    :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver, 'ring-2 ring-primary': selected }"
     draggable="true"
     role="button"
     tabindex="0"

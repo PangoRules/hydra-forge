@@ -49,6 +49,16 @@ function handleAddCard(columnId?: string) {
 const selectedColumnIndex = ref(0)
 const selectedCardIndex = ref(0)
 
+const selectedCardIdForKeyboard = computed(() => {
+  const columns = board.visibleColumns
+  if (!columns.length) return null
+  const col = columns[selectedColumnIndex.value]
+  if (!col) return null
+  const cards = board.cardsByColumn.get(col.id) ?? []
+  const card = cards[selectedCardIndex.value]
+  return card?.id ?? null
+})
+
 const { moveCardToColumn } = useCardMove(projectId)
 const realtime = useRealtime()
 const presence = usePresence()
@@ -396,6 +406,8 @@ function hashColor(id: string): string {
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
             :readonly="projectArchived"
+            :selected-card-id="selectedCardIdForKeyboard"
+            :selected-column-index="selectedColumnIndex"
             @card-move="moveCardToColumn"
             @card-click="handleCardClick"
             @add-card="handleAddCard"

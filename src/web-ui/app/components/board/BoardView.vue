@@ -14,6 +14,8 @@ const props = defineProps<{
   projectId: string
   includeArchived: boolean
   readonly?: boolean
+  selectedCardId?: string | null
+  selectedColumnIndex?: number
 }>()
 
 const emit = defineEmits<{
@@ -70,6 +72,8 @@ onMounted(() => {
       :readonly="readonly"
       :can-move-left="idx > 0"
       :can-move-right="idx < columns.length - 1"
+      :selected="idx === selectedColumnIndex"
+      :selected-card-id="selectedCardId"
       class="w-64 md:w-72 lg:w-80"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
