@@ -12,6 +12,8 @@ const props = defineProps<{
   card: CardResponse
   projectId: string
   readonly?: boolean
+  blocked?: boolean
+  selected?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -136,24 +138,27 @@ function handleCardDrop(event: DragEvent) {
 <template>
   <div
     class="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow group"
-    :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver }"
+    :class="{ 'opacity-50': isDragging, 'ring-2 ring-primary/50': isCardDragOver, 'ring-2 ring-primary': selected }"
     draggable="true"
+    role="button"
     @click="emit('click', card)"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @dragover.stop.prevent="handleCardDragOver"
     @dragleave="handleCardDragLeave"
     @drop.stop.prevent="handleCardDrop"
+    @keydown.enter="emit('click', card)"
+    @keydown.space="emit('click', card)"
   >
     <div class="flex items-start gap-2">
       <input
         v-if="!readonly"
         type="checkbox"
+        tabindex="-1"
         class="mr-2 shrink-0 hidden md:block"
         :checked="!!board.selectedCardIds[card.id]"
-        aria-label="Select card"
+        :aria-label="`Select card ${card.title}`"
         @click.stop="board.toggleSelectCard(card.id)"
-        @keydown.stop.prevent="board.toggleSelectCard(card.id)"
       >
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
@@ -168,6 +173,16 @@ function handleCardDrop(event: DragEvent) {
             :class="cardTypeColorClass(typeOption)"
           >
             {{ typeOption.label }}
+          </span>
+          <span
+            v-if="blocked"
+            class="text-warning flex items-center gap-0.5"
+            title="Card is blocked"
+          >
+            <UIcon
+              name="i-lucide-lock"
+              class="size-3"
+            />
           </span>
         </div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
@@ -194,6 +209,7 @@ function handleCardDrop(event: DragEvent) {
       >
         <div class="flex flex-col">
           <UButton
+            tabindex="-1"
             icon="i-lucide-chevron-up"
             size="xs"
             variant="ghost"
@@ -202,6 +218,7 @@ function handleCardDrop(event: DragEvent) {
             @click.stop="emit('move-up', card.id)"
           />
           <UButton
+            tabindex="-1"
             icon="i-lucide-chevron-down"
             size="xs"
             variant="ghost"
@@ -225,13 +242,16 @@ function handleCardDrop(event: DragEvent) {
           <UIcon
             name="i-lucide-grip-vertical"
             class="size-4"
+            aria-hidden="true"
           />
         </span>
         <span ref="menuButtonRef">
           <UButton
+            tabindex="-1"
             icon="i-lucide-ellipsis-vertical"
             variant="ghost"
             size="xs"
+            :aria-label="`Card menu for ${card.title}`"
             @click.stop="toggleMenu"
           />
         </span>
@@ -243,23 +263,27 @@ function handleCardDrop(event: DragEvent) {
         >
           <button
             v-if="card.archivedAt"
+            tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
             @click="handleRestore"
           >
             <UIcon
               name="i-lucide-archive-restore"
               class="size-4"
+              aria-hidden="true"
             />
             Restore
           </button>
           <button
             v-else
+            tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
             @click="handleArchive"
           >
             <UIcon
               name="i-lucide-archive"
               class="size-4"
+              aria-hidden="true"
             />
             Archive
           </button>

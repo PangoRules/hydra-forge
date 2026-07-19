@@ -10,7 +10,10 @@
  *   toast.success('Card archived')           // green, 4s
  *   toast.error('Failed to archive')         // red, 6s
  *   toast.success('Moved 3 cards', 2000)     // green, 2s
+ *   toast.showApiError(error)                // red, 6s, with correlationId copy button
  */
+
+import { ApiError } from '~/lib/api-error'
 
 type ToastFn = (title: string, durationOverride?: number) => void
 
@@ -35,5 +38,44 @@ export function useAppToast() {
     show(title, 'error', durationOverride ?? 6000)
   }
 
-  return { success, error, remove, clear }
+  const showApiError = (error: ApiError | Error) => {
+    if (error instanceof ApiError) {
+      // For ApiError, show the title and add a copy button for correlationId
+      add({
+        title: error.title,
+        color: 'error',
+        type: 'foreground' as const,
+        duration: 6000,
+        close: true,
+        actions: [
+          {
+            label: 'Copy Correlation ID',
+            onClick: async () => {
+              try {
+                await navigator.clipboard.writeText(error.correlationId)
+                add({
+                  title: 'Correlation ID copied',
+                  color: 'success',
+                  type: 'foreground' as const,
+                  duration: 2000
+                })
+              } catch {
+                add({
+                  title: 'Failed to copy — ID: ' + error.correlationId.slice(0, 8) + '.',
+                  color: 'error',
+                  type: 'foreground' as const,
+                  duration: 4000
+                })
+              }
+            }
+          }
+        ]
+      })
+    } else {
+      // For generic Error, just show the message
+      show(error.message, 'error', 6000)
+    }
+  }
+
+  return { success, error, showApiError, remove, clear }
 }

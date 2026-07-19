@@ -308,6 +308,9 @@ function toggleSource() {
         v-show="!sourceMode"
         :editor="editor"
         :class="isFullscreen ? 'markdown-editor-content markdown-editor-fullscreen' : 'markdown-editor-content'"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Markdown editor"
       />
 
       <!-- Source textarea -->

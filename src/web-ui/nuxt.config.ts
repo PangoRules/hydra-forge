@@ -3,7 +3,8 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@vite-pwa/nuxt'
   ],
 
   devtools: {
@@ -44,12 +45,50 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@microsoft/signalr',
+        '@tiptap/extension-placeholder',
+        '@tiptap/starter-kit',
+        '@tiptap/vue-3',
+        '@vueuse/core',
+        'marked',
+        'turndown'
+      ]
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'HydraForge',
+      short_name: 'HydraForge',
+      description: 'Self-hosted AI workspace + project management',
+      theme_color: '#00C16A',
+      background_color: '#ffffff',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/favicon.ico',
+          sizes: '64x64',
+          type: 'image/x-icon'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      navigateFallbackAllowlist: [/^\/$/, /^\/projects/, /^\/login/],
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
     }
   }
 })

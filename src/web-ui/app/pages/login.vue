@@ -51,6 +51,7 @@ async function handleSubmit() {
             autocomplete="username"
             required
             class="w-full"
+            aria-label="Username"
           />
         </UFormField>
 
@@ -64,6 +65,7 @@ async function handleSubmit() {
             autocomplete="current-password"
             required
             class="w-full"
+            aria-label="Password"
           />
         </UFormField>
 

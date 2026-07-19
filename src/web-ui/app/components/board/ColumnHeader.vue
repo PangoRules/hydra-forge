@@ -132,6 +132,7 @@ function handleDrop(event: DragEvent) {
       <div class="ml-auto flex items-center gap-1 shrink-0">
         <UButton
           v-if="canMoveLeft && !readonly"
+          tabindex="-1"
           icon="i-lucide-chevron-left"
           size="xs"
           variant="ghost"
@@ -141,6 +142,7 @@ function handleDrop(event: DragEvent) {
         />
         <UButton
           v-if="canMoveRight && !readonly"
+          tabindex="-1"
           icon="i-lucide-chevron-right"
           size="xs"
           variant="ghost"
@@ -154,6 +156,7 @@ function handleDrop(event: DragEvent) {
           class="relative shrink-0 flex items-center"
         >
           <button
+            tabindex="-1"
             class="text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
             title="Edit column"
             data-testid="column-edit-trigger"
@@ -233,6 +236,7 @@ function handleDrop(event: DragEvent) {
     <div class="flex items-center gap-2 mb-1">
       <span class="text-xs text-gray-500 shrink-0">Type:</span>
       <select
+        tabindex="-1"
         class="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
         @change="emit('filter-type', ($event.target as HTMLSelectElement).value || null)"
       >
@@ -250,6 +254,7 @@ function handleDrop(event: DragEvent) {
       >
         <input
           type="checkbox"
+          tabindex="-1"
           class="size-3"
           @change="emit('filter-archived', ($event.target as HTMLInputElement).checked)"
         >
@@ -257,6 +262,7 @@ function handleDrop(event: DragEvent) {
       </label>
       <button
         v-if="!readonly"
+        tabindex="-1"
         class="ml-auto text-xs px-2 py-1 rounded border border-primary text-primary bg-primary/5 hover:bg-primary/10"
         title="Add card to this column"
         @click="emit('add-card')"

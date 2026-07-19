@@ -13,12 +13,16 @@ const props = defineProps<{
   projectId: string
   includeArchived: boolean
   readonly?: boolean
+  selectedCardId?: string | null
+  selectedColumnIndex?: number
 }>()
 
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'column-click': [columnId: string]
   'add-card': [columnId: string]
+  'container-focus': []
 }>()
 
 const { reorderColumns, moveColumnLeft, moveColumnRight } = useColumnReorder(props.projectId)
@@ -46,7 +50,12 @@ async function handleAddColumn() {
 </script>
 
 <template>
-  <div class="flex gap-4 pb-4 flex-1 min-h-0">
+  <div
+    tabindex="0"
+    class="flex gap-4 pb-4 flex-1 min-h-0 rounded-lg outline-none"
+    aria-label="Board columns — use h j k l to navigate, Enter to open, ? for shortcuts"
+    @focus="emit('container-focus')"
+  >
     <BoardColumn
       v-for="(col, idx) in columns"
       :key="col.id"
@@ -57,8 +66,12 @@ async function handleAddColumn() {
       :readonly="readonly"
       :can-move-left="idx > 0"
       :can-move-right="idx < columns.length - 1"
+      :selected="idx === selectedColumnIndex"
+      :selected-card-id="selectedCardId"
+      class="w-64 md:w-72 lg:w-80"
       @card-move="handleCardMove"
       @card-click="handleCardClick"
+      @column-click="(colId: string) => emit('column-click', colId)"
       @add-card="(colId: string) => emit('add-card', colId)"
       @reorder="reorderColumns"
       @move-left="() => moveColumnLeft(col.id)"

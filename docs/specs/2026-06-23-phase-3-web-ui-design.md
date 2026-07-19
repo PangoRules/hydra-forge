@@ -21,7 +21,7 @@
 - [x] Task 4B: E2E Testing Foundation — Playwright setup, auth fixture, save/debounce + archive/restore + concurrency specs, CI job
 - [x] Task 5: Specs, Plans & Real-time — Spec/Plan Editors + SignalR BoardHub + PresenceHub
 - [x] Task 5a: Specs, Plan Schema changes.
-- [ ] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
+- [x] Task 6: Polish & Hardening — Keyboard, Errors, Blocked Cards, Archive, ARIA, Tablet, PWA
 - [ ] Task 7: Project List Redesign — edit modal, member picker, and list polish shipped already (different mechanism than originally planned); remaining scope is table view + search/sort/role filter + real pagination (see `docs/specs/2026-07-07-project-list-redesign-design.md` and `docs/plans/2026-07-07-phase-3-plan-7-project-list-redesign.md`)
 
 ---

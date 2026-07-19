@@ -5,8 +5,11 @@ import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
+import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useBoardKeyboardNav } from '~/composables/keyboard/useBoardKeyboardNav'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -35,6 +38,36 @@ const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 const showMembersPanel = ref(false)
+const showShortcutOverlay = ref(false)
+
+// Board-level archive state
+const showArchiveConfirm = ref(false)
+const archiveTargetCard = ref<CardResponse | null>(null)
+
+// Block board shortcuts when any modal overlay is open
+const anyModalOpen = computed(() =>
+  !!selectedCardId.value
+  || showCreateModal.value
+  || showArchiveConfirm.value
+  || showShortcutOverlay.value
+  || showMembersPanel.value
+)
+
+async function confirmArchive() {
+  const card = archiveTargetCard.value
+  if (!card) return
+  try {
+    await api.POST(ApiRoutes.Cards.archive(projectId, card.id), {
+      body: { version: card.version }
+    })
+    toast.success('Card archived')
+    board.fetchBoard(projectId)
+  } catch {
+    toast.error('Failed to archive card')
+  }
+  showArchiveConfirm.value = false
+  archiveTargetCard.value = null
+}
 
 function handleAddCard(columnId?: string) {
   if (projectArchived.value) return
@@ -54,10 +87,30 @@ function findCard(cardId: string): CardResponse | undefined {
   return undefined
 }
 
-function handleCardClick(card: CardResponse) {
+function openCardModal(card: CardResponse) {
   selectedCard.value = card
   selectedCardId.value = card.id
   showCardModal.value = true
+}
+
+function requestArchive(card: CardResponse) {
+  archiveTargetCard.value = card
+  showArchiveConfirm.value = true
+}
+
+const nav = useBoardKeyboardNav({
+  projectId,
+  anyModalOpen,
+  projectArchived,
+  onOpenCard: openCardModal,
+  onCreateCard: handleAddCard,
+  onArchiveCard: requestArchive,
+  onShowShortcuts: () => { showShortcutOverlay.value = true }
+})
+
+function handleCardClick(card: CardResponse) {
+  openCardModal(card)
+  nav.syncToCard(card)
 }
 
 function handleCardModalClose() {
@@ -124,6 +177,7 @@ onMounted(async () => {
     projectName.value = project.name
     projectArchived.value = !!project.archivedAt
   }
+  nav.activate()
 })
 
 async function handleRestore() {
@@ -173,6 +227,7 @@ watch(selectedCardId, (cardId) => {
 onBeforeUnmount(() => {
   realtime.disconnect(projectId)
   presence.disconnect(projectId)
+  nav.deactivate()
 })
 
 // Presence indicator
@@ -313,9 +368,13 @@ function hashColor(id: string): string {
             :project-id="projectId"
             :include-archived="board.boardFilters.includeArchived"
             :readonly="projectArchived"
+            :selected-card-id="nav.selectedCardId.value"
+            :selected-column-index="nav.selectedColumnIndex.value"
             @card-move="moveCardToColumn"
             @card-click="handleCardClick"
+            @column-click="nav.syncToColumn"
             @add-card="handleAddCard"
+            @container-focus="nav.clampSelection"
           />
         </div>
       </div>
@@ -367,6 +426,20 @@ function hashColor(id: string): string {
       :preselected-column-id="createColumnId ?? undefined"
       @close="showCreateModal = false"
       @created="board.fetchBoard(projectId)"
+    />
+
+    <KeyboardShortcutOverlay
+      v-if="showShortcutOverlay"
+      :open="showShortcutOverlay"
+      @close="showShortcutOverlay = false"
+    />
+
+    <ConfirmDialog
+      v-model:open="showArchiveConfirm"
+      title="Archive card"
+      :message="archiveTargetCard ? `Archive #${archiveTargetCard.cardNumber} ${archiveTargetCard.title}?` : ''"
+      confirm-text="Archive"
+      @confirm="confirmArchive"
     />
   </div>
 </template>

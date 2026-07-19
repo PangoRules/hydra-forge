@@ -4,8 +4,10 @@ import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import AppModal from '~/components/shared/AppModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import ArchiveCardWarning from '~/components/card/ArchiveCardWarning.vue'
 import CardSpec from '~/components/card/CardSpec.vue'
 import CardPlan from '~/components/card/CardPlan.vue'
+import { useKeyboard } from '~/composables/keyboard/useKeyboard'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -30,6 +32,8 @@ const isArchived = computed(() => !!card.value?.archivedAt)
 const isReadonly = computed(() => props.readonly || isArchived.value)
 const toast = useAppToast()
 const showArchiveConfirm = ref(false)
+const showArchiveWarning = ref(false)
+const archiveDependents = ref<{ id: string, title: string, type: string }[]>([])
 const checklistRefresh = ref(0)
 
 // API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
@@ -79,6 +83,7 @@ watch(hasDocsTab, (has) => {
 })
 
 const api = useApi()
+const keyboard = useKeyboard()
 
 /** Close with animation: set isOpen=false (triggers UModal scale-out 200ms), then emit close */
 function closeWithAnimation() {
@@ -103,7 +108,42 @@ function handleOpenChange(val: boolean) {
 }
 
 function handleArchive() {
-  showArchiveConfirm.value = true
+  if (card.value) {
+    // Check for dependents before showing confirmation
+    fetchCardRelationships()
+  } else {
+    showArchiveConfirm.value = true
+  }
+}
+
+async function fetchCardRelationships() {
+  try {
+    const response = await api.GET(
+      ApiRoutes.Relationships.list(props.projectId, card.value!.id)
+    )
+
+    // Type assertion for the response data
+    const data = response.data as { relationships: Array<{ sourceCardId: string, targetCardId: string, targetCardTitle: string, type: string }> }
+
+    // Filter relationships where this card is the source (blocking others)
+    const dependents = data.relationships
+      .filter((rel: { sourceCardId: string }) => rel.sourceCardId === card.value!.id)
+      .map((rel: { targetCardId: string, targetCardTitle: string, type: string }) => ({
+        id: rel.targetCardId,
+        title: rel.targetCardTitle,
+        type: rel.type
+      }))
+
+    if (dependents.length > 0) {
+      archiveDependents.value = dependents
+      showArchiveWarning.value = true
+    } else {
+      showArchiveConfirm.value = true
+    }
+  } catch {
+    // If we can't fetch relationships, proceed with normal archive
+    showArchiveConfirm.value = true
+  }
 }
 
 async function confirmArchive() {
@@ -151,6 +191,18 @@ function applyCardUpdate(updated: CardResponse) {
 onMounted(() => {
   fetchCard()
   linkedSpecId.value = null
+
+  // Keyboard shortcuts
+  keyboard.register('Card', 'a', (e) => {
+    if (!isArchived.value && !props.readonly) {
+      e.preventDefault()
+      handleArchive()
+    }
+  }, 'Archive card', true /** allowWhileEditing */)
+})
+
+onBeforeUnmount(() => {
+  keyboard.unregister('Card')
 })
 
 // Presence indicator
@@ -433,5 +485,12 @@ const otherViewers = computed(() => {
     :message="card ? `Archive #${card.cardNumber} ${card.title}?` : ''"
     confirm-text="Archive"
     @confirm="confirmArchive"
+  />
+
+  <ArchiveCardWarning
+    v-if="showArchiveWarning"
+    :dependents="archiveDependents"
+    @confirm="confirmArchive"
+    @cancel="showArchiveWarning = false"
   />
 </template>

@@ -14,11 +14,14 @@ const props = defineProps<{
   readonly?: boolean
   canMoveLeft?: boolean
   canMoveRight?: boolean
+  selected?: boolean
+  selectedCardId?: string | null
 }>()
 
 const emit = defineEmits<{
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
   'card-click': [card: CardResponse]
+  'column-click': [columnId: string]
   'add-card': [columnId: string]
   'reorder': [draggedColumnId: string, targetColumnId: string]
   'move-left': []
@@ -92,7 +95,11 @@ function handleDrop(event: DragEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0">
+  <div
+    class="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg min-w-[320px] max-w-[360px] w-[340px] min-h-0 shrink-0"
+    :class="{ 'ring-2 ring-primary/40': selected }"
+    @click.stop="emit('column-click', column.id)"
+  >
     <ColumnHeader
       :column="column"
       :card-count="filteredCards.length"
@@ -132,6 +139,8 @@ function handleDrop(event: DragEvent) {
           :card="card"
           :project-id="projectId"
           :readonly="readonly"
+          :blocked="false"
+          :selected="card.id === selectedCardId"
           @click="emit('card-click', card)"
           @move-up="(id) => emit('card-move', id, column.id, Math.max(0, Number(card.position) - 1))"
           @move-down="(id) => emit('card-move', id, column.id, Math.min(filteredCards.length - 1, Number(card.position) + 1))"
