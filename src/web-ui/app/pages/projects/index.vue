@@ -112,7 +112,10 @@ watch(sortDescending, () => {
   fetchProjects()
 })
 watch(page, () => fetchProjects())
-watch(pageSize, () => { page.value = 1; fetchProjects() })
+watch(pageSize, () => {
+  page.value = 1
+  fetchProjects()
+})
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(search, () => {
