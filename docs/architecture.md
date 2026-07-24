@@ -366,7 +366,16 @@ Failures in these services must never bring down the core board:
 
 ---
 
-## 6. Repository Structure
+### 6.1. TUI Configuration Management
+
+The TUI manages user-specific settings and preferences in `~/.config/hydraforge/config.json`. This configuration is handled by the `ConfigStore` service, which provides:
+
+- **Persistence:** Reads and writes settings to a JSON file with `0600` permissions (read/write for owner only).
+- **Schema Validation:** Ensures the configuration adheres to a defined schema, preventing invalid settings.
+- **Default Values:** Provides sensible defaults if the configuration file is missing or incomplete.
+
+The `ConfigStore` is registered in `HydraForge.Tui`'s `Program.cs` and injected into services requiring access to user preferences.
+
 
 ```
 hydra-forge/
