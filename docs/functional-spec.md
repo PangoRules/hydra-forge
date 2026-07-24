@@ -516,10 +516,10 @@
 ### Phase 4: Project Space — TUI 🖥️
 > Goal: full project board usable in terminal. Feature parity with Web UI board.
 
-> ⚠️ **Pre-phase decisions needed:**
-> 1. **.NET API client strategy** — Web UI has an established convention (openapi-typescript codegen + centralized `routes.ts`, see CLAUDE.md "Web UI API routes"). TUI has no equivalent yet. Options: (a) NSwag/Kiota-generated typed C# client from `/openapi/v1.json` — stays in sync with the API automatically, recommended; (b) hand-rolled `HttpClient` + `System.Text.Json` calls — more control, more drift risk; (c) Refit. Pick before writing the first TUI screen that calls the API.
-> 2. **SignalR .NET client wiring** — `Microsoft.AspNetCore.SignalR.Client` package needed for `BoardHub`/`PresenceHub` consumption from the TUI. Decide connection lifecycle ownership (single long-lived `HubConnection` per app session vs. per-screen) and where reconnect/backoff logic lives relative to the "Connection handling" checklist item below.
-> 3. **JWT config storage location/format** — `docs/architecture.md`'s "TUI Connectivity Behavior" says only "JWT stored in user config." Needs a concrete path and format: e.g. `~/.config/hydraforge/config.json` (plain file, mode 0600) vs. OS keychain integration. Plain file is the pragmatic MVP default; note it explicitly so it isn't left implicit.
+> ✅ **Pre-phase decisions resolved — see D-48:**
+> 1. **.NET API client strategy** — NSwag-generated typed C# client from `/openapi/v1.json`, regenerated as a build step. Mirrors the Web UI's openapi-typescript + `routes.ts` convention (CLAUDE.md "Web UI API routes").
+> 2. **SignalR .NET client wiring** — `Microsoft.AspNetCore.SignalR.Client` package for `BoardHub`/`PresenceHub` consumption. Connection lifecycle ownership and reconnect/backoff placement (relative to the "Connection handling" checklist item below) still decided at implementation time — D-48 settles the package choice, not the lifecycle design.
+> 3. **JWT config storage location/format** — plain file, `~/.config/hydraforge/config.json` (`%APPDATA%\hydraforge\config.json` on Windows), owner-only permissions (`0600` on POSIX). No OS keychain for MVP — see D-48 rationale (remote/SSH usage is the primary TUI persona, where a desktop keychain is often unavailable anyway).
 >
 > `src/HydraForge.Tui/Program.cs` is currently the unmodified `dotnet new console` template — no Spectre.Console package reference yet. Phase 4 starts from zero scaffolding.
 

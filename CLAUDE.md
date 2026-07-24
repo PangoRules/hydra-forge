@@ -202,7 +202,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
-Phase 4 (TUI) has **not started** — `src/HydraForge.Tui/Program.cs` is still the unmodified `dotnet new console` template, no Spectre.Console package reference yet. See `docs/functional-spec.md` §25 Phase 4 checklist, which now carries its own pre-phase decision block (API client strategy, SignalR client wiring, JWT config file location) — resolve those before planning tasks.
+Phase 4 (TUI) has **not started** — `src/HydraForge.Tui/Program.cs` is still the unmodified `dotnet new console` template, no Spectre.Console package reference yet. Infra pre-phase decisions (API client strategy, SignalR client wiring, JWT config storage) are resolved — see D-48 in `docs/DECISIONS.md`: NSwag-generated client from `/openapi/v1.json`, `Microsoft.AspNetCore.SignalR.Client`, JWT in `~/.config/hydraforge/config.json` (0600, no OS keychain for MVP). `docs/functional-spec.md` §25 Phase 4 has the full checklist.
 
 ### Nuxt UI v4 patterns
 
