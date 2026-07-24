@@ -3,7 +3,7 @@
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
 > **Date:** 2026-06-02 (updated 2026-06-25)
-> **Status:** 10 original questions resolved + 24 new decisions added (D-13–D-39). D-3, D-7 revised/rejected. Ready for Phase 3 Web UI.
+> **Status:** 10 original questions resolved + 24 new decisions added (D-13–D-39). D-3, D-7 revised/rejected. Phase 3 Web UI complete. Ready for Phase 4 TUI.
 
 ---
 

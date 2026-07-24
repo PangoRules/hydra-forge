@@ -481,7 +481,7 @@
 
 - [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
 - [x] Auth pages: login, first-run admin setup
-- [x] Backend: POST /api/Auth/change-password endpoint (needed by setup page) — **TODO: still pending**
+- [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page) — Not implemented — deferred to Phase 5 (Admin) or later.
 - [x] Project list + create project flow (`app/pages/projects/index.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`) — includes optional git remote URL + provider fields in advanced expander
 - [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
 - [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)

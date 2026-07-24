@@ -215,7 +215,6 @@ curl -s -X POST http://localhost:5000/api/projects/$PROJECT_ID/Cards \
 
 ## Plan 3A: Card Modal Hardening
 
-
 ### Setup
 - [X] API server running locally (`ASPNETCORE_ENVIRONMENT=Development`)
 - [X] Web dev server running (`pnpm dev` at `src/web-ui`)
@@ -292,7 +291,6 @@ Working
 ---
 
 ## Plan 4: Card Modal Panels
-
 
 ### Setup
 - [x] API server running locally (`ASPNETCORE_ENVIRONMENT=Development`)
@@ -427,7 +425,6 @@ Working
 
 ## Plan 4A: Board Filtering & Quick-Add
 
-
 **Plan:** `docs/plans/2026-06-24-phase-3-plan-4a-board-filtering-and-quick-add.md`
 **Branch:** `task/phase-3-board-filtering`
 **Server + Web UI both running** (pnpm dev + docker compose up)
@@ -504,7 +501,6 @@ Works
 
 ## Plan 4C: Board Filter Redesign
 
-
 Column visibility controlled via dropdown multi-select. Card-type filter stays per-column. Column selection makes `hideEmptyColumns` mutually exclusive.
 
 #### Setup
@@ -562,7 +558,6 @@ Works
 
 ## Plan 4D: Card Type Redesign
 
-
 Renames `Bug`→`Issue`, `Epic`→`Goal`, retires `Spec` (rows data-migrated to Goal). Removes the Epic-only parent restriction so any card type can parent any other. Updates UI labels across `CardCreateModal`, `CardMetadata`, `BoardCard`, `BoardMobileList`, and the type filter dropdowns.
 
 #### Setup
@@ -581,7 +576,6 @@ Works!
 Works!
 4. BoardCard and BoardMobileList show "Parent" (not "Epic") when `parentCardId` is set, with `i-lucide-layers` icon
 Works!
-
 
 #### Happy Path — Open Parent Restriction
 5. Create a `Task` card with parent = another `Task` → succeeds (200), card displays on board
@@ -624,6 +618,7 @@ Works!
 
 ## Plan 4B: E2E Testing Foundation
 
+> **Note (2026-07-23):** `card-archive-restore.spec.ts` and `card-description-save.spec.ts` were deleted and their coverage folded into `project-lifecycle.spec.ts`. See `src/web-ui/e2e/SMOKE_FLOW.md` for the consolidated flow description.
 
 ### Validate: Playwright e2e suite runs green locally and in CI
 
@@ -667,7 +662,6 @@ Works!
 ---
 
 ## Plan 5: Specs, Plans & Real-time
-
 
 ### Setup
 - [X] API server running locally (`ASPNETCORE_ENVIRONMENT=Development`)
@@ -755,69 +749,7 @@ Works
 
 ---
 
-## Plan 5A: Doc Model Schema
-
-
-API behavior (DocType, PlanStatus, SpawnedFrom, SetStatus lifecycle) is covered by
-`ProjectServiceTests`/`PlanServiceTests`/`SpecServiceTests`/`PlansControllerTests`/`SpecsControllerTests`
-(xUnit) and `.http` smoke files — not re-validated manually here. This matrix only
-covers what those don't: does the actual UI expose and wire the feature correctly.
-
-#### Setup
-- [ ] API server running (`dotnet run --project src/HydraForge.Server`)
-- [ ] Web dev server running (`pnpm dev`)
-- [ ] Authenticated user, member of a project
-- [ ] A Goal card exists in the project
-- [ ] An Idea card exists in the project
-- [ ] An Issue card exists in the project
-- [ ] A Task card exists in the project
-
-#### UI — Docs tab visibility per card type
-
-Actual gating logic (`CardModal.vue`): Spec shown for Goal/Idea/Issue, Plans shown for
-Goal/Issue/Task — so every type gets a Docs tab, but the sections inside differ.
-
-1. [X] **Goal card → Docs tab** → Spec section labeled "Specification" + Plans section with "Add Plan"
-2. [X] **Idea card → Docs tab** → Spec section labeled "Concept" only, no Plans section
-3. [x] **Issue card → Docs tab** → Spec section labeled "Report" + Plans section with "Add Plan"
-4. [x] **Task card → Docs tab** → Plans section only (no Spec section), "Add Plan" present
-
-#### UI — Spec section (Goal / Idea / Issue)
-
-5. [x] **Create spec (empty state)** → title input + editor + "Create" button; fill both, click Create → spec saves, toast "Spec saved", button label switches to "Save"
-6. [x] **Save disabled when clean** → immediately after create/load, Save is disabled (nothing edited yet)
-7. [x] **Edit spec** → change title or content → Save enables → click Save → toast "Spec saved"
-8. [x] **Version history** → click "History" → versions panel opens showing past versions with author + timestamp
-9. [x] **Restore version** → click Restore on an older version → title/content revert, toast "Version restored", history refreshes
-10. [X] **Readonly (archived card)** → no Create/Save button, no title/content editing
-
-#### UI — Plans section (Goal / Issue / Task)
-
-11. [x] **Add Plan** → click "Add Plan" → inline form (title + editor + Create/Cancel) appears
-12. [x] **Create disabled until titled** → Create button disabled while title is empty
-13. [x] **Create plan** → fill title + content, click Create → plan appears in list with "Pending" badge, toast "Plan created"
-14. [x] **Expand/collapse** → click a plan's header row → chevron rotates, editor (and history panel if open) shows/hides
-15. [x] **Status dropdown** → click the status badge → dropdown lists the other two statuses only (e.g. from Pending: Active, Done)
-16. [x] **Set Active** → pick Active from dropdown → badge updates to "Active" immediately, no page reload
-17. [x] **Set Done** → pick Done from dropdown → badge "Done", editor becomes read-only, Save button disappears, plan row dims (opacity)
-18. [x] **Done → Pending/Active directly** → from a Done plan, status dropdown still works and allows jumping straight back to Pending or Active (no separate "Reactivate" button — single dropdown handles all transitions)
-19. [x] **Save gated by dirty state** → Save button disabled until title or content actually changes; disabled entirely while status is Done
-20. [x] **Multiple plans** → create 2+ plans on one card → all shown stacked, ordered by position, each independently expandable/editable
-21. [x] **Version history per plan** → click History on one plan → panel shows versions for that plan only (not other plans)
-22. [x] **Restore blocked on Done** → open history on a Done plan → Restore button disabled
-23. [x] **Restore on non-Done plan** → Restore an older version → content reverts, toast "Version restored"
-24. [x] **Readonly (archived card)** → no "Add Plan" button, status dropdown disabled, no Save buttons
-
-#### Regressions (UI)
-
-25. [x] **Tab switch preserves data** → edit a Spec/Plan without saving, switch to another tab and back → unsaved edits still present (no unexpected refetch wipes them)
-26. [x] **Closing and reopening the card** → re-fetches fresh Spec/Plan state from the server (saved changes persist, no stale cache)
-27. [x] **Idea card never shows a Plans section** → confirms no regression of the Idea-has-no-plans rule (D-44) after any of the above interactions
-
----
-
 ## Plan 5A UX Polish: Collapsible Plans, Status Dropdown, Fullscreen Editor
-
 
 #### Setup
 - [ ] API server running (`dotnet run --project src/HydraForge.Server`)
