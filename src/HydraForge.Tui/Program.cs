@@ -39,7 +39,17 @@ public static class Program
         {
             // Show login screen
             var loginScreen = new LoginScreen(configStore, apiClientFactory, appState, errorCollector);
-            await loginScreen.OnEnterAsync();
+            await loginScreen.RenderAsync();
+            
+            // Reload config after login
+            loadedConfig = configStore.Load();
+            
+            // Check if login was successful
+            if (string.IsNullOrEmpty(loadedConfig.JwtToken))
+            {
+                AnsiConsole.MarkupLine("[red]Login failed. Exiting.[/]");
+                return 1;
+            }
         }
         else
         {
@@ -53,7 +63,17 @@ public static class Program
                     // Refresh failed, clear config and show login screen
                     configStore.Clear();
                     var loginScreen = new LoginScreen(configStore, apiClientFactory, appState, errorCollector);
-                    await loginScreen.OnEnterAsync();
+                    await loginScreen.RenderAsync();
+                    
+                    // Reload config after login
+                    loadedConfig = configStore.Load();
+                    
+                    // Check if login was successful
+                    if (string.IsNullOrEmpty(loadedConfig.JwtToken))
+                    {
+                        AnsiConsole.MarkupLine("[red]Login failed. Exiting.[/]");
+                        return 1;
+                    }
                 }
             }
         }
@@ -62,7 +82,7 @@ public static class Program
         var client = apiClientFactory.CreateClient();
 
         // Placeholder: will wire up screens in later tasks
-        AnsiConsole.WriteLine("Authentication successful. Press any key to continue...");
+        AnsiConsole.MarkupLine("Authentication successful. Press any key to continue...");
         Console.ReadKey(true);
 
         return 0;
