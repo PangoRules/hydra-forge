@@ -1,12 +1,12 @@
-﻿using HydraForge.Tui.Models;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Spectre.Console;
+using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui;
 
 public static class Program
 {
-    public static async Task<int> Main(string[] args)
+    public static async Task<int> Main()
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -19,9 +19,6 @@ public static class Program
 
         var config = new TuiConfig();
         configuration.Bind(config);
-
-        var appState = new AppState();
-        var screenStack = new ScreenStack();
 
         AnsiConsole.Write(new FigletText("HydraForge").Color(Color.Blue));
         AnsiConsole.WriteLine("TUI client starting...");
