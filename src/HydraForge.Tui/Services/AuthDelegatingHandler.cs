@@ -12,6 +12,9 @@ public class AuthDelegatingHandler : DelegatingHandler
 
     public AuthDelegatingHandler() : base(new HttpClientHandler()) { }
 
+    // Lets tests substitute a fake transport instead of hitting the real network.
+    internal AuthDelegatingHandler(HttpMessageHandler innerHandler) : base(innerHandler) { }
+
     public void SetToken(string? token) => _token = token;
 
     protected override async Task<HttpResponseMessage> SendAsync(

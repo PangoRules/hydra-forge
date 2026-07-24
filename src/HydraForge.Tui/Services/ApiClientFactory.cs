@@ -9,15 +9,28 @@ public class ApiClientFactory
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
 
+    private readonly Func<HttpMessageHandler> _innerHandlerFactory;
+
     private HydraForgeApiClient? _client;
     private AuthDelegatingHandler? _authHandler;
     private TuiConfig? _cachedConfig;
 
     public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector)
+        : this(configStore, appState, errorCollector, () => new HttpClientHandler())
+    {
+    }
+
+    // Lets tests substitute a fake transport instead of hitting the real network.
+    internal ApiClientFactory(
+        ConfigStore configStore,
+        AppState appState,
+        ErrorCollector errorCollector,
+        Func<HttpMessageHandler> innerHandlerFactory)
     {
         _configStore = configStore;
         _appState = appState;
         _errorCollector = errorCollector;
+        _innerHandlerFactory = innerHandlerFactory;
     }
 
     /// <summary>
@@ -29,7 +42,7 @@ public class ApiClientFactory
         var config = _configStore.Load();
         _cachedConfig = config;
 
-        _authHandler = new AuthDelegatingHandler();
+        _authHandler = new AuthDelegatingHandler(_innerHandlerFactory());
         _authHandler.SetToken(config.JwtToken);
 
         var httpClient = new HttpClient(_authHandler)
@@ -58,7 +71,7 @@ public class ApiClientFactory
     public HydraForgeApiClient CreateUnauthenticatedClient()
     {
         var config = _cachedConfig ?? _configStore.Load();
-        var httpClient = new HttpClient
+        var httpClient = new HttpClient(_innerHandlerFactory())
         {
             BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/")
         };
