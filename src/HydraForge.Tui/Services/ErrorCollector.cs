@@ -1,24 +1,15 @@
+using System.Collections.Concurrent;
+
 namespace HydraForge.Tui.Services;
 
 public class ErrorCollector
 {
-    private readonly List<(DateTime Timestamp, string CorrelationId, string Message)> _errors = new();
+    private readonly ConcurrentBag<string> _errors = new();
 
-    public void Add(string correlationId, string message)
+    public IReadOnlyCollection<string> Errors => _errors.ToArray();
+
+    public void AddError(string error)
     {
-        _errors.Add((DateTime.UtcNow, correlationId, message));
-        if (_errors.Count > 50)
-            _errors.RemoveAt(0);
+        _errors.Add(error);
     }
-
-    public IReadOnlyList<(DateTime Timestamp, string CorrelationId, string Message)> GetErrors()
-        => _errors.AsReadOnly();
-
-    public void Dismiss(int index)
-    {
-        if (index >= 0 && index < _errors.Count)
-            _errors.RemoveAt(index);
-    }
-
-    public int Count => _errors.Count;
 }
