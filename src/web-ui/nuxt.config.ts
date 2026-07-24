@@ -13,6 +13,10 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  colorMode: {
+    storage: 'cookie'
+  },
+
   runtimeConfig: {
     // Private — server-side only. Used by the /api/[...path] proxy route.
     apiBaseUrl: process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000',

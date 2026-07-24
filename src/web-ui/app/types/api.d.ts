@@ -1717,6 +1717,12 @@ export interface paths {
             parameters: {
                 query?: {
                     includeArchived?: boolean;
+                    search?: string;
+                    sortBy?: components["schemas"]["ProjectSortField"];
+                    sortDescending?: boolean;
+                    role?: components["schemas"]["MemberRole"];
+                    skip?: number | string;
+                    take?: number | string;
                 };
                 header?: never;
                 path?: never;
@@ -1730,9 +1736,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProjectListResponse"][];
-                        "application/json": components["schemas"]["ProjectListResponse"][];
-                        "text/json": components["schemas"]["ProjectListResponse"][];
+                        "text/plain": components["schemas"]["ProjectListPageResponse"];
+                        "application/json": components["schemas"]["ProjectListPageResponse"];
+                        "text/json": components["schemas"]["ProjectListPageResponse"];
                     };
                 };
             };
@@ -2666,6 +2672,11 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProjectListPageResponse: {
+            items: components["schemas"]["ProjectListResponse"][];
+            /** Format: int32 */
+            totalCount: number | string;
+        };
         ProjectListResponse: {
             /** Format: uuid */
             id: string;
@@ -2677,6 +2688,7 @@ export interface components {
             archivedAt: null | string;
             /** Format: int32 */
             memberCount: number | string;
+            myRole: components["schemas"]["MemberRole"];
         };
         ProjectResponse: {
             /** Format: uuid */
@@ -2694,6 +2706,7 @@ export interface components {
             columns: components["schemas"]["ColumnResponse"][];
             members: components["schemas"]["MemberResponse"][];
         };
+        ProjectSortField: number;
         RefreshTokenResponse: {
             accessToken: string;
             /** Format: date-time */

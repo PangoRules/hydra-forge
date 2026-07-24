@@ -1,12 +1,32 @@
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Projects;
+
+public enum ProjectSortField
+{
+    Name,
+    CreatedAt,
+    UpdatedAt,
+}
+
+public record ProjectListPage(IReadOnlyList<Project> Items, int TotalCount);
 
 public interface IProjectRepository
 {
     Task AddAsync(Project project, CancellationToken ct = default);
     Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default);
+    Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    );
     Task UpdateAsync(Project project, CancellationToken ct = default);
 }
 
@@ -27,6 +47,11 @@ public interface IProjectMemberRepository
     Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default
+    );
     Task AddMemberAsync(ProjectMember member, CancellationToken ct = default);
     Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default);
     Task RemoveMemberAsync(Guid id, CancellationToken ct = default);

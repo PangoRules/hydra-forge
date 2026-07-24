@@ -61,5 +61,8 @@ public record ProjectListDto(
     string Description,
     DateTime CreatedAt,
     DateTime? ArchivedAt,
-    int MemberCount
+    int MemberCount,
+    MemberRole MyRole
 );
+
+public record ProjectListPageDto(IReadOnlyList<ProjectListDto> Items, int TotalCount);

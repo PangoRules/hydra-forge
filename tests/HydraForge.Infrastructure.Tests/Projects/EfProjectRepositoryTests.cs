@@ -100,6 +100,87 @@ public class EfProjectRepositoryTests
         Assert.NotNull(saved);
         Assert.Equal("Updated Name", saved.Name);
     }
+
+    [Fact]
+    public async Task ListByUserIdAsync_SearchFiltersByNameOrDescription()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfProjectRepository(context);
+        var userId = Guid.NewGuid();
+
+        var matchByName = new Project { Id = Guid.NewGuid(), Name = "Orders API", Description = "backend" };
+        var matchByDesc = new Project { Id = Guid.NewGuid(), Name = "Marketing", Description = "orders dashboard" };
+        var noMatch = new Project { Id = Guid.NewGuid(), Name = "Unrelated", Description = "nothing" };
+        context.Projects.AddRange(matchByName, matchByDesc, noMatch);
+        context.ProjectMembers.AddRange(
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = matchByName.Id, UserId = userId, Role = MemberRole.Owner },
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = matchByDesc.Id, UserId = userId, Role = MemberRole.Owner },
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = noMatch.Id, UserId = userId, Role = MemberRole.Owner }
+        );
+        await context.SaveChangesAsync();
+
+        var page = await repo.ListByUserIdAsync(userId, includeArchived: false, search: "orders", sortBy: ProjectSortField.Name, sortDescending: false, role: null, skip: 0, take: 20);
+
+        Assert.Equal(2, page.TotalCount);
+        Assert.DoesNotContain(page.Items, p => p.Id == noMatch.Id);
+    }
+
+    [Fact]
+    public async Task ListByUserIdAsync_RoleFilterScopesToRequesterRole()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfProjectRepository(context);
+        var userId = Guid.NewGuid();
+
+        var owned = new Project { Id = Guid.NewGuid(), Name = "Owned Project", Description = "d" };
+        var memberOf = new Project { Id = Guid.NewGuid(), Name = "Member Project", Description = "d" };
+        context.Projects.AddRange(owned, memberOf);
+        context.ProjectMembers.AddRange(
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = owned.Id, UserId = userId, Role = MemberRole.Owner },
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = memberOf.Id, UserId = userId, Role = MemberRole.Member }
+        );
+        await context.SaveChangesAsync();
+
+        var page = await repo.ListByUserIdAsync(userId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: MemberRole.Owner, skip: 0, take: 20);
+
+        Assert.Single(page.Items);
+        Assert.Equal(owned.Id, page.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task ListByUserIdAsync_SkipTakePagesResultsAndReturnsTotalCount()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfProjectRepository(context);
+        var userId = Guid.NewGuid();
+
+        for (var i = 0; i < 5; i++)
+        {
+            var project = new Project { Id = Guid.NewGuid(), Name = $"Project {i}", Description = "d" };
+            context.Projects.Add(project);
+            context.ProjectMembers.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = project.Id, UserId = userId, Role = MemberRole.Owner });
+        }
+        await context.SaveChangesAsync();
+
+        var page = await repo.ListByUserIdAsync(userId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: null, skip: 2, take: 2);
+
+        Assert.Equal(5, page.TotalCount);
+        Assert.Equal(2, page.Items.Count);
+        Assert.Equal("Project 2", page.Items[0].Name);
+        Assert.Equal("Project 3", page.Items[1].Name);
+    }
 }
 
 public class EfProjectMemberRepositoryTests
@@ -198,6 +279,32 @@ public class EfProjectMemberRepositoryTests
 
         var saved = await context.ProjectMembers.FindAsync(member.Id);
         Assert.Null(saved);
+    }
+
+    [Fact]
+    public async Task GetRolesByProjectAndUserAsync_ReturnsRequesterRolePerProject()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString)) return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfProjectMemberRepository(context);
+
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var project = new Project { Id = projectId, Name = "Roles Test", Description = "d" };
+        context.Projects.Add(project);
+        context.ProjectMembers.AddRange(
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = userId, Role = MemberRole.Owner },
+            new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = otherUserId, Role = MemberRole.Member }
+        );
+        await context.SaveChangesAsync();
+
+        var roles = await repo.GetRolesByProjectAndUserAsync([projectId], userId);
+
+        Assert.Equal(MemberRole.Owner, roles[projectId]);
     }
 }
 

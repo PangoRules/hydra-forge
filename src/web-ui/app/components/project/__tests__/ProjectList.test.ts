@@ -9,6 +9,7 @@ const makeProject = (id: string, name: string, description: string | null = 'A t
   createdAt: new Date().toISOString(),
   archivedAt: null,
   memberCount: 1,
+  myRole: 0
 })
 
 describe('ProjectList', () => {

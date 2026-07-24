@@ -222,6 +222,37 @@ public class ProjectServiceTests
         Assert.Equal(projectId, log.ProjectId);
     }
 
+    [Fact]
+    public async Task GetAllAsync_ReturnsPagedProjectsWithMyRole()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
+        var userId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project", Description = "d" });
+        memberRepo.Members.Add(new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = userId, Role = MemberRole.Owner });
+
+        var result = await handler.GetAllAsync(userId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: null, skip: 0, take: 20);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value.Items);
+        Assert.Equal(MemberRole.Owner, result.Value.Items[0].MyRole);
+        Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ClampsTakeToMaxOneHundred()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter);
+        var userId = Guid.NewGuid();
+
+        var result = await handler.GetAllAsync(userId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: null, skip: 0, take: 9999);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(100, repo.LastTake);
+    }
+
     private static (
         InMemoryProjectRepository repo,
         InMemoryColumnRepository columnRepo,
@@ -249,6 +280,7 @@ public class ProjectServiceTests
 internal class InMemoryProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = [];
+    public int LastTake { get; private set; }
 
     public Task AddAsync(Project project, CancellationToken ct = default)
     {
@@ -262,8 +294,40 @@ internal class InMemoryProjectRepository : IProjectRepository
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(Projects.FirstOrDefault(p => p.Id == id));
 
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Project>>(Projects);
+    public Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        LastTake = take;
+
+        var filtered = Projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+
+        var all = sorted.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
 
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
@@ -346,6 +410,19 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
             .GroupBy(m => m.ProjectId)
             .ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
+    }
+
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        var idList = projectIds.ToList();
+        var roles = Members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
 
     public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)

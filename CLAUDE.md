@@ -211,7 +211,8 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 ### Nuxt UI v4 patterns
 
 - **UModal:** `v-model:open` for two-way binding. Content in named slots (`#body`, `#header`, `#footer`). Default slot is `DialogTrigger`, not modal content. No `UOverlay` component — overlay built into `UModal` via `overlay` prop (default `true`).
-- **USelect:** No `clearable` prop. Wrap in relative container with absolute ghost `UButton` (X icon) to clear.
+- **USelect:** No `clearable` prop. Wrap in relative container with absolute ghost `UButton` (X icon) to clear. Additionally, USelect v4's internal `SelectItem` component rejects empty-string values — never use `value: ''` in items. Use a non-empty sentinel (e.g. `'all'`) and translate to `''`/`null` at the emit site.
+- **openapi-typescript enum typing:** `openapi-typescript` may type string-valued enum fields (serialized by `JsonStringEnumConverter`) as `number` in `api.d.ts`. Handle both types in cell templates (`displayRole` function checking `typeof`). Cast test fixtures with `as any` to satisfy typecheck; the actual API response at runtime is the string name.
 - **vue-draggable-plus** removed — SSR-incompatible with Nuxt 4. Use plain `v-for`; native HTML5 drag-and-drop planned.
 - **`import.meta.client`** not usable in Vue template expressions — define as `const isClient = import.meta.client` in `<script>`.
 - **Card detail panel version ownership** — `CardModal.vue` owns the single `card` ref (and `card.value.version`) for the lifetime of the open modal. Panels under it that mutate a `Card` field (`CardDescription`, `CardMetadata`) read `props.card.version` at call time and emit `'update:card': [CardResponse]` with the server's response on success — never cache `version` locally inside a panel (D-41).
