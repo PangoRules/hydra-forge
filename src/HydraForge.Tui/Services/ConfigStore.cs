@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using HydraForge.Tui.Models;
 
@@ -16,9 +15,9 @@ public class ConfigStore
     private readonly string _configPath;
 
     public ConfigStore() : this(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".config",
-        "hydraforge"))
+        AppContext.BaseDirectory,
+        "..", "..", "..",
+        ".hydraforge"))
     {
     }
 
@@ -44,13 +43,6 @@ public class ConfigStore
 
         var json = JsonSerializer.Serialize(config, JsonOptions);
         File.WriteAllText(_configPath, json);
-
-        // Set 0600 permissions on POSIX
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            File.SetUnixFileMode(_configPath,
-                UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        }
     }
 
     public virtual void Clear()
