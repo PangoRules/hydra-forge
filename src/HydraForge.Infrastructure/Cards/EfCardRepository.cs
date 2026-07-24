@@ -36,13 +36,19 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         if (filter.Type.HasValue)
             query = query.Where(c => c.Type == filter.Type.Value);
 
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+            query = query.Where(c => EF.Functions.ILike(c.Title, $"%{filter.Search}%"));
+
+        if (filter.ArchivedLimit.HasValue)
+            query = query.OrderByDescending(c => c.ArchivedAt ?? c.CreatedAt).Take(filter.ArchivedLimit.Value);
+
         return await query.OrderBy(c => c.Position).ToListAsync(ct);
     }
 
     public async Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
     {
         var max = await context.Cards
-            .Where(c => c.ProjectId == projectId && c.ArchivedAt == null)
+            .Where(c => c.ProjectId == projectId)
             .MaxAsync(c => (int?)c.CardNumber, ct);
         return max ?? 0;
     }

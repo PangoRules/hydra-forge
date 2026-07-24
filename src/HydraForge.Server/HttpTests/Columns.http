@@ -37,7 +37,8 @@ X-Correlation-Id: smoke-test-col-002
   "description": "Project for column smoke test",
   "gitProvider": "github",
   "gitRemoteUrl": "https://github.com/test/test.git",
-  "name": "Column Smoke Test Project"
+  "name": "Column Smoke Test Project",
+  "template": "Software"
 }
 
 
@@ -327,6 +328,6 @@ X-Correlation-Id: smoke-test-col-021
 
 # ── Cleanup ─────────────────────────────────────────────────
 
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/toggle-archive HTTP/1.1
 Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-col-022

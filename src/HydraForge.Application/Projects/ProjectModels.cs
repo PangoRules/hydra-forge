@@ -8,7 +8,8 @@ public record CreateProjectRequest(
     string Name,
     string Description,
     string? GitRemoteUrl,
-    string? GitProvider
+    string? GitProvider,
+    ColumnTemplate Template = ColumnTemplate.General
 );
 
 public record UpdateProjectRequest(
@@ -61,8 +62,11 @@ public record MemberResponse(
 public record ProjectListResponse(
     Guid Id,
     string Name,
-    string Description,
+    string? Description,
     DateTime CreatedAt,
     DateTime? ArchivedAt,
-    int MemberCount
+    int MemberCount,
+    MemberRole MyRole
 );
+
+public record ProjectListPageResponse(IReadOnlyList<ProjectListResponse> Items, int TotalCount);

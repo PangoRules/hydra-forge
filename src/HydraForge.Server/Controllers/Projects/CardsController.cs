@@ -16,17 +16,21 @@ namespace HydraForge.Server.Controllers.Projects;
 public class CardsController(CardService cardService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(AppCards.CardListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(
         Guid projectId,
         [FromQuery] Guid? columnId,
         [FromQuery] bool includeArchived = false,
         [FromQuery] Guid? assigneeUserId = null,
-        [FromQuery] CardType? type = null
+        [FromQuery] CardType? type = null,
+        [FromQuery] string? search = null,
+        [FromQuery] int? archivedLimit = null
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type);
+        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type, search, archivedLimit);
         var result = await cardService.ListAsync(projectId, filter, userId);
 
         if (result.IsFailure)
@@ -39,6 +43,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpGet("{cardIdOrNumber}")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdOrNumber(Guid projectId, string cardIdOrNumber)
     {
         var userId = User.GetRequiredUserId();
@@ -67,6 +73,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(
         Guid projectId,
         [FromBody] AppCards.CreateCardRequest request
@@ -82,7 +90,8 @@ public class CardsController(CardService cardService) : ControllerBase
             request.Description,
             request.Type,
             request.ParentCardId,
-            request.DueAt
+            request.DueAt,
+            request.AssigneeUserIds
         );
         var result = await cardService.CreateAsync(cmd);
 
@@ -100,6 +109,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPut("{cardId:guid}")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid cardId,
@@ -130,6 +141,9 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/move")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AppCards.BlockedMoveWarningResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Move(
         Guid projectId,
         Guid cardId,
@@ -183,6 +197,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/assignees")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Assign(
         Guid projectId,
         Guid cardId,
@@ -203,6 +219,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpDelete("{cardId:guid}/assignees/{assigneeUserId:guid}")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Unassign(Guid projectId, Guid cardId, Guid assigneeUserId)
     {
         var userId = User.GetRequiredUserId();
@@ -219,6 +237,8 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/archive")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Archive(
         Guid projectId,
         Guid cardId,
@@ -238,7 +258,31 @@ public class CardsController(CardService cardService) : ControllerBase
         return Ok(MapToResponse(result.Value));
     }
 
+    [HttpPost("{cardId:guid}/restore")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(
+        Guid projectId,
+        Guid cardId,
+        [FromBody] AppCards.RestoreCardRequest request
+    )
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new AppCards.RestoreCardCommand(projectId, cardId, userId, request.Version);
+        var result = await cardService.RestoreAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return Ok(MapToResponse(result.Value));
+    }
+
     [HttpDelete("{cardId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();

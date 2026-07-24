@@ -1,7 +1,10 @@
 namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -147,7 +150,7 @@ public class ProjectsControllerTests
     }
 
     [Fact]
-    public async Task Delete_NonOwner_Returns403()
+    public async Task ToggleArchive_NonOwner_Returns403()
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
@@ -155,10 +158,10 @@ public class ProjectsControllerTests
         var token = factory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
-        factory.AddProject(new Project { Id = projectId, Name = "Delete Test" });
+        factory.AddProject(new Project { Id = projectId, Name = "Archive Test" });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/toggle-archive");
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -195,6 +198,31 @@ public class ProjectsControllerTests
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task List_ReturnsPagedResponseWithMyRole()
+    {
+        var factory = new ProjectsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Listed Project", Description = "d" });
+        factory.AddMember(new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = userId, Role = MemberRole.Owner });
+        var token = factory.IssueToken(userId, "testuser", isAdmin: false);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/Projects?search=Listed&sortBy=Name&take=10");
+
+        response.EnsureSuccessStatusCode();
+        var jsonOpts = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        jsonOpts.Converters.Add(new JsonStringEnumConverter());
+        var body = await response.Content.ReadFromJsonAsync<ProjectListPageResponse>(jsonOpts);
+        Assert.NotNull(body);
+        Assert.Single(body.Items);
+        Assert.Equal("Listed Project", body.Items[0].Name);
+        Assert.Equal(MemberRole.Owner, body.Items[0].MyRole);
+        Assert.Equal(1, body.TotalCount);
     }
 }
 
@@ -346,8 +374,31 @@ internal class TestProjectRepository : IProjectRepository
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<Project?>(_projects.FirstOrDefault(p => p.Id == id));
 
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Project>>(_projects);
+    public Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var filtered = _projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+
+        var all = filtered.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
 
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
@@ -432,6 +483,18 @@ internal class TestProjectMemberRepository : IProjectMemberRepository
             .GroupBy(m => m.ProjectId)
             .ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
+    }
+
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = _members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
 
     public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)

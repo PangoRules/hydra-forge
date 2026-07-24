@@ -497,8 +497,25 @@ internal class CCTestProjectRepository : HydraForge.Application.Projects.IProjec
     public Task AddAsync(Project project, CancellationToken ct = default) { _projects.Add(project); return Task.CompletedTask; }
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_projects.FirstOrDefault(p => p.Id == id));
-    public Task<IReadOnlyList<Project>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Project>>(_projects);
+    public Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var filtered = _projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        var all = filtered.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
         var idx = _projects.FindIndex(p => p.Id == project.Id);
@@ -532,7 +549,12 @@ internal class CCTestCardRepository : HydraForge.Application.Cards.ICardReposito
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
     public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Card>>(_cards.Where(c => c.ProjectId == projectId).ToList());
+    {
+        var query = _cards.Where(c => c.ProjectId == projectId);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+            query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
+        return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
+    }
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
     public Task AddAsync(Card card, CancellationToken ct = default) { _cards.Add(card); return Task.CompletedTask; }
@@ -564,6 +586,7 @@ internal class CCTestCardAssigneeRepository : HydraForge.Application.Cards.ICard
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.CardId == cardId).ToList());
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { _assignees.Add(assignee); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { _assignees.AddRange(assignees); return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { _assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
     public Task<IReadOnlyList<CardAssignee>> ListByUserAsync(Guid userId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.UserId == userId).ToList());
@@ -580,6 +603,7 @@ internal class CCTestCardWatcherRepository : HydraForge.Application.Cards.ICardW
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardWatcher>>(_watchers.Where(w => w.CardId == cardId).ToList());
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { _watchers.Add(watcher); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { _watchers.AddRange(watchers); return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { _watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }
 
@@ -625,6 +649,15 @@ internal class CCTestProjectMemberRepository : HydraForge.Application.Projects.I
         var counts = _members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = _members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
+    }
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { _members.Add(member); return Task.CompletedTask; }
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
@@ -645,8 +678,8 @@ internal class CCTestUserRepository : HydraForge.Application.Auth.IUserRepositor
         => Task.FromResult<IReadOnlyDictionary<Guid, User>>(_users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(_users.FirstOrDefault(u => u.Username == username));
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<string, User>>(_users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+=> Task.FromResult<IReadOnlyDictionary<string, User>>(_users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task CreateAsync(User user) { _users.Add(user); return Task.CompletedTask; }

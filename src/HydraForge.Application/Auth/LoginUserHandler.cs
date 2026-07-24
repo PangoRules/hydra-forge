@@ -10,7 +10,7 @@ public interface IUserRepository
     Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
     Task<User?> FindByUsernameAsync(string username);
-    Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default);
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();
     Task CreateAsync(User user);
@@ -32,6 +32,8 @@ public interface IAccessTokenIssuer
 public record LoginRequest(string Username, string Password);
 
 public record AccessToken(string Value, DateTimeOffset ExpiresAt);
+
+public record RefreshTokenResponse(string AccessToken, DateTimeOffset ExpiresAt);
 
 public record LoginResponse(
     string AccessToken,

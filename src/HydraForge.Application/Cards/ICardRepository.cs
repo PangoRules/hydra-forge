@@ -46,6 +46,7 @@ public interface ICardAssigneeRepository
     );
     Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
     Task AddAsync(CardAssignee assignee, CancellationToken ct = default);
+    Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default);
     Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);
 }
 
@@ -62,6 +63,7 @@ public interface ICardWatcherRepository
     );
     Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default);
     Task AddAsync(CardWatcher watcher, CancellationToken ct = default);
+    Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default);
     Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default);
 }
 

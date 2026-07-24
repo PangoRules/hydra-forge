@@ -1,5 +1,6 @@
 using HydraForge.Application.Projects;
 using HydraForge.Application.Auth;
+using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,8 @@ public class ProjectsController(
 ) : ControllerBase
 {
     [HttpPost]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -25,7 +28,8 @@ public class ProjectsController(
             request.Name,
             request.Description,
             request.GitRemoteUrl,
-            request.GitProvider
+            request.GitProvider,
+            request.Template
         );
         var result = await projectService.CreateAsync(cmd);
 
@@ -67,31 +71,73 @@ public class ProjectsController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> List()
+    [ProducesResponseType(typeof(ProjectListPageResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> List(
+        [FromQuery] bool includeArchived = false,
+        [FromQuery] string? search = null,
+        [FromQuery] ProjectSortField sortBy = ProjectSortField.CreatedAt,
+        [FromQuery] bool sortDescending = true,
+        [FromQuery] MemberRole? role = null,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 20
+    )
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await projectService.GetAllAsync(userId);
+        var result = await projectService.GetAllAsync(
+            userId,
+            includeArchived,
+            search,
+            sortBy,
+            sortDescending,
+            role,
+            skip,
+            take
+        );
 
         if (result.IsFailure)
         {
             return this.ToProblemResult(result.Error);
         }
 
-        var response = result
-            .Value.Select(p => new ProjectListResponse(
-                p.Id,
-                p.Name,
-                p.Description,
-                p.CreatedAt,
-                p.ArchivedAt,
-                p.MemberCount
-            ))
-            .ToList();
+        var response = new ProjectListPageResponse(
+            [
+                .. result.Value.Items.Select(p => new ProjectListResponse(
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.CreatedAt,
+                    p.ArchivedAt,
+                    p.MemberCount,
+                    p.MyRole
+                )),
+            ],
+            result.Value.TotalCount
+        );
         return Ok(response);
     }
 
+    [HttpPost("{projectId:guid}/toggle-archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleArchive(Guid projectId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new ToggleProjectArchiveCommand(projectId, userId);
+        var result = await projectService.ToggleArchiveAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return NoContent();
+    }
+
     [HttpGet("{projectId:guid}")]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -136,6 +182,8 @@ public class ProjectsController(
     }
 
     [HttpPut("{projectId:guid}")]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid projectId, [FromBody] UpdateProjectRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -187,23 +235,9 @@ public class ProjectsController(
         return Ok(response);
     }
 
-    [HttpDelete("{projectId:guid}")]
-    public async Task<IActionResult> Delete(Guid projectId)
-    {
-        var userId = User.GetRequiredUserId();
-
-        var cmd = new ArchiveProjectCommand(projectId, userId);
-        var result = await projectService.ArchiveAsync(cmd);
-
-        if (result.IsFailure)
-        {
-            return this.ToProblemResult(result.Error);
-        }
-
-        return NoContent();
-    }
-
     [HttpGet("{projectId:guid}/members")]
+    [ProducesResponseType(typeof(List<MemberResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListMembers(Guid projectId)
     {
         var userId = User.GetRequiredUserId();
@@ -221,6 +255,8 @@ public class ProjectsController(
     }
 
     [HttpPost("{projectId:guid}/members")]
+    [ProducesResponseType(typeof(MemberResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMember(Guid projectId, [FromBody] AddMemberRequest request)
     {
         var userId = User.GetRequiredUserId();
@@ -244,6 +280,8 @@ public class ProjectsController(
     }
 
     [HttpPut("{projectId:guid}/members/{memberId:guid}")]
+    [ProducesResponseType(typeof(MemberResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMember(
         Guid projectId,
         Guid memberId,
@@ -271,6 +309,8 @@ public class ProjectsController(
     }
 
     [HttpDelete("{projectId:guid}/members/{memberId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMember(Guid projectId, Guid memberId)
     {
         var userId = User.GetRequiredUserId();

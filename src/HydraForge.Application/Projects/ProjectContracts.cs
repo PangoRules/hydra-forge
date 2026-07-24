@@ -7,7 +7,8 @@ public record CreateProjectCommand(
     string Name,
     string Description,
     string? GitRemoteUrl,
-    string? GitProvider
+    string? GitProvider,
+    ColumnTemplate Template = ColumnTemplate.General
 );
 
 public record UpdateProjectCommand(
@@ -19,9 +20,7 @@ public record UpdateProjectCommand(
     string? GitProvider
 );
 
-public record ArchiveProjectCommand(Guid ProjectId, Guid ActorId);
-
-public record DeleteProjectCommand(Guid ProjectId, Guid ActorId);
+public record ToggleProjectArchiveCommand(Guid ProjectId, Guid ActorId);
 
 public record AddProjectMemberCommand(
     Guid ProjectId,
@@ -62,5 +61,8 @@ public record ProjectListDto(
     string Description,
     DateTime CreatedAt,
     DateTime? ArchivedAt,
-    int MemberCount
+    int MemberCount,
+    MemberRole MyRole
 );
+
+public record ProjectListPageDto(IReadOnlyList<ProjectListDto> Items, int TotalCount);

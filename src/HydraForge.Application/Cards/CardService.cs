@@ -50,67 +50,139 @@ public class CardService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Column not found.")
             );
 
-        var maxNumber = await _cardRepo.GetMaxCardNumberAsync(cmd.ProjectId, ct);
-        var cardCount = await _cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
-        if (cmd.ParentCardId.HasValue)
+        // Retry on unique constraint violation (race condition on CardNumber)
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
-            if (parentCard == null)
-                return Result<CardDto>.Failure(
-                    new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
+            var maxNumber = await _cardRepo.GetMaxCardNumberAsync(cmd.ProjectId, ct);
+            var cardCount = await _cardRepo.CountByColumnIdAsync(cmd.ColumnId, ct);
+            if (cmd.ParentCardId.HasValue)
+            {
+                Card? parentCard = await _cardRepo.GetByIdAsync(cmd.ParentCardId.Value, ct);
+                if (parentCard == null)
+                    return Result<CardDto>.Failure(
+                        new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
+                    );
+
+                var parentError = Card.ValidateParent(
+                    new Card
+                    {
+                        Id = Guid.Empty,
+                        ProjectId = cmd.ProjectId,
+                        Type = cmd.Type,
+                    },
+                    parentCard
+                );
+                if (parentError != null)
+                    return Result<CardDto>.Failure(parentError);
+            }
+
+            var card = new Card
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = cmd.ProjectId,
+                ColumnId = cmd.ColumnId,
+                ParentCardId = cmd.ParentCardId,
+                CardNumber = maxNumber + 1,
+                Title = cmd.Title,
+                Description = cmd.Description,
+                Type = cmd.Type,
+                Position = cardCount,
+                DueAt = cmd.DueAt,
+                Version = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                MovedAt = DateTime.UtcNow,
+            };
+
+            try
+            {
+                await _cardRepo.AddAsync(card, ct);
+                // Success - exit retry loop
+                await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+                await _auditLogWriter.WriteAsync(
+                    new AuditLogRequest(
+                        cmd.ActorId,
+                        AuditLogScope.Project,
+                        "Card",
+                        card.Id,
+                        "Created",
+                        cmd.ProjectId,
+                        null,
+                        null
+                    ),
+                    ct
                 );
 
-            var parentError = Card.ValidateParentEpic(
-                new Card
+                // Assign requested users after card creation (batch flow — no N+1)
+                if (cmd.AssigneeUserIds is { Count: > 0 })
                 {
-                    Id = Guid.Empty,
-                    ProjectId = cmd.ProjectId,
-                    Type = cmd.Type,
-                },
-                parentCard
-            );
-            if (parentError != null)
-                return Result<CardDto>.Failure(parentError);
+                    var usersById = await _userRepo.FindByIdsAsync(cmd.AssigneeUserIds, ct);
+                    if (usersById.Count > 0)
+                    {
+                        var existingAssignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
+                        var existingWatchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+                        var existingAssigneeUserIds = existingAssignees.Select(a => a.UserId).ToHashSet();
+                        var existingWatcherUserIds = existingWatchers.Select(w => w.UserId).ToHashSet();
+
+                        var newAssignees = new List<CardAssignee>(usersById.Count);
+                        var newWatchers = new List<CardWatcher>(usersById.Count);
+
+                        foreach (var userId in usersById.Keys)
+                        {
+                            if (existingAssigneeUserIds.Contains(userId))
+                                continue;
+
+                            newAssignees.Add(new CardAssignee
+                            {
+                                Id = Guid.NewGuid(),
+                                CardId = card.Id,
+                                UserId = userId,
+                                AssignedAt = DateTime.UtcNow,
+                                AssignedByUserId = cmd.ActorId,
+                            });
+
+                            if (!existingWatcherUserIds.Contains(userId))
+                            {
+                                newWatchers.Add(new CardWatcher
+                                {
+                                    CardId = card.Id,
+                                    UserId = userId,
+                                    AddedAt = DateTime.UtcNow,
+                                });
+                            }
+                        }
+
+                        if (newAssignees.Count > 0)
+                            await _assigneeRepo.AddRangeAsync(newAssignees, ct);
+                        if (newWatchers.Count > 0)
+                            await _watcherRepo.AddRangeAsync(newWatchers, ct);
+                    }
+                }
+
+                await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
+
+                return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+            }
+            catch (Exception ex) when (ex.Message.Contains("23505") 
+                || ex.Message.Contains("duplicate key") 
+                || ex.Message.Contains("IX_cards_ProjectId_CardNumber")
+                || ex.InnerException?.Message.Contains("23505") == true
+                || ex.InnerException?.Message.Contains("duplicate key") == true)
+            {
+                // Unique constraint violation on CardNumber - retry with fresh max
+                if (attempt == maxRetries - 1)
+                    return Result<CardDto>.Failure(
+                        new Error(DomainErrorCodes.Cards.ConcurrencyConflict, "Failed to generate unique card number after retries.")
+                    );
+                // Continue loop to retry
+            }
         }
 
-        var card = new Card
-        {
-            Id = Guid.NewGuid(),
-            ProjectId = cmd.ProjectId,
-            ColumnId = cmd.ColumnId,
-            ParentCardId = cmd.ParentCardId,
-            CardNumber = maxNumber + 1,
-            Title = cmd.Title,
-            Description = cmd.Description,
-            Type = cmd.Type,
-            Position = cardCount,
-            DueAt = cmd.DueAt,
-            Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            MovedAt = DateTime.UtcNow,
-        };
-
-        await _cardRepo.AddAsync(card, ct);
-        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-
-        await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(
-                cmd.ActorId,
-                AuditLogScope.Project,
-                "Card",
-                card.Id,
-                "Created",
-                cmd.ProjectId,
-                null,
-                null
-            ),
-            ct
+        return Result<CardDto>.Failure(
+            new Error(DomainErrorCodes.Cards.ConcurrencyConflict, "Failed to generate unique card number after retries.")
         );
-
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Created, ct);
-
-        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
     private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
@@ -253,7 +325,7 @@ public class CardService(
                     new Error(DomainErrorCodes.Cards.NotFound, "Parent card not found.")
                 );
 
-            var parentError = Card.ValidateParentEpic(card, parentCard);
+            var parentError = Card.ValidateParent(card, parentCard);
             if (parentError != null)
                 return Result<CardDto>.Failure(parentError);
         }
@@ -666,6 +738,60 @@ public class CardService(
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
+    public async Task<Result<CardDto>> RestoreAsync(
+        RestoreCardCommand cmd,
+        CancellationToken ct = default
+    )
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        if (card.Version != cmd.Version)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.ConcurrencyMismatch, "Card has been modified.")
+            );
+
+        if (card.ArchivedAt == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.Archived, "Card is not archived.")
+            );
+
+        var maxPosition = await _cardRepo.CountByColumnIdAsync(card.ColumnId, ct);
+
+        card.Restore();
+        card.Position = maxPosition + 1;
+
+        await _cardRepo.UpdateAsync(card, ct);
+        await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Card",
+                card.Id,
+                "Restored",
+                cmd.ProjectId,
+                null,
+                null
+            ),
+            ct
+        );
+
+        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Restored, ct);
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+    }
+
     public async Task<Result> DeleteAsync(DeleteCardCommand cmd, CancellationToken ct = default)
     {
         var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
@@ -705,24 +831,34 @@ public class CardService(
     private async Task<CardDto> MapToDtoAsync(Card card, CancellationToken ct)
     {
         var assignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
-        var assigneeDtos = new List<CardAssigneeDto>();
-        foreach (var a in assignees)
-        {
-            var user = await _userRepo.FindByIdAsync(a.UserId, ct);
-            assigneeDtos.Add(
-                new CardAssigneeDto(a.Id, a.UserId, user?.Username ?? string.Empty, a.AssignedAt)
-            );
-        }
-
         var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
-        var watcherDtos = new List<CardWatcherDto>();
-        foreach (var w in watchers)
-        {
-            var user = await _userRepo.FindByIdAsync(w.UserId, ct);
-            watcherDtos.Add(
-                new CardWatcherDto(w.UserId, user?.Username ?? string.Empty, w.AddedAt)
-            );
-        }
+
+        var allUserIds = assignees
+            .Select(a => a.UserId)
+            .Concat(watchers.Select(w => w.UserId))
+            .Distinct()
+            .ToList();
+
+        var usersById = allUserIds.Count > 0
+            ? await _userRepo.FindByIdsAsync(allUserIds, ct)
+            : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+
+        var assigneeDtos = assignees
+            .Select(a => new CardAssigneeDto(
+                a.Id,
+                a.UserId,
+                usersById.TryGetValue(a.UserId, out var u) ? u.Username : string.Empty,
+                a.AssignedAt
+            ))
+            .ToList();
+
+        var watcherDtos = watchers
+            .Select(w => new CardWatcherDto(
+                w.UserId,
+                usersById.TryGetValue(w.UserId, out var u) ? u.Username : string.Empty,
+                w.AddedAt
+            ))
+            .ToList();
 
         return new CardDto(
             card.Id,

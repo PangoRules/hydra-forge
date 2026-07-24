@@ -10,7 +10,8 @@ public record CreateCardCommand(
     string Description,
     CardType Type,
     Guid? ParentCardId,
-    DateTime? DueAt
+    DateTime? DueAt,
+    IReadOnlyList<Guid>? AssigneeUserIds
 );
 
 public record UpdateCardCommand(
@@ -50,6 +51,13 @@ public record UnassignCardCommand(
 );
 
 public record ArchiveCardCommand(
+    Guid ProjectId,
+    Guid CardId,
+    Guid ActorId,
+    int Version
+);
+
+public record RestoreCardCommand(
     Guid ProjectId,
     Guid CardId,
     Guid ActorId,
@@ -99,7 +107,9 @@ public record CardListFilter(
     Guid? ColumnId = null,
     bool IncludeArchived = false,
     Guid? AssigneeUserId = null,
-    CardType? Type = null
+    CardType? Type = null,
+    string? Search = null,
+    int? ArchivedLimit = 200
 );
 
 public record BlockedMoveWarningDto(
@@ -126,7 +136,8 @@ public record CreateCardRequest(
     string Description,
     CardType Type,
     Guid? ParentCardId,
-    DateTime? DueAt
+    DateTime? DueAt,
+    IReadOnlyList<Guid>? AssigneeUserIds
 );
 
 public record UpdateCardRequest(
@@ -150,6 +161,10 @@ public record AssignCardRequest(
 );
 
 public record ArchiveCardRequest(
+    int Version
+);
+
+public record RestoreCardRequest(
     int Version
 );
 

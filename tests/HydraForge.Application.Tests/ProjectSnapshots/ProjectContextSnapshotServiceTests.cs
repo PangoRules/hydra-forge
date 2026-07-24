@@ -173,7 +173,7 @@ internal class InMemoryCardRepository : ICardRepository
 
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
     {
-        var max = _cards.Where(c => c.ProjectId == projectId && c.ArchivedAt == null).Max(c => (int?)c.CardNumber);
+        var max = _cards.Where(c => c.ProjectId == projectId).Max(c => (int?)c.CardNumber);
         return Task.FromResult(max ?? 0);
     }
 

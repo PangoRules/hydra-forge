@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+@layer base {
+  html,
+  body,
+  #__nuxt {
+    height: 100%;
+    margin: 0;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+/* Modal: fast open/close transition */
+[data-slot="overlay"] {
+  transition: opacity 100ms ease;
+}
+
+[data-slot="overlay"] [data-slot="content"] {
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Nuxt build artifacts
+.nuxt/
+.cache/
+dist/
+.output/
+
+# Tests
+test-results/
+playwright-report/
+coverage/
+.vitest/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+*.txt
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

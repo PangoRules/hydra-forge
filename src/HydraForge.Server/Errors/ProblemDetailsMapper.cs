@@ -38,7 +38,7 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Cards.InvalidType => (400, "Invalid card type"),
             DomainErrorCodes.Cards.InvalidAssignee => (400, "Invalid assignee"),
             DomainErrorCodes.Cards.DuplicateAssignee => (409, "User is already assigned"),
-            DomainErrorCodes.Cards.InvalidParentEpic => (400, "Invalid parent epic"),
+            DomainErrorCodes.Cards.InvalidParent => (400, "Invalid parent"),
             DomainErrorCodes.Cards.ParentCycle => (400, "Parent cycle detected"),
             DomainErrorCodes.Cards.BlockedMoveWarning => (409, "Card has blockers"),
             DomainErrorCodes.Cards.ConcurrencyMismatch => (409, "Card has been modified"),

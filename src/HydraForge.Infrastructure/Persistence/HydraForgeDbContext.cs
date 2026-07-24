@@ -5,6 +5,7 @@ using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 public class HydraForgeDbContext : DbContext
@@ -93,7 +94,9 @@ public class HydraForgeDbContext : DbContext
 
         ConfigureEntity<CardRelationship>(modelBuilder, "card_relationships", b =>
         {
-            b.HasIndex(e => new { e.SourceCardId, e.TargetCardId }).IsUnique();
+            b.HasIndex(e => new { e.SourceCardId, e.TargetCardId })
+                .IsUnique()
+                .HasFilter("\"ArchivedAt\" IS NULL");
         });
 
         ConfigureEntity<CardWatcher>(modelBuilder, "card_watchers", b =>
@@ -121,6 +124,7 @@ public class HydraForgeDbContext : DbContext
         {
             b.HasIndex(e => e.ProjectId);
             b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
+            b.Property(e => e.DocType).HasColumnName("doc_type").HasConversion<int>().HasDefaultValue(DocType.Specification).IsRequired();
             b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(e => e.CardId).HasDatabaseName("ix_specs_card_id");
         });
@@ -140,6 +144,8 @@ public class HydraForgeDbContext : DbContext
             b.HasIndex(e => e.ProjectId);
             b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
             b.Property(e => e.SpecId).HasColumnName("spec_id");
+            b.Property(e => e.Status).HasColumnName("status").HasConversion<int>().HasDefaultValue(PlanStatus.Pending).IsRequired();
+            b.Property(e => e.Position).HasColumnName("position").HasDefaultValue(0).IsRequired();
             b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne<Spec>().WithMany().HasForeignKey(e => e.SpecId).OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(e => e.CardId).HasDatabaseName("ix_plans_card_id");

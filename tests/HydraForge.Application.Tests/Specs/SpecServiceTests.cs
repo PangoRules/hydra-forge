@@ -24,7 +24,7 @@ public class SpecServiceTests
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Spec Title", "Desc", "# Hello"));
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, DocType.Specification, "Spec Title", "Desc", "# Hello"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Version);
@@ -99,7 +99,7 @@ public class SpecServiceTests
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         var largeContent = new string('x', 1_000_001);
 
-        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Big", null, largeContent));
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, DocType.Specification, "Big", null, largeContent));
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Specs.MarkdownPayloadTooLarge, result.Error.Code);
@@ -118,7 +118,7 @@ public class SpecServiceTests
 
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, "Spec Title", "Desc", "# Hello"));
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, DocType.Specification, "Spec Title", "Desc", "# Hello"));
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -249,6 +249,15 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
         var idList = projectIds.ToList();
         var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
+    }
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
     public void Add(ProjectMember member) => AddMemberAsync(member).GetAwaiter().GetResult();

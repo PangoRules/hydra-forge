@@ -37,6 +37,18 @@ builder.Host.UseSerilog(
             )
 );
 
+var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000";
+var corsOriginList = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(corsOriginList)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
+
 builder.Services.AddOpenApi();
 builder
     .Services.AddControllers()
@@ -172,6 +184,8 @@ app.UseSerilogRequestLogging(options =>
         );
     };
 });
+
+app.UseCors();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();

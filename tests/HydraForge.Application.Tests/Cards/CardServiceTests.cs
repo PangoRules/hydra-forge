@@ -28,7 +28,7 @@ public class CardServiceTests
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(4, result.Value.CardNumber);
@@ -48,7 +48,7 @@ public class CardServiceTests
         cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Title = "Second" });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "Third Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "Third Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.Position);
@@ -67,7 +67,7 @@ public class CardServiceTests
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.CardNumber);
@@ -124,7 +124,7 @@ public class CardServiceTests
         var columnId = NewId();
 
         cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Type = CardType.Task, Title = "Task" });
-        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Type = CardType.Bug, Title = "Bug" });
+        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Type = CardType.Issue, Title = "Issue" });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
         var result = await service.ListAsync(projectId, new CardListFilter(Type: CardType.Task), actorId);
@@ -393,6 +393,70 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task RestoreAsync_ClearsArchivedAtAndRestoresToEndOfColumn()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+        var columnId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 0, Version = 1, ArchivedAt = DateTime.UtcNow });
+        cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Title = "Active card" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value.ArchivedAt);
+        var restoredCard = cardRepo.Cards.First(c => c.Id == cardId);
+        Assert.Null(restoredCard.ArchivedAt);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_NotArchived_ReturnsFailure()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1, ArchivedAt = null });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DomainErrorCodes.Cards.Archived, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_WritesAuditLog()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Position = 0, Version = 1, ArchivedAt = DateTime.UtcNow });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.RestoreAsync(new RestoreCardCommand(projectId, cardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        var req = Assert.Single(auditWriter.Writes);
+        Assert.Equal(actorId, req.ActorId);
+        Assert.Equal(AuditLogScope.Project, req.Scope);
+        Assert.Equal("Card", req.EntityType);
+        Assert.Equal(cardId, req.EntityId);
+        Assert.Equal("Restored", req.Action);
+        Assert.Equal(projectId, req.ProjectId);
+    }
+
+    [Fact]
     public async Task DeleteAsync_HardDeletesOnlyIfAllowed()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
@@ -425,7 +489,7 @@ public class CardServiceTests
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -678,6 +742,7 @@ internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository
         => Task.FromResult<IReadOnlyList<CardAssignee>>(Assignees.Where(a => a.CardId == cardId).ToList());
 
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { Assignees.Add(assignee); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { Assignees.AddRange(assignees); return Task.CompletedTask; }
     public void Add(CardAssignee assignee) => AddAsync(assignee).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
 }
@@ -696,6 +761,7 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
         => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
 
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { Watchers.Add(watcher); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { Watchers.AddRange(watchers); return Task.CompletedTask; }
     public void Add(CardWatcher watcher) => AddAsync(watcher).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }
@@ -788,6 +854,15 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
         var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var idList = projectIds.ToList();
+        var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
+    }
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
     public void Add(ProjectMember member) => AddMemberAsync(member).GetAwaiter().GetResult();
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
@@ -809,8 +884,8 @@ internal class InMemoryUserRepository : IUserRepository
         => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
     public Task<User?> FindByUsernameAsync(string username)
         => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+=> Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }

@@ -4,5 +4,6 @@ public enum RelationshipType
 {
     BlockedBy = 1,
     Precedes = 2,
-    Relates = 3
+    Relates = 3,
+    SpawnedFrom = 4
 }

@@ -46,11 +46,11 @@
 | FR-3 | Columns: Renamable, reorderable, per-project columns | ✅ |
 | FR-4 | Columns: Default set = Backlog → Spec-ing → Planned → In Dev → In Review → Done | ✅ |
 | FR-5 | Cards: Create, edit, delete, move between columns | ✅ |
-| FR-6 | Cards: Title, description, type (Task / Bug / Epic / Spec / Idea) | ✅ |
+| FR-6 | Cards: Title, description, type (Task / Issue / Goal / Idea) | ✅ |
 | FR-7 | Cards: Assignee(s) | ✅ |
 | FR-8 | Cards: Checklist with subtasks | ✅ |
 | FR-9 | Cards: Comments | ✅ |
-| FR-10 | Cards: Link child cards to parent Epic | ✅ |
+| FR-10 | Cards: Any card can parent any other card in the same project; cycles are rejected | ✅ |
 | FR-11 | Cards: Move by drag-and-drop (Web UI) and keyboard (TUI) | ✅ |
 | FR-12 | Cards: Linked to Specs and Plans | ✅ |
 | FR-13 | Specs: Long-form markdown documents linked to cards | ✅ |
@@ -460,8 +460,8 @@
 - [x] `ProjectArchiveService.Archive(projectId)`: sets `Project.ArchivedAt` (if/when added) + cascades to chat folder and sessions via `ChatArchiveService.ArchiveFolder`. Project archive is the entry point that triggers cascading archive down the chat subtree.
 - [x] Column CRUD + reordering + per-project default columns
 - [x] Card CRUD + move between columns + position ordering
-- [x] Card types: Task / Bug / Epic / Spec / Idea
-- [x] Epic → child card linking
+- [x] Card types: Task / Issue / Goal / Idea
+- [x] Goal → child card linking (any card type can be a parent)
 - [x] Checklists on cards (items, completion, assignee per item)
 - [x] Comments on cards + @mention extraction + CardWatcher auto-add
 - [x] File attachments on cards (local FS storage, S3-compatible abstraction)
@@ -477,23 +477,41 @@
 
 ### Phase 3: Project Space — Web UI 🌐
 > Goal: full project board usable in browser. Feature-complete project workspace.
+> **Status: Complete.** Detailed task list archived at `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md`.
 
-- [ ] Auth pages: login, first-run admin setup
-- [ ] Project list + create project flow
-- [ ] Board view: columns + cards, drag-and-drop move, column reorder
-- [ ] Card detail modal: title, description, type, assignees, checklist, comments, attachments, spec link, plan link
-- [ ] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
-- [ ] Blocked card lock icon + badge on board (always visible)
-- [ ] Soft warning modal on column move when blocked (points to blocking card)
-- [ ] Spec editor: versioned markdown, version history sidebar, restore
-- [ ] Plan editor: numbered steps markdown, version history
-- [ ] Archive card with dependents: warning modal listing affected cards
-- [ ] Real-time board updates via SignalR (no page refresh)
-- [ ] Presence dots on board and card detail
-- [ ] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
-- [ ] Keyboard shortcut reference overlay (`?`)
-- [ ] ARIA labels, focus management, WCAG AA color contrast (built in from day one)
-- [ ] Error display: typed toast with `detail` + `correlationId` copy button
+- [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
+- [x] Auth pages: login, first-run admin setup
+- [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page) — Not implemented — deferred to Phase 5 (Admin) or later.
+- [x] Project list + create project flow (`app/pages/projects/index.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`) — includes optional git remote URL + provider fields in advanced expander
+- [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
+- [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
+- [x] Card move with optimistic update + rollback on failure (via `useBoardStore` + `PUT /api/projects/{projectId}/Cards/{cardId}/move`)
+- [x] Column reorder persisted via `PUT /api/projects/{projectId}/Columns/reorder`
+- [x] Archive/restore project: archive action in project list context menu or settings; archived projects hidden from default list, accessible via a filter toggle
+- [x] Archive/restore card: archive action in card modal; archived cards hidden from default board view, accessible via a filter toggle; restore option in card modal
+- [x] Archive card with dependents: warning modal listing affected cards
+- [x] Card detail modal: desktop two-column layout + mobile tabbed layout (CardModal, CardMetadata, CardDescription with Tiptap editor, MarkdownEditor, archive/restore)
+- [x] Fix silent failures on `useApi()` errors in CardModal/BoardCard/CardCreateModal archive, restore, and create flows (D-40)
+- [x] Lift card-version ownership to `CardModal`, extract shared `lib/card-type.ts`/`lib/date.ts`, accessibility pass on save status (D-41)
+- [x] Checklist panel in card detail modal
+- [x] Comments panel in card detail modal
+- [x] Attachments panel in card detail modal
+- [x] Card metadata editor: type, due date, assignees
+- [x] E2E test foundation: Playwright, auth fixture, save/debounce + archive-restore + concurrency specs, CI job
+- [x] Dependency panel in card detail: view/add BlockedBy, Precedes, Relates — search cards by number/title
+- [x] Blocked card lock icon + badge on board (always visible)
+- [x] Soft warning modal on column move when blocked (points to blocking card)
+- [x] Spec editor: versioned markdown, version history sidebar, restore
+- [x] Plan editor: numbered steps markdown, version history
+- [x] Real-time board updates via SignalR (no page refresh)
+- [x] Presence dots on board and card detail
+- [x] Full keyboard navigation: board columns/cards with arrow keys, `n` new card, `m` move, `/` search, `Enter` open, `Escape` close
+- [x] Keyboard shortcut reference overlay (`?`)
+- [x] ARIA labels, focus management, WCAG AA color contrast
+- [x] Error display: toast on API failure with `detail` + `correlationId` copy button
+- [x] Project list redesign: server-paginated table with search, sort, role filter, archived toggle, page size selector
+- [x] Editable columns + project templates (Software/General/Blank)
+- [x] Card type redesign (Task/Issue/Goal/Idea)
 
 ### Phase 4: Project Space — TUI 🖥️
 > Goal: full project board usable in terminal. Feature parity with Web UI board.

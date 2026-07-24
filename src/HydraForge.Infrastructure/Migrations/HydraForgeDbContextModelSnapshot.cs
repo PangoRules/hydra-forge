@@ -1377,7 +1377,8 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SourceCardId", "TargetCardId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ArchivedAt\" IS NULL");
 
                     b.ToTable("card_relationships", (string)null);
                 });
@@ -1522,12 +1523,24 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<int>("Position")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("position");
+
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("SpecId")
                         .HasColumnType("uuid")
                         .HasColumnName("spec_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1710,6 +1723,12 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<int>("DocType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("doc_type");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");

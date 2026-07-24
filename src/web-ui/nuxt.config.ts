@@ -2,7 +2,9 @@
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
-    '@nuxt/ui'
+    '@nuxt/ui',
+    '@pinia/nuxt',
+    '@vite-pwa/nuxt'
   ],
 
   devtools: {
@@ -11,11 +13,55 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  colorMode: {
+    storage: 'cookie'
+  },
+
+  runtimeConfig: {
+    // Private — server-side only. Used by the /api/[...path] proxy route.
+    apiBaseUrl: process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000',
+    public: {
+      // Empty string → browser sends relative /api/... requests to Nuxt server,
+      // which proxies them via server/routes/api/[...path].ts. No CORS ever.
+      apiBaseUrl: '',
+      // Empty → relative /hubs/... (nginx handles in Docker).
+      // Set NUXT_PUBLIC_SIGNALR_BASE_URL=http://localhost:5000 for local dev
+      // to get direct WebSocket (bypasses Nuxt devProxy, avoids WS errors).
+      signalrBaseUrl: process.env.NUXT_PUBLIC_SIGNALR_BASE_URL ?? '',
+      authCookieMaxAge: parseInt(process.env.NUXT_PUBLIC_AUTH_COOKIE_MAX_AGE ?? '3600', 10),
+      authCookieSecure: process.env.NUXT_PUBLIC_AUTH_COOKIE_SECURE === 'true'
+    }
+  },
+
   routeRules: {
     '/': { prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
+
+  nitro: {
+    devProxy: {
+      '/hubs': {
+        target: `${process.env.NUXT_API_BASE_URL ?? 'http://localhost:5000'}/hubs`,
+        ws: true,
+        changeOrigin: true
+      }
+    }
+  },
+
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@microsoft/signalr',
+        '@tiptap/extension-placeholder',
+        '@tiptap/starter-kit',
+        '@tiptap/vue-3',
+        '@vueuse/core',
+        'marked',
+        'turndown'
+      ]
+    }
+  },
 
   eslint: {
     config: {
@@ -23,6 +69,30 @@ export default defineNuxtConfig({
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'HydraForge',
+      short_name: 'HydraForge',
+      description: 'Self-hosted AI workspace + project management',
+      theme_color: '#00C16A',
+      background_color: '#ffffff',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/favicon.ico',
+          sizes: '64x64',
+          type: 'image/x-icon'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      navigateFallbackAllowlist: [/^\/$/, /^\/projects/, /^\/login/],
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
     }
   }
 })

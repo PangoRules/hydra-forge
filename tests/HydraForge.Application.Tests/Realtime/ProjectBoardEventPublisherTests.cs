@@ -28,7 +28,7 @@ public class ProjectBoardEventPublisherTests
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsSuccess);
         Assert.Single(publisher.PublishedEvents);
@@ -49,7 +49,7 @@ public class ProjectBoardEventPublisherTests
         // No column added — create will fail validation
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
-        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null));
+        var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
         Assert.True(result.IsFailure);
         Assert.Empty(publisher.PublishedEvents);
@@ -102,7 +102,7 @@ internal class InMemoryCardRepository : ICardRepository
     public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default) => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null));
     public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.ProjectId == projectId && (filter.ColumnId is null || c.ColumnId == filter.ColumnId.Value) && (filter.IncludeArchived || c.ArchivedAt == null) && (!filter.Type.HasValue || c.Type == filter.Type.Value)).OrderBy(c => c.Position).ToList());
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) => Task.FromResult(Cards.Where(c => c.ProjectId == projectId && c.ArchivedAt == null).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
     public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
     public void Add(Card card) => AddAsync(card).GetAwaiter().GetResult();
     public Task UpdateAsync(Card card, CancellationToken ct = default) { var idx = Cards.FindIndex(c => c.Id == card.Id); if (idx >= 0) Cards[idx] = card; return Task.CompletedTask; }
@@ -119,6 +119,7 @@ internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository
     public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default) => Task.FromResult<ILookup<Guid, CardAssignee>>(Assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CardAssignee>>(Assignees.Where(a => a.CardId == cardId).ToList());
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { Assignees.Add(assignee); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { Assignees.AddRange(assignees); return Task.CompletedTask; }
     public void Add(CardAssignee assignee) => AddAsync(assignee).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
 }
@@ -130,6 +131,7 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
     public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default) => Task.FromResult<ILookup<Guid, CardWatcher>>(Watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { Watchers.Add(watcher); return Task.CompletedTask; }
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { Watchers.AddRange(watchers); return Task.CompletedTask; }
     public void Add(CardWatcher watcher) => AddAsync(watcher).GetAwaiter().GetResult();
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }
@@ -171,6 +173,7 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
     public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default) => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
     public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(m => m.ProjectId == projectId).ToList());
     public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default) { var idList = projectIds.ToList(); var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count()); return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts); }
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(IEnumerable<Guid> projectIds, Guid userId, CancellationToken ct = default) { var idList = projectIds.ToList(); var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role); return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles); }
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
     public void Add(ProjectMember member) => AddMemberAsync(member).GetAwaiter().GetResult();
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default) { var idx = Members.FindIndex(m => m.Id == member.Id); if (idx >= 0) Members[idx] = member; return Task.CompletedTask; }
@@ -183,7 +186,7 @@ internal class InMemoryUserRepository : IUserRepository
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
     public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }

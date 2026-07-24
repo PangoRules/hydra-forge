@@ -83,9 +83,9 @@ X-Correlation-Id: smoke-test-006
 
 ###
 
-# Archive (soft delete) project
+# Toggle archive state
 
-DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}} HTTP/1.1
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/toggle-archive HTTP/1.1
 Authorization: Bearer {{adminToken}}
 X-Correlation-Id: smoke-test-007
 

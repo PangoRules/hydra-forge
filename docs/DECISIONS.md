@@ -2,8 +2,8 @@
 
 > **Purpose:** Record every architectural and functional decision made during requirements gathering, along with the rationale. This prevents re-litigating settled topics and preserves context for future contributors.
 >
-> **Date:** 2026-06-02 (updated 2026-06-09)
-> **Status:** 10 original questions resolved + 21 new decisions added (D-13–D-34). D-3, D-7 revised/rejected. Ready for Phase 1.
+> **Date:** 2026-06-02 (updated 2026-06-25)
+> **Status:** 10 original questions resolved + 24 new decisions added (D-13–D-39). D-3, D-7 revised/rejected. Phase 3 Web UI complete. Ready for Phase 4 TUI.
 
 ---
 
@@ -81,8 +81,8 @@ Each entry has:
 | **Topic** | CardType enum values |
 | **Date** | 2026-06-02 |
 | **Status** | ✅ Settled |
-| **Decision** | **CardType enum:** `Task`, `Bug`, `Epic`, `Spec`, `Idea`. Plans are a **separate entity**, not a card type. |
-| **Rationale** | Epics are cards that group other cards (parent-child). Specs and Plans are rich markdown documents, distinct from cards. Keeping them as separate entities with links is cleaner than overloading Card. |
+| **Decision** | **CardType enum:** `Task`, `Issue`, `Goal`, `Idea`. Plans are a **separate entity**, not a card type. `Spec` card type retired (rows migrated to `Goal`); `Bug` renamed `Issue`; `Epic` renamed `Goal`; parent restriction removed — any card can parent any other card. |
+| **Rationale** | Original types were software-specific. Universal replacements (Goal/Issue/Idea) work across any domain. Epics-only parent restriction was unnecessary — cycle detection already prevents bad hierarchies. |
 | **Impact** | Domain model: `Card` has `CardType`. `Spec` and `Plan` are project-level entities owned by cards via `Spec.CardId` and `Plan.CardId` FKs (ownership — one card creates and owns its spec/plan, other cards can read but not edit). `Plan.SpecId` is an optional FK linking a plan to its parent specification. Each has version snapshot entities (`SpecVersion`, `PlanVersion`) storing full document state (title, description, content) for history + restore. |
 
 ---
@@ -191,7 +191,7 @@ Each entry has:
 | **Decision** | **Replace Swashbuckle/Swagger with built-in `Microsoft.AspNetCore.OpenApi` for doc generation + `Scalar.AspNetCore` for the interactive UI.** |
 | **Rationale** | Microsoft deprecated Swashbuckle in default templates starting .NET 9, and in .NET 10 the `Microsoft.OpenApi` library had a major v2 breaking change. Swashbuckle 10.x depends on `Microsoft.OpenApi` 2.x which removed the `Microsoft.OpenApi.Models` namespace, broke all type references (`OpenApiInfo`, `OpenApiSecurityScheme`, etc.), and restructured the public API. Rather than fight the breaking changes and maintain compatibility with a deprecated library, we switch to Microsoft's recommended path: `Microsoft.AspNetCore.OpenApi` (already in the project) generates the OpenAPI 3.1 document, and Scalar provides a modern dark-mode interactive reference UI. Scalar is actively maintained, has no legacy compatibility burden, and is the de-facto standard in the .NET ecosystem for replacing Swagger UI. |
 | **Alternatives considered** | 1. Fix Swashbuckle 10.x references to use root `Microsoft.OpenApi` namespace + new v2 API (rejected — the `Reference` property on security schemes was removed, security requirement API changed, and migration path is poorly documented / unstable). 2. Use `Microsoft.AspNetCore.OpenApi` for docs + `Swashbuckle.AspNetCore.SwaggerUI` for UI (rejected — adds complexity of mixing two systems with different transformer/filter models for no benefit over Scalar). |
-| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Removed `using Swashbuckle.AspNetCore.Annotations` and all `[SwaggerTag]`, `[SwaggerOperation]`, `[SwaggerResponse]` attributes from all 5 controllers. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. |
+| **Impact** | Removed `Swashbuckle.AspNetCore` and `Swashbuckle.AspNetCore.Annotations` packages. Replaced `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()` with `AddOpenApi()` / `MapOpenApi()` / `MapScalarApiReference()`. OpenAPI doc served at `/openapi/v1.json`. Scalar UI served at `/scalar/v1` (dev only). For customizing the OpenAPI doc (e.g. adding Bearer auth scheme), use `IOpenApiDocumentTransformer` / `IOpenApiOperationTransformer` instead of Swashbuckle filters. The `Microsoft.OpenApi.Models` namespace does not exist in OpenAPI.NET v2.x — all types live in root `Microsoft.OpenApi`. **Note:** `[ProducesResponseType]` attributes (built-in ASP.NET Core, distinct from Swashbuckle's `[SwaggerResponse]`) were later added to all controller actions to improve OpenAPI spec accuracy — these are standard MVC attributes and do not reintroduce Swashbuckle dependency. |
 
 ---
 
@@ -203,7 +203,7 @@ Each entry has:
 | D-2 | Dual interface | Full feature parity | ✅ |
 | D-3 | Offline | Rejected — server connection required, TUI locks gracefully | ❌ |
 | D-4 | Personas | 4 personas: Terminal, Team, Manager, AI | ✅ |
-| D-5 | Card types | Enum `Task/Bug/Epic/Spec/Idea`. Plan = own entity | ✅ |
+| D-5 | Card types | Enum `Task/Issue/Goal/Idea`. Plan = own entity. Any card can parent any card. | ✅ |
 | D-6 | Auth | Basic auth, no SSO | ✅ |
 | D-7 | Conflict resolution | Rejected — no offline = no sync conflicts | ❌ |
 | D-8 | Multi-tenant | No — fresh install per team | ✅ |
@@ -610,3 +610,158 @@ Chats
 | **Alternatives considered** | 1. Each service publishes directly to SignalR internally (rejected — couples services to SignalR, breaks Clean Architecture). 2. Domain events with a separate subscriber (rejected — over-engineered for current scale). |
 | **Impact** | All board mutations (cards, columns, checklists, comments, attachments, specs, plans, relationships) call IProjectBoardEventPublisher.PublishAsync after successful commit. Clients receive typed OnBoardEvent with the full envelope. |
 
+
+---
+
+## D-37: vue-draggable-plus Removal — Plain v-for for Board Lists
+
+| Field | Value |
+|---|---|
+| **Topic** | Drag-and-drop library for board columns and cards in the Web UI |
+| **Date** | 2026-06-23 |
+| **Status** | ✅ Settled |
+| **Decision** | **Remove `vue-draggable-plus` (SortableJS wrapper). Use plain `v-for` for column and card lists. Re-implement with native HTML5 drag-and-drop later.** |
+| **Rationale** | `vue-draggable-plus` is SSR-incompatible with Nuxt 4. SortableJS requires browser APIs (DOM measurements, event listeners) that fail during SSR. Wrapping in `ClientOnly` causes hydration mismatches because the server-rendered static list differs from the client-rendered draggable list. The `v-model` reactivity pattern also causes hydration warnings. Plain `v-for` is stable, SSR-safe, and sufficient for the current board view. Native HTML5 drag-and-drop (no library dependency) is planned for re-implementation in a follow-up task. |
+| **Alternatives considered** | 1. `@vueuse/core` `useDraggable` (rejected — free positioning, not list reordering). 2. `vue-smooth-dnd` (rejected — unmaintained, no Nuxt 4 support). 3. `sortablejs` directly with manual Vue integration (rejected — same SSR issues, more boilerplate). |
+| **Impact** | Board columns and cards render as static `v-for` lists. Card moves between columns are not yet implemented via drag-and-drop — they work via curl/API only. Column reorder also not yet implemented via drag. Both will be re-added with native HTML5 drag-and-drop. |
+
+---
+
+## D-38: Nuxt UI v4 UModal Usage Patterns
+
+| Field | Value |
+|---|---|
+| **Topic** | How to use UModal in Nuxt UI v4 for dialogs and overlays |
+| **Date** | 2026-06-24 |
+| **Status** | ✅ Settled |
+| **Decision** | **UModal uses `v-model:open` for two-way binding. Content goes in named slots (`#body`, `#header`, `#footer`). The default slot is a `DialogTrigger`, not modal content. No `UOverlay` component exists — the overlay is built into `UModal` via the `overlay` prop (defaults to `true`).** |
+| **Rationale** | Nuxt UI v4's `UModal` is built on `reka-ui` (Radix Vue) `DialogRoot`. The default slot renders as a `DialogTrigger` with `as-child` — putting content directly inside `<UModal>` makes it a trigger button rendered in-page, not an overlay modal. Named slots (`#body`, `#header`, `#footer`) are the correct way to provide modal content. The `overlay` prop (default `true`) controls the backdrop. `dismissible` (default `true`) controls ESC/click-outside close. `portal` (default `true`) renders content at the document root via `DialogPortal`. |
+| **Alternatives considered** | 1. `UOverlay` component (rejected — does not exist in Nuxt UI v4). 2. Custom overlay with Tailwind fixed positioning (rejected — `UModal` already handles portal, backdrop, focus trap, and accessibility). |
+| **Impact** | All modals in the Web UI must use `v-model:open` + named slots. The `close` prop enables the built-in X button. `dismissible` controls ESC/backdrop behavior. `transition` controls open/close animation. Component tests using `@vue/test-utils` `mount` cannot assert on portal-rendered content — use TypeScript compilation and lint to verify prop contracts instead. |
+
+---
+
+## D-39: USelect Clearable Workaround in Nuxt UI v4
+
+| Field | Value |
+|---|---|
+| **Topic** | How to provide a clear/reset button for USelect since v4 has no `clearable` prop |
+| **Date** | 2026-06-24 |
+| **Status** | ✅ Settled |
+| **Decision** | **USelect in Nuxt UI v4 has no `clearable` prop. Wrap the select in a `relative` container with an absolute-positioned ghost `UButton` (X icon, `right-6` to avoid overlapping the chevron) that sets the model to `undefined`. Only show the button when the model has a value.** |
+| **Rationale** | The `clearable` prop exists in some UI libraries but was not included in Nuxt UI v4's `USelect` component (built on `reka-ui` `SelectRoot`). The component's props list (lines 23-60 of `Select.vue`) does not include `clearable`. The trailing slot renders the chevron icon only. A custom clear button is the simplest workaround without forking the component. |
+| **Alternatives considered** | 1. Fork `USelect` to add `clearable` (rejected — maintenance burden). 2. Use a different select component (rejected — `USelect` is the standard Nuxt UI v4 select). 3. Require users to close and reopen the modal to clear (rejected — poor UX). |
+| **Impact** | Any `USelect` that needs a clear/reset option must use the wrapper pattern. The button uses `v-if="model"` to only appear when a value is selected. `right-6` positioning avoids overlapping the built-in chevron-down icon. |
+
+---
+
+## D-40: `useApi()` Throws — Call Sites Must try/catch, Never Destructure `{ error }` From an Unguarded Call
+
+| Field | Value |
+|---|---|
+| **Topic** | Why several "Failed to X" error toasts in the Web UI never fired on real API failures |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`useApi()`'s `onResponse` middleware (`app/composables/useApi.ts`) throws `ApiError` for any non-2xx, non-401 response — it never resolves with a populated `error` field. Every call site must wrap `await api.X(...)` in try/catch. Writing `const { error } = await api.X(...); if (error) { ... }` with no surrounding try/catch is a bug: the `await` throws before that line's destructuring runs, the function's promise rejects unhandled, and the `else`/`if (error)` branch (and its toast) is dead code.** |
+| **Rationale** | `CardModal.vue`'s `confirmArchive`/`handleRestore`, `BoardCard.vue`'s `confirmArchive`/`handleRestore`, and `CardCreateModal.vue`'s `handleCreate` were all written assuming a Result-style resolve (`{ data, error }`) — the pattern openapi-fetch uses by default. This project's `useApi()` deliberately overrides that with a throw-based middleware (so `ApiError` carries `status`/`code`/`detail`/`correlationId` from the RFC 7807 body) — documented in `CLAUDE.md`'s "Error types" bullet, but not enforced anywhere, so five call sites silently regressed to "click Archive, nothing happens, no toast, no error" on real failures. Found and fixed in `2026-06-25-phase-3-card-modal-hardening.md` Task 1. `CardDescription.vue` happened to handle this correctly already, because its `if (error) throw error` line is inside a `try { ... } catch (e) { saveError.value = e.message }` — the outer `await`'s rejection lands in that `catch` regardless of the dead `if` line. |
+| **Alternatives considered** | 1. Change `useApi()` to resolve with `{ error }` instead of throwing, matching openapi-fetch's default and every call site's assumption (rejected — `CLAUDE.md` already documents throw-based error handling as intentional, and `ApiError`'s richer shape, e.g. `correlationId`, is more useful caught at the call site than buried in a generic `error` field). 2. Add a global Vue error handler to catch unhandled rejections from template event handlers and toast generically (rejected — loses the specific "Failed to archive card" vs. "Failed to restore card" messaging the manual test matrix expects per action). |
+| **Impact** | Any new component that calls `useApi()` and wants to show a failure toast MUST wrap the call in try/catch — destructuring `{ error }` without one will compile and pass code review but silently does nothing on a real failure. Code review for new `useApi()` call sites should specifically check for this. |
+
+---
+
+## D-41: Card Detail Panel Version Ownership Lives on `CardModal`, Not on Each Panel
+
+| Field | Value |
+|---|---|
+| **Topic** | Where the optimistic-concurrency `version` for a `Card` is cached while its detail modal is open across multiple editable panels |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`CardModal.vue` owns the single `card` ref (and therefore `card.value.version`) for the lifetime of the open modal. Every panel below it that mutates a `Card` field (`CardDescription`, and `CardMetadata` once Plan 4's Task 16 lands) reads `props.card.version` at call time and emits `'update:card': [CardResponse]` with the server's response on success — it never keeps its own cached copy of `version`.** |
+| **Rationale** | `CardDescription.vue` originally seeded a local `currentVersion` ref from `props.card.version` once at mount and only updated it from its own save responses. Plan 4 adds a second panel (`CardMetadata`'s type/due-date/assignee editor) that also calls `PUT Cards/{cardId}` with a version. Two independently-cached copies of the same token desync the moment a user edits the description and then the type (or vice versa) in one modal session — the second save sends a stale version and gets a spurious `409 CARD_CONCURRENCY_MISMATCH` even though no other user or tab touched the card. Centralizing on `CardModal.vue`'s `card` ref, with children emitting `update:card` instead of caching, makes this structurally impossible: there is exactly one `version` in memory per open modal. |
+| **Alternatives considered** | 1. Have each panel re-fetch the full card before every save (rejected — extra round-trip per save, and still racy between the fetch and the save). 2. Pass `version` down as a separate prop, updated by the parent on every child's success (rejected — `update:card` replacing the whole `card.value` is simpler and also keeps `description`/`assignees`/etc. in sync for sibling panels, e.g. the metadata sidebar reflecting a description-triggered `updatedAt` change). |
+| **Impact** | Implemented in `2026-06-25-phase-3-card-modal-hardening.md` Task 2 for `CardDescription`; Plan 4's Task 16 (rewritten in `2026-06-23-phase-3-plan-4-card-modal-panels.md`) wires `CardMetadata` onto the same `update:card` contract. Any future card-detail panel that edits a `Card` field (not a sub-resource like checklist items or comments, which have their own concurrency tokens) must follow this pattern. |
+
+---
+
+## D-42: Playwright Adopted for End-to-End Testing
+
+| Field | Value |
+|---|---|
+| **Topic** | Which framework drives automated end-to-end tests against the real Web UI + API + Postgres stack |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **`@playwright/test` (MIT license), paired with the project's existing `@nuxt/test-utils` devDependency family. No E2E framework existed before this — `docs/superpowers/manual-validation/*.md` matrices were 100% manual checkbox lists.** |
+| **Rationale** | Open-source-only constraint ruled out paid tiers, but Playwright's free local tier already covers everything needed here: multi-browser (matters less today, useful later), first-class network interception/waiting (needed to assert on the description editor's debounced auto-save and the two-tab version-conflict scenario), and a free trace viewer for diagnosing flaky CI runs without a paid dashboard. Cypress's strongest free-tier differentiator (component testing DX) is not a gap here — Vitest + `@nuxt/test-utils` already covers component tests; what was missing was real-browser, real-stack flows, which is Playwright's core strength. `@nuxt/test-utils` is already a devDependency, so no new framework family was introduced, only a sibling package. |
+| **Alternatives considered** | 1. Cypress (rejected — Chromium-first, WebKit support experimental; richer replay/debugging is behind the paid Cypress Cloud tier, while Playwright's trace viewer is free). 2. `@nuxt/test-utils/e2e`'s own `setup()` helper alone, without Playwright (rejected — `setup()` boots an isolated Nuxt instance per test file; this project's E2E goal is to exercise the real running API + Postgres + MinIO stack, which `setup()` does not model). |
+| **Impact** | `src/web-ui/e2e/` holds Playwright specs; `playwright.config.ts` lives alongside `vitest.config.ts`. New end-to-end coverage goes here, not into Vitest component tests. CI runs E2E specs in a dedicated `pull_request`-only job (slower than unit tests) per `2026-06-25-phase-3-e2e-testing-foundation.md` Task 6. There is no per-test database reset yet — specs seed their own randomly-suffixed data via the API and run serially (`workers: 1`) until that exists. |
+
+---
+
+## D-43: Unify Shared Filter State and Logic via Composables
+
+| Field | Value |
+|---|---|
+| **Topic** | How to handle filter state and logic shared between desktop and mobile views in the Web UI |
+| **Date** | 2026-06-25 |
+| **Status** | ✅ Settled |
+| **Decision** | **Extract shared filter state and logic into a dedicated composable (`useBoardFilters.ts`) that reads/writes the Pinia store directly. Both `BoardFilterBar.vue` (desktop) and `BoardMobileList.vue` (mobile) consume this composable instead of duplicating state or using watchers to sync local refs.** |
+| **Rationale** | Desktop and mobile views often render different components but need to share the same global filter state (search, type, assignee, archived, hide empty). Originally, `BoardFilterBar.vue` used `defineModel` connected to the store, while `BoardMobileList.vue` maintained its own duplicate local refs (`mobileSearch`, `mobileType`, etc.) and used watchers to sync them with the store. This duplication caused significant issues: 1. Double-fetching (both the store watcher and local watcher triggered API calls on change). 2. Synchronization lag and race conditions. 3. Multi-statement inline event handlers that introduced bugs (like the `"null"` string → `NaN` conversion bug on the per-column type filter). Unifying on a single composable that directly wraps the Pinia store's `boardFilters` with reactive computed getters/setters ensures identical behavior, zero state duplication, and a cleaner API. |
+| **Alternatives considered** | 1. Keep duplicate state and fix the sync watchers (rejected — high maintenance burden, prone to regression, still suffers from double-fetching). 2. Pass filters as props and emit events from both components (rejected — introduces immense prop-drilling and event-bubbling boilerplate across the board page hierarchy). |
+| **Impact** | Created `app/composables/useBoardFilters.ts`. Refactored `BoardFilterBar.vue` and `BoardMobileList.vue` to use it, deleting 4 duplicate refs and 5 watchers. Updated `BoardFilterBar.test.ts` to assert against the Pinia store instead of emitted events. All future shared filter state or complex multi-view logic must use this composable pattern. |
+
+---
+
+## D-44: Doc Model — Spec/Plan Redesign (DocType, Multi-Plan, PlanStatus, Idea→Goal)
+
+| Field | Value |
+|---|---|
+| **Topic** | How Spec and Plan documents relate to card types; plan lifecycle states; Idea-to-Goal lineage |
+| **Date** | 2026-06-29 |
+| **Status** | ✅ Settled |
+| **Decision** | **Specs are typed by card: Goal→Specification, Idea→Concept, Issue→Report. Each Spec owns 0..N Plans (via `Plan.SpecId`). Task and Issue cards may also carry Plans directly (`Plan.CardId` only, no Spec). Plans have a `PlanStatus` lifecycle: `Pending → Active → Done` (read-only when Done; reactivation required to edit). Plans carry a `Position` field for ordering. Creating a Goal from an Idea is a UX action that optionally wires a `SpawnedFrom` CardRelationship (Source=Goal, Target=Idea).** |
+| **Rationale** | The previous model assumed 1 Spec and 1 Plan per Card, which did not match actual delivery workflow: a single spec (milestone) naturally decomposes into multiple sequential plans (tasks), each handed to an agent or developer one at a time. Idea cards need a freeform exploration document (Concept) but no execution plans — they are still in the thinking phase; when ready, they become Goals. Issue cards need a problem description (Report) plus one or more mitigation/research plans. Task cards are lightweight — no formal spec needed, but structured plans help for non-trivial tasks. The DocType discriminator keeps a single `Spec` entity while allowing the UI to show domain-appropriate labels (Specification / Concept / Report), keeping the system approachable for non-developer use cases (finance, education, libraries, etc.). PlanStatus makes agent orchestration state machine explicit: an orchestrator picks up a Pending plan, sets it Active, marks it Done when the PR merges. Done plans are read-only to prevent accidental edits after delivery — reactivation requires intent. |
+| **Alternatives considered** | 1. Separate `Concept` and `Report` entities instead of DocType discriminator (rejected — same structure, needless schema duplication; a discriminator field costs one column and zero extra tables). 2. Idea cards can have Plans (rejected — Ideas are conceptual; premature planning before a Goal is created creates orphaned work). 3. `Relates` CardRelationship for Idea→Goal lineage (considered — sufficient for MVP since `Relates` already exists; `SpawnedFrom` added instead because the direction and intent are specific enough to warrant a named type, enabling future queries like "all Goals spawned from this Idea"). 4. Plan status tracked externally (e.g. by branch existence or PR state) (rejected — external state is ephemeral and not domain-owned; HydraForge should be the source of truth for work state). |
+| **Impact** | Schema: add `Spec.DocType` (DocType enum), `Plan.Status` (PlanStatus enum, default Pending), `Plan.Position` (int). Add `SpawnedFrom = 4` to `RelationshipType`. Card→doc rules: Goal card creates a Specification; Idea card creates a Concept; Issue card creates a Report; Task card has no primary doc. UI: Docs tab label adapts to card type. Plan list replaces the single-plan panel; each plan shows status badge. **Superseded on the "Reactivate" mechanism only — see D-45**: the dedicated Activate/Complete/Reactivate actions described here were consolidated into a single status dropdown before this Impact line was updated. New migration required. |
+
+---
+
+## D-45: Plan Status Transitions — Single `SetStatus` Endpoint Replaces Activate/Complete/Reactivate
+
+| Field | Value |
+|---|---|
+| **Topic** | How a Plan's `PlanStatus` (Pending/Active/Done) is changed from the UI and API, superseding the dedicated-action mechanism described in D-44's Impact line |
+| **Date** | 2026-07-07 (documented retroactively — the change shipped earlier in this branch's history, undocumented) |
+| **Status** | ✅ Settled |
+| **Decision** | **One `PATCH` endpoint (`SetStatus` on `PlansController`, backed by `PlanService.SetStatusAsync` → `Plan.SetStatus(PlanStatus)`) accepts any target status and applies it unconditionally — there is no enforced `Pending → Active → Done` ordering and no separate Activate/Complete/Reactivate/Reopen actions. The UI (`CardPlan.vue`) shows the current status as a clickable badge; clicking opens a dropdown listing the other two statuses, and picking one calls `SetStatus` directly.** |
+| **Rationale** | The original three-action design (Activate/Complete/Reactivate) mapped cleanly to a strict linear lifecycle but added UI and API surface for what is, in practice, a single "change this plan's status" operation — and real usage needed to jump backward (Done → Pending) without a dedicated "un-complete" action. Collapsing to one endpoint plus one dropdown removed three controller actions and three button states for one select control, with no loss of capability. |
+| **Alternatives considered** | 1. Keep D-44's three dedicated actions and add a fourth for arbitrary reopen (rejected — grows the action surface further for a state machine that turned out not to need enforced ordering). 2. Enforce valid transitions server-side (e.g. reject Done→Pending without going through Active) (rejected — no product requirement surfaced for this, and it would need a real reason to justify the extra validation code and error states). |
+| **Impact** | `Plan.Reopen()` (added under D-44, sets status back to `Pending`) is now dead code — nothing calls it; `SetStatus` bypasses it entirely. Confirm before deleting it, or fold its intent into `SetStatus` if a distinct "reopen" semantic (vs. arbitrary status assignment) still turns out to matter. Any future plan/task lifecycle work should default to this single-setter pattern rather than reintroducing per-transition actions unless a concrete need for enforced ordering appears. |
+
+---
+
+## D-46: Blocked Card Move — No UI Override, Toast-and-Stop Is Final
+
+| Field | Value |
+|---|---|
+| **Topic** | Whether the Web UI should expose a way to force a card move past a `409 Conflict` blocked-move rejection, given the API supports `confirmBlockedMove=true` |
+| **Date** | 2026-07-07 |
+| **Status** | ✅ Settled |
+| **Decision** | **The Web UI never sends `confirmBlockedMove=true`. On `409`, `useCardMove.ts` rolls back the optimistic move and toasts "Cannot move blocked card" — full stop, no confirm-and-retry modal.** |
+| **Rationale** | Resolving a blocked card means resolving the actual blocking dependency (finish/unblock the card it's waiting on), not force-moving past the block. `confirmBlockedMove` exists as an API-level capability — any client could use it — but the Web UI intentionally chooses not to expose an override, keeping the blocked-move rule meaningful rather than a dismissible warning. |
+| **Alternatives considered** | 1. Build a confirm-and-retry modal (Plan 6's original Task 23 design) that resends the move with `confirmBlockedMove=true` after user confirmation (rejected — the whole point of a blocked-move rule is undermined if the UI trains users to just click through it). |
+| **Impact** | Plan 6 Task 23's "move warning modal" sub-scope is dropped — only the `BoardCard.vue` visual blocked indicator (lock icon) remains from that task. Do not read CLAUDE.md's `confirmBlockedMove=true` API-contract line as a requirement to build UI for it. |
+
+
+---
+
+## D-47: Keyboard Navigation — Roving-Focus Composable Split
+
+| Field | Value |
+|---|---|
+| **Topic** | How board keyboard navigation (hjkl, selection highlight, roving tabindex) is structured to stay reusable as more sections of the app gain keyboard nav |
+| **Date** | 2026-07-19 |
+| **Status** | ✅ Settled |
+| **Decision** | **Keyboard-nav selection state and dispatch live in `app/composables/keyboard/`: `useRovingFocus.ts` (generic single-axis index/selection primitive, no DOM opinion) and `useBoardKeyboardNav.ts` (board-specific composable that wires two `useRovingFocus` instances — columns axis, cards-within-column axis — to `Board`-scope `keyboard.register` calls). `useKeyboard.ts` gained an `enabled?: () => boolean` predicate per shortcut, replacing a manual `if (isModalOpen()) return` guard duplicated in every Board handler. `useBoardKeyboardNav` exposes `activate()`/`deactivate()` rather than self-managing `onMounted`/`onBeforeUnmount` — Vue no-ops `onMounted` when there is no active component instance on the call stack, so the composable cannot register its own lifecycle hook; the caller (`board.vue`) invokes `activate()`/`deactivate()` from its own `onMounted`/`onBeforeUnmount`, the same way it already drives `realtime.connect`/`disconnect`.** |
+| **Rationale** | The five keyboard-nav commits that shipped hjkl navigation, roving tabindex, and card move/reorder left `board.vue` holding ~270 lines of inline selection state, sync handlers, and shortcut registrations — the same shape of duplication D-43 already flagged for filter state. Along the way, a visual bug surfaced: `BoardView`'s own `tabindex=0` container carried its own `focus:ring` class, a second highlight mechanism entirely disconnected from the `selectedColumnIndex`/`selectedCardId` ring that actually reflects keyboard selection. Tab-ing into the board painted a ring shaped like the whole column row, which read as misaligned next to the real per-column/per-card ring. Splitting into a generic primitive + a board-specific wrapper fixes the duplication (one composable owns selection state, `syncToCard`/`syncToColumn` are its only write path) and gives the next keyboard-nav consumer (Projects page, later chat) a primitive to plug into directly instead of re-inlining the pattern. |
+| **Alternatives considered** | 1. Single board-specific composable only, no generic primitive (rejected — YAGNI-adjacent but the columns/cards split is genuinely two instances of the same index logic; extracting it costs nothing and is exactly what a flat-list nav elsewhere would need). 2. True per-item ARIA roving-tabindex (tabindex physically moving between individual cards/columns as selection changes) (deferred, not rejected — bigger a11y rework, belongs to the still-open Task 25 ARIA pass, not this fix). 3. A scope-priority stack in `useKeyboard.ts` instead of a per-shortcut `enabled` predicate (rejected — only two scopes exist today (`Board`, `Card`); a predicate is the minimal mechanism that removes the duplicated guard without adding a new registry concept). 4. Composable self-registers via its own internal `onMounted`/`onBeforeUnmount` (tried first, caught during plan-writing before implementation — `onMounted` with no active component instance on the stack is a silent no-op in Vue, so shortcuts would never register; corrected to caller-driven `activate()`/`deactivate()`). |
+| **Impact** | New folder `app/composables/keyboard/` holds `useKeyboard.ts` (moved), `useRovingFocus.ts`, `useBoardKeyboardNav.ts`. `board.vue` calls `useBoardKeyboardNav` once and drives `nav.activate()`/`nav.deactivate()` from its own lifecycle hooks instead of registering 9+ shortcuts inline. `BoardView.vue` dropped its own focus ring in favor of the existing selection ring (`aria-label` added for screen readers). Any future keyboard-nav surface should start from `useRovingFocus` rather than re-inlining index/wraparound logic. |

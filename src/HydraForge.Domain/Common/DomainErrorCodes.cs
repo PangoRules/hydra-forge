@@ -47,10 +47,11 @@ public static class DomainErrorCodes
         public const string InvalidType = "CARD_INVALID_TYPE";
         public const string InvalidAssignee = "CARD_INVALID_ASSIGNEE";
         public const string DuplicateAssignee = "CARD_DUPLICATE_ASSIGNEE";
-        public const string InvalidParentEpic = "CARD_INVALID_PARENT_EPIC";
+        public const string InvalidParent = "CARD_INVALID_PARENT";
         public const string ParentCycle = "CARD_PARENT_CYCLE";
         public const string BlockedMoveWarning = "CARD_BLOCKED_MOVE_WARNING";
         public const string ConcurrencyMismatch = "CARD_CONCURRENCY_MISMATCH";
+        public const string ConcurrencyConflict = "CARD_CONCURRENCY_CONFLICT";
     }
 
     public static class Checklist
@@ -93,6 +94,7 @@ public static class DomainErrorCodes
         public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
         public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
         public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
+        public const string EditForbiddenWhenDone = "PLAN_EDIT_FORBIDDEN_WHEN_DONE";
     }
 
     public static class Relationships
