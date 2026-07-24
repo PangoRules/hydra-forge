@@ -8,29 +8,18 @@ public class ApiClientFactory
     private readonly ConfigStore _configStore;
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
-
-    private readonly Func<HttpMessageHandler> _innerHandlerFactory;
+    private readonly HttpMessageHandler? _testHandler;
 
     private HydraForgeApiClient? _client;
     private AuthDelegatingHandler? _authHandler;
     private TuiConfig? _cachedConfig;
 
-    public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector)
-        : this(configStore, appState, errorCollector, () => new HttpClientHandler())
-    {
-    }
-
-    // Lets tests substitute a fake transport instead of hitting the real network.
-    internal ApiClientFactory(
-        ConfigStore configStore,
-        AppState appState,
-        ErrorCollector errorCollector,
-        Func<HttpMessageHandler> innerHandlerFactory)
+    public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector, HttpMessageHandler? testHandler = null)
     {
         _configStore = configStore;
         _appState = appState;
         _errorCollector = errorCollector;
-        _innerHandlerFactory = innerHandlerFactory;
+        _testHandler = testHandler;
     }
 
     /// <summary>
@@ -42,7 +31,9 @@ public class ApiClientFactory
         var config = _configStore.Load();
         _cachedConfig = config;
 
-        _authHandler = new AuthDelegatingHandler(_innerHandlerFactory());
+        _authHandler = _testHandler != null 
+            ? new AuthDelegatingHandler(_testHandler) 
+            : new AuthDelegatingHandler();
         _authHandler.SetToken(config.JwtToken);
 
         var httpClient = new HttpClient(_authHandler)
@@ -71,10 +62,10 @@ public class ApiClientFactory
     public HydraForgeApiClient CreateUnauthenticatedClient()
     {
         var config = _cachedConfig ?? _configStore.Load();
-        var httpClient = new HttpClient(_innerHandlerFactory())
-        {
-            BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/")
-        };
+        var httpClient = _testHandler != null
+            ? new HttpClient(_testHandler)
+            : new HttpClient();
+        httpClient.BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/");
         return new HydraForgeApiClient(httpClient);
     }
 
