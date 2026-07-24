@@ -198,15 +198,11 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 3: Web UI (in progress)
+## Current Phase — Phase 4: Project Space — TUI (starting)
 
-- **Branch:** `feat/phase-3-web-ui`
-- **Plan 1** (auth + scaffold) ✅ — login page, auth middleware, JWT token management
-- **Plan 2** (project list + board) ✅ — Pinia board store, project list, create modal (with git fields), board view (desktop kanban + mobile list), project name in header
-- **Plan 3** (card modal core) ✅ — CardModal desktop/mobile layouts, Tiptap editor, archive/restore
-- **Tasks 3A-5a** ✅ — card modal hardening, card modal panels, board filtering/quick-add/filter redesign, card type redesign (Task/Issue/Goal/Idea), E2E Playwright foundation, Specs/Plans/Realtime, doc model schema (DocType/PlanStatus/multi-plan, D-44) + its UX-polish follow-up. Editable columns + project templates also shipped ahead of Task 6/7.
-- **Task 6** (Polish & Hardening) and **Task 7** (Project Management UI) 🔲 — see `docs/plans/`; both carry a 2026-07-07 pre-execution note — verify against current code before running, several sub-tasks are already done or superseded
-- **141 vitest tests** across stores, composables, components, middleware, pages
+Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
+
+Phase 4 (TUI) has **not started** — `src/HydraForge.Tui/Program.cs` is still the unmodified `dotnet new console` template, no Spectre.Console package reference yet. See `docs/functional-spec.md` §25 Phase 4 checklist, which now carries its own pre-phase decision block (API client strategy, SignalR client wiring, JWT config file location) — resolve those before planning tasks.
 
 ### Nuxt UI v4 patterns
 

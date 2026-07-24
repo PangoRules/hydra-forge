@@ -516,6 +516,13 @@
 ### Phase 4: Project Space — TUI 🖥️
 > Goal: full project board usable in terminal. Feature parity with Web UI board.
 
+> ⚠️ **Pre-phase decisions needed:**
+> 1. **.NET API client strategy** — Web UI has an established convention (openapi-typescript codegen + centralized `routes.ts`, see CLAUDE.md "Web UI API routes"). TUI has no equivalent yet. Options: (a) NSwag/Kiota-generated typed C# client from `/openapi/v1.json` — stays in sync with the API automatically, recommended; (b) hand-rolled `HttpClient` + `System.Text.Json` calls — more control, more drift risk; (c) Refit. Pick before writing the first TUI screen that calls the API.
+> 2. **SignalR .NET client wiring** — `Microsoft.AspNetCore.SignalR.Client` package needed for `BoardHub`/`PresenceHub` consumption from the TUI. Decide connection lifecycle ownership (single long-lived `HubConnection` per app session vs. per-screen) and where reconnect/backoff logic lives relative to the "Connection handling" checklist item below.
+> 3. **JWT config storage location/format** — `docs/architecture.md`'s "TUI Connectivity Behavior" says only "JWT stored in user config." Needs a concrete path and format: e.g. `~/.config/hydraforge/config.json` (plain file, mode 0600) vs. OS keychain integration. Plain file is the pragmatic MVP default; note it explicitly so it isn't left implicit.
+>
+> `src/HydraForge.Tui/Program.cs` is currently the unmodified `dotnet new console` template — no Spectre.Console package reference yet. Phase 4 starts from zero scaffolding.
+
 - [ ] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
 - [ ] Auth: login prompt on startup, JWT stored in user config
 - [ ] Project list view + create project

@@ -130,13 +130,15 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   await checklistTab.locator('li', { hasText: 'Schedule send' }).getByRole('button', { name: 'Delete item' }).click()
   await expect(checklistTab.getByText('Schedule send', { exact: true })).not.toBeVisible()
 
-  // Attachments (sidebar, desktop only)
+  // Attachments (sidebar, desktop only) — real multipart upload + disk write on
+  // the server, structurally slower than the JSON round-trips elsewhere in this
+  // flow; give it more headroom than the 5000ms default on slower CI runners.
   await desktop.locator('input[type="file"]').setInputFiles({
     name: 'launch-notes.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('Launch checklist notes for the marketing site revamp.')
   })
-  await expect(desktop.getByText('launch-notes.txt', { exact: true })).toBeVisible()
+  await expect(desktop.getByText('launch-notes.txt', { exact: true })).toBeVisible({ timeout: 15000 })
 
   // Dependencies: Blocked by -> "Update hero image assets"
   await desktop.getByRole('button', { name: 'Link card' }).click()
