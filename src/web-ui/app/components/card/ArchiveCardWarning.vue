@@ -13,18 +13,18 @@ const emit = defineEmits<{
     :open="true"
     @close="emit('cancel')"
   >
-    <UCard>
-      <template #header>
-        <div class="flex items-center gap-2">
-          <UIcon
-            name="i-lucide-alert-triangle"
-            class="size-5 text-warning"
-          />
-          <h3 class="font-semibold">
-            Archive Card
-          </h3>
-        </div>
-      </template>
+    <template #header>
+      <div class="flex items-center gap-2">
+        <UIcon
+          name="i-lucide-alert-triangle"
+          class="size-5 text-warning"
+        />
+        <h3 class="font-semibold">
+          Archive Card
+        </h3>
+      </div>
+    </template>
+    <template #body>
       <div class="space-y-3">
         <p class="text-sm">
           This card has relationships with other cards:
@@ -48,22 +48,22 @@ const emit = defineEmits<{
           Archiving this card will not remove relationships but may affect dependent cards. Continue?
         </p>
       </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            variant="outline"
-            @click="emit('cancel')"
-          >
-            Cancel
-          </UButton>
-          <UButton
-            color="error"
-            @click="emit('confirm')"
-          >
-            Archive
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton
+          variant="outline"
+          @click="emit('cancel')"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          color="error"
+          @click="emit('confirm')"
+        >
+          Archive
+        </UButton>
+      </div>
+    </template>
   </UModal>
 </template>

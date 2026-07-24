@@ -20,10 +20,10 @@ const show = computed({
 
 // Map raw key names to human-readable display
 const KEY_LABELS: Record<string, string> = {
-  'ArrowRight': 'Ctrl+Shift+→',
-  'ArrowLeft': 'Ctrl+Shift+←',
-  'ArrowUp': 'Ctrl+Shift+↑',
-  'ArrowDown': 'Ctrl+Shift+↓',
+  'H': 'Ctrl+Shift+H',
+  'J': 'Ctrl+Shift+J',
+  'K': 'Ctrl+Shift+K',
+  'L': 'Ctrl+Shift+L',
   'Enter': '↵',
   '?': '?'
 }

@@ -158,25 +158,35 @@ export function useBoardKeyboardNav(options: {
       if (card && !card.archivedAt) options.onArchiveCard(card)
     }, 'Archive card', false, boardEnabled)
 
-    keyboard.register('Board', 'ArrowRight', (e) => {
+    // hjkl chords for move/reorder, standardized alongside the plain hjkl
+    // nav shortcuts above (l/h = column right/left, j/k = card down/up).
+    // Registered by their Shift-produced uppercase letter (event.key is
+    // 'H'/'J'/'K'/'L' when Shift is held) so they don't collide with the
+    // plain lowercase nav registrations in useKeyboard's key-only match —
+    // see useKeyboard.ts. Known edge case: with Caps Lock on, a plain
+    // h/j/k/l press also reports an uppercase key, so it matches these
+    // handlers instead of nav and (lacking ctrlKey) silently no-ops rather
+    // than falling back to navigation. Not worth a bigger keybinding
+    // rework for that edge case today.
+    keyboard.register('Board', 'L', (e) => {
       if (!e.ctrlKey || !e.shiftKey) return
       e.preventDefault()
       moveSelectedCard(1)
     }, 'Move card right', false, boardEnabled)
 
-    keyboard.register('Board', 'ArrowLeft', (e) => {
+    keyboard.register('Board', 'H', (e) => {
       if (!e.ctrlKey || !e.shiftKey) return
       e.preventDefault()
       moveSelectedCard(-1)
     }, 'Move card left', false, boardEnabled)
 
-    keyboard.register('Board', 'ArrowUp', (e) => {
+    keyboard.register('Board', 'K', (e) => {
       if (!e.ctrlKey || !e.shiftKey) return
       e.preventDefault()
       reorderSelectedCard(-1)
     }, 'Move card up', false, boardEnabled)
 
-    keyboard.register('Board', 'ArrowDown', (e) => {
+    keyboard.register('Board', 'J', (e) => {
       if (!e.ctrlKey || !e.shiftKey) return
       e.preventDefault()
       reorderSelectedCard(1)

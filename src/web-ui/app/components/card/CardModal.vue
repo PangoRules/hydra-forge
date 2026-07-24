@@ -192,13 +192,16 @@ onMounted(() => {
   fetchCard()
   linkedSpecId.value = null
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts. allowWhileEditing must stay false/omitted here:
+  // useKeyboard's guard is the only thing stopping every "a" a user types
+  // into the Tiptap description/spec/plan editors from popping this
+  // archive confirm instead of inserting the letter (see D-47 note).
   keyboard.register('Card', 'a', (e) => {
     if (!isArchived.value && !props.readonly) {
       e.preventDefault()
       handleArchive()
     }
-  }, 'Archive card', true /** allowWhileEditing */)
+  }, 'Archive card')
 })
 
 onBeforeUnmount(() => {

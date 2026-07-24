@@ -173,25 +173,25 @@ describe('useBoardKeyboardNav', () => {
     expect(nav.selectedCardIndex.value).toBe(0)
   })
 
-  it('Ctrl+Shift+ArrowRight moves the selected card to the next column and follows it', () => {
+  it('Ctrl+Shift+L moves the selected card to the next column and follows it', () => {
     const nav = setup()
-    press('ArrowRight', { ctrlKey: true, shiftKey: true })
+    press('L', { ctrlKey: true, shiftKey: true })
     expect(board.cardsByColumn.get('col-2')?.map(c => c.id)).toEqual(['card-3', 'card-1'])
     expect(board.cardsByColumn.get('col-1')?.map(c => c.id)).toEqual(['card-2'])
     expect(nav.selectedColumnIndex.value).toBe(1)
     expect(nav.selectedCardIndex.value).toBe(1)
   })
 
-  it('Ctrl+Shift+ArrowDown reorders the selected card down within its column', () => {
+  it('Ctrl+Shift+J reorders the selected card down within its column', () => {
     const nav = setup()
-    press('ArrowDown', { ctrlKey: true, shiftKey: true })
+    press('J', { ctrlKey: true, shiftKey: true })
     expect(board.cardsByColumn.get('col-1')?.map(c => c.id)).toEqual(['card-2', 'card-1'])
     expect(nav.selectedCardIndex.value).toBe(1)
   })
 
-  it('plain ArrowRight (no modifiers) does not move a card', () => {
+  it('plain L (no modifiers) does not move a card', () => {
     setup()
-    press('ArrowRight')
+    press('L')
     expect(board.cardsByColumn.get('col-1')?.map(c => c.id)).toEqual(['card-1', 'card-2'])
   })
 
