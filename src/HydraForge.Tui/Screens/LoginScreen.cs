@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;

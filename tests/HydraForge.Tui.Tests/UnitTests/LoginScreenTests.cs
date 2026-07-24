@@ -74,15 +74,16 @@ public class LoginScreenTests
         var configStore = new TestConfigStore { Config = testConfig };
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
-        var mockApiClient = new TestApiClient { ThrowOnLogin = false };
+        var mockApiClient = new TestApiClient { ThrowOnLogin = true };
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
 
-        var loginScreen = new LoginScreen(configStore, apiClientFactory, appState, errorCollector);
+        // Act — LoginAsync should throw HttpRequestException when ThrowOnLogin is true
+        var client = apiClientFactory.CreateUnauthenticatedClient();
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.LoginAsync(new LoginRequest { Username = "u", Password = "p" }));
 
-        // Act - simulate entering the login screen (config loads but no token means login needed)
-        var loadedConfig = configStore.Load();
-        Assert.NotNull(loadedConfig);
-        Assert.Null(loadedConfig.JwtToken); // No token initially
+        // Assert
+        Assert.Contains("Network error", ex.Message);
     }
 
     [Fact]
