@@ -12,6 +12,8 @@ public class AuthDelegatingHandler : DelegatingHandler
 
     public AuthDelegatingHandler() : base(new HttpClientHandler()) { }
 
+    internal AuthDelegatingHandler(HttpMessageHandler innerHandler) : base(innerHandler) { }
+
     public void SetToken(string? token) => _token = token;
 
     protected override async Task<HttpResponseMessage> SendAsync(
