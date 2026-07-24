@@ -14,7 +14,6 @@ using HydraForge.Application.Cards;
 using HydraForge.Application.Checklist;
 using HydraForge.Application.Comments;
 using HydraForge.Application.Projects;
-using HydraForge.Application.Projects;
 
 public class ChecklistCommentsControllerTests
 {
