@@ -1,54 +1,52 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Services;
 
-public interface IConfigStore
+public class ConfigStore
 {
-    Task<Config> LoadAsync();
-    Task SaveAsync(Config config);
-}
+    private static readonly string ConfigDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".config",
+        "hydraforge"
+    );
 
-public class ConfigStore : IConfigStore
-{
-    private readonly string _configPath;
+    private static readonly string ConfigPath = Path.Combine(ConfigDir, "config.json");
 
-    public ConfigStore()
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _configPath = Path.Combine(appDataPath, "HydraForge", "config.json");
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    public TuiConfig Load()
+    {
+        if (!File.Exists(ConfigPath))
+            return new TuiConfig();
+
+        var json = File.ReadAllText(ConfigPath);
+        return JsonSerializer.Deserialize<TuiConfig>(json, JsonOptions) ?? new TuiConfig();
     }
 
-    public async Task<Config> LoadAsync()
+    public void Save(TuiConfig config)
     {
-        if (!File.Exists(_configPath))
+        Directory.CreateDirectory(ConfigDir);
+
+        var json = JsonSerializer.Serialize(config, JsonOptions);
+        File.WriteAllText(ConfigPath, json);
+
+        // Set 0600 permissions on POSIX
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return new Config();
+            File.SetUnixFileMode(ConfigPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
-
-        var json = await File.ReadAllTextAsync(_configPath);
-        var config = JsonSerializer.Deserialize<Config>(json, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        return config ?? new Config();
     }
 
-    public async Task SaveAsync(Config config)
+    public void Clear()
     {
-        var directory = Path.GetDirectoryName(_configPath);
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        });
-
-        await File.WriteAllTextAsync(_configPath, json);
+        if (File.Exists(ConfigPath))
+            File.Delete(ConfigPath);
     }
 }
