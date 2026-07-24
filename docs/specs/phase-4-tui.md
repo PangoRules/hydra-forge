@@ -518,7 +518,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 
 ## Tasks
 
-- [ ] Task 1: Scaffold — packages, NSwag codegen, Program.cs bootstrap, remove Application ref
+- [x] Task 1: Scaffold — packages, NSwag codegen, Program.cs bootstrap, remove Application ref
 - [ ] Task 2: ConfigStore — read/write `~/.config/hydraforge/config.json` with 0600 perms
 - [ ] Task 3: ApiClientFactory — NSwag client with JWT auth, token refresh
 - [ ] Task 4: Auth — login screen + startup auth flow
