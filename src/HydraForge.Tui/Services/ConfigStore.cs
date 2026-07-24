@@ -29,7 +29,7 @@ public class ConfigStore
         _configPath = Path.Combine(configDir, "config.json");
     }
 
-    public TuiConfig Load()
+    public virtual TuiConfig Load()
     {
         if (!File.Exists(_configPath))
             return new TuiConfig();
@@ -38,7 +38,7 @@ public class ConfigStore
         return JsonSerializer.Deserialize<TuiConfig>(json, JsonOptions) ?? new TuiConfig();
     }
 
-    public void Save(TuiConfig config)
+    public virtual void Save(TuiConfig config)
     {
         Directory.CreateDirectory(_configDir);
 
@@ -53,7 +53,7 @@ public class ConfigStore
         }
     }
 
-    public void Clear()
+    public virtual void Clear()
     {
         if (File.Exists(_configPath))
             File.Delete(_configPath);

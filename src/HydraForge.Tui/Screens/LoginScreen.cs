@@ -42,11 +42,15 @@ public class LoginScreen : IScreen
                 .DefaultValue(config.ServerUrl)
                 .Validate(url =>
                 {
-                    if (Uri.TryCreate(url, UriKind.Absolute, out _))
+                    if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                        (uri.Scheme == "http" || uri.Scheme == "https") &&
+                        !string.IsNullOrWhiteSpace(uri.Host))
                         return ValidationResult.Success();
-                    return ValidationResult.Error("Enter a valid URL (e.g. http://localhost:5000)");
+                    return ValidationResult.Error("Enter a valid HTTP or HTTPS URL (e.g. http://localhost:5000)");
                 }));
         config.ServerUrl = serverUrl;
+        _configStore.Save(config);
+        _apiClientFactory.InvalidateConfig();
 
         // Prompt for username and password in a retry loop
         while (true)
@@ -85,6 +89,17 @@ public class LoginScreen : IScreen
                 // Note: RefreshToken is not part of LoginResponse, it's handled by the refresh endpoint
                 _configStore.Save(config);
 
+                // Verify that we got a valid token
+                if (string.IsNullOrWhiteSpace(response.AccessToken))
+                {
+                    var error = "Login failed: No access token received";
+                    _errorCollector.Add("N/A", $"Login error: {error}");
+                    AnsiConsole.MarkupLine($"[red]{error}[/]");
+                    AnsiConsole.MarkupLine("Press any key to try again...");
+                    Console.ReadKey(true);
+                    continue; // Retry login
+                }
+
                 // Update app state
                 _appState.CurrentScreen = null; // Will be set by the main loop after auth
 
@@ -98,7 +113,8 @@ public class LoginScreen : IScreen
                 // Log the error and show it to the user
                 var error = $"Login failed: {ex.Message}";
                 _errorCollector.Add("N/A", $"Login error: {ex.Message}");
-                AnsiConsole.MarkupLine($"[red]{error}[/]");
+                var escapedError = Markup.Escape(error);
+                AnsiConsole.MarkupLine($"[red]{escapedError}[/]");
                 AnsiConsole.MarkupLine("Press any key to try again...");
                 Console.ReadKey(true);
             }
@@ -107,7 +123,8 @@ public class LoginScreen : IScreen
                 // Network error
                 var error = $"Network error during login: {ex.Message}";
                 _errorCollector.Add("N/A", $"Login error: {ex.Message}");
-                AnsiConsole.MarkupLine($"[red]{error}[/]");
+                var escapedError = Markup.Escape(error);
+                AnsiConsole.MarkupLine($"[red]{escapedError}[/]");
                 AnsiConsole.MarkupLine("Press any key to try again...");
                 Console.ReadKey(true);
             }

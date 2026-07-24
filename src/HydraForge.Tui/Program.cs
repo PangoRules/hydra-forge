@@ -33,7 +33,7 @@ public static class Program
 
         // Check if we have a valid JWT token
         var loadedConfig = configStore.Load();
-        var needsLogin = string.IsNullOrEmpty(loadedConfig.JwtToken);
+        var needsLogin = string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null;
 
         if (needsLogin)
         {
@@ -45,7 +45,7 @@ public static class Program
             loadedConfig = configStore.Load();
             
             // Check if login was successful
-            if (string.IsNullOrEmpty(loadedConfig.JwtToken))
+            if (string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null)
             {
                 AnsiConsole.MarkupLine("[red]Login failed. Exiting.[/]");
                 return 1;
@@ -69,7 +69,7 @@ public static class Program
                     loadedConfig = configStore.Load();
                     
                     // Check if login was successful
-                    if (string.IsNullOrEmpty(loadedConfig.JwtToken))
+                    if (string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null)
                     {
                         AnsiConsole.MarkupLine("[red]Login failed. Exiting.[/]");
                         return 1;
