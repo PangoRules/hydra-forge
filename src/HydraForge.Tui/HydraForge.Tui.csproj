@@ -29,6 +29,10 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HydraForge.Tui.Tests" />
+  </ItemGroup>
+
   <Target Name="GenerateApiClient" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec
       Command="dotnet nswag run nswag.json"
