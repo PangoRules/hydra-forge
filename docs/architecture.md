@@ -153,7 +153,7 @@ TUI / Web UI
 ### TUI Connectivity Behavior
 
 - **Online:** Normal operation. JWT auth on startup, stored in user config.
-- **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff.
+- **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff `[5s, 10s, 30s, 60s]`. Uses `LockScreen` and `ConnectionManager` services.
 - **Reconnected:** Auto-resumes. Re-fetches board state. No manual refresh required.
 
 ### SignalR Hubs
