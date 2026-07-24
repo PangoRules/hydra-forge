@@ -21,6 +21,8 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
       - name: Restore
         run: dotnet restore HydraForge.slnx
+      - name: Restore tools
+        run: dotnet tool restore
       - name: Build
         run: dotnet build HydraForge.slnx --configuration Release --no-restore
       - name: Test
