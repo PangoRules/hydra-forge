@@ -1,23 +1,26 @@
 using System.Net.Http.Headers;
-using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Services;
 
+/// <summary>
+/// DelegatingHandler that injects the JWT Bearer token into every outgoing request.
+/// Token is mutable — ApiClientFactory updates it on refresh.
+/// </summary>
 public class AuthDelegatingHandler : DelegatingHandler
 {
-    private readonly ConfigStore _configStore;
+    private string? _token;
 
-    public AuthDelegatingHandler(ConfigStore configStore)
-    {
-        _configStore = configStore ?? throw new ArgumentNullException(nameof(configStore));
-    }
+    public AuthDelegatingHandler() : base(new HttpClientHandler()) { }
 
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    public void SetToken(string? token) => _token = token;
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var config = _configStore.Load();
-        if (!string.IsNullOrEmpty(config.JwtToken))
+        if (!string.IsNullOrEmpty(_token))
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.JwtToken);
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", _token);
         }
 
         return await base.SendAsync(request, cancellationToken);
