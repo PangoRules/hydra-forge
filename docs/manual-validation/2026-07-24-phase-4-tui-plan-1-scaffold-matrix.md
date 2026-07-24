@@ -1,11 +1,11 @@
 ## Validate: TUI Scaffold (Plan 1 — Spectre.Console + NSwag + Models)
 
 ### Setup
-- [ ] `dotnet tool restore` at repo root succeeds (installs `nswag.consolecore` 14.7.1)
-- [ ] `dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj` succeeds with 0 errors
-- [ ] `src/HydraForge.Tui/Generated/HydraForgeApiClient.cs` and `Contracts.cs` exist after build
-- [ ] API server NOT required for build (codegen fails silently, build still succeeds)
-- [ ] Docker Postgres+MinIO not required for this plan
+- [X] `dotnet tool restore` at repo root succeeds (installs `nswag.consolecore` 14.7.1)
+- [X] `dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj` succeeds with 0 errors
+- [X] `src/HydraForge.Tui/Generated/HydraForgeApiClient.cs` and `Contracts.cs` exist after build
+- [X] API server NOT required for build (codegen fails silently, build still succeeds)
+- [X] Docker Postgres+MinIO not required for this plan
 
 ### Happy Path
 1. `dotnet run --project src/HydraForge.Tui` → Figlet "HydraForge" in blue renders, "TUI client starting..." line appears, any key exits cleanly with exit code 0
@@ -30,5 +30,5 @@
 5. `git log --oneline feat/phase-4-tui..task/tui-scaffold` → only the 2 expected commits
 
 ### Cleanup
-- [ ] None — no DB, no file uploads, no test data created
-- [ ] Branch `task/tui-scaffold` ready for merge into `feat/phase-4-tui`
+- [x] None — no DB, no file uploads, no test data created
+- [x] Branch `task/tui-scaffold` ready for merge into `feat/phase-4-tui`
