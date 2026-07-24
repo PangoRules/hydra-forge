@@ -13,6 +13,7 @@ public class ApiClientFactory
     private HydraForgeApiClient? _client;
     private AuthDelegatingHandler? _authHandler;
     private TuiConfig? _cachedConfig;
+    private DateTime _lastConfigLoad = DateTime.MinValue;
 
     public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector, HttpMessageHandler? testHandler = null)
     {
@@ -23,10 +24,19 @@ public class ApiClientFactory
     }
 
     /// <summary>
+    /// Invalidates the cached config to force a reload on next access.
+    /// </summary>
+    public void InvalidateConfig()
+    {
+        _cachedConfig = null;
+        _lastConfigLoad = DateTime.MinValue;
+    }
+
+    /// <summary>
     /// Creates or returns the cached authenticated NSwag client.
     /// Reads JWT from config and injects it via AuthDelegatingHandler.
     /// </summary>
-    public HydraForgeApiClient CreateClient()
+    public virtual HydraForgeApiClient CreateClient()
     {
         var config = _configStore.Load();
         _cachedConfig = config;
@@ -59,7 +69,7 @@ public class ApiClientFactory
     /// Creates an unauthenticated NSwag client (no JWT header).
     /// Used only for the login endpoint.
     /// </summary>
-    public HydraForgeApiClient CreateUnauthenticatedClient()
+    public virtual HydraForgeApiClient CreateUnauthenticatedClient()
     {
         var config = _cachedConfig ?? _configStore.Load();
         var httpClient = _testHandler != null
