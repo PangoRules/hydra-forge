@@ -1,10 +1,10 @@
-# Plan 1: TUI Scaffold + Spectre.Console Setup
+# Plan 1: TUI Scaffold + Spectre.Console + NSwag Codegen
 
 **Branch:** `task/tui-scaffold`
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 1
 
-**Goal:** Strip bare console template, add NuGet packages, set up NSwag codegen, bootstrap `Program.cs` with Spectre.Console app loop.
+**Goal:** Strip bare console template, add NuGet packages, set up NSwag codegen (MSBuild target + nswag.json + dotnet tool manifest), bootstrap `Program.cs` with Spectre.Console app loop.
 
 **Depends on:** Nothing.
 
@@ -55,13 +55,129 @@ Add to `src/HydraForge.Tui/HydraForge.Tui.csproj`:
 
 Run: `dotnet restore src/HydraForge.Tui/HydraForge.Tui.csproj`
 
-## Step 3: Create directory structure
+## Step 3: Create dotnet tool manifest for NSwag
+
+Create `.config/dotnet-tools.json` at repo root (if it doesn't exist) or add the nswag tool entry:
+
+```bash
+dotnet new tool-manifest --output .config 2>/dev/null || true
+dotnet tool install NSwag.Console --version 14.2.0 --tool-path .config/dotnet-tools.json 2>/dev/null || true
+```
+
+If `.config/dotnet-tools.json` already exists, add the `nswag.console` entry manually:
+
+```json
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "nswag.console": {
+      "version": "14.2.0",
+      "commands": ["nswag"]
+    }
+  }
+}
+```
+
+Run: `dotnet tool restore` to verify the tool is available.
+
+## Step 4: Create NSwag config file
+
+Create `src/HydraForge.Tui/nswag.json`:
+
+```json
+{
+  "runtime": "Net90",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "http://localhost:5000/openapi/v1.json",
+      "output": null
+    }
+  },
+  "codeGenerators": {
+    "openApiToCSharpClient": {
+      "clientBaseClass": null,
+      "configurationClass": null,
+      "generateClientClasses": true,
+      "generateClientInterfaces": true,
+      "clientBaseInterface": null,
+      "injectHttpClient": true,
+      "disposeHttpClient": false,
+      "generateExceptionClasses": true,
+      "exceptionClass": "ApiException",
+      "wrapDtoExceptions": true,
+      "useHttpClientCreationMethod": false,
+      "httpClientType": "System.Net.Http.HttpClient",
+      "useHttpRequestMessageCreationMethod": false,
+      "useBaseUrl": false,
+      "generateBaseUrlProperty": false,
+      "generateSyncMethods": false,
+      "generatePrepareRequestAndProcessResponseAsAsyncMethods": false,
+      "exposeJsonSerializerSettings": false,
+      "clientClassAccessModifier": "public",
+      "typeAccessModifier": "public",
+      "generateContractsOutput": true,
+      "contractsNamespace": "HydraForge.Tui.Generated",
+      "contractsOutputFilePath": "Generated/Contracts.cs",
+      "className": "HydraForgeApiClient",
+      "operationGenerationMode": "MultipleClientsFromOperationId",
+      "additionalNamespaceUsages": [],
+      "additionalContractNamespaceUsages": [],
+      "generateOptionalParameters": true,
+      "generateJsonMethods": false,
+      "encodeContractNames": false,
+      "generateDataAnnotations": false,
+      "excludedTypeNames": [],
+      "excludedParameterNames": [],
+      "handleReferences": false,
+      "generateImmutableArrayProperties": false,
+      "generateImmutableDictionaryProperties": false,
+      "jsonSerializerSettingsTransformationMethod": null,
+      "inlineNamedDictionaries": false,
+      "inlineNamedAny": false,
+      "generateDtoTypes": true,
+      "generateOptionalPropertiesAsNullable": true,
+      "generateNullableReferenceTypes": true,
+      "templateDirectory": null,
+      "typeNameGeneratorType": null,
+      "propertyNameGeneratorType": null,
+      "enumNameGeneratorType": null,
+      "serviceHost": null,
+      "serviceSchemes": null,
+      "output": "Generated/HydraForgeApiClient.cs",
+      "newLineBehavior": "Auto",
+      "namespace": "HydraForge.Tui.Generated"
+    }
+  }
+}
+```
+
+## Step 5: Add GenerateApiClient MSBuild target
+
+Add to `src/HydraForge.Tui/HydraForge.Tui.csproj` (after `</ItemGroup>`):
+
+```xml
+  <Target Name="GenerateApiClient" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec
+      Command="dotnet nswag run nswag.json"
+      WorkingDirectory="$(MSBuildProjectDirectory)"
+      ContinueOnError="true"
+      EchoOff="false" />
+    <Message Text="NSwag codegen complete. Check Generated/ for output." Importance="high" />
+  </Target>
+```
+
+- `ContinueOnError="true"` — if server not running, build continues with last generated client (spec line 425)
+- `Condition="'$(DesignTimeBuild)' != 'true'"` — skip during IDE design-time builds
+- `WorkingDirectory="$(MSBuildProjectDirectory)"` — runs from TUI project dir where `nswag.json` lives
+
+## Step 6: Create directory structure
 
 ```bash
 mkdir -p src/HydraForge.Tui/{Screens,Services,Models,Renderers,Generated}
 ```
 
-## Step 4: Create `IScreen` interface
+## Step 7: Create `IScreen` interface
 
 Create `src/HydraForge.Tui/Screens/IScreen.cs`:
 
@@ -77,7 +193,7 @@ public interface IScreen
 }
 ```
 
-## Step 5: Create `AppState` model
+## Step 8: Create `AppState` model
 
 Create `src/HydraForge.Tui/Models/AppState.cs`:
 
@@ -98,7 +214,7 @@ public class AppState
 }
 ```
 
-## Step 6: Create `ScreenStack` model
+## Step 9: Create `ScreenStack` model
 
 Create `src/HydraForge.Tui/Models/ScreenStack.cs`:
 
@@ -117,7 +233,7 @@ public class ScreenStack
 }
 ```
 
-## Step 7: Create `TuiConfig` model
+## Step 10: Create `TuiConfig` model
 
 Create `src/HydraForge.Tui/Models/TuiConfig.cs`:
 
@@ -133,7 +249,7 @@ public class TuiConfig
 }
 ```
 
-## Step 8: Bootstrap `Program.cs`
+## Step 11: Bootstrap `Program.cs`
 
 Replace `src/HydraForge.Tui/Program.cs`:
 
@@ -164,17 +280,18 @@ public static class Program
 }
 ```
 
-## Step 9: Build verification
+## Step 12: Build verification
 
 ```bash
+dotnet tool restore
 dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj
 ```
 
-Expected: build succeeds with no errors.
+Expected: build succeeds. NSwag codegen may warn if server not running (non-fatal). Generated files appear in `src/HydraForge.Tui/Generated/`.
 
-## Step 10: Commit
+## Step 13: Commit
 
 ```bash
-git add src/HydraForge.Tui/
-git commit -m "feat(tui): scaffold project with Spectre.Console, models, and screen interface"
+git add src/HydraForge.Tui/ .config/dotnet-tools.json
+git commit -m "feat(tui): scaffold project with Spectre.Console, NSwag codegen, models, and screen interface"
 ```

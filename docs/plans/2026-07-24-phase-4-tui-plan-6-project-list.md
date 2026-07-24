@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 6
 
-**Goal:** Full-screen project list table with keyboard nav, create project prompt workflow, filter/search.
+**Goal:** Full-screen project list table with keyboard nav, create project prompt workflow, filter/search. Uses NSwag-generated `HydraForgeApiClient` for all API calls.
 
-**Depends on:** Task 3 (ApiClientFactory), Task 4 (auth flow in Program.cs).
+**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 4 (auth flow in Program.cs).
 
 ---
 
@@ -15,8 +15,7 @@
 Create `src/HydraForge.Tui/Screens/ProjectListScreen.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -35,11 +34,6 @@ public class ProjectListScreen : IScreen
     private bool _showArchived;
     private string _searchFilter = "";
     private int _totalCount;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public ProjectListScreen(
         ApiClientFactory apiClientFactory,
@@ -177,25 +171,28 @@ public class ProjectListScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var url = $"api/projects?includeArchived={_showArchived.ToString().ToLower()}&take=50";
-            if (!string.IsNullOrEmpty(_searchFilter))
-                url += $"&search={Uri.EscapeDataString(_searchFilter)}";
 
-            var response = await client.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
-            {
-                _errorCollector.Add("N/A", $"Failed to load projects: {response.StatusCode}");
-                return;
-            }
+            // NSwag generates ProjectsAsync with optional parameters
+            var page = await client.ProjectsAsync(
+                includeArchived: _showArchived,
+                search: string.IsNullOrEmpty(_searchFilter) ? null : _searchFilter,
+                take: 50);
 
-            var page = await response.Content.ReadFromJsonAsync<ProjectListPage>(JsonOptions);
             if (page != null)
             {
-                _projects = page.Items;
+                _projects = page.Items
+                    .Select(p => new ProjectItem(
+                        p.Id, p.Name, p.CreatedAt, p.ArchivedAt,
+                        p.MemberCount, p.MyRole))
+                    .ToList();
                 _totalCount = page.TotalCount;
                 if (_selectedIndex >= _projects.Count)
                     _selectedIndex = Math.Max(0, _projects.Count - 1);
             }
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Failed to load projects: {ex.StatusCode}");
         }
         catch (HttpRequestException ex)
         {
@@ -224,31 +221,26 @@ public class ProjectListScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new
-            {
-                name,
-                description,
-                template = template switch
-                {
-                    "Software" => "Software",
-                    "Blank" => "Blank",
-                    _ => "General"
-                }
-            };
 
-            var response = await client.PostAsJsonAsync("api/projects", payload, JsonOptions);
-            if (response.IsSuccessStatusCode)
+            await client.ProjectsCreateAsync(new CreateProjectRequest
             {
-                AnsiConsole.MarkupLine($"[green]Project \"{name}\" created![/]");
-                await LoadProjectsAsync();
-                await RenderAsync();
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                AnsiConsole.MarkupLine($"[red]Failed: {response.StatusCode}[/]");
-                _errorCollector.Add("N/A", $"Create project failed: {error}");
-            }
+                Name = name,
+                Description = description,
+                Template = template switch
+                {
+                    "Software" => ProjectTemplate.Software,
+                    "Blank" => ProjectTemplate.Blank,
+                    _ => ProjectTemplate.General
+                }
+            });
+
+            AnsiConsole.MarkupLine($"[green]Project \"{name}\" created![/]");
+            await LoadProjectsAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Create project failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -266,19 +258,22 @@ public class ProjectListScreen : IScreen
         return "just now";
     }
 
+    // Local view model — maps from NSwag-generated DTOs
     private record ProjectItem(
-        Guid Id,
-        string Name,
-        string? Description,
-        DateTime CreatedAt,
-        DateTime? ArchivedAt,
-        int MemberCount,
-        string MyRole
+        Guid Id, string Name, DateTime CreatedAt, DateTime? ArchivedAt,
+        int MemberCount, string MyRole
     );
-
-    private record ProjectListPage(List<ProjectItem> Items, int TotalCount);
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports
+- No `JsonSerializerOptions` field
+- No manual `ProjectListPage` / `ProjectItem` DTO records — NSwag generates `ProjectListPage`, `ProjectItem`, `CreateProjectRequest`, `ProjectTemplate`
+- `client.ProjectsAsync(includeArchived, search, take)` — typed method with optional params
+- `client.ProjectsCreateAsync(request)` — typed create method
+- Catches `ApiException` for non-2xx responses
+- Local `ProjectItem` record maps from NSwag DTO to view model (keeps screen decoupled from generated types)
 
 ## Step 2: Wire `ProjectListScreen` into `Program.cs`
 

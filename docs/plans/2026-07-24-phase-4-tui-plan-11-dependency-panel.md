@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 11
 
-**Goal:** Modal dependency panel: search card by number, select relationship type, confirm. Triggered by `d` key from board or card detail.
+**Goal:** Modal dependency panel: search card by number, select relationship type, confirm. Triggered by `d` key from board or card detail. Uses NSwag-generated `HydraForgeApiClient`.
 
-**Depends on:** Task 3 (ApiClientFactory), Task 9 (CardDetailScreen).
+**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 9 (CardDetailScreen).
 
 ---
 
@@ -15,8 +15,7 @@
 Create `src/HydraForge.Tui/Screens/DependencyPanel.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -37,10 +36,6 @@ public class DependencyPanel : IScreen
     private List<CardSearchResult> _searchResults = new();
 
     private static readonly string[] RelationshipTypes = ["BlockedBy", "Precedes", "Relates", "SpawnedFrom"];
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public DependencyPanel(
         ApiClientFactory apiClientFactory,
@@ -216,17 +211,11 @@ public class DependencyPanel : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync(
-                $"api/projects/{_projectId}/cards?search={Uri.EscapeDataString(_searchText)}&take=5");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var list = await response.Content.ReadFromJsonAsync<CardSearchList>(JsonOptions);
-                _searchResults = list?.Cards
-                    .Where(c => c.Id != _sourceCardId)
-                    .Select(c => new CardSearchResult(c.Id, c.CardNumber, c.Title))
-                    .ToList() ?? new();
-            }
+            var list = await client.CardsAllAsync(_projectId, search: _searchText, take: 5);
+            _searchResults = list?.Cards
+                .Where(c => c.Id != _sourceCardId)
+                .Select(c => new CardSearchResult(c.Id, c.CardNumber, c.Title))
+                .ToList() ?? new();
         }
         catch { }
     }
@@ -240,34 +229,23 @@ public class DependencyPanel : IScreen
         }
 
         var targetCard = _searchResults[0];
-        var type = _selectedType switch
-        {
-            "BlockedBy" => "BlockedBy",
-            "Precedes" => "Precedes",
-            "Relates" => "Relates",
-            "SpawnedFrom" => "SpawnedFrom",
-            _ => "Relates"
-        };
 
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new { targetCardId = targetCard.Id, type };
 
-            var response = await client.PostAsJsonAsync(
-                $"api/projects/{_projectId}/cards/{_sourceCardId}/relationships",
-                payload, JsonOptions);
+            await client.RelationshipsCreateAsync(_projectId, _sourceCardId, new CreateRelationshipRequest
+            {
+                TargetCardId = targetCard.Id,
+                Type = _selectedType
+            });
 
-            if (response.IsSuccessStatusCode)
-            {
-                AnsiConsole.MarkupLine($"[green]Dependency added: {type} #{targetCard.CardNumber}[/]");
-                _appState.CurrentScreen = null; // Dismiss
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                _errorCollector.Add("N/A", $"Dependency error: {error}");
-            }
+            AnsiConsole.MarkupLine($"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
+            _appState.CurrentScreen = null; // Dismiss
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Dependency error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -276,9 +254,17 @@ public class DependencyPanel : IScreen
     }
 
     private record CardSearchResult(Guid Id, int CardNumber, string Title);
-    private record CardSearchList(List<CardSearchResult> Cards);
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports
+- No `JsonSerializerOptions` field
+- No manual DTO records (`CardSearchList`, `CardSearchResult` for API) — NSwag generates `CardList`, `CardInfo`, `CreateRelationshipRequest`
+- `client.CardsAllAsync(projectId, search, take)` — typed search with optional params
+- `client.RelationshipsCreateAsync(projectId, sourceCardId, request)` — typed create
+- Catches `ApiException` for non-2xx responses
+- Local `CardSearchResult` record maps from NSwag DTO to view model
 
 ## Step 2: Wire `DependencyPanel` into `BoardScreen` and `CardDetailScreen`
 

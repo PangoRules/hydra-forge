@@ -4,7 +4,7 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 10
 
-**Goal:** Card create (n), edit title inline (e), move between columns (m), reorder (r), archive (Del) — all from board view keyboard.
+**Goal:** Card create (n), edit title inline (e), move between columns (m), reorder (r), archive (Del) — all from board view keyboard. Uses NSwag-generated `HydraForgeApiClient`.
 
 **Depends on:** Task 7 (BoardScreen), Task 9 (CardDetailScreen for edit).
 
@@ -32,24 +32,23 @@ private async Task EditCardTitleAsync()
     try
     {
         var client = _apiClientFactory.GetClient();
-        var payload = new
-        {
-            title = newTitle,
-            description = "",
-            type = card.Type,
-            parentCardId = (Guid?)null,
-            dueAt = (DateTime?)null,
-            version = card.Version
-        };
 
-        var response = await client.PutAsJsonAsync(
-            $"api/projects/{_projectId}/cards/{card.Id}", payload, JsonOptions);
-
-        if (response.IsSuccessStatusCode)
+        await client.CardsUpdateAsync(_projectId, card.Id, new UpdateCardRequest
         {
-            await LoadBoardAsync();
-            await RenderAsync();
-        }
+            Title = newTitle,
+            Description = "",
+            Type = card.Type,
+            ParentCardId = null,
+            DueAt = null,
+            Version = card.Version
+        });
+
+        await LoadBoardAsync();
+        await RenderAsync();
+    }
+    catch (ApiException ex)
+    {
+        _errorCollector.Add("N/A", $"Edit error: {ex.Message}");
     }
     catch (HttpRequestException ex)
     {
@@ -89,22 +88,21 @@ private async Task ConfirmReorderAsync()
     try
     {
         var client = _apiClientFactory.GetClient();
-        var payload = new
-        {
-            targetColumnId = col.Id,
-            targetPosition = _selectedCard,
-            confirmBlockedMove = false,
-            version = card.Version
-        };
 
-        var response = await client.PostAsJsonAsync(
-            $"api/projects/{_projectId}/cards/{card.Id}/move", payload, JsonOptions);
-
-        if (response.IsSuccessStatusCode)
+        await client.CardsMoveAsync(_projectId, card.Id, new MoveCardRequest
         {
-            await LoadBoardAsync();
-            await RenderAsync();
-        }
+            TargetColumnId = col.Id,
+            TargetPosition = _selectedCard,
+            ConfirmBlockedMove = false,
+            Version = card.Version
+        });
+
+        await LoadBoardAsync();
+        await RenderAsync();
+    }
+    catch (ApiException ex)
+    {
+        _errorCollector.Add("N/A", $"Reorder error: {ex.Message}");
     }
     catch (HttpRequestException ex)
     {
@@ -148,7 +146,13 @@ case ConsoleKey.Escape:
     break;
 ```
 
-The existing `MoveCardAsync`, `CreateCardAsync`, `ArchiveCardAsync` methods are already in BoardScreen from Task 7. The `m`, `n`, `Del` keys are already wired.
+The existing `MoveCardAsync`, `CreateCardAsync`, `ArchiveCardAsync` methods are already in BoardScreen from Task 7 (using NSwag typed client). The `m`, `n`, `Del` keys are already wired.
+
+**Key changes from raw-HttpClient version:**
+- `EditCardTitleAsync` uses `client.CardsUpdateAsync(projectId, cardId, request)` — typed NSwag method
+- `ConfirmReorderAsync` uses `client.CardsMoveAsync(projectId, cardId, request)` — typed NSwag method
+- Catches `ApiException` instead of checking `response.IsSuccessStatusCode`
+- No `System.Net.Http.Json` / `System.Text.Json` / `JsonSerializerOptions` needed
 
 ## Step 4: Build verification
 

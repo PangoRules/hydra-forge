@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 4
 
-**Goal:** Login screen with username/password prompts, JWT storage, startup auth flow (config check → token refresh → login fallback).
+**Goal:** Login screen with username/password prompts, JWT storage, startup auth flow (config check → token refresh → login fallback). Uses NSwag-generated `HydraForgeApiClient` for all API calls — no raw `HttpClient`.
 
-**Depends on:** Task 2 (ConfigStore), Task 3 (ApiClientFactory).
+**Depends on:** Task 2 (ConfigStore), Task 3 (ApiClientFactory wraps `HydraForgeApiClient`).
 
 ---
 
@@ -15,8 +15,7 @@
 Create `src/HydraForge.Tui/Screens/LoginScreen.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -29,11 +28,6 @@ public class LoginScreen : IScreen
     private readonly ApiClientFactory _apiClientFactory;
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public LoginScreen(
         ConfigStore configStore,
@@ -97,40 +91,29 @@ public class LoginScreen : IScreen
     {
         try
         {
-            using var client = new HttpClient
-            {
-                BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/")
-            };
+            // Use unauthenticated client — login endpoint doesn't need a token
+            var client = _apiClientFactory.CreateUnauthenticatedClient();
 
-            var payload = new { username, password };
-            var response = await client.PostAsJsonAsync("api/auth/login", payload, JsonOptions);
-
-            if (!response.IsSuccessStatusCode)
+            var loginResponse = await client.LoginAsync(new LoginRequest
             {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                AnsiConsole.MarkupLine($"[red]Login failed: {response.StatusCode}[/]");
-                AnsiConsole.MarkupLine($"[grey]{errorBody}[/]");
-                AnsiConsole.WriteLine("Press any key to retry...");
-                Console.ReadKey(true);
-                await RenderAsync();
-                return;
-            }
-
-            var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
-            if (loginResponse == null)
-            {
-                AnsiConsole.MarkupLine("[red]Login failed: invalid response[/]");
-                AnsiConsole.WriteLine("Press any key to retry...");
-                Console.ReadKey(true);
-                await RenderAsync();
-                return;
-            }
+                Username = username,
+                Password = password
+            });
 
             config.JwtToken = loginResponse.AccessToken;
             config.ExpiresAt = loginResponse.ExpiresAt;
             _configStore.Save(config);
 
             AnsiConsole.MarkupLine($"[green]Logged in as {loginResponse.Username}[/]");
+        }
+        catch (ApiException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Login failed: {ex.StatusCode}[/]");
+            AnsiConsole.MarkupLine($"[grey]{ex.Response}[/]");
+            _errorCollector.Add("N/A", $"Login error: {ex.Message}");
+            AnsiConsole.WriteLine("Press any key to retry...");
+            Console.ReadKey(true);
+            await RenderAsync();
         }
         catch (HttpRequestException ex)
         {
@@ -143,16 +126,16 @@ public class LoginScreen : IScreen
     }
 
     public Task HandleKeyAsync(ConsoleKeyInfo key) => Task.CompletedTask;
-
-    private record LoginResponse(
-        string AccessToken,
-        DateTimeOffset ExpiresAt,
-        Guid UserId,
-        string Username,
-        bool IsAdmin
-    );
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports — NSwag handles serialization
+- No `JsonSerializerOptions` field
+- No manual `LoginResponse` record — NSwag generates `LoginRequest` and `LoginResponse` types
+- `_apiClientFactory.CreateUnauthenticatedClient()` returns `HydraForgeApiClient` without auth header
+- `client.LoginAsync(request)` is the typed NSwag method
+- Catches `ApiException` (NSwag-generated) for non-2xx responses
 
 ## Step 2: Create startup auth flow in `Program.cs`
 
@@ -229,6 +212,8 @@ public static class Program
 }
 ```
 
+**Wiring note:** `apiClientFactory.CreateClient()` now returns `HydraForgeApiClient` (NSwag-generated). All downstream screens use `_apiClientFactory.GetClient()` which returns the same typed client.
+
 ## Step 3: Build verification
 
 ```bash
@@ -241,5 +226,5 @@ Expected: build succeeds.
 
 ```bash
 git add src/HydraForge.Tui/Screens/LoginScreen.cs src/HydraForge.Tui/Program.cs
-git commit -m "feat(tui): add login screen and startup auth flow with token refresh"
+git commit -m "feat(tui): add login screen and startup auth flow with NSwag client"
 ```

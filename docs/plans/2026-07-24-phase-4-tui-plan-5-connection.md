@@ -6,7 +6,7 @@
 
 **Goal:** Lock screen overlay when server unreachable, auto-reconnect with backoff, connection status tracking in AppState.
 
-**Depends on:** Task 1 (AppState, IScreen).
+**Depends on:** Task 1 (AppState, IScreen), Task 3 (ApiClientFactory wraps `HydraForgeApiClient`).
 
 ---
 
@@ -125,6 +125,7 @@ public class LockScreen : IScreen
 Create `src/HydraForge.Tui/Services/ConnectionManager.cs`:
 
 ```csharp
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Services;
@@ -150,8 +151,9 @@ public class ConnectionManager
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync("api/health");
-            return response.IsSuccessStatusCode;
+            // NSwag generates HealthAsync() from the /api/health endpoint
+            await client.HealthAsync();
+            return true;
         }
         catch
         {
@@ -182,6 +184,8 @@ public class ConnectionManager
     }
 }
 ```
+
+**Key change:** `CheckHealthAsync` uses `client.HealthAsync()` (NSwag-generated typed method) instead of `client.GetAsync("api/health")`. No raw `HttpClient` calls.
 
 ## Step 3: Build verification
 

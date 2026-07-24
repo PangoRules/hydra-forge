@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 9
 
-**Goal:** Full-screen card detail with all fields, section navigation via Tab, $EDITOR for description, checklist/comments/dependencies display.
+**Goal:** Full-screen card detail with all fields, section navigation via Tab, $EDITOR for description, checklist/comments/dependencies display. Uses NSwag-generated `HydraForgeApiClient`.
 
-**Depends on:** Task 3 (ApiClientFactory), Task 7 (BoardScreen navigation).
+**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 7 (BoardScreen navigation).
 
 ---
 
@@ -64,8 +64,7 @@ public class EditorLauncher
 Create `src/HydraForge.Tui/Screens/CardDetailScreen.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -86,11 +85,6 @@ public class CardDetailScreen : IScreen
     private Guid _projectId;
     private Guid _cardId;
     private int _sectionIndex; // 0=metadata, 1=description, 2=checklist, 3=comments, 4=dependencies
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public CardDetailScreen(
         ApiClientFactory apiClientFactory,
@@ -132,15 +126,11 @@ public class CardDetailScreen : IScreen
         ).LeftAligned();
         AnsiConsole.Write(header);
 
-        // Metadata section
+        // Sections
         var metadataPanel = BuildMetadataPanel();
-        // Description section
         var descriptionPanel = BuildDescriptionPanel();
-        // Checklist section
         var checklistPanel = BuildChecklistPanel();
-        // Comments section
         var commentsPanel = BuildCommentsPanel();
-        // Dependencies section
         var dependenciesPanel = BuildDependenciesPanel();
 
         var sections = new List<IRenderable>
@@ -177,7 +167,7 @@ public class CardDetailScreen : IScreen
                 : $"[grey]{_card.DueAt:yyyy-MM-dd}[/]")
             : "[grey]No due date[/]";
 
-        var assignees = _card.Assignees.Count > 0
+        var assignees = _card.Assignees?.Count > 0
             ? string.Join(", ", _card.Assignees.Select(a => a.Username))
             : "[grey]Unassigned[/]";
 
@@ -348,7 +338,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case 1: // Description — $EDITOR
-                var newDesc = await _editorLauncher.EditAsync(_card!.Description);
+                var newDesc = await _editorLauncher.EditAsync(_card!.Description ?? "");
                 if (newDesc != null)
                     await UpdateCardAsync(description: newDesc);
                 break;
@@ -360,29 +350,23 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new
-            {
-                title = title ?? _card!.Title,
-                description = description ?? _card!.Description,
-                type = _card!.Type,
-                parentCardId = (Guid?)null,
-                dueAt = _card!.DueAt,
-                version = _card!.Version
-            };
 
-            var response = await client.PutAsJsonAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}", payload, JsonOptions);
+            var updated = await client.CardsUpdateAsync(_projectId, _cardId, new UpdateCardRequest
+            {
+                Title = title ?? _card!.Title,
+                Description = description ?? _card!.Description,
+                Type = _card!.Type,
+                ParentCardId = null,
+                DueAt = _card!.DueAt,
+                Version = _card!.Version
+            });
 
-            if (response.IsSuccessStatusCode)
-            {
-                _card = await response.Content.ReadFromJsonAsync<CardDetail>(JsonOptions);
-                await RenderAsync();
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                _errorCollector.Add("N/A", $"Update failed: {error}");
-            }
+            _card = updated;
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Update failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -393,20 +377,18 @@ public class CardDetailScreen : IScreen
     private async Task ToggleChecklistItemAsync()
     {
         if (_checklist.Count == 0) return;
-        // Toggle first incomplete item, or first item
         var item = _checklist.FirstOrDefault(i => !i.IsCompleted) ?? _checklist[0];
 
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.PatchAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}/checklist/{item.Id}/toggle", null);
-
-            if (response.IsSuccessStatusCode)
-            {
-                await LoadChecklistAsync();
-                await RenderAsync();
-            }
+            await client.ChecklistToggleAsync(_projectId, _cardId, item.Id);
+            await LoadChecklistAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Toggle error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -425,16 +407,16 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new { content };
-
-            var response = await client.PostAsJsonAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}/comments", payload, JsonOptions);
-
-            if (response.IsSuccessStatusCode)
+            await client.CommentsCreateAsync(_projectId, _cardId, new CreateCommentRequest
             {
-                await LoadCommentsAsync();
-                await RenderAsync();
-            }
+                Content = content
+            });
+            await LoadCommentsAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Comment error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -447,17 +429,15 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                _card = await response.Content.ReadFromJsonAsync<CardDetail>(JsonOptions);
-            }
+            _card = await client.CardsGETAsync(_projectId, _cardId);
 
             await LoadChecklistAsync();
             await LoadCommentsAsync();
             await LoadRelationshipsAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Load error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -470,14 +450,8 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}/checklist");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var list = await response.Content.ReadFromJsonAsync<ChecklistList>(JsonOptions);
-                _checklist = list?.Items ?? new();
-            }
+            var list = await client.ChecklistAllAsync(_projectId, _cardId);
+            _checklist = list?.Items ?? new();
         }
         catch { }
     }
@@ -487,14 +461,8 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}/comments");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var list = await response.Content.ReadFromJsonAsync<CommentList>(JsonOptions);
-                _comments = list?.Comments ?? new();
-            }
+            var list = await client.CommentsAllAsync(_projectId, _cardId);
+            _comments = list?.Comments ?? new();
         }
         catch { }
     }
@@ -504,14 +472,8 @@ public class CardDetailScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var response = await client.GetAsync(
-                $"api/projects/{_projectId}/cards/{_cardId}/relationships");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var list = await response.Content.ReadFromJsonAsync<RelationshipList>(JsonOptions);
-                _relationships = list?.Relationships ?? new();
-            }
+            var list = await client.RelationshipsAllAsync(_projectId, _cardId);
+            _relationships = list?.Relationships ?? new();
         }
         catch { }
     }
@@ -524,22 +486,21 @@ public class CardDetailScreen : IScreen
         "Idea" => "green",
         _ => "grey"
     };
-
-    // DTOs
-    private record CardDetail(
-        Guid Id, int CardNumber, string Title, string Description, string Type,
-        string ColumnName, int Version, DateTime CreatedAt, DateTime? DueAt,
-        List<AssigneeInfo> Assignees
-    );
-    private record AssigneeInfo(Guid UserId, string Username);
-    private record ChecklistList(List<ChecklistItem> Items);
-    private record ChecklistItem(Guid Id, string Text, bool IsCompleted, int Position);
-    private record CommentList(List<CommentItem> Comments);
-    private record CommentItem(Guid Id, string AuthorUsername, string Content, DateTime CreatedAt);
-    private record RelationshipList(List<RelationshipItem> Relationships);
-    private record RelationshipItem(Guid Id, string Type, int TargetCardNumber, string TargetCardTitle);
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports
+- No `JsonSerializerOptions` field
+- No manual DTO records — NSwag generates `CardDetail`, `ChecklistItem`, `CommentItem`, `RelationshipItem`, `UpdateCardRequest`, `CreateCommentRequest`
+- `client.CardsGETAsync(projectId, cardId)` — typed card fetch
+- `client.CardsUpdateAsync(projectId, cardId, request)` — typed update
+- `client.ChecklistAllAsync(projectId, cardId)` — typed checklist fetch
+- `client.ChecklistToggleAsync(projectId, cardId, itemId)` — typed toggle
+- `client.CommentsAllAsync(projectId, cardId)` — typed comments fetch
+- `client.CommentsCreateAsync(projectId, cardId, request)` — typed comment create
+- `client.RelationshipsAllAsync(projectId, cardId)` — typed relationships fetch
+- Catches `ApiException` for non-2xx responses
 
 ## Step 3: Wire `CardDetailScreen` into `BoardScreen`
 

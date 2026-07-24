@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 13
 
-**Goal:** View spec/plan documents in terminal, open in $EDITOR for editing, save back via API.
+**Goal:** View spec/plan documents in terminal, open in $EDITOR for editing, save back via API. Uses NSwag-generated `HydraForgeApiClient`.
 
-**Depends on:** Task 3 (ApiClientFactory), Task 9 (CardDetailScreen, EditorLauncher).
+**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 9 (CardDetailScreen, EditorLauncher).
 
 ---
 
@@ -15,8 +15,7 @@
 Create `src/HydraForge.Tui/Screens/SpecViewerScreen.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -36,11 +35,6 @@ public class SpecViewerScreen : IScreen
 
     private List<DocumentItem> _documents = new();
     private int _selectedIndex;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public SpecViewerScreen(
         ApiClientFactory apiClientFactory,
@@ -152,7 +146,6 @@ public class SpecViewerScreen : IScreen
         AnsiConsole.Clear();
         AnsiConsole.Write(new Rule($"[blue]{Markup.Escape(doc.Title)}[/]").LeftAligned());
 
-        // Render content (truncated for terminal)
         var content = doc.Content.Length > 1000
             ? doc.Content[..997] + "..."
             : doc.Content;
@@ -186,30 +179,33 @@ public class SpecViewerScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new
+
+            if (_mode == "spec")
             {
-                title = doc.Title,
-                description = (string?)null,
-                content = newContent
-            };
-
-            var url = _mode == "spec"
-                ? $"api/projects/{_projectId}/specs/{doc.Id}"
-                : $"api/projects/{_projectId}/plans/{doc.Id}";
-
-            var response = await client.PutAsJsonAsync(url, payload, JsonOptions);
-
-            if (response.IsSuccessStatusCode)
-            {
-                AnsiConsole.MarkupLine("[green]Document updated.[/]");
-                await LoadDocumentsAsync();
-                await RenderAsync();
+                await client.SpecsUpdateAsync(_projectId, doc.Id, new UpdateSpecRequest
+                {
+                    Title = doc.Title,
+                    Description = null,
+                    Content = newContent
+                });
             }
             else
             {
-                var error = await response.Content.ReadAsStringAsync();
-                _errorCollector.Add("N/A", $"Update failed: {error}");
+                await client.PlansUpdateAsync(_projectId, doc.Id, new UpdatePlanRequest
+                {
+                    Title = doc.Title,
+                    Description = null,
+                    Content = newContent
+                });
             }
+
+            AnsiConsole.MarkupLine("[green]Document updated.[/]");
+            await LoadDocumentsAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Update failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -244,47 +240,33 @@ public class SpecViewerScreen : IScreen
 
             if (_mode == "spec")
             {
-                var payload = new
+                await client.SpecsCreateAsync(_projectId, _cardId, new CreateSpecRequest
                 {
-                    docType,
-                    title,
-                    description = (string?)null,
-                    content
-                };
-                var response = await client.PostAsJsonAsync(
-                    $"api/projects/{_projectId}/specs/cards/{_cardId}", payload, JsonOptions);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    _errorCollector.Add("N/A", $"Create failed: {error}");
-                    return;
-                }
+                    DocType = docType,
+                    Title = title,
+                    Description = null,
+                    Content = content
+                });
             }
             else
             {
-                var payload = new
+                await client.PlansCreateAsync(_projectId, _cardId, new CreatePlanRequest
                 {
-                    title,
-                    description = (string?)null,
-                    content,
-                    specId = (Guid?)null,
-                    position = _documents.Count
-                };
-                var response = await client.PostAsJsonAsync(
-                    $"api/projects/{_projectId}/plans/cards/{_cardId}", payload, JsonOptions);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    _errorCollector.Add("N/A", $"Create failed: {error}");
-                    return;
-                }
+                    Title = title,
+                    Description = null,
+                    Content = content,
+                    SpecId = null,
+                    Position = _documents.Count
+                });
             }
 
             AnsiConsole.MarkupLine($"[green]{_mode} created![/]");
             await LoadDocumentsAsync();
             await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Create failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -297,29 +279,25 @@ public class SpecViewerScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var url = _mode == "spec"
-                ? $"api/projects/{_projectId}/specs/cards/{_cardId}"
-                : $"api/projects/{_projectId}/plans/cards/{_cardId}";
 
-            var response = await client.GetAsync(url);
-
-            if (response.IsSuccessStatusCode)
+            if (_mode == "spec")
             {
-                if (_mode == "spec")
-                {
-                    var list = await response.Content.ReadFromJsonAsync<SpecList>(JsonOptions);
-                    _documents = list?.Specs.Select(s => new DocumentItem(
-                        s.Id, s.Title, s.Content, s.Version, s.UpdatedAt, s.DocType, null
-                    )).ToList() ?? new();
-                }
-                else
-                {
-                    var list = await response.Content.ReadFromJsonAsync<PlanList>(JsonOptions);
-                    _documents = list?.Plans.Select(p => new DocumentItem(
-                        p.Id, p.Title, p.Content, p.Version, p.UpdatedAt, null, p.Status
-                    )).ToList() ?? new();
-                }
+                var list = await client.SpecsAllAsync(_projectId, _cardId);
+                _documents = list?.Specs.Select(s => new DocumentItem(
+                    s.Id, s.Title, s.Content, s.Version, s.UpdatedAt, s.DocType, null
+                )).ToList() ?? new();
             }
+            else
+            {
+                var list = await client.PlansAllAsync(_projectId, _cardId);
+                _documents = list?.Plans.Select(p => new DocumentItem(
+                    p.Id, p.Title, p.Content, p.Version, p.UpdatedAt, null, p.Status
+                )).ToList() ?? new();
+            }
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Load error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -339,15 +317,21 @@ public class SpecViewerScreen : IScreen
         Guid Id, string Title, string Content, int Version,
         DateTime UpdatedAt, string? DocType, string? Status
     );
-
-    private record SpecList(List<SpecInfo> Specs);
-    private record SpecInfo(Guid Id, string Title, string Content, int Version,
-        DateTime UpdatedAt, string DocType);
-    private record PlanList(List<PlanInfo> Plans);
-    private record PlanInfo(Guid Id, string Title, string Content, int Version,
-        DateTime UpdatedAt, string Status);
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports
+- No `JsonSerializerOptions` field
+- No manual DTO records (`SpecList`, `SpecInfo`, `PlanList`, `PlanInfo`) — NSwag generates `SpecList`, `SpecInfo`, `PlanList`, `PlanInfo`, `CreateSpecRequest`, `CreatePlanRequest`, `UpdateSpecRequest`, `UpdatePlanRequest`
+- `client.SpecsAllAsync(projectId, cardId)` — typed spec list
+- `client.SpecsCreateAsync(projectId, cardId, request)` — typed spec create
+- `client.SpecsUpdateAsync(projectId, specId, request)` — typed spec update
+- `client.PlansAllAsync(projectId, cardId)` — typed plan list
+- `client.PlansCreateAsync(projectId, cardId, request)` — typed plan create
+- `client.PlansUpdateAsync(projectId, planId, request)` — typed plan update
+- Catches `ApiException` for non-2xx responses
+- Local `DocumentItem` record maps from NSwag DTO to view model
 
 ## Step 2: Wire `SpecViewerScreen` into `CardDetailScreen`
 

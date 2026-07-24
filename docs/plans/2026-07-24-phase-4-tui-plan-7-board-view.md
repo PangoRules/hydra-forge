@@ -4,9 +4,9 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 7
 
-**Goal:** Board view with Spectre.Console column/card layout, keyboard navigation (h/l/j/k), LiveDisplay for real-time updates.
+**Goal:** Board view with Spectre.Console column/card layout, keyboard navigation (h/l/j/k), LiveDisplay for real-time updates. Uses NSwag-generated `HydraForgeApiClient` for all API calls.
 
-**Depends on:** Task 3 (ApiClientFactory), Task 4 (auth), Task 5 (ConnectionManager).
+**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 4 (auth), Task 5 (ConnectionManager).
 
 ---
 
@@ -153,8 +153,7 @@ public class BoardRenderer
 Create `src/HydraForge.Tui/Screens/BoardScreen.cs`:
 
 ```csharp
-using System.Net.Http.Json;
-using System.Text.Json;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Renderers;
 using HydraForge.Tui.Services;
@@ -175,11 +174,6 @@ public class BoardScreen : IScreen
     private int _selectedCard;
     private string _projectName = "";
     private Guid _projectId;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public BoardScreen(
         ApiClientFactory apiClientFactory,
@@ -301,20 +295,12 @@ public class BoardScreen : IScreen
             var client = _apiClientFactory.GetClient();
 
             // Load project
-            var projectResponse = await client.GetAsync($"api/projects/{_projectId}");
-            if (!projectResponse.IsSuccessStatusCode) return;
-
-            var project = await projectResponse.Content.ReadFromJsonAsync<ProjectDetail>(JsonOptions);
-            if (project == null) return;
-
+            var project = await client.ProjectsGETAsync(_projectId);
             _projectName = project.Name;
 
             // Load cards
-            var cardsResponse = await client.GetAsync($"api/projects/{_projectId}/cards");
-            if (!cardsResponse.IsSuccessStatusCode) return;
-
-            var cardList = await cardsResponse.Content.ReadFromJsonAsync<CardList>(JsonOptions);
-            var cards = cardList?.Cards ?? new();
+            var cardList = await client.CardsAllAsync(_projectId);
+            var cards = cardList?.Cards ?? new List<CardInfo>();
 
             // Build column data
             _columns = project.Columns
@@ -334,12 +320,16 @@ public class BoardScreen : IScreen
                             c.Title,
                             c.Type,
                             false, // Blocked indicator — Task 12
-                            c.Assignees.Select(a => a.Username[..1].ToUpper()).ToList(),
+                            c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList() ?? new(),
                             c.Version
                         ))
                         .ToList()
                 ))
                 .ToList();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Board load error: {ex.StatusCode}");
         }
         catch (HttpRequestException ex)
         {
@@ -378,30 +368,24 @@ public class BoardScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new
-            {
-                columnId = col.Id,
-                title,
-                description = "",
-                type,
-                parentCardId = (Guid?)null,
-                dueAt = (DateTime?)null,
-                assigneeUserIds = Array.Empty<Guid>()
-            };
 
-            var response = await client.PostAsJsonAsync(
-                $"api/projects/{_projectId}/cards", payload, JsonOptions);
+            await client.CardsCreateAsync(_projectId, new CreateCardRequest
+            {
+                ColumnId = col.Id,
+                Title = title,
+                Description = "",
+                Type = type,
+                ParentCardId = null,
+                DueAt = null,
+                AssigneeUserIds = new List<Guid>()
+            });
 
-            if (response.IsSuccessStatusCode)
-            {
-                await LoadBoardAsync();
-                await RenderAsync();
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                _errorCollector.Add("N/A", $"Create card failed: {error}");
-            }
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Create card failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -427,31 +411,25 @@ public class BoardScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new
-            {
-                targetColumnId = targetCol.Id,
-                targetPosition = targetCol.Cards.Count,
-                confirmBlockedMove = false,
-                version = card.Version
-            };
 
-            var response = await client.PostAsJsonAsync(
-                $"api/projects/{_projectId}/cards/{card.Id}/move", payload, JsonOptions);
+            await client.CardsMoveAsync(_projectId, card.Id, new MoveCardRequest
+            {
+                TargetColumnId = targetCol.Id,
+                TargetPosition = targetCol.Cards.Count,
+                ConfirmBlockedMove = false,
+                Version = card.Version
+            });
 
-            if (response.IsSuccessStatusCode)
-            {
-                await LoadBoardAsync();
-                await RenderAsync();
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-            {
-                AnsiConsole.MarkupLine("[yellow]Move blocked by dependencies. Use --force to override.[/]");
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                _errorCollector.Add("N/A", $"Move failed: {error}");
-            }
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 409)
+        {
+            AnsiConsole.MarkupLine("[yellow]Move blocked by dependencies. Use --force to override.[/]");
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Move failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
@@ -472,36 +450,37 @@ public class BoardScreen : IScreen
         try
         {
             var client = _apiClientFactory.GetClient();
-            var payload = new { version = card.Version };
 
-            var response = await client.PostAsJsonAsync(
-                $"api/projects/{_projectId}/cards/{card.Id}/archive", payload, JsonOptions);
-
-            if (response.IsSuccessStatusCode)
+            await client.CardsArchiveAsync(_projectId, card.Id, new ArchiveCardRequest
             {
-                await LoadBoardAsync();
-                await RenderAsync();
-            }
+                Version = card.Version
+            });
+
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
         }
     }
-
-    // DTOs
-    private record ProjectDetail(
-        Guid Id, string Name, List<ColumnInfo> Columns
-    );
-    private record ColumnInfo(Guid Id, string Name, int Position, int? WipLimit, string? Color);
-    private record CardList(List<CardInfo> Cards);
-    private record CardInfo(
-        Guid Id, Guid ColumnId, int CardNumber, string Title, string Type,
-        int Position, int Version, List<AssigneeInfo> Assignees
-    );
-    private record AssigneeInfo(Guid UserId, string Username);
 }
 ```
+
+**Key changes from raw-HttpClient version:**
+- No `System.Net.Http.Json` / `System.Text.Json` imports
+- No `JsonSerializerOptions` field
+- No manual DTO records (`ProjectDetail`, `ColumnInfo`, `CardList`, `CardInfo`, `AssigneeInfo`) — NSwag generates them
+- `client.ProjectsGETAsync(projectId)` — typed project fetch
+- `client.CardsAllAsync(projectId)` — typed cards list
+- `client.CardsCreateAsync(projectId, request)` — typed create
+- `client.CardsMoveAsync(projectId, cardId, request)` — typed move
+- `client.CardsArchiveAsync(projectId, cardId, request)` — typed archive
+- Catches `ApiException` for non-2xx responses, including `409 Conflict` for blocked moves
 
 ## Step 3: Wire `BoardScreen` into `ProjectListScreen`
 

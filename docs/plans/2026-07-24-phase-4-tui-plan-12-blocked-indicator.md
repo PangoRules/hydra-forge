@@ -4,7 +4,7 @@
 **Parent branch:** `feat/phase-4-tui`
 **Parent spec:** `2026-07-24-phase-4-tui.md` — Task 12
 
-**Goal:** Show 🔴 prefix on cards that have active "BlockedBy" relationships in board view.
+**Goal:** Show 🔴 prefix on cards that have active "BlockedBy" relationships in board view. Uses NSwag-generated `HydraForgeApiClient`.
 
 **Depends on:** Task 7 (BoardScreen), Task 11 (dependency panel creates relationships).
 
@@ -20,47 +20,44 @@ Add after the cards load:
 var blockedCardIds = new HashSet<Guid>();
 try
 {
+    var client = _apiClientFactory.GetClient();
+
     // Fetch relationships for all cards to find BlockedBy
     foreach (var card in cards)
     {
-        var relResponse = await client.GetAsync(
-            $"api/projects/{_projectId}/cards/{card.Id}/relationships");
-        if (relResponse.IsSuccessStatusCode)
+        var relList = await client.RelationshipsAllAsync(_projectId, card.Id);
+        if (relList?.Relationships != null)
         {
-            var relList = await relResponse.Content
-                .ReadFromJsonAsync<RelationshipList>(JsonOptions);
-            if (relList?.Relationships.Any(r => r.Type == "BlockedBy") == true)
+            foreach (var rel in relList.Relationships)
             {
-                blockedCardIds.Add(card.Id);
+                if (rel.Type == "BlockedBy")
+                    blockedCardIds.Add(card.Id);
             }
         }
     }
 }
-catch { /* Non-critical — blocked indicators are cosmetic */ }
+catch
+{
+    // Non-fatal — blocked indicators are cosmetic
+}
 ```
 
-Update the `CardData` construction to use `blockedCardIds`:
+Then update the `CardData` construction to use `blockedCardIds`:
 ```csharp
 .Select(c => new BoardRenderer.CardData(
     c.Id,
     c.CardNumber,
     c.Title,
     c.Type,
-    blockedCardIds.Contains(c.Id), // IsBlocked
-    c.Assignees.Select(a => a.Username[..1].ToUpper()).ToList(),
+    blockedCardIds.Contains(c.Id), // ← was hardcoded false
+    c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList() ?? new(),
     c.Version
 ))
 ```
 
-## Step 2: Add DTO for relationship list
+**Key change:** `client.RelationshipsAllAsync(projectId, cardId)` — typed NSwag method instead of raw `client.GetAsync(...)`.
 
-Add to `BoardScreen`:
-```csharp
-private record RelationshipList(List<RelationshipInfo> Relationships);
-private record RelationshipInfo(string Type);
-```
-
-## Step 3: Build verification
+## Step 2: Build verification
 
 ```bash
 dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj
@@ -68,9 +65,9 @@ dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj
 
 Expected: build succeeds.
 
-## Step 4: Commit
+## Step 3: Commit
 
 ```bash
 git add src/HydraForge.Tui/Screens/BoardScreen.cs
-git commit -m "feat(tui): add blocked card indicator (🔴) in board view"
+git commit -m "feat(tui): add blocked card indicator via relationship check in board view"
 ```
