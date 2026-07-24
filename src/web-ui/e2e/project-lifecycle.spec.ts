@@ -120,8 +120,8 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   await addChecklistItem('Get approval from marketing')
   await addChecklistItem('Schedule send')
 
-  await checklistTab.getByRole('button', { name: "Mark 'Draft copy' complete" }).click()
-  await expect(checklistTab.getByRole('button', { name: "Mark 'Draft copy' incomplete" })).toBeVisible()
+  await checklistTab.getByRole('button', { name: 'Mark \'Draft copy\' complete' }).click()
+  await expect(checklistTab.getByRole('button', { name: 'Mark \'Draft copy\' incomplete' })).toBeVisible()
 
   // Move "Get approval from marketing" above "Draft copy"
   await checklistTab.locator('li', { hasText: 'Get approval from marketing' }).getByRole('button', { name: 'Move up' }).click()
