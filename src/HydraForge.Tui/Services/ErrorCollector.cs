@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace HydraForge.Tui.Services;
 
 public class ErrorCollector

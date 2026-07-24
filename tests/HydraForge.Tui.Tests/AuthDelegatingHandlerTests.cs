@@ -9,7 +9,7 @@ public class AuthDelegatingHandlerTests
     public async Task SendAsync_WithToken_AddsBearerAuthorizationHeader()
     {
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
-        var handler = new AuthDelegatingHandler();
+        var handler = new AuthDelegatingHandler(fake);
         handler.SetToken("jwt-abc");
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
@@ -23,7 +23,7 @@ public class AuthDelegatingHandlerTests
     public async Task SendAsync_AfterSetTokenNull_OmitsAuthorizationHeader()
     {
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
-        var handler = new AuthDelegatingHandler();
+        var handler = new AuthDelegatingHandler(fake);
         handler.SetToken("jwt-abc");
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
