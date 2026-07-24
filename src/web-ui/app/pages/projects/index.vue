@@ -183,7 +183,7 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
           v-if="totalCount > 0"
           class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
         >
-          <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">
             <div class="flex items-center gap-2">
               <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Rows per page:</span>
               <USelect
