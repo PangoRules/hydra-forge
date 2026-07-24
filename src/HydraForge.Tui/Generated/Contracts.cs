@@ -749,7 +749,7 @@ namespace HydraForge.Tui.Generated
         public System.Guid? SpecId { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("position", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int? Position { get; set; } = "0";
+        public int? Position { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
