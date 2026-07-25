@@ -1,13 +1,9 @@
 using HydraForge.Application.Auth;
+using HydraForge.Application.Realtime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace HydraForge.Infrastructure.Realtime;
-
-public interface INotificationHub
-{
-    Task OnNotificationReceived(object notification);
-}
 
 [Authorize]
 public class NotificationHub : Hub<INotificationHub>

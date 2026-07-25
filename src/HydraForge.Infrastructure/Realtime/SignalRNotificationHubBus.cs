@@ -1,4 +1,5 @@
 using HydraForge.Application.Notifications;
+using HydraForge.Application.Realtime;
 using HydraForge.Domain.Entities.PersonalSpace;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,8 +10,7 @@ public class SignalRNotificationHubBus(IHubContext<NotificationHub, INotificatio
     public async Task SendNotificationAsync(Guid userId, Notification notification, CancellationToken ct)
     {
         await hubContext.Clients.Group($"user-{userId}").OnNotificationReceived(
-            new
-            {
+            new NotificationReceivedEvent(
                 notification.Id,
                 notification.Title,
                 notification.Body,
@@ -18,8 +18,8 @@ public class SignalRNotificationHubBus(IHubContext<NotificationHub, INotificatio
                 notification.ProjectId,
                 notification.ActionUrl,
                 notification.CreatedAt,
-                notification.IsRead,
-            }
+                notification.IsRead
+            )
         );
     }
 }
