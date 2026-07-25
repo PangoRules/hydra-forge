@@ -332,10 +332,9 @@ public class BoardScreen : IScreen
                     ? ValidationResult.Error("Title required")
                     : ValidationResult.Success()));
 
-        var type = AnsiConsole.Prompt(
-            new SelectionPrompt<HydraForge.Tui.Generated.CardType>()
-                .Title("Type:")
-                .AddChoices(HydraForge.Tui.Generated.CardType.Task, HydraForge.Tui.Generated.CardType.Issue, HydraForge.Tui.Generated.CardType.Goal, HydraForge.Tui.Generated.CardType.Idea));
+        var typeChoices = new[] { "Task", "Issue", "Goal", "Idea" };
+        var typeName = await ListPrompt.Show("Type:", typeChoices, renderBackdrop: RenderAsync) ?? "Task";
+        var type = Enum.Parse<HydraForge.Tui.Generated.CardType>(typeName);
 
         try
         {
@@ -373,10 +372,12 @@ public class BoardScreen : IScreen
         var card = sourceCol.Cards[_selectedCard];
 
         var targetNames = _columns.Select(c => c.Name).ToList();
-        var targetName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Move to column:")
-                .AddChoices(targetNames));
+        var targetName = await ListPrompt.Show("Move to column:", targetNames, _selectedColumn, RenderAsync);
+        if (targetName == null)
+        {
+            await RenderAsync();
+            return;
+        }
 
         var targetCol = _columns.First(c => c.Name == targetName);
 
