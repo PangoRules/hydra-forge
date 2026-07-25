@@ -7,34 +7,29 @@ using Spectre.Console.Rendering;
 
 namespace HydraForge.Tui.Screens;
 
-public class CardDetailScreen : IScreen
+public class CardDetailScreen(
+    ApiClientFactory apiClientFactory,
+    AppState appState,
+    ErrorCollector errorCollector,
+    ConnectionManager connectionManager
+) : IScreen
 {
-    private readonly ApiClientFactory _apiClientFactory;
-    private readonly AppState _appState;
-    private readonly ErrorCollector _errorCollector;
-    private readonly ConnectionManager _connectionManager;
+    private readonly ApiClientFactory _apiClientFactory = apiClientFactory;
+    private readonly AppState _appState = appState;
+    private readonly ErrorCollector _errorCollector = errorCollector;
+    private readonly ConnectionManager _connectionManager = connectionManager;
+    private HydraForgeApiClient Client => _apiClientFactory.GetClient();
     private readonly EditorLauncher _editorLauncher = new();
 
     private CardResponse? _card;
-    private List<ChecklistItemResponse> _checklist = new();
-    private List<CommentResponse> _comments = new();
-    private List<CardRelationshipDto> _relationships = new();
+    private List<ChecklistItemResponse> _checklist = [];
+    private List<CommentResponse> _comments = [];
+    private List<CardRelationshipDto> _relationships = [];
     private Guid _projectId;
     private Guid _cardId;
     private int _sectionIndex;
     private int _checklistIndex;
-
-    public CardDetailScreen(
-        ApiClientFactory apiClientFactory,
-        AppState appState,
-        ErrorCollector errorCollector,
-        ConnectionManager connectionManager)
-    {
-        _apiClientFactory = apiClientFactory;
-        _appState = appState;
-        _errorCollector = errorCollector;
-        _connectionManager = connectionManager;
-    }
+    private int _dependencyIndex;
 
     public async Task OnEnterAsync()
     {
@@ -47,15 +42,18 @@ public class CardDetailScreen : IScreen
 
     public async Task RenderAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         AnsiConsole.Clear();
 
         // Header
         var typeColor = GetTypeColor(_card.Type);
-        AnsiConsole.Write(new Rule(
-            $"[{typeColor}]#{_card.CardNumber}[/] [blue bold]{Markup.Escape(_card.Title)}[/]"
-        ));
+        AnsiConsole.Write(
+            new Rule(
+                $"[{typeColor}]#{_card.CardNumber}[/] [blue bold]{Markup.Escape(_card.Title)}[/]"
+            )
+        );
 
         // Sections — build content first, then wrap in panels
         var content = new List<IRenderable>
@@ -64,7 +62,7 @@ public class CardDetailScreen : IScreen
             BuildDescriptionPanel(),
             BuildChecklistPanel(),
             BuildCommentsPanel(),
-            BuildDependenciesPanel()
+            BuildDependenciesPanel(),
         };
 
         // Highlight active section
@@ -100,6 +98,11 @@ public class CardDetailScreen : IScreen
                 break;
             case 3:
                 yield return "[a] Comment";
+                break;
+            case 4:
+                yield return "[j/k] Select";
+                yield return "[Enter] Open";
+                yield return "[d] Add dependency";
                 break;
         }
 
@@ -147,27 +150,37 @@ public class CardDetailScreen : IScreen
     }
 
     private Panel BuildMetadataPanel() => BuildSectionPanel(0, _sectionIndex == 0);
+
     private Panel BuildDescriptionPanel() => BuildSectionPanel(1, _sectionIndex == 1);
+
     private Panel BuildChecklistPanel() => BuildSectionPanel(2, _sectionIndex == 2);
+
     private Panel BuildCommentsPanel() => BuildSectionPanel(3, _sectionIndex == 3);
+
     private Panel BuildDependenciesPanel() => BuildSectionPanel(4, _sectionIndex == 4);
 
     private IRenderable BuildMetadataContent()
     {
-        if (_card == null) return new Markup("");
+        if (_card == null)
+            return new Markup("");
 
         var dueText = _card.DueAt.HasValue
-            ? (_card.DueAt.Value.UtcDateTime < DateTime.UtcNow
-                ? $"[red]{_card.DueAt:yyyy-MM-dd} (overdue)[/]"
-                : $"[grey]{_card.DueAt:yyyy-MM-dd}[/]")
+            ? (
+                _card.DueAt.Value.UtcDateTime < DateTime.UtcNow
+                    ? $"[red]{_card.DueAt:yyyy-MM-dd} (overdue)[/]"
+                    : $"[grey]{_card.DueAt:yyyy-MM-dd}[/]"
+            )
             : "[grey]No due date[/]";
 
-        var assignees = _card.Assignees?.Count > 0
-            ? string.Join(", ", _card.Assignees.Select(a => Markup.Escape(a.Username)))
-            : "[grey]Unassigned[/]";
+        var assignees =
+            _card.Assignees?.Count > 0
+                ? string.Join(", ", _card.Assignees.Select(a => Markup.Escape(a.Username)))
+                : "[grey]Unassigned[/]";
 
         return new Rows(
-            new Markup($"Type: [{GetTypeColor(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"),
+            new Markup(
+                $"Type: [{GetTypeColor(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"
+            ),
             new Markup($"Due: {dueText}"),
             new Markup($"Assignees: {assignees}"),
             new Markup($"Version: [grey]{_card.Version}[/]"),
@@ -175,15 +188,18 @@ public class CardDetailScreen : IScreen
         );
     }
 
-    private IRenderable BuildDescriptionContent()
+    private Markup BuildDescriptionContent()
     {
-        if (_card == null) return new Markup("");
+        if (_card == null)
+            return new Markup("");
 
         var desc = string.IsNullOrWhiteSpace(_card.Description)
             ? "[grey](No description)[/]"
-            : Markup.Escape(_card.Description.Length > 200
-                ? _card.Description[..197] + "..."
-                : _card.Description);
+            : Markup.Escape(
+                _card.Description.Length > 200
+                    ? _card.Description[..197] + "..."
+                    : _card.Description
+            );
 
         return new Markup(desc);
     }
@@ -194,18 +210,20 @@ public class CardDetailScreen : IScreen
             return new Markup("[grey](No checklist items)[/]");
 
         var showCursor = _sectionIndex == 2;
-        var items = _checklist.Select((item, i) =>
-        {
-            var isSelected = showCursor && i == _checklistIndex;
-            var cursor = isSelected ? "[blue]>[/] " : "  ";
-            var checkbox = item.IsCompleted ? "[green][[x]][/]" : "[grey][[ ]][/]";
-            var text = item.IsCompleted
-                ? $"[strikethrough grey]{Markup.Escape(item.Text)}[/]"
-                : Markup.Escape(item.Text);
-            return new Markup($"{cursor}{checkbox} {text}") as IRenderable;
-        });
+        var items = _checklist.Select(
+            (item, i) =>
+            {
+                var isSelected = showCursor && i == _checklistIndex;
+                var cursor = isSelected ? "[blue]>[/] " : "  ";
+                var checkbox = item.IsCompleted ? "[green][[x]][/]" : "[grey][[ ]][/]";
+                var text = item.IsCompleted
+                    ? $"[strikethrough grey]{Markup.Escape(item.Text)}[/]"
+                    : Markup.Escape(item.Text);
+                return new Markup($"{cursor}{checkbox} {text}") as IRenderable;
+            }
+        );
 
-        return new Rows(items.ToArray());
+        return new Rows([.. items]);
     }
 
     private IRenderable BuildCommentsContent()
@@ -217,10 +235,11 @@ public class CardDetailScreen : IScreen
         {
             var time = c.CreatedAt.ToString("MM-dd HH:mm");
             var author = Markup.Escape(c.AuthorUsername ?? "Unknown");
-            return new Markup($"[bold]{author}[/] [grey]{time}[/]\n  {Markup.Escape(c.Content)}") as IRenderable;
+            return new Markup($"[bold]{author}[/] [grey]{time}[/]\n  {Markup.Escape(c.Content)}")
+                as IRenderable;
         });
 
-        return new Rows(items.ToArray());
+        return new Rows([.. items]);
     }
 
     private IRenderable BuildDependenciesContent()
@@ -228,9 +247,18 @@ public class CardDetailScreen : IScreen
         if (_relationships.Count == 0)
             return new Markup("[grey](No dependencies)[/]");
 
-        var items = _relationships.Select(r => new Markup(DescribeRelationship(r)) as IRenderable);
+        var showCursor = _sectionIndex == 4;
+        var items = _relationships.Select(
+            (r, i) =>
+            {
+                var isSelected = showCursor && i == _dependencyIndex;
+                var cursor = isSelected ? "[blue]>[/] " : "  ";
+                var desc = DescribeRelationship(r);
+                return new Markup($"{cursor}{desc}") as IRenderable;
+            }
+        );
 
-        return new Rows(items.ToArray());
+        return new Rows([.. items]);
     }
 
     // Relationship rows always carry Source/Target regardless of which side the
@@ -271,20 +299,32 @@ public class CardDetailScreen : IScreen
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.J or ConsoleKey.DownArrow:
+            case ConsoleKey.J
+            or ConsoleKey.DownArrow:
             case ConsoleKey.N when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklist.Count > 0)
                 {
                     _checklistIndex = Math.Min(_checklistIndex + 1, _checklist.Count - 1);
                     await RenderAsync();
                 }
+                else if (_sectionIndex == 4 && _relationships.Count > 0)
+                {
+                    _dependencyIndex = Math.Min(_dependencyIndex + 1, _relationships.Count - 1);
+                    await RenderAsync();
+                }
                 break;
 
-            case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.K
+            or ConsoleKey.UpArrow:
             case ConsoleKey.P when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklistIndex > 0)
                 {
                     _checklistIndex--;
+                    await RenderAsync();
+                }
+                else if (_sectionIndex == 4 && _dependencyIndex > 0)
+                {
+                    _dependencyIndex--;
                     await RenderAsync();
                 }
                 break;
@@ -312,6 +352,39 @@ public class CardDetailScreen : IScreen
             case ConsoleKey.S:
                 break;
 
+            case ConsoleKey.D:
+                _appState.PreviousScreen = this;
+                var depPanel = new DependencyPanel(
+                    _apiClientFactory,
+                    _appState,
+                    _errorCollector,
+                    _projectId,
+                    _cardId
+                );
+                _appState.CurrentScreen = depPanel;
+                await depPanel.RenderAsync();
+                break;
+
+            case ConsoleKey.Enter:
+                if (_sectionIndex == 4 && _relationships.Count > 0)
+                {
+                    var rel = _relationships[_dependencyIndex];
+                    var targetCardId =
+                        rel.SourceCardId == _cardId ? rel.TargetCardId : rel.SourceCardId;
+                    _appState.SelectedCardId = targetCardId;
+                    _appState.PreviousScreen = this;
+                    var detailScreen = new CardDetailScreen(
+                        _apiClientFactory,
+                        _appState,
+                        _errorCollector,
+                        _connectionManager
+                    );
+                    _appState.CurrentScreen = detailScreen;
+                    await detailScreen.OnEnterAsync();
+                    await detailScreen.RenderAsync();
+                }
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)
@@ -321,48 +394,66 @@ public class CardDetailScreen : IScreen
             case ConsoleKey.Escape:
                 await OnExitAsync();
                 var boardScreen = new BoardScreen(
-                    _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _apiClientFactory,
+                    _appState,
+                    _errorCollector,
+                    _connectionManager
+                );
                 _appState.CurrentScreen = boardScreen;
                 _appState.SelectedCardId = null;
                 await boardScreen.OnEnterAsync();
                 await boardScreen.RenderAsync();
                 break;
 
-            case ConsoleKey k when key.KeyChar == '?':
+            case ConsoleKey when key.KeyChar == '?':
                 ShowHelp();
                 await RenderAsync();
                 break;
         }
     }
 
-    private void ShowHelp() => HelpOverlay.Show("Card Detail", new (string, string)[]
-    {
-        ("Tab / Shift+Tab", "Next / prev section"),
-        ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist (Checklist section only)"),
-        ("e", "Metadata: pick Title/Due Date/Assignees to edit; Description: edit in $EDITOR"),
-        ("Space", "Toggle checklist item"),
-        ("n", "New checklist item (Checklist section only)"),
-        ("a", "Add comment (Comments section only)"),
-        ("Esc", "Back to board"),
-        ("q", "Quit"),
-        ("?", "This help"),
-    });
+    private static void ShowHelp() =>
+        HelpOverlay.Show(
+            "Card Detail",
+            [
+                ("Tab / Shift+Tab", "Next / prev section"),
+                ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist / dependencies"),
+                (
+                    "e",
+                    "Metadata: pick Title/Due Date/Assignees to edit; Description: edit in $EDITOR"
+                ),
+                ("Space", "Toggle checklist item"),
+                ("n", "New checklist item (Checklist section only)"),
+                ("a", "Add comment (Comments section only)"),
+                ("Enter", "Open dependency card (Dependencies section only)"),
+                ("Esc", "Back to board"),
+                ("q", "Quit"),
+                ("?", "This help"),
+            ]
+        );
 
     private async Task EditCurrentSectionAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         var card = _card;
         switch (_sectionIndex)
         {
             case 0:
-                var field = await ListPrompt.Show("Edit field:", new[] { "Title", "Due Date", "Assignees" }, renderBackdrop: RenderAsync);
+                var field = await ListPrompt.Show(
+                    "Edit field:",
+                    ["Title", "Due Date", "Assignees"],
+                    renderBackdrop: RenderAsync
+                );
                 switch (field)
                 {
                     case "Title":
                         var newTitle = AnsiConsole.Prompt(
-                            new TextPrompt<string>("Title ([grey]Enter unchanged to cancel[/]):")
-                                .DefaultValue(card.Title));
+                            new TextPrompt<string>(
+                                "Title ([grey]Enter unchanged to cancel[/]):"
+                            ).DefaultValue(card.Title)
+                        );
                         if (newTitle != card.Title)
                             await UpdateCardAsync(title: newTitle);
                         break;
@@ -382,7 +473,9 @@ public class CardDetailScreen : IScreen
                 var newDesc = await _editorLauncher.EditAsync(originalDesc);
                 if (newDesc == null)
                 {
-                    AnsiConsole.MarkupLine("[red]Editor failed to launch — check $EDITOR/$VISUAL. No changes saved.[/]");
+                    AnsiConsole.MarkupLine(
+                        "[red]Editor failed to launch — check $EDITOR/$VISUAL. No changes saved.[/]"
+                    );
                 }
                 else if (newDesc != originalDesc)
                 {
@@ -394,13 +487,15 @@ public class CardDetailScreen : IScreen
 
     private async Task EditDueDateAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         var current = _card.DueAt.HasValue ? _card.DueAt.Value.ToString("yyyy-MM-dd") : "";
         var input = AnsiConsole.Prompt(
             new TextPrompt<string>("Due date (yyyy-MM-dd, [grey]blank to clear[/]):")
                 .DefaultValue(current)
-                .AllowEmpty());
+                .AllowEmpty()
+        );
 
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -415,37 +510,52 @@ public class CardDetailScreen : IScreen
             return;
         }
 
-        await UpdateCardAsync(dueAt: new DateTimeOffset(DateTime.SpecifyKind(parsed, DateTimeKind.Utc)));
+        await UpdateCardAsync(
+            dueAt: new DateTimeOffset(DateTime.SpecifyKind(parsed, DateTimeKind.Utc))
+        );
     }
 
     private async Task EditAssigneesAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var members = (await client.MembersAllAsync(_projectId)).ToList();
+            var members = (await Client.MembersAllAsync(_projectId)).ToList();
             if (members.Count == 0)
             {
                 AnsiConsole.MarkupLine("[grey]No project members to assign.[/]");
                 return;
             }
 
-            var assignedIds = _card.Assignees?.Select(a => a.UserId).ToHashSet() ?? new HashSet<Guid>();
+            var assignedIds = _card.Assignees?.Select(a => a.UserId).ToHashSet() ?? [];
             var labels = members
-                .Select(m => assignedIds.Contains(m.UserId) ? $"* {m.Username} (assigned)" : $"  {m.Username}")
+                .Select(m =>
+                    assignedIds.Contains(m.UserId)
+                        ? $"* {m.Username} (assigned)"
+                        : $"  {m.Username}"
+                )
                 .ToList();
 
-            var picked = await ListPrompt.Show("Toggle assignee (Enter to select):", labels, renderBackdrop: RenderAsync);
-            if (picked == null) return;
+            var picked = await ListPrompt.Show(
+                "Toggle assignee (Enter to select):",
+                labels,
+                renderBackdrop: RenderAsync
+            );
+            if (picked == null)
+                return;
 
             var pickedIndex = labels.IndexOf(picked);
             var member = members[pickedIndex];
 
             var updated = assignedIds.Contains(member.UserId)
-                ? await client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
-                : await client.AssigneesPOSTAsync(_projectId, _cardId, new AssignCardRequest { AssigneeUserId = member.UserId });
+                ? await Client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
+                : await Client.AssigneesPOSTAsync(
+                    _projectId,
+                    _cardId,
+                    new AssignCardRequest { AssigneeUserId = member.UserId }
+                );
 
             _card = updated;
         }
@@ -456,22 +566,31 @@ public class CardDetailScreen : IScreen
         }
     }
 
-    private async Task UpdateCardAsync(string? title = null, string? description = null, DateTimeOffset? dueAt = null, bool clearDueAt = false)
+    private async Task UpdateCardAsync(
+        string? title = null,
+        string? description = null,
+        DateTimeOffset? dueAt = null,
+        bool clearDueAt = false
+    )
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var updated = await client.CardsPUTAsync(_projectId, _cardId, new UpdateCardRequest
-            {
-                Title = title ?? _card.Title,
-                Description = description ?? _card.Description,
-                Type = _card.Type,
-                ParentCardId = _card.ParentCardId,
-                DueAt = clearDueAt ? null : (dueAt ?? _card.DueAt),
-                Version = _card.Version
-            });
+            var updated = await Client.CardsPUTAsync(
+                _projectId,
+                _cardId,
+                new UpdateCardRequest
+                {
+                    Title = title ?? _card.Title,
+                    Description = description ?? _card.Description,
+                    Type = _card.Type,
+                    ParentCardId = _card.ParentCardId,
+                    DueAt = clearDueAt ? null : (dueAt ?? _card.DueAt),
+                    Version = _card.Version,
+                }
+            );
 
             _card = updated;
         }
@@ -489,13 +608,13 @@ public class CardDetailScreen : IScreen
 
     private async Task ToggleChecklistItemAsync()
     {
-        if (_checklist.Count == 0) return;
+        if (_checklist.Count == 0)
+            return;
         var item = _checklist[_checklistIndex];
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.ToggleAsync(_projectId, _cardId, item.Id);
+            await Client.ToggleAsync(_projectId, _cardId, item.Id);
             await LoadChecklistAsync();
             await RenderAsync();
         }
@@ -514,18 +633,20 @@ public class CardDetailScreen : IScreen
     private async Task AddChecklistItemAsync()
     {
         var text = AnsiConsole.Prompt(
-            new TextPrompt<string>("Checklist item:")
-                .Validate(t => string.IsNullOrWhiteSpace(t)
+            new TextPrompt<string>("Checklist item:").Validate(t =>
+                string.IsNullOrWhiteSpace(t)
                     ? ValidationResult.Error("Text required")
-                    : ValidationResult.Success()));
+                    : ValidationResult.Success()
+            )
+        );
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.CardChecklistPOSTAsync(_projectId, _cardId, new CreateChecklistItemRequest
-            {
-                Text = text
-            });
+            await Client.CardChecklistPOSTAsync(
+                _projectId,
+                _cardId,
+                new CreateChecklistItemRequest { Text = text }
+            );
             await LoadChecklistAsync();
             _checklistIndex = Math.Max(0, _checklist.Count - 1);
             await RenderAsync();
@@ -545,18 +666,20 @@ public class CardDetailScreen : IScreen
     private async Task AddCommentAsync()
     {
         var content = AnsiConsole.Prompt(
-            new TextPrompt<string>("Comment:")
-                .Validate(c => string.IsNullOrWhiteSpace(c)
+            new TextPrompt<string>("Comment:").Validate(c =>
+                string.IsNullOrWhiteSpace(c)
                     ? ValidationResult.Error("Comment required")
-                    : ValidationResult.Success()));
+                    : ValidationResult.Success()
+            )
+        );
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.CardCommentsPOSTAsync(_projectId, _cardId, new CreateCommentRequest
-            {
-                Content = content
-            });
+            await Client.CardCommentsPOSTAsync(
+                _projectId,
+                _cardId,
+                new CreateCommentRequest { Content = content }
+            );
             await LoadCommentsAsync();
             await RenderAsync();
         }
@@ -576,8 +699,7 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            _card = await client.CardsGET2Async(_projectId, _cardId.ToString());
+            _card = await Client.CardsGET2Async(_projectId, _cardId.ToString());
 
             await LoadChecklistAsync();
             await LoadCommentsAsync();
@@ -597,20 +719,19 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardChecklistGETAsync(_projectId, _cardId);
-            _checklist = list?.Items?.ToList() ?? new();
+            var list = await Client.CardChecklistGETAsync(_projectId, _cardId);
+            _checklist = list?.Items?.ToList() ?? [];
             _checklistIndex = Math.Clamp(_checklistIndex, 0, Math.Max(0, _checklist.Count - 1));
         }
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load checklist: {ex.Message}");
-            _checklist = new();
+            _checklist = [];
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load checklist: {ex.Message}");
-            _checklist = new();
+            _checklist = [];
         }
     }
 
@@ -618,19 +739,18 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardCommentsGETAsync(_projectId, _cardId);
-            _comments = list?.Comments?.ToList() ?? new();
+            var list = await Client.CardCommentsGETAsync(_projectId, _cardId);
+            _comments = list?.Comments?.ToList() ?? [];
         }
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load comments: {ex.Message}");
-            _comments = new();
+            _comments = [];
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load comments: {ex.Message}");
-            _comments = new();
+            _comments = [];
         }
     }
 
@@ -638,28 +758,28 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardRelationshipsGETAsync(_projectId, _cardId);
-            _relationships = list?.Relationships?.ToList() ?? new();
+            var list = await Client.CardRelationshipsGETAsync(_projectId, _cardId);
+            _relationships = list?.Relationships?.ToList() ?? [];
         }
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load relationships: {ex.Message}");
-            _relationships = new();
+            _relationships = [];
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Failed to load relationships: {ex.Message}");
-            _relationships = new();
+            _relationships = [];
         }
     }
 
-    private static string GetTypeColor(CardType type) => type switch
-    {
-        CardType.Task => "cyan1",
-        CardType.Issue => "red",
-        CardType.Goal => "yellow",
-        CardType.Idea => "green",
-        _ => "grey"
-    };
+    private static string GetTypeColor(CardType type) =>
+        type switch
+        {
+            CardType.Task => "cyan1",
+            CardType.Issue => "red",
+            CardType.Goal => "yellow",
+            CardType.Idea => "green",
+            _ => "grey",
+        };
 }
