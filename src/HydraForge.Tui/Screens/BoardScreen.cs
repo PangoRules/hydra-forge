@@ -341,11 +341,7 @@ public class BoardScreen(
                 foreach (var card in cards)
                 {
                     var rels = await Client.CardRelationshipsGETAsync(_projectId, card.Id);
-                    foreach (var rel in rels?.Relationships ?? [])
-                    {
-                        if (rel.Type == RelationshipType.BlockedBy)
-                            blockedCardIds.Add(rel.TargetCardId);
-                    }
+                    blockedCardIds.UnionWith(BlockedCardHelper.GetBlockedCardIds(rels?.Relationships ?? []));
                 }
             }
             catch (Exception)

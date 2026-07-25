@@ -25,13 +25,13 @@ try
     // Fetch relationships for all cards to find BlockedBy
     foreach (var card in cards)
     {
-        var relList = await client.RelationshipsAllAsync(_projectId, card.Id);
+        var relList = await client.CardRelationshipsGETAsync(_projectId, card.Id);
         if (relList?.Relationships != null)
         {
             foreach (var rel in relList.Relationships)
             {
-                if (rel.Type == "BlockedBy")
-                    blockedCardIds.Add(card.Id);
+                if (rel.Type == RelationshipType.BlockedBy)
+                    blockedCardIds.Add(rel.SourceCardId);
             }
         }
     }
