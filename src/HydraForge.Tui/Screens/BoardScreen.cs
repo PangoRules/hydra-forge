@@ -22,6 +22,7 @@ public class BoardScreen : IScreen
     private int _selectedCard;
     private string _projectName = "";
     private Guid _projectId;
+    private bool _reorderMode = false;
 
     public BoardScreen(
         ApiClientFactory apiClientFactory,
@@ -156,8 +157,50 @@ public class BoardScreen : IScreen
                 await RenderAsync();
                 break;
 
+            case ConsoleKey.Enter when _reorderMode:
+                await ConfirmReorderAsync();
+                break;
+
             case ConsoleKey.Enter:
-                await OpenCardDetailAsync();
+                if (_reorderMode)
+                {
+                    await ConfirmReorderAsync();
+                }
+                else
+                {
+                    await OpenCardDetailAsync();
+                }
+                break;
+
+            case ConsoleKey.Escape when _reorderMode:
+                _reorderMode = false;
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.Escape:
+                if (_reorderMode)
+                {
+                    _reorderMode = false;
+                    await RenderAsync();
+                }
+                else
+                {
+                    await OnExitAsync();
+                    var projectListScreen = new ProjectListScreen(
+                        _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _appState.CurrentScreen = projectListScreen;
+                    _appState.SelectedProjectId = null;
+                    await projectListScreen.OnEnterAsync();
+                    await projectListScreen.RenderAsync();
+                }
+                break;
+
+            case ConsoleKey.E:
+                await EditCardTitleAsync();
+                break;
+
+            case ConsoleKey.R:
+                await EnterReorderModeAsync();
                 break;
 
             case ConsoleKey.N:
@@ -168,22 +211,8 @@ public class BoardScreen : IScreen
                 await MoveCardAsync();
                 break;
 
-            case ConsoleKey.Escape:
-                await OnExitAsync();
-                var projectListScreen = new ProjectListScreen(
-                    _apiClientFactory, _appState, _errorCollector, _connectionManager);
-                _appState.CurrentScreen = projectListScreen;
-                _appState.SelectedProjectId = null;
-                await projectListScreen.OnEnterAsync();
-                await projectListScreen.RenderAsync();
-                break;
-
             case ConsoleKey.D:
                 // Dependency panel — Task 11
-                break;
-
-            case ConsoleKey.R:
-                // Reorder — Task 10
                 break;
 
             case ConsoleKey.Delete:
@@ -377,6 +406,97 @@ public class BoardScreen : IScreen
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
+        }
+    }
+
+    private async Task EditCardTitleAsync()
+    {
+        if (_columns.Count == 0) return;
+        var col = _columns[_selectedColumn];
+        if (_selectedCard >= col.Cards.Count) return;
+        var card = col.Cards[_selectedCard];
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+
+            var newTitle = AnsiConsole.Prompt(
+                new TextPrompt<string>($"New title (current: {card.Title}):")
+                    .DefaultValue(card.Title)
+                    .Validate(t => string.IsNullOrWhiteSpace(t)
+                        ? ValidationResult.Error("Title required")
+                        : ValidationResult.Success()));
+
+            await client.CardsPUTAsync(_projectId, card.Id, new UpdateCardRequest
+            {
+                Title = newTitle,
+                Description = "",
+                Type = CardTypeMapper.FromDisplayString(card.Type),
+                ParentCardId = null,
+                DueAt = null,
+                Version = card.Version
+            });
+
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Update title failed: {ex.Message}");
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+        }
+    }
+
+    private async Task EnterReorderModeAsync()
+    {
+        _reorderMode = true;
+        AnsiConsole.MarkupLine("[yellow]Reorder mode: Use j/k to navigate, Enter to confirm, Esc to cancel[/]");
+        await RenderAsync();
+    }
+
+    private async Task ConfirmReorderAsync()
+    {
+        if (_columns.Count == 0) return;
+        var col = _columns[_selectedColumn];
+        if (_selectedCard >= col.Cards.Count) return;
+        var card = col.Cards[_selectedCard];
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+
+            await client.MoveAsync(_projectId, card.Id, new MoveCardRequest
+            {
+                TargetColumnId = col.Id,
+                TargetPosition = _selectedCard,
+                ConfirmBlockedMove = false,
+                Version = card.Version
+            });
+
+            _reorderMode = false;
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 409)
+        {
+            AnsiConsole.MarkupLine("[yellow]Move blocked by dependencies. Use --force to override.[/]");
+            _reorderMode = false;
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Reorder failed: {ex.Message}");
+            _reorderMode = false;
+            await RenderAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            _reorderMode = false;
+            await RenderAsync();
         }
     }
 
