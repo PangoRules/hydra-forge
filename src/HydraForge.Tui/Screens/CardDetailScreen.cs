@@ -88,7 +88,7 @@ public class CardDetailScreen : IScreen
         switch (_sectionIndex)
         {
             case 0:
-                yield return "[e] Edit title";
+                yield return "[e] Edit field";
                 break;
             case 1:
                 yield return "[e] Edit in $EDITOR";
@@ -105,6 +105,7 @@ public class CardDetailScreen : IScreen
 
         yield return "[Esc] Back";
         yield return "[q] Quit";
+        yield return "[?] Help";
     }
 
     private Panel BuildSectionPanel(int index, bool isActive)
@@ -271,6 +272,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case ConsoleKey.J or ConsoleKey.DownArrow:
+            case ConsoleKey.N when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklist.Count > 0)
                 {
                     _checklistIndex = Math.Min(_checklistIndex + 1, _checklist.Count - 1);
@@ -279,6 +281,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.P when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklistIndex > 0)
                 {
                     _checklistIndex--;
@@ -288,6 +291,7 @@ public class CardDetailScreen : IScreen
 
             case ConsoleKey.E:
                 await EditCurrentSectionAsync();
+                await RenderAsync();
                 break;
 
             case ConsoleKey.Spacebar:
@@ -323,8 +327,26 @@ public class CardDetailScreen : IScreen
                 await boardScreen.OnEnterAsync();
                 await boardScreen.RenderAsync();
                 break;
+
+            case ConsoleKey k when key.KeyChar == '?':
+                ShowHelp();
+                await RenderAsync();
+                break;
         }
     }
+
+    private void ShowHelp() => HelpOverlay.Show("Card Detail", new (string, string)[]
+    {
+        ("Tab / Shift+Tab", "Next / prev section"),
+        ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist (Checklist section only)"),
+        ("e", "Metadata: pick Title/Due Date/Assignees to edit; Description: edit in $EDITOR"),
+        ("Space", "Toggle checklist item"),
+        ("n", "New checklist item (Checklist section only)"),
+        ("a", "Add comment (Comments section only)"),
+        ("Esc", "Back to board"),
+        ("q", "Quit"),
+        ("?", "This help"),
+    });
 
     private async Task EditCurrentSectionAsync()
     {
@@ -334,11 +356,25 @@ public class CardDetailScreen : IScreen
         switch (_sectionIndex)
         {
             case 0:
-                var newTitle = AnsiConsole.Prompt(
-                    new TextPrompt<string>("Title ([grey]Enter unchanged to cancel[/]):")
-                        .DefaultValue(card.Title));
-                if (newTitle != card.Title)
-                    await UpdateCardAsync(title: newTitle);
+                var field = await ListPrompt.Show("Edit field:", new[] { "Title", "Due Date", "Assignees" }, renderBackdrop: RenderAsync);
+                switch (field)
+                {
+                    case "Title":
+                        var newTitle = AnsiConsole.Prompt(
+                            new TextPrompt<string>("Title ([grey]Enter unchanged to cancel[/]):")
+                                .DefaultValue(card.Title));
+                        if (newTitle != card.Title)
+                            await UpdateCardAsync(title: newTitle);
+                        break;
+
+                    case "Due Date":
+                        await EditDueDateAsync();
+                        break;
+
+                    case "Assignees":
+                        await EditAssigneesAsync();
+                        break;
+                }
                 break;
 
             case 1:
@@ -356,7 +392,71 @@ public class CardDetailScreen : IScreen
         }
     }
 
-    private async Task UpdateCardAsync(string? title = null, string? description = null)
+    private async Task EditDueDateAsync()
+    {
+        if (_card == null) return;
+
+        var current = _card.DueAt.HasValue ? _card.DueAt.Value.ToString("yyyy-MM-dd") : "";
+        var input = AnsiConsole.Prompt(
+            new TextPrompt<string>("Due date (yyyy-MM-dd, [grey]blank to clear[/]):")
+                .DefaultValue(current)
+                .AllowEmpty());
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            if (_card.DueAt.HasValue)
+                await UpdateCardAsync(clearDueAt: true);
+            return;
+        }
+
+        if (!DateTime.TryParse(input, out var parsed))
+        {
+            AnsiConsole.MarkupLine("[red]Invalid date. Use yyyy-MM-dd.[/]");
+            return;
+        }
+
+        await UpdateCardAsync(dueAt: new DateTimeOffset(DateTime.SpecifyKind(parsed, DateTimeKind.Utc)));
+    }
+
+    private async Task EditAssigneesAsync()
+    {
+        if (_card == null) return;
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+            var members = (await client.MembersAllAsync(_projectId)).ToList();
+            if (members.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]No project members to assign.[/]");
+                return;
+            }
+
+            var assignedIds = _card.Assignees?.Select(a => a.UserId).ToHashSet() ?? new HashSet<Guid>();
+            var labels = members
+                .Select(m => assignedIds.Contains(m.UserId) ? $"* {m.Username} (assigned)" : $"  {m.Username}")
+                .ToList();
+
+            var picked = await ListPrompt.Show("Toggle assignee (Enter to select):", labels, renderBackdrop: RenderAsync);
+            if (picked == null) return;
+
+            var pickedIndex = labels.IndexOf(picked);
+            var member = members[pickedIndex];
+
+            var updated = assignedIds.Contains(member.UserId)
+                ? await client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
+                : await client.AssigneesPOSTAsync(_projectId, _cardId, new AssignCardRequest { AssigneeUserId = member.UserId });
+
+            _card = updated;
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Assign failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Assign failed: {Markup.Escape(ex.Message)}[/]");
+        }
+    }
+
+    private async Task UpdateCardAsync(string? title = null, string? description = null, DateTimeOffset? dueAt = null, bool clearDueAt = false)
     {
         if (_card == null) return;
 
@@ -369,12 +469,11 @@ public class CardDetailScreen : IScreen
                 Description = description ?? _card.Description,
                 Type = _card.Type,
                 ParentCardId = _card.ParentCardId,
-                DueAt = _card.DueAt,
+                DueAt = clearDueAt ? null : (dueAt ?? _card.DueAt),
                 Version = _card.Version
             });
 
             _card = updated;
-            await RenderAsync();
         }
         catch (ApiException ex)
         {

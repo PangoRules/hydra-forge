@@ -34,7 +34,8 @@ public class BoardRenderer
         int totalCards,
         ConnectionStatus connection = ConnectionStatus.Disconnected,
         int onlineCount = 0,
-        int errorCount = 0)
+        int errorCount = 0,
+        Guid? reorderCardId = null)
     {
         var layout = new Layout("Root")
             .SplitRows(
@@ -60,6 +61,7 @@ public class BoardRenderer
             var cardPanels = col.Cards.Select((card, j) =>
             {
                 var isCardSelected = isSelected && j == selectedCard;
+                var isBeingReordered = reorderCardId.HasValue && card.Id == reorderCardId.Value;
                 var prefix = card.IsBlocked ? "🔴 " : "";
                 var typeBadge = card.Type switch
                 {
@@ -82,8 +84,10 @@ public class BoardRenderer
 
                 return new Panel(new Markup(cardMarkup))
                 {
-                    Border = isCardSelected ? BoxBorder.Double : BoxBorder.None,
-                    BorderStyle = isCardSelected ? new Style(foreground: Color.Blue) : null,
+                    Border = isCardSelected || isBeingReordered ? BoxBorder.Double : BoxBorder.None,
+                    BorderStyle = isBeingReordered
+                        ? new Style(foreground: Color.Yellow)
+                        : isCardSelected ? new Style(foreground: Color.Blue) : null,
                 };
             }).ToList();
 

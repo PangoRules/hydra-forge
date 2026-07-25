@@ -22,6 +22,8 @@ public class BoardScreen : IScreen
     private int _selectedCard;
     private string _projectName = "";
     private Guid _projectId;
+    private bool _reorderMode = false;
+    private Guid? _reorderCardId;
 
     public BoardScreen(
         ApiClientFactory apiClientFactory,
@@ -90,14 +92,20 @@ public class BoardScreen : IScreen
             var totalCards = _columns.Sum(c => c.Cards.Count);
             var layout = _renderer.BuildLayout(
                 _columns, _selectedColumn, _selectedCard, _projectName, totalCards,
-                _appState.Connection, _appState.OnlineCount, _errorCollector.Count);
+                _appState.Connection, _appState.OnlineCount, _errorCollector.Count, _reorderCardId);
 
             AnsiConsole.Write(layout);
+
+            if (_reorderMode)
+            {
+                AnsiConsole.MarkupLine("[yellow]Reorder mode: j/k to place the highlighted card, Enter to confirm, Esc to cancel[/]");
+            }
 
             KeyHintBar.Render(new[]
             {
                 "[h/l] Columns", "[j/k] Cards", "[Enter] Detail", "[n] New",
-                "[m] Move", "[?] Help", "[Esc] Back", "[q] Quit",
+                "[e] Edit", "[m] Move", "[r] Reorder", "[Del] Archive",
+                "[?] Help", "[Esc] Back", "[q] Quit",
             });
         }
         finally
@@ -111,7 +119,7 @@ public class BoardScreen : IScreen
         switch (key.Key)
         {
             case ConsoleKey.H or ConsoleKey.LeftArrow:
-                if (_selectedColumn > 0)
+                if (!_reorderMode && _selectedColumn > 0)
                 {
                     _selectedColumn--;
                     _selectedCard = 0;
@@ -120,7 +128,7 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.L or ConsoleKey.RightArrow:
-                if (_selectedColumn < _columns.Count - 1)
+                if (!_reorderMode && _selectedColumn < _columns.Count - 1)
                 {
                     _selectedColumn++;
                     _selectedCard = 0;
@@ -129,6 +137,7 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.J or ConsoleKey.DownArrow:
+            case ConsoleKey.N when key.Modifiers == ConsoleModifiers.Control:
                 if (_columns.Count > 0)
                 {
                     var col = _columns[_selectedColumn];
@@ -139,6 +148,7 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.P when key.Modifiers == ConsoleModifiers.Control:
                 if (_selectedCard > 0)
                     _selectedCard--;
                 await RenderAsync();
@@ -157,7 +167,47 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.Enter:
-                await OpenCardDetailAsync();
+                if (_reorderMode)
+                {
+                    await ConfirmReorderAsync();
+                }
+                else
+                {
+                    await OpenCardDetailAsync();
+                }
+                break;
+
+            case ConsoleKey.Escape:
+                if (_reorderMode)
+                {
+                    _reorderMode = false;
+                    _reorderCardId = null;
+                    await RenderAsync();
+                }
+                else
+                {
+                    await OnExitAsync();
+                    var projectListScreen = new ProjectListScreen(
+                        _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _appState.CurrentScreen = projectListScreen;
+                    _appState.SelectedProjectId = null;
+                    await projectListScreen.OnEnterAsync();
+                    await projectListScreen.RenderAsync();
+                }
+                break;
+
+            case ConsoleKey.E:
+                if (!_reorderMode)
+                {
+                    await EditCardTitleAsync();
+                }
+                break;
+
+            case ConsoleKey.R:
+                if (!_reorderMode)
+                {
+                    await EnterReorderModeAsync();
+                }
                 break;
 
             case ConsoleKey.N:
@@ -168,22 +218,8 @@ public class BoardScreen : IScreen
                 await MoveCardAsync();
                 break;
 
-            case ConsoleKey.Escape:
-                await OnExitAsync();
-                var projectListScreen = new ProjectListScreen(
-                    _apiClientFactory, _appState, _errorCollector, _connectionManager);
-                _appState.CurrentScreen = projectListScreen;
-                _appState.SelectedProjectId = null;
-                await projectListScreen.OnEnterAsync();
-                await projectListScreen.RenderAsync();
-                break;
-
             case ConsoleKey.D:
                 // Dependency panel — Task 11
-                break;
-
-            case ConsoleKey.R:
-                // Reorder — Task 10
                 break;
 
             case ConsoleKey.Delete:
@@ -195,8 +231,30 @@ public class BoardScreen : IScreen
                 if (confirm)
                     Environment.Exit(0);
                 break;
+
+            case ConsoleKey k when key.KeyChar == '?':
+                ShowHelp();
+                await RenderAsync();
+                break;
         }
     }
+
+    private void ShowHelp() => HelpOverlay.Show("Board", new (string, string)[]
+    {
+        ("h/l, ←/→", "Prev/next column"),
+        ("j/k, ↑/↓, Ctrl+n/p", "Prev/next card"),
+        ("g / G", "First / last column"),
+        ("Enter", "Open card detail (confirm reorder)"),
+        ("n", "New card"),
+        ("e", "Edit card title"),
+        ("m", "Move card to column"),
+        ("r", "Reorder mode (j/k to place, Enter to confirm, Esc to cancel)"),
+        ("Del", "Archive card"),
+        ("d", "Dependency panel (coming soon)"),
+        ("Esc", "Back to project list"),
+        ("q", "Quit"),
+        ("?", "This help"),
+    });
 
     private async Task LoadBoardAsync()
     {
@@ -274,10 +332,9 @@ public class BoardScreen : IScreen
                     ? ValidationResult.Error("Title required")
                     : ValidationResult.Success()));
 
-        var type = AnsiConsole.Prompt(
-            new SelectionPrompt<HydraForge.Tui.Generated.CardType>()
-                .Title("Type:")
-                .AddChoices(HydraForge.Tui.Generated.CardType.Task, HydraForge.Tui.Generated.CardType.Issue, HydraForge.Tui.Generated.CardType.Goal, HydraForge.Tui.Generated.CardType.Idea));
+        var typeChoices = new[] { "Task", "Issue", "Goal", "Idea" };
+        var typeName = await ListPrompt.Show("Type:", typeChoices, renderBackdrop: RenderAsync) ?? "Task";
+        var type = Enum.Parse<HydraForge.Tui.Generated.CardType>(typeName);
 
         try
         {
@@ -315,10 +372,12 @@ public class BoardScreen : IScreen
         var card = sourceCol.Cards[_selectedCard];
 
         var targetNames = _columns.Select(c => c.Name).ToList();
-        var targetName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Move to column:")
-                .AddChoices(targetNames));
+        var targetName = await ListPrompt.Show("Move to column:", targetNames, _selectedColumn, RenderAsync);
+        if (targetName == null)
+        {
+            await RenderAsync();
+            return;
+        }
 
         var targetCol = _columns.First(c => c.Name == targetName);
 
@@ -377,6 +436,117 @@ public class BoardScreen : IScreen
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
+        }
+    }
+
+    private async Task EditCardTitleAsync()
+    {
+        if (_columns.Count == 0) return;
+        var col = _columns[_selectedColumn];
+        if (_selectedCard >= col.Cards.Count) return;
+        var card = col.Cards[_selectedCard];
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+
+            var newTitle = AnsiConsole.Prompt(
+                new TextPrompt<string>($"New title (current: {card.Title}):")
+                    .DefaultValue(card.Title)
+                    .Validate(t => string.IsNullOrWhiteSpace(t)
+                        ? ValidationResult.Error("Title required")
+                        : ValidationResult.Success()));
+
+            await client.CardsPUTAsync(_projectId, card.Id, new UpdateCardRequest
+            {
+                Title = newTitle,
+                Description = "",
+                Type = CardTypeMapper.FromDisplayString(card.Type),
+                ParentCardId = null,
+                DueAt = null,
+                Version = card.Version
+            });
+
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Update title failed: {ex.Message}");
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+        }
+    }
+
+    private async Task EnterReorderModeAsync()
+    {
+        if (_columns.Count == 0) return;
+        var col = _columns[_selectedColumn];
+        if (_selectedCard >= col.Cards.Count) return;
+
+        // Capture the card being reordered by id — j/k below moves _selectedCard
+        // to pick a target slot, so the moved card can no longer be found by
+        // cursor position alone once the cursor has stepped onto a different card.
+        _reorderMode = true;
+        _reorderCardId = col.Cards[_selectedCard].Id;
+        await RenderAsync();
+    }
+
+    private async Task ConfirmReorderAsync()
+    {
+        if (_columns.Count == 0 || _reorderCardId == null)
+        {
+            _reorderMode = false;
+            _reorderCardId = null;
+            return;
+        }
+        var col = _columns[_selectedColumn];
+        var card = col.Cards.FirstOrDefault(c => c.Id == _reorderCardId.Value);
+        if (card == null)
+        {
+            _reorderMode = false;
+            _reorderCardId = null;
+            return;
+        }
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+
+            await client.MoveAsync(_projectId, card.Id, new MoveCardRequest
+            {
+                TargetColumnId = col.Id,
+                TargetPosition = _selectedCard,
+                ConfirmBlockedMove = false,
+                Version = card.Version
+            });
+
+            _reorderMode = false;
+            _reorderCardId = null;
+            await LoadBoardAsync();
+            await RenderAsync();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 409)
+        {
+            _reorderMode = false;
+            _reorderCardId = null;
+            AnsiConsole.MarkupLine("[yellow]Move blocked by dependencies. Use --force to override.[/]");
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Reorder failed: {ex.Message}");
+            _reorderMode = false;
+            _reorderCardId = null;
+            await RenderAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            _reorderMode = false;
+            _reorderCardId = null;
+            await RenderAsync();
         }
     }
 

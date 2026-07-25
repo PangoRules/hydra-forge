@@ -1,3 +1,5 @@
+> **Pre-execution note (2026-07-25):** `?` was dead in Board/CardDetail/ProjectList (advertised in hint bars, did nothing) — fixed ahead of this plan as a bug, via a lightweight `Rendering/HelpOverlay.Show(title, bindings)` called directly from each screen's `HandleKeyAsync` (blocks on `Console.ReadKey` until `?`/`Esc`, same pattern as the existing `AnsiConsole.Prompt` calls — no `ScreenStack`/`KeyboardDispatcher` involved). Matches `key.KeyChar == '?'` rather than `Oem2`/`Divide` keycodes for keyboard-layout portability. This plan's `KeyboardDispatcher` + global-`E`-error-panel + `LoginScreen`/`LockScreen` coverage is still open — either build on `HelpOverlay` or replace it, but the per-screen binding tables (`ShowHelp()` in each screen) are the source of truth to port over, not the hardcoded table below (already drifted, e.g. it lists `E` for error panel toggle which isn't wired anywhere yet).
+
 # Plan 16: Keyboard Shortcut Reference (`?` Overlay)
 
 **Branch:** `task/tui-keyboard-ref`
