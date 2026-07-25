@@ -173,8 +173,12 @@ public class ProjectListScreen : IScreen
                 {
                     var selected = _projects[_selectedIndex];
                     _appState.SelectedProjectId = selected.Id;
-                    // Board screen will be wired in Task 7
-                    AnsiConsole.MarkupLine($"[green]Opening project: {Markup.Escape(selected.Name)}[/]");
+
+                    var boardScreen = new BoardScreen(
+                        _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _appState.CurrentScreen = boardScreen;
+                    await boardScreen.OnEnterAsync();
+                    await boardScreen.RenderAsync();
                 }
                 break;
 
