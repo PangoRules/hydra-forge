@@ -139,6 +139,7 @@ public class BoardScreen(
                 "[m] Move",
                 "[r] Reorder",
                 "[Del] Archive",
+                "[x] Errors",
                 "[?] Help",
                 "[Esc] Back",
                 "[q] Quit",
@@ -286,6 +287,13 @@ public class BoardScreen(
                 await ArchiveCardAsync();
                 break;
 
+            case ConsoleKey.X:
+                _appState.PreviousScreen = this;
+                var errorPanel = new ErrorPanelScreen(_appState, _errorCollector);
+                _appState.CurrentScreen = errorPanel;
+                await errorPanel.RenderAsync();
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)
@@ -314,6 +322,7 @@ public class BoardScreen(
                 ("r", "Reorder mode (j/k to place, Enter to confirm, Esc to cancel)"),
                 ("Del", "Archive card"),
                 ("d", "Add dependency"),
+                ("x", "Error panel"),
                 ("Esc", "Back to project list"),
                 ("q", "Quit"),
                 ("?", "This help"),

@@ -528,15 +528,15 @@
 - [x] Project list view + create project
 - [x] Board view: ASCII/rich columns + cards, real-time updates via SignalR
 - [x] Card detail view: all fields editable (description opens in `$EDITOR`)
-- [ ] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
-- [ ] Dependency panel: `d` key → search/type card → select type → confirm
-- [ ] Blocked card indicator in board view
-- [ ] Spec + plan viewer/editor (opens in `$EDITOR`)
-- [ ] Comments: inline view + add
-- [ ] Checklists: toggle completion from keyboard
-- [ ] Keyboard shortcut reference: `?`
-- [ ] Status bar: sync status, unread notification count, online presence count
-- [ ] Error panel in status bar: surfaced errors with correlationId, dismissible
+- [x] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
+- [x] Dependency panel: `d` key → search/type card → select type → confirm
+- [x] Blocked card indicator in board view
+- [x] Spec + plan viewer/editor (opens in `$EDITOR`)
+- [x] Comments: inline view + add
+- [x] Checklists: toggle completion from keyboard
+- [x] Keyboard shortcut reference: `?`
+- [x] Status bar: sync status, online presence count (unread notification count deferred to Phase 5 — no notification API surface yet, see below)
+- [x] Error panel in status bar: surfaced errors with correlationId, dismissible
 
 ### Phase 5: Multi-User, Notifications & Admin 🔔
 > Goal: team collaboration working end-to-end. Admin can manage the install.

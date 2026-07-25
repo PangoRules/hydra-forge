@@ -2,7 +2,8 @@
 
 **Branch:** `feat/phase-4-tui`
 **Date:** 2026-07-24
-**Status:** Draft
+**Status:** Complete — archived 2026-07-25
+**Validation matrix:** `docs/archive/manual-validation/2026-07-24-phase-4-tui-matrix.md`
 
 ---
 
@@ -533,9 +534,9 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 - [x] Task 12: Blocked card indicator in board view
 - [x] Task 13: Spec + plan viewer/editor (`$EDITOR`)
 - [x] Task 14: Comments — inline view + add
-- [ ] Task 15: Checklists — toggle completion from keyboard
-- [ ] Task 16: Keyboard shortcut reference (`?` overlay)
-- [ ] Task 17: Status bar — sync status, unread notifications, online presence, error panel
+- [x] Task 15: Checklists — toggle completion from keyboard
+- [x] Task 16: Keyboard shortcut reference (`?` overlay)
+- [x] Task 17: Status bar — sync status, online presence, error panel (unread notification count deferred to Phase 5 — no notification API surface exists until ntfy integration lands, see functional-spec.md Phase 5)
 
 ---
 

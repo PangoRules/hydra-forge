@@ -1,4 +1,5 @@
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using Spectre.Console;
 
 namespace HydraForge.Tui.Screens;
@@ -51,7 +52,7 @@ public class LockScreen : IScreen
 
         AnsiConsole.Write(panel);
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[grey]Press [bold]q[/] to quit[/]");
+        AnsiConsole.MarkupLine("[grey]Press [bold]q[/] to quit, [bold]?[/] for help[/]");
 
         return Task.CompletedTask;
     }
@@ -66,8 +67,24 @@ public class LockScreen : IScreen
                 _retryCts?.Cancel();
                 Environment.Exit(0);
             }
+            return;
+        }
+
+        if (key.KeyChar == '?')
+        {
+            ShowHelp();
+            await RenderAsync();
         }
     }
+
+    private static void ShowHelp() =>
+        HelpOverlay.Show(
+            "Server Unreachable",
+            [
+                ("q", "Quit"),
+                ("?", "This help"),
+            ]
+        );
 
     private async Task RetryLoopAsync(CancellationToken ct)
     {
