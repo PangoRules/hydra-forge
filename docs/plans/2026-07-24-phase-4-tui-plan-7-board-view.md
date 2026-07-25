@@ -512,7 +512,7 @@ Expected: build succeeds.
 
 ## Step 5: Commit
 
-```bash
-git add src/HydraForge.Tui/Renderers/BoardRenderer.cs src/HydraForge.Tui/Screens/BoardScreen.cs src/HydraForge.Tui/Screens/ProjectListScreen.cs
-git commit -m "feat(tui): add board view with column/card layout and keyboard navigation"
-```
+- [x] ```bash
+    git add src/HydraForge.Tui/Renderers/BoardRenderer.cs src/HydraForge.Tui/Screens/BoardScreen.cs src/HydraForge.Tui/Screens/ProjectListScreen.cs
+    git commit -m "feat(tui): add board view with column/card layout and keyboard navigation"
+    ```
