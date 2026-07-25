@@ -86,6 +86,9 @@ public static class DomainErrorCodes
         public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
         public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
         public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
+        public const string InvalidCardType = "SPEC_INVALID_CARD_TYPE";
+        public const string DocTypeMismatch = "SPEC_DOC_TYPE_MISMATCH";
+        public const string AlreadyExists = "SPEC_ALREADY_EXISTS";
     }
 
     public static class Plans
@@ -95,6 +98,9 @@ public static class DomainErrorCodes
         public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
         public const string CardDocumentProjectMismatch = "CARD_DOCUMENT_PROJECT_MISMATCH";
         public const string EditForbiddenWhenDone = "PLAN_EDIT_FORBIDDEN_WHEN_DONE";
+        public const string InvalidCardType = "PLAN_INVALID_CARD_TYPE";
+        public const string SpecLinkNotAllowed = "PLAN_SPEC_LINK_NOT_ALLOWED";
+        public const string SpecCardMismatch = "PLAN_SPEC_CARD_MISMATCH";
     }
 
     public static class Relationships

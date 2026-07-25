@@ -13,6 +13,7 @@ namespace HydraForge.Server.Controllers.Projects;
 public class PlansController(PlanService planService) : ControllerBase
 {
     [HttpPost("cards/{cardId:guid}")]
+    [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
@@ -63,6 +64,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpGet("cards/{cardId:guid}")]
+    [ProducesResponseType(typeof(PlanListResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -101,6 +103,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpGet("{planId:guid}")]
+    [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetById(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -132,6 +135,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpPut("{planId:guid}")]
+    [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid planId,
@@ -176,6 +180,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpGet("{planId:guid}/versions")]
+    [ProducesResponseType(typeof(PlanVersionListResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid planId)
     {
         var userId = User.GetRequiredUserId();
@@ -204,6 +209,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpPost("{planId:guid}/restore")]
+    [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Restore(
         Guid projectId,
         Guid planId,
@@ -241,6 +247,7 @@ public class PlansController(PlanService planService) : ControllerBase
     }
 
     [HttpPatch("{planId:guid}/status")]
+    [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> SetStatus(
         Guid projectId,
         Guid planId,

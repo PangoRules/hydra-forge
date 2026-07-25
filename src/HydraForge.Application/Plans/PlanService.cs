@@ -1,8 +1,10 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
+using HydraForge.Application.Specs;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -11,6 +13,8 @@ namespace HydraForge.Application.Plans;
 
 public class PlanService(
     IPlanRepository planRepo,
+    ICardRepository cardRepo,
+    ISpecRepository specRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
@@ -18,6 +22,8 @@ public class PlanService(
 )
 {
     private readonly IPlanRepository _planRepo = planRepo;
+    private readonly ICardRepository _cardRepo = cardRepo;
+    private readonly ISpecRepository _specRepo = specRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
@@ -33,6 +39,43 @@ public class PlanService(
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null)
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+        if (card.ProjectId != cmd.ProjectId)
+            return Result<PlanDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Plans.CardDocumentProjectMismatch,
+                    "Card is in a different project."
+                )
+            );
+
+        var cardTypeError = Card.ValidateAllowsPlan(card.Type);
+        if (cardTypeError != null)
+            return Result<PlanDto>.Failure(cardTypeError);
+
+        if (cmd.SpecId != null)
+        {
+            if (card.Type != CardType.Goal)
+                return Result<PlanDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Plans.SpecLinkNotAllowed,
+                        $"{card.Type} plans cannot be linked to a Spec via SpecId."
+                    )
+                );
+
+            var spec = await _specRepo.GetByIdAsync(cmd.SpecId.Value, ct);
+            if (spec == null || spec.CardId != cmd.CardId || spec.ProjectId != cmd.ProjectId)
+                return Result<PlanDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Plans.SpecCardMismatch,
+                        "SpecId must reference the Spec owned by this card."
+                    )
+                );
+        }
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<PlanDto>.Failure(
