@@ -208,7 +208,7 @@ public class BoardScreen : IScreen
         var type = AnsiConsole.Prompt(
             new SelectionPrompt<HydraForge.Tui.Generated.CardType>()
                 .Title("Type:")
-                .AddChoices(HydraForge.Tui.Generated.CardType.Task, HydraForge.Tui.Generated.CardType.Issue, HydraForge.Tui.Generated.CardType.Idea));
+                .AddChoices(HydraForge.Tui.Generated.CardType.Task, HydraForge.Tui.Generated.CardType.Issue, HydraForge.Tui.Generated.CardType.Goal, HydraForge.Tui.Generated.CardType.Idea));
 
         try
         {
@@ -296,7 +296,7 @@ public class BoardScreen : IScreen
         {
             var client = _apiClientFactory.GetClient();
 
-            await client.CardsDELETEAsync(_projectId, card.Id);
+            await client.ArchiveAsync(_projectId, card.Id, new ArchiveCardRequest { Version = card.Version });
 
             await LoadBoardAsync();
             await RenderAsync();
