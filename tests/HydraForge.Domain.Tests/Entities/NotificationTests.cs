@@ -1,5 +1,4 @@
 using HydraForge.Domain.Entities.PersonalSpace;
-using Xunit;
 
 namespace HydraForge.Domain.Tests.Entities;
 
@@ -13,8 +12,14 @@ public class NotificationTests
         var projectId = Guid.NewGuid();
 
         var notif = Notification.Create(
-            userId, "Test Title", "Test Body", "Test Message",
-            cardId, projectId, "/projects/123");
+            userId,
+            "Test Title",
+            "Test Body",
+            "Test Message",
+            cardId,
+            projectId,
+            "/projects/123"
+        );
 
         Assert.NotEqual(Guid.Empty, notif.Id);
         Assert.Equal(userId, notif.UserId);
@@ -31,8 +36,7 @@ public class NotificationTests
     [Fact]
     public void MarkRead_SetsIsReadToTrue()
     {
-        var notif = Notification.Create(
-            Guid.NewGuid(), "Title", null, "Message", null, null, null);
+        var notif = Notification.Create(Guid.NewGuid(), "Title", null, "Message", null, null, null);
 
         notif.MarkRead();
 
@@ -42,8 +46,7 @@ public class NotificationTests
     [Fact]
     public void Create_WithNullOptionals_Works()
     {
-        var notif = Notification.Create(
-            Guid.NewGuid(), "Title", null, "Message", null, null, null);
+        var notif = Notification.Create(Guid.NewGuid(), "Title", null, "Message", null, null, null);
 
         Assert.Null(notif.Body);
         Assert.Null(notif.CardId);

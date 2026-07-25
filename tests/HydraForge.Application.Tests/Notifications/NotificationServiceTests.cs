@@ -1,6 +1,5 @@
 using HydraForge.Application.Notifications;
 using HydraForge.Domain.Entities.PersonalSpace;
-using Xunit;
 
 namespace HydraForge.Application.Tests.Notifications;
 
@@ -16,16 +15,30 @@ public class NotificationServiceTests
             return Task.CompletedTask;
         }
 
-        public Task AddRangeAsync(IReadOnlyList<Notification> notifications, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<IReadOnlyList<Notification>> ListByUserAsync(Guid userId, int skip, int take, bool? unreadOnly = null, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<int> CountUnreadAsync(Guid userId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task MarkAsReadAsync(Guid notificationId, Guid userId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
-            => throw new NotImplementedException();
+        public Task AddRangeAsync(
+            IReadOnlyList<Notification> notifications,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<Notification>> ListByUserAsync(
+            Guid userId,
+            int skip,
+            int take,
+            bool? unreadOnly = null,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<int> CountUnreadAsync(Guid userId, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task MarkAsReadAsync(
+            Guid notificationId,
+            Guid userId,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default) =>
+            throw new NotImplementedException();
     }
 
     [Fact]
@@ -35,7 +48,9 @@ public class NotificationServiceTests
         var service = new NotificationService(repo);
         var userId = Guid.NewGuid();
 
-        await service.NotifyAsync(new NotifyRequest(userId, userId, "Title", null, null, null, null, null));
+        await service.NotifyAsync(
+            new NotifyRequest(userId, userId, "Title", null, null, null, null, null)
+        );
 
         Assert.Empty(repo.Added);
     }
@@ -48,7 +63,9 @@ public class NotificationServiceTests
         var userId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
 
-        await service.NotifyAsync(new NotifyRequest(userId, actorId, "Test Title", "Body", "Message", null, null, null));
+        await service.NotifyAsync(
+            new NotifyRequest(userId, actorId, "Test Title", "Body", "Message", null, null, null)
+        );
 
         Assert.Single(repo.Added);
         var notif = repo.Added[0];
@@ -65,7 +82,9 @@ public class NotificationServiceTests
         var repo = new FakeNotificationRepository();
         var service = new NotificationService(repo);
 
-        await service.NotifyAsync(new NotifyRequest(Guid.NewGuid(), Guid.NewGuid(), "Title", null, null, null, null, null));
+        await service.NotifyAsync(
+            new NotifyRequest(Guid.NewGuid(), Guid.NewGuid(), "Title", null, null, null, null, null)
+        );
 
         Assert.Equal("Title", repo.Added[0].Message);
     }
