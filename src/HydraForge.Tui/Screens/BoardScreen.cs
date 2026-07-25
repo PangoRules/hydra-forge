@@ -1,5 +1,6 @@
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using HydraForge.Tui.Renderers;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -50,7 +51,11 @@ public class BoardScreen : IScreen
 
         AnsiConsole.Write(layout);
 
-        AnsiConsole.MarkupLine("[grey][[h/l]] Columns  [[j/k]] Cards  [[Enter]] Detail  [[n]] New  [[m]] Move  [[?]] Help  [[Esc]] Back[/]");
+        KeyHintBar.Render(new[]
+        {
+            "[h/l] Columns", "[j/k] Cards", "[Enter] Detail", "[n] New",
+            "[m] Move", "[?] Help", "[Esc] Back", "[q] Quit",
+        });
     }
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
@@ -134,6 +139,12 @@ public class BoardScreen : IScreen
 
             case ConsoleKey.Delete:
                 await ArchiveCardAsync();
+                break;
+
+            case ConsoleKey.Q:
+                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                if (confirm)
+                    Environment.Exit(0);
                 break;
         }
     }

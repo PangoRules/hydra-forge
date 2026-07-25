@@ -34,9 +34,9 @@ public class BoardRenderer
     {
         var layout = new Layout("Root")
             .SplitRows(
-                new Layout("Title"),
+                new Layout("Title").Size(3),
                 new Layout("Board"),
-                new Layout("Status")
+                new Layout("Status").Size(3)
             );
 
         // Title bar
