@@ -350,6 +350,17 @@ public class CardDetailScreen(
                 break;
 
             case ConsoleKey.S:
+                var mode = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("View:")
+                        .AddChoices("Specs", "Plans"));
+                var specScreen = new SpecViewerScreen(
+                    _apiClientFactory, _appState, _errorCollector,
+                    _projectId, _cardId,
+                    mode == "Specs" ? "spec" : "plan");
+                _appState.CurrentScreen = specScreen;
+                await specScreen.OnEnterAsync();
+                await specScreen.RenderAsync();
                 break;
 
             case ConsoleKey.D:
