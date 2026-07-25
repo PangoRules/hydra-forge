@@ -522,7 +522,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 - [x] Task 2: ConfigStore — read/write `.hydraforge/config.json` at the repo root (D-49) with 0600 perms
 - [x] Task 3: ApiClientFactory — NSwag client with JWT auth, token refresh
 - [x] Task 4: Auth — login screen + startup auth flow
-- [ ] Task 5: Connection handling — lock screen, auto-reconnect, status bar indicators
+- [x] Task 5: Connection handling — lock screen, auto-reconnect, status bar indicators
 - [ ] Task 6: Project list view + create project
 - [ ] Task 7: Board view — Spectre.Console column/card layout + keyboard nav
 - [ ] Task 8: SignalR integration — BoardHub + PresenceHub, LiveDisplay updates
