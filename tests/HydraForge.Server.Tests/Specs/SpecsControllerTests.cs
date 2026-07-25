@@ -29,13 +29,13 @@ public class SpecsControllerTests
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1 });
+        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1, Type = CardType.Goal });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs/cards/{cardId}")
         {
             Content = new StringContent(
-                "{\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"# Spec\"}",
+                "{\"docType\":\"Specification\",\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"# Spec\"}",
                 Encoding.UTF8,
                 "application/json"
             ),
