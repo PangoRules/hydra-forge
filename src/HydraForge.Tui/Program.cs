@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
-using Spectre.Console;
 using HydraForge.Tui.Models;
-using HydraForge.Tui.Services;
 using HydraForge.Tui.Screens;
+using HydraForge.Tui.Services;
+using Microsoft.Extensions.Configuration;
+using Spectre.Console;
 
 namespace HydraForge.Tui;
 
@@ -15,7 +15,11 @@ public static class Program
         var configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: false)
+            .AddJsonFile(
+                $"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json",
+                optional: true,
+                reloadOnChange: false
+            )
             .AddEnvironmentVariables()
             .Build();
 
@@ -42,17 +46,23 @@ public static class Program
 
         // Check if we have a valid JWT token
         var loadedConfig = configStore.Load();
-        var needsLogin = string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null;
+        var needsLogin =
+            string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null;
 
         if (needsLogin)
         {
             // Show login screen
-            var loginScreen = new LoginScreen(configStore, apiClientFactory, appState, errorCollector);
+            var loginScreen = new LoginScreen(
+                configStore,
+                apiClientFactory,
+                appState,
+                errorCollector
+            );
             await loginScreen.RenderAsync();
-            
+
             // Reload config after login
             loadedConfig = configStore.Load();
-            
+
             // Check if login was successful
             if (string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null)
             {
@@ -71,14 +81,22 @@ public static class Program
                 {
                     // Refresh failed, clear config and show login screen
                     configStore.Clear();
-                    var loginScreen = new LoginScreen(configStore, apiClientFactory, appState, errorCollector);
+                    var loginScreen = new LoginScreen(
+                        configStore,
+                        apiClientFactory,
+                        appState,
+                        errorCollector
+                    );
                     await loginScreen.RenderAsync();
-                    
+
                     // Reload config after login
                     loadedConfig = configStore.Load();
-                    
+
                     // Check if login was successful
-                    if (string.IsNullOrWhiteSpace(loadedConfig.JwtToken) || loadedConfig.ExpiresAt == null)
+                    if (
+                        string.IsNullOrWhiteSpace(loadedConfig.JwtToken)
+                        || loadedConfig.ExpiresAt == null
+                    )
                     {
                         AnsiConsole.MarkupLine("[red]Login failed. Exiting.[/]");
                         return 1;
@@ -92,7 +110,11 @@ public static class Program
 
         // Show project list
         var projectListScreen = new ProjectListScreen(
-            apiClientFactory, appState, errorCollector, connectionManager);
+            apiClientFactory,
+            appState,
+            errorCollector,
+            connectionManager
+        );
         appState.CurrentScreen = projectListScreen;
         await projectListScreen.OnEnterAsync();
         await projectListScreen.RenderAsync();
@@ -122,16 +144,15 @@ public static class Program
                 }
             }
         }
-
-#pragma warning disable CS0162
-        return 0;
-#pragma warning restore CS0162
     }
 
     // No generic IScreen runner exists yet (board loop lands in a later task),
     // so LockScreen drives its own render/input loop here until its background
     // retry loop marks AppState.Connection as Connected.
-    private static async Task RunLockScreenUntilConnectedAsync(LockScreen lockScreen, AppState appState)
+    private static async Task RunLockScreenUntilConnectedAsync(
+        LockScreen lockScreen,
+        AppState appState
+    )
     {
         await lockScreen.OnEnterAsync();
 

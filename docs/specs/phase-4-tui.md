@@ -528,7 +528,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 - [x] Task 8: SignalR integration — BoardHub + PresenceHub, LiveDisplay updates
 - [x] Task 9: Card detail view — all fields, section nav, `$EDITOR` for description
 - [x] Task 10: Create / edit / move cards via keyboard
-- [ ] Task 11: Dependency panel — search card, select type, confirm
+- [x] Task 11: Dependency panel — search card, select type, confirm
 - [ ] Task 12: Blocked card indicator in board view
 - [ ] Task 13: Spec + plan viewer/editor (`$EDITOR`)
 - [ ] Task 14: Comments — inline view + add

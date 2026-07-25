@@ -1,9 +1,9 @@
 ## Validate: TUI Dependency Panel
 
 ### Setup
-- [ ] Start HydraForge API and TUI with authenticated user.
-- [ ] Open project board containing at least two cards (one source, one or more targets) in any column.
-- [ ] Open a card detail view (Enter on a card) to verify the `d` key triggers from there too.
+- [X] Start HydraForge API and TUI with authenticated user.
+- [X] Open project board containing at least two cards (one source, one or more targets) in any column.
+- [X] Open a card detail view (Enter on a card) to verify the `d` key triggers from there too.
 
 ### Happy Path
 1. From board, press `d` on a card → Dependency Panel modal renders over the board.
