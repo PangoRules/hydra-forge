@@ -92,7 +92,7 @@ var content = new Rows(new List<IRenderable>(cardPanels));
             {
                 Header = new PanelHeader($" {Markup.Escape(col.Name)}{wipText} "),
                 Border = BoxBorder.Rounded,
-                BorderStyle = new Style(foreground: color),
+                BorderStyle = isSelected ? new Style(foreground: Color.Blue) : new Style(foreground: color),
                 Expand = true,
             };
         }).ToList();

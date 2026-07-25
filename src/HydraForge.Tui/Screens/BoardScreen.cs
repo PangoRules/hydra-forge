@@ -121,6 +121,7 @@ public class BoardScreen : IScreen
                 _appState.CurrentScreen = projectListScreen;
                 _appState.SelectedProjectId = null;
                 await projectListScreen.OnEnterAsync();
+                await projectListScreen.RenderAsync();
                 break;
 
             case ConsoleKey.D:
