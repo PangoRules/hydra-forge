@@ -52,7 +52,6 @@ public class BoardRenderer
         {
             var isSelected = i == selectedColumn;
             var color = ParseColor(col.Color) ?? Color.Grey;
-            var borderColor = isSelected ? Color.Blue : color;
 
             var cardPanels = col.Cards.Select((card, j) =>
             {
@@ -84,13 +83,7 @@ public class BoardRenderer
                 };
             }).ToList();
 
-            var wipText = col.WipLimit.HasValue
-                ? $" ({col.Cards.Count}/{col.WipLimit})"
-                : $" ({col.Cards.Count})";
-
-
-
-            var content = new Rows(new List<IRenderable>(cardPanels));
+var content = new Rows(new List<IRenderable>(cardPanels));
             return new Panel(content)
             {
                 Header = new PanelHeader($" {col.Name} "),
