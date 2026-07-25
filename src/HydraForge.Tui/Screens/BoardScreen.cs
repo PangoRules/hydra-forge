@@ -42,42 +42,48 @@ public class BoardScreen : IScreen
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         await LoadBoardAsync();
 
-        // Connect SignalR — real-time sync degrades gracefully if the server is unreachable
-        // Guard against re-connection when restored from modal (OnExitAsync nulls _signalR first)
+        // Connect SignalR — real-time sync degrades gracefully if the server is unreachable.
+        // Only create + connect once; OnExitAsync nulls _signalR so a true exit (not modal
+        // return) triggers a fresh connect on next OnEnterAsync.
         if (_signalR == null)
+        {
             _signalR = new SignalRConnectionManager(_appState, _errorCollector);
-        _signalR.OnBoardEvent += HandleBoardEvent;
-        _signalR.OnCurrentUsers += async users =>
-        {
-            _appState.OnlineCount = users.Count;
-            await RenderAsync();
-        };
-        _signalR.OnUserJoined += async _ =>
-        {
-            _appState.OnlineCount++;
-            await RenderAsync();
-        };
-        _signalR.OnUserLeft += async _ =>
-        {
-            _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
-            await RenderAsync();
-        };
+            _signalR.OnBoardEvent += HandleBoardEvent;
+            _signalR.OnCurrentUsers += async users =>
+            {
+                _appState.OnlineCount = users.Count;
+                await RenderAsync();
+            };
+            _signalR.OnUserJoined += async _ =>
+            {
+                _appState.OnlineCount++;
+                await RenderAsync();
+            };
+            _signalR.OnUserLeft += async _ =>
+            {
+                _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
+                await RenderAsync();
+            };
 
-        try
-        {
-            await _signalR.ConnectAsync(_projectId);
-        }
-        catch (Exception ex)
-        {
-            _appState.Connection = ConnectionStatus.Disconnected;
-            _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+            try
+            {
+                await _signalR.ConnectAsync(_projectId);
+            }
+            catch (Exception ex)
+            {
+                _appState.Connection = ConnectionStatus.Disconnected;
+                _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+            }
         }
     }
 
     public async Task OnExitAsync()
     {
         if (_signalR != null)
+        {
             await _signalR.DisconnectAsync();
+            _signalR = null;
+        }
     }
 
     public async Task RenderAsync()

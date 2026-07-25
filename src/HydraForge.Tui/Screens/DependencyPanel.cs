@@ -259,7 +259,7 @@ public class DependencyPanel : IScreen
                 Type = relType
             });
 
-            AnsiConsole.MarkupLine($"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
+            _errorCollector.Add("N/A", $"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
             _appState.CurrentScreen = null;
         }
         catch (ApiException ex)
