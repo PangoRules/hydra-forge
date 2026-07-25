@@ -157,10 +157,6 @@ public class BoardScreen : IScreen
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.Enter when _reorderMode:
-                await ConfirmReorderAsync();
-                break;
-
             case ConsoleKey.Enter:
                 if (_reorderMode)
                 {
@@ -170,11 +166,6 @@ public class BoardScreen : IScreen
                 {
                     await OpenCardDetailAsync();
                 }
-                break;
-
-            case ConsoleKey.Escape when _reorderMode:
-                _reorderMode = false;
-                await RenderAsync();
                 break;
 
             case ConsoleKey.Escape:
@@ -196,11 +187,17 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.E:
-                await EditCardTitleAsync();
+                if (!_reorderMode)
+                {
+                    await EditCardTitleAsync();
+                }
                 break;
 
             case ConsoleKey.R:
-                await EnterReorderModeAsync();
+                if (!_reorderMode)
+                {
+                    await EnterReorderModeAsync();
+                }
                 break;
 
             case ConsoleKey.N:
@@ -452,16 +449,28 @@ public class BoardScreen : IScreen
 
     private async Task EnterReorderModeAsync()
     {
+        if (_columns.Count == 0) return;
+        var col = _columns[_selectedColumn];
+        if (_selectedCard >= col.Cards.Count) return;
+        
         _reorderMode = true;
         AnsiConsole.MarkupLine("[yellow]Reorder mode: Use j/k to navigate, Enter to confirm, Esc to cancel[/]");
-        await RenderAsync();
+        // Do NOT call RenderAsync() here as it will clear the markup line
     }
 
     private async Task ConfirmReorderAsync()
     {
-        if (_columns.Count == 0) return;
+        if (_columns.Count == 0) 
+        {
+            _reorderMode = false;
+            return;
+        }
         var col = _columns[_selectedColumn];
-        if (_selectedCard >= col.Cards.Count) return;
+        if (_selectedCard >= col.Cards.Count) 
+        {
+            _reorderMode = false;
+            return;
+        }
         var card = col.Cards[_selectedCard];
 
         try
@@ -484,7 +493,7 @@ public class BoardScreen : IScreen
         {
             AnsiConsole.MarkupLine("[yellow]Move blocked by dependencies. Use --force to override.[/]");
             _reorderMode = false;
-            await RenderAsync();
+            // Do NOT call RenderAsync() here as it will clear the markup line
         }
         catch (ApiException ex)
         {
