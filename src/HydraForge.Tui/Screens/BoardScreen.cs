@@ -117,6 +117,7 @@ public class BoardScreen : IScreen
 
             case ConsoleKey.Escape:
                 _appState.CurrentScreen = null; // Return to project list
+                _appState.SelectedProjectId = null; // Also clear project selection
                 break;
 
             case ConsoleKey.D:
