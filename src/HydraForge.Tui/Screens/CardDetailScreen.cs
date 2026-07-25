@@ -105,6 +105,7 @@ public class CardDetailScreen : IScreen
 
         yield return "[Esc] Back";
         yield return "[q] Quit";
+        yield return "[?] Help";
     }
 
     private Panel BuildSectionPanel(int index, bool isActive)
@@ -271,6 +272,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case ConsoleKey.J or ConsoleKey.DownArrow:
+            case ConsoleKey.N when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklist.Count > 0)
                 {
                     _checklistIndex = Math.Min(_checklistIndex + 1, _checklist.Count - 1);
@@ -279,6 +281,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.P when key.Modifiers == ConsoleModifiers.Control:
                 if (_sectionIndex == 2 && _checklistIndex > 0)
                 {
                     _checklistIndex--;
@@ -323,8 +326,26 @@ public class CardDetailScreen : IScreen
                 await boardScreen.OnEnterAsync();
                 await boardScreen.RenderAsync();
                 break;
+
+            case ConsoleKey k when key.KeyChar == '?':
+                ShowHelp();
+                await RenderAsync();
+                break;
         }
     }
+
+    private void ShowHelp() => HelpOverlay.Show("Card Detail", new (string, string)[]
+    {
+        ("Tab / Shift+Tab", "Next / prev section"),
+        ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist (Checklist section only)"),
+        ("e", "Edit title (Metadata) or description in $EDITOR (Description)"),
+        ("Space", "Toggle checklist item"),
+        ("n", "New checklist item (Checklist section only)"),
+        ("a", "Add comment (Comments section only)"),
+        ("Esc", "Back to board"),
+        ("q", "Quit"),
+        ("?", "This help"),
+    });
 
     private async Task EditCurrentSectionAsync()
     {

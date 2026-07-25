@@ -117,6 +117,7 @@ public class ProjectListScreen : IScreen
         {
             "[Enter] Open", "[c] Create", "[/] Search", "[a] Archived", "[q] Quit",
             "[s] Sort", "[Shift+S] Direction", "[r] Role filter", "[n]/[p] Page",
+            "[?] Help",
         };
         if (errors.Count > 0)
             hints.Add("[x] Dismiss errors");
@@ -149,12 +150,14 @@ public class ProjectListScreen : IScreen
         switch (key.Key)
         {
             case ConsoleKey.J or ConsoleKey.DownArrow:
+            case ConsoleKey.N when key.Modifiers == ConsoleModifiers.Control:
                 if (_selectedIndex < _projects.Count - 1)
                     _selectedIndex++;
                 await RenderAsync();
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.P when key.Modifiers == ConsoleModifiers.Control:
                 if (_selectedIndex > 0)
                     _selectedIndex--;
                 await RenderAsync();
@@ -278,8 +281,30 @@ public class ProjectListScreen : IScreen
                 if (confirm)
                     Environment.Exit(0);
                 break;
+
+            case ConsoleKey k when key.KeyChar == '?':
+                ShowHelp();
+                await RenderAsync();
+                break;
         }
     }
+
+    private void ShowHelp() => HelpOverlay.Show("Projects", new (string, string)[]
+    {
+        ("j/k, ↑/↓, Ctrl+n/p", "Prev/next row"),
+        ("g/Home, G/End", "First / last row"),
+        ("Enter", "Open board"),
+        ("c", "Create project"),
+        ("/", "Search"),
+        ("a", "Toggle archived"),
+        ("s", "Cycle sort field"),
+        ("Shift+S", "Toggle sort direction"),
+        ("r", "Cycle role filter"),
+        ("n / p", "Next / prev page"),
+        ("x", "Dismiss errors"),
+        ("q", "Quit"),
+        ("?", "This help"),
+    });
 
     private async Task LoadProjectsAsync()
     {
