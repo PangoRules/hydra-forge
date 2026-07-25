@@ -3,10 +3,10 @@
 Plan scope: Domain entity factory + `MarkRead`, `INotificationRepository` port, `INotificationService` with actor-exclusion, `EfNotificationRepository`, DI registration. No UI, no SignalR — service layer only.
 
 ### Setup
-- [ ] `dotnet build` succeeds (no new warnings beyond pre-existing `Microsoft.OpenApi` NU1903)
-- [ ] `dotnet test` — 600 tests pass (59 Domain + 210 Application + 74 Infrastructure + 152 Server + 105 TUI)
-- [ ] `dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server` returns "No changes have been made to the model since the last migration"
-- [ ] `INotificationRepository` and `INotificationService` resolve from DI in `HydraForge.Server.Program.cs` (smoke: server starts without DI exception)
+- [x] `dotnet build` succeeds (no new warnings beyond pre-existing `Microsoft.OpenApi` NU1903)
+- [x] `dotnet test` — 600 tests pass (59 Domain + 210 Application + 74 Infrastructure + 152 Server + 105 TUI)
+- [x] `dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server` returns "No changes have been made to the model since the last migration"
+- [x] `INotificationRepository` and `INotificationService` resolve from DI in `HydraForge.Server.Program.cs` (smoke: server starts without DI exception — covered by 152 passing Server tests)
 
 ### Happy Path
 1. `Notification.Create(userId, title, body, message, cardId, projectId, actionUrl)` returns a `Notification` with all 7 properties set, `Id != Guid.Empty`, `IsRead == false`, `CreatedAt` within last minute.
@@ -29,4 +29,4 @@ Plan scope: Domain entity factory + `MarkRead`, `INotificationRepository` port, 
 4. TUI and Web UI untouched — no SignalR/UI regression surface.
 
 ### Cleanup
-- [ ] None required — no DB rows created, no config changed, no temp files.
+- [x] None required — no DB rows created, no config changed, no temp files.
