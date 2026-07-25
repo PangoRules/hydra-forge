@@ -54,8 +54,10 @@ builder.Services.AddOpenApi(options =>
 builder
     .Services.AddControllers()
     .AddJsonOptions(options =>
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
-    );
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new HydraForge.Server.Serialization.UtcDateTimeConverter());
+    });
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
 builder.Services.AddColumnServices();

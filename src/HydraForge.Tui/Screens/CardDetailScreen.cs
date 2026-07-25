@@ -1,6 +1,3 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Rendering;
@@ -15,29 +12,28 @@ public class CardDetailScreen : IScreen
     private readonly ApiClientFactory _apiClientFactory;
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
+    private readonly ConnectionManager _connectionManager;
     private readonly EditorLauncher _editorLauncher = new();
 
     private CardResponse? _card;
-    private List<ChecklistItemData> _checklist = new();
-    private List<CommentData> _comments = new();
-    private List<RelationshipData> _relationships = new();
+    private List<ChecklistItemResponse> _checklist = new();
+    private List<CommentResponse> _comments = new();
+    private List<CardRelationshipDto> _relationships = new();
     private Guid _projectId;
     private Guid _cardId;
     private int _sectionIndex;
-
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    private int _checklistIndex;
 
     public CardDetailScreen(
         ApiClientFactory apiClientFactory,
         AppState appState,
-        ErrorCollector errorCollector)
+        ErrorCollector errorCollector,
+        ConnectionManager connectionManager)
     {
         _apiClientFactory = apiClientFactory;
         _appState = appState;
         _errorCollector = errorCollector;
+        _connectionManager = connectionManager;
     }
 
     public async Task OnEnterAsync()
@@ -80,11 +76,35 @@ public class CardDetailScreen : IScreen
 
         AnsiConsole.Write(new Rows(content));
         AnsiConsole.WriteLine();
-        KeyHintBar.Render(new[]
+        KeyHintBar.Render(BuildHints());
+    }
+
+    // Hints reflect what the current section actually does — e.g. [j/k] only
+    // means something inside the checklist, [e] only edits title/description.
+    private IEnumerable<string> BuildHints()
+    {
+        yield return "[Tab] Sections";
+
+        switch (_sectionIndex)
         {
-            "[Tab] Sections", "[e] Edit", "[Space] Toggle", "[a] Comment",
-            "[Esc] Back",
-        });
+            case 0:
+                yield return "[e] Edit title";
+                break;
+            case 1:
+                yield return "[e] Edit in $EDITOR";
+                break;
+            case 2:
+                yield return "[j/k] Item";
+                yield return "[Space] Toggle";
+                yield return "[n] New item";
+                break;
+            case 3:
+                yield return "[a] Comment";
+                break;
+        }
+
+        yield return "[Esc] Back";
+        yield return "[q] Quit";
     }
 
     private Panel BuildSectionPanel(int index, bool isActive)
@@ -121,6 +141,7 @@ public class CardDetailScreen : IScreen
             Header = new PanelHeader(header),
             Border = isActive ? BoxBorder.Double : BoxBorder.Rounded,
             BorderStyle = isActive ? new Style(foreground: Color.Blue) : null,
+            Expand = true,
         };
     }
 
@@ -171,13 +192,16 @@ public class CardDetailScreen : IScreen
         if (_checklist.Count == 0)
             return new Markup("[grey](No checklist items)[/]");
 
-        var items = _checklist.Select(item =>
+        var showCursor = _sectionIndex == 2;
+        var items = _checklist.Select((item, i) =>
         {
+            var isSelected = showCursor && i == _checklistIndex;
+            var cursor = isSelected ? "[blue]>[/] " : "  ";
             var checkbox = item.IsCompleted ? "[green][[x]][/]" : "[grey][[ ]][/]";
             var text = item.IsCompleted
                 ? $"[strikethrough grey]{Markup.Escape(item.Text)}[/]"
                 : Markup.Escape(item.Text);
-            return new Markup($"{checkbox} {text}") as IRenderable;
+            return new Markup($"{cursor}{checkbox} {text}") as IRenderable;
         });
 
         return new Rows(items.ToArray());
@@ -203,20 +227,33 @@ public class CardDetailScreen : IScreen
         if (_relationships.Count == 0)
             return new Markup("[grey](No dependencies)[/]");
 
-        var items = _relationships.Select(r =>
-        {
-            var typeLabel = r.Type switch
-            {
-                "BlockedBy" => "[red]blocks[/]",
-                "Precedes" => "[yellow]precedes[/]",
-                "Relates" => "[grey]relates[/]",
-                "SpawnedFrom" => "[cyan1]spawned[/]",
-                _ => r.Type
-            };
-            return new Markup($"{typeLabel} #{r.TargetCardNumber} {Markup.Escape(r.TargetCardTitle)}") as IRenderable;
-        });
+        var items = _relationships.Select(r => new Markup(DescribeRelationship(r)) as IRenderable);
 
         return new Rows(items.ToArray());
+    }
+
+    // Relationship rows always carry Source/Target regardless of which side the
+    // current card is on — direction and label must be resolved relative to
+    // _cardId, otherwise the panel can show the card's own number as its "other side".
+    private string DescribeRelationship(CardRelationshipDto r)
+    {
+        var isSource = r.SourceCardId == _cardId;
+
+        return r.Type switch
+        {
+            RelationshipType.BlockedBy => isSource
+                ? $"[red]blocks[/] #{r.TargetCardNumber} {Markup.Escape(r.TargetCardTitle)}"
+                : $"[red]blocked by[/] #{r.SourceCardNumber} {Markup.Escape(r.SourceCardTitle)}",
+            RelationshipType.Precedes => isSource
+                ? $"[yellow]precedes[/] #{r.TargetCardNumber} {Markup.Escape(r.TargetCardTitle)}"
+                : $"[yellow]preceded by[/] #{r.SourceCardNumber} {Markup.Escape(r.SourceCardTitle)}",
+            RelationshipType.SpawnedFrom => isSource
+                ? $"[cyan1]spawned from[/] #{r.TargetCardNumber} {Markup.Escape(r.TargetCardTitle)}"
+                : $"[cyan1]spawned[/] #{r.SourceCardNumber} {Markup.Escape(r.SourceCardTitle)}",
+            _ => isSource
+                ? $"[grey]relates[/] #{r.TargetCardNumber} {Markup.Escape(r.TargetCardTitle)}"
+                : $"[grey]relates[/] #{r.SourceCardNumber} {Markup.Escape(r.SourceCardTitle)}",
+        };
     }
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
@@ -233,6 +270,22 @@ public class CardDetailScreen : IScreen
                 await RenderAsync();
                 break;
 
+            case ConsoleKey.J or ConsoleKey.DownArrow:
+                if (_sectionIndex == 2 && _checklist.Count > 0)
+                {
+                    _checklistIndex = Math.Min(_checklistIndex + 1, _checklist.Count - 1);
+                    await RenderAsync();
+                }
+                break;
+
+            case ConsoleKey.K or ConsoleKey.UpArrow:
+                if (_sectionIndex == 2 && _checklistIndex > 0)
+                {
+                    _checklistIndex--;
+                    await RenderAsync();
+                }
+                break;
+
             case ConsoleKey.E:
                 await EditCurrentSectionAsync();
                 break;
@@ -240,6 +293,11 @@ public class CardDetailScreen : IScreen
             case ConsoleKey.Spacebar:
                 if (_sectionIndex == 2)
                     await ToggleChecklistItemAsync();
+                break;
+
+            case ConsoleKey.N:
+                if (_sectionIndex == 2)
+                    await AddChecklistItemAsync();
                 break;
 
             case ConsoleKey.A:
@@ -250,8 +308,20 @@ public class CardDetailScreen : IScreen
             case ConsoleKey.S:
                 break;
 
+            case ConsoleKey.Q:
+                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                if (confirm)
+                    Environment.Exit(0);
+                break;
+
             case ConsoleKey.Escape:
-                _appState.CurrentScreen = null;
+                await OnExitAsync();
+                var boardScreen = new BoardScreen(
+                    _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                _appState.CurrentScreen = boardScreen;
+                _appState.SelectedCardId = null;
+                await boardScreen.OnEnterAsync();
+                await boardScreen.RenderAsync();
                 break;
         }
     }
@@ -259,13 +329,13 @@ public class CardDetailScreen : IScreen
     private async Task EditCurrentSectionAsync()
     {
         if (_card == null) return;
-        
-        var card = _card!;
+
+        var card = _card;
         switch (_sectionIndex)
         {
             case 0:
                 var newTitle = AnsiConsole.Prompt(
-                    new TextPrompt<string>("Title:")
+                    new TextPrompt<string>("Title ([grey]Enter unchanged to cancel[/]):")
                         .DefaultValue(card.Title));
                 if (newTitle != card.Title)
                     await UpdateCardAsync(title: newTitle);
@@ -274,21 +344,29 @@ public class CardDetailScreen : IScreen
             case 1:
                 var originalDesc = card.Description ?? "";
                 var newDesc = await _editorLauncher.EditAsync(originalDesc);
-                if (newDesc != null && newDesc != originalDesc)
+                if (newDesc == null)
+                {
+                    AnsiConsole.MarkupLine("[red]Editor failed to launch — check $EDITOR/$VISUAL. No changes saved.[/]");
+                }
+                else if (newDesc != originalDesc)
+                {
                     await UpdateCardAsync(description: newDesc);
+                }
                 break;
         }
     }
 
     private async Task UpdateCardAsync(string? title = null, string? description = null)
     {
+        if (_card == null) return;
+
         try
         {
             var client = _apiClientFactory.GetClient();
             var updated = await client.CardsPUTAsync(_projectId, _cardId, new UpdateCardRequest
             {
-                Title = title ?? _card!.Title,
-                Description = description ?? _card!.Description,
+                Title = title ?? _card.Title,
+                Description = description ?? _card.Description,
                 Type = _card.Type,
                 ParentCardId = _card.ParentCardId,
                 DueAt = _card.DueAt,
@@ -301,17 +379,19 @@ public class CardDetailScreen : IScreen
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Update failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Update failed: {Markup.Escape(ex.Message)}[/]");
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Connection error: {Markup.Escape(ex.Message)}[/]");
         }
     }
 
     private async Task ToggleChecklistItemAsync()
     {
         if (_checklist.Count == 0) return;
-        var item = _checklist.FirstOrDefault(i => !i.IsCompleted) ?? _checklist[0];
+        var item = _checklist[_checklistIndex];
 
         try
         {
@@ -323,10 +403,43 @@ public class CardDetailScreen : IScreen
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Toggle failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Toggle failed: {Markup.Escape(ex.Message)}[/]");
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Connection error: {Markup.Escape(ex.Message)}[/]");
+        }
+    }
+
+    private async Task AddChecklistItemAsync()
+    {
+        var text = AnsiConsole.Prompt(
+            new TextPrompt<string>("Checklist item:")
+                .Validate(t => string.IsNullOrWhiteSpace(t)
+                    ? ValidationResult.Error("Text required")
+                    : ValidationResult.Success()));
+
+        try
+        {
+            var client = _apiClientFactory.GetClient();
+            await client.CardChecklistPOSTAsync(_projectId, _cardId, new CreateChecklistItemRequest
+            {
+                Text = text
+            });
+            await LoadChecklistAsync();
+            _checklistIndex = Math.Max(0, _checklist.Count - 1);
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Add item failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Add item failed: {Markup.Escape(ex.Message)}[/]");
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Connection error: {Markup.Escape(ex.Message)}[/]");
         }
     }
 
@@ -351,10 +464,12 @@ public class CardDetailScreen : IScreen
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Comment failed: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Comment failed: {Markup.Escape(ex.Message)}[/]");
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]Connection error: {Markup.Escape(ex.Message)}[/]");
         }
     }
 
@@ -383,16 +498,19 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var http = _apiClientFactory.CreateAuthenticatedHttpClient();
-            var response = await http.GetAsync($"api/projects/{_projectId}/cards/{_cardId}/CardChecklist");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            var wrapper = JsonSerializer.Deserialize<ChecklistWrapper>(json, JsonOpts);
-            _checklist = wrapper?.Items ?? new();
+            var client = _apiClientFactory.GetClient();
+            var list = await client.CardChecklistGETAsync(_projectId, _cardId);
+            _checklist = list?.Items?.ToList() ?? new();
+            _checklistIndex = Math.Clamp(_checklistIndex, 0, Math.Max(0, _checklist.Count - 1));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Failed to load [checklist]: {ex.Message}");
+            _errorCollector.Add("N/A", $"Failed to load checklist: {ex.Message}");
+            _checklist = new();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Failed to load checklist: {ex.Message}");
             _checklist = new();
         }
     }
@@ -401,16 +519,18 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var http = _apiClientFactory.CreateAuthenticatedHttpClient();
-            var response = await http.GetAsync($"api/projects/{_projectId}/cards/{_cardId}/CardComments");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            var wrapper = JsonSerializer.Deserialize<CommentsWrapper>(json, JsonOpts);
-            _comments = wrapper?.Comments ?? new();
+            var client = _apiClientFactory.GetClient();
+            var list = await client.CardCommentsGETAsync(_projectId, _cardId);
+            _comments = list?.Comments?.ToList() ?? new();
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Failed to load [comments]: {ex.Message}");
+            _errorCollector.Add("N/A", $"Failed to load comments: {ex.Message}");
+            _comments = new();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Failed to load comments: {ex.Message}");
             _comments = new();
         }
     }
@@ -419,16 +539,18 @@ public class CardDetailScreen : IScreen
     {
         try
         {
-            var http = _apiClientFactory.CreateAuthenticatedHttpClient();
-            var response = await http.GetAsync($"api/projects/{_projectId}/cards/{_cardId}/CardRelationships");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            var wrapper = JsonSerializer.Deserialize<RelationshipsWrapper>(json, JsonOpts);
-            _relationships = wrapper?.Relationships ?? new();
+            var client = _apiClientFactory.GetClient();
+            var list = await client.CardRelationshipsGETAsync(_projectId, _cardId);
+            _relationships = list?.Relationships?.ToList() ?? new();
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Failed to load [relationships]: {ex.Message}");
+            _errorCollector.Add("N/A", $"Failed to load relationships: {ex.Message}");
+            _relationships = new();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Failed to load relationships: {ex.Message}");
             _relationships = new();
         }
     }
@@ -441,60 +563,4 @@ public class CardDetailScreen : IScreen
         CardType.Idea => "green",
         _ => "grey"
     };
-
-    // Raw JSON DTOs for NSwag-void endpoints
-
-    private class ChecklistWrapper
-    {
-        [JsonPropertyName("items")]
-        public List<ChecklistItemData> Items { get; set; } = new();
-    }
-
-    private class ChecklistItemData
-    {
-        [JsonPropertyName("id")]
-        public Guid Id { get; set; }
-
-        [JsonPropertyName("text")]
-        public string Text { get; set; } = "";
-
-        [JsonPropertyName("isCompleted")]
-        public bool IsCompleted { get; set; }
-    }
-
-    private class CommentsWrapper
-    {
-        [JsonPropertyName("comments")]
-        public List<CommentData> Comments { get; set; } = new();
-    }
-
-    private class CommentData
-    {
-        [JsonPropertyName("content")]
-        public string Content { get; set; } = "";
-
-        [JsonPropertyName("authorUsername")]
-        public string AuthorUsername { get; set; } = "";
-
-        [JsonPropertyName("createdAt")]
-        public DateTime CreatedAt { get; set; }
-    }
-
-    private class RelationshipsWrapper
-    {
-        [JsonPropertyName("relationships")]
-        public List<RelationshipData> Relationships { get; set; } = new();
-    }
-
-    private class RelationshipData
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; } = "";
-
-        [JsonPropertyName("targetCardNumber")]
-        public int TargetCardNumber { get; set; }
-
-        [JsonPropertyName("targetCardTitle")]
-        public string TargetCardTitle { get; set; } = "";
-    }
 }

@@ -14,7 +14,6 @@ public class ApiClientFactory
     private AuthDelegatingHandler? _authHandler;
     private TuiConfig? _cachedConfig;
     private DateTime _lastConfigLoad = DateTime.MinValue;
-    private HttpClient? _rawHttpClient;
 
     public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector, HttpMessageHandler? testHandler = null)
     {
@@ -54,31 +53,6 @@ public class ApiClientFactory
 
         _client = new HydraForgeApiClient(httpClient);
         return _client;
-    }
-
-    /// <summary>
-    /// Creates an authenticated raw HttpClient for endpoints NSwag codegen
-    /// couldn't type-check (e.g. checklist/comments/relationships GETs).
-    /// </summary>
-    public HttpClient CreateAuthenticatedHttpClient()
-    {
-        if (_rawHttpClient != null)
-            return _rawHttpClient;
-            
-        var config = _configStore.Load();
-        _cachedConfig = config;
-
-        var authHandler = _testHandler != null
-            ? new AuthDelegatingHandler(_testHandler)
-            : new AuthDelegatingHandler();
-        authHandler.SetToken(config.JwtToken);
-
-        _rawHttpClient = new HttpClient(authHandler)
-        {
-            BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/")
-        };
-        
-        return _rawHttpClient;
     }
 
     /// <summary>

@@ -58,77 +58,77 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardChecklistGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChecklistItemListResponse> CardChecklistGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ChecklistItemResponse> CardChecklistPOSTAsync(System.Guid projectId, System.Guid cardId, CreateChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardChecklistPOSTAsync(System.Guid projectId, System.Guid cardId, CreateChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChecklistItemResponse> CardChecklistPUTAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, UpdateChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardChecklistPUTAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, UpdateChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task CardChecklistDELETEAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task ToggleAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChecklistItemResponse> ToggleAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task ReorderAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, ReorderChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChecklistItemResponse> ReorderAsync(System.Guid projectId, System.Guid cardId, System.Guid itemId, ReorderChecklistItemRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardCommentsGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CommentListResponse> CardCommentsGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CommentResponse> CardCommentsPOSTAsync(System.Guid projectId, System.Guid cardId, CreateCommentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardCommentsPOSTAsync(System.Guid projectId, System.Guid cardId, CreateCommentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CommentResponse> CardCommentsPUTAsync(System.Guid projectId, System.Guid cardId, System.Guid commentId, UpdateCommentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardCommentsPUTAsync(System.Guid projectId, System.Guid cardId, System.Guid commentId, UpdateCommentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CommentResponse> CardCommentsDELETEAsync(System.Guid projectId, System.Guid cardId, System.Guid commentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardCommentsDELETEAsync(System.Guid projectId, System.Guid cardId, System.Guid commentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CardRelationshipListResponse> CardRelationshipsGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
+        /// <returns>Created</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardRelationshipsGETAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CardRelationshipDto> CardRelationshipsPOSTAsync(System.Guid projectId, System.Guid cardId, CreateRelationshipRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task CardRelationshipsPOSTAsync(System.Guid projectId, System.Guid cardId, CreateRelationshipRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task CardRelationshipsDELETEAsync(System.Guid projectId, System.Guid cardId, System.Guid relationshipId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task ArchiveImpactAsync(System.Guid projectId, System.Guid cardId, bool? confirm = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ArchiveImpactResponse> ArchiveImpactAsync(System.Guid projectId, System.Guid cardId, bool? confirm = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task ArchiveWithRelationshipsAsync(System.Guid projectId, System.Guid cardId, ArchiveImpactRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ArchiveImpactResponse> ArchiveWithRelationshipsAsync(System.Guid projectId, System.Guid cardId, ArchiveImpactRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -401,6 +401,30 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ArchiveImpactResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("cardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("dependentCards", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<DependentCardDto> DependentCards { get; set; } = new System.Collections.ObjectModel.Collection<DependentCardDto>();
+
+        [Newtonsoft.Json.JsonProperty("requiresConfirmation", Required = Newtonsoft.Json.Required.Always)]
+        public bool RequiresConfirmation { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class AssignCardRequest
     {
 
@@ -499,6 +523,73 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("cards", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<CardResponse> Cards { get; set; } = new System.Collections.ObjectModel.Collection<CardResponse>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CardRelationshipDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("sourceCardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid SourceCardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("targetCardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid TargetCardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("sourceCardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int SourceCardNumber { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("sourceCardTitle", Required = Newtonsoft.Json.Required.Always)]
+        public string SourceCardTitle { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("targetCardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int TargetCardNumber { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("targetCardTitle", Required = Newtonsoft.Json.Required.Always)]
+        public string TargetCardTitle { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public RelationshipType Type { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdByUserId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CreatedByUserId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("archivedAt", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.DateTimeOffset? ArchivedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CardRelationshipListResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("relationships", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<CardRelationshipDto> Relationships { get; set; } = new System.Collections.ObjectModel.Collection<CardRelationshipDto>();
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -621,6 +712,63 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ChecklistItemListResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("items", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<ChecklistItemResponse> Items { get; set; } = new System.Collections.ObjectModel.Collection<ChecklistItemResponse>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ChecklistItemResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("text", Required = Newtonsoft.Json.Required.Always)]
+        public string Text { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isCompleted", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsCompleted { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("position", Required = Newtonsoft.Json.Required.Always)]
+        public int Position { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("assignedTo", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? AssignedTo { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("assignedToUsername", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? AssignedToUsername { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ColumnResponse
     {
 
@@ -662,6 +810,66 @@ namespace HydraForge.Tui.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"Blank")]
         Blank = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CommentListResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("comments", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<CommentResponse> Comments { get; set; } = new System.Collections.ObjectModel.Collection<CommentResponse>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CommentResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("authorId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid AuthorId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("authorUsername", Required = Newtonsoft.Json.Required.Always)]
+        public string AuthorUsername { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        public string Content { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("updatedAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset UpdatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("archivedAt", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.DateTimeOffset? ArchivedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("mentionedUserIds", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<System.Guid> MentionedUserIds { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -867,6 +1075,34 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
         public string Content { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DependentCardDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int CardNumber { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("relationshipType", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public RelationshipType RelationshipType { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -13,6 +13,8 @@ namespace HydraForge.Server.Controllers.Projects;
 public class CardChecklistController(ChecklistService checklistService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(ChecklistItemListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -37,6 +39,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(ChecklistItemResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
@@ -72,6 +76,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     }
 
     [HttpPut("{itemId:guid}")]
+    [ProducesResponseType(typeof(ChecklistItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid cardId,
@@ -108,6 +114,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     }
 
     [HttpPatch("{itemId:guid}/toggle")]
+    [ProducesResponseType(typeof(ChecklistItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Toggle(Guid projectId, Guid cardId, Guid itemId)
     {
         var userId = User.GetRequiredUserId();
@@ -132,6 +140,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     }
 
     [HttpPut("{itemId:guid}/reorder")]
+    [ProducesResponseType(typeof(ChecklistItemResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reorder(
         Guid projectId,
         Guid cardId,
@@ -167,6 +177,8 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
     }
 
     [HttpDelete("{itemId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId, Guid cardId, Guid itemId)
     {
         var userId = User.GetRequiredUserId();
