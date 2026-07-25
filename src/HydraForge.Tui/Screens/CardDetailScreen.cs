@@ -313,6 +313,7 @@ public class CardDetailScreen : IScreen
                 break;
 
             case ConsoleKey.D:
+                _appState.PreviousScreen = this;
                 var depPanel = new DependencyPanel(
                     _apiClientFactory, _appState, _errorCollector,
                     _projectId, _cardId);

@@ -7,6 +7,7 @@ public enum ConnectionStatus { Connected, Reconnecting, Disconnected }
 public class AppState
 {
     public IScreen? CurrentScreen { get; set; }
+    public IScreen? PreviousScreen { get; set; }
     public Guid? SelectedProjectId { get; set; }
     public Guid? SelectedCardId { get; set; }
     public ConnectionStatus Connection { get; set; } = ConnectionStatus.Disconnected;

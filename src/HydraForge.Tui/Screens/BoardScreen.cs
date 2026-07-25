@@ -225,6 +225,7 @@ public class BoardScreen : IScreen
                     if (_selectedCard < col.Cards.Count)
                     {
                         var card = col.Cards[_selectedCard];
+                        _appState.PreviousScreen = this;
                         var depPanel = new DependencyPanel(
                             _apiClientFactory, _appState, _errorCollector,
                             _projectId, card.Id);

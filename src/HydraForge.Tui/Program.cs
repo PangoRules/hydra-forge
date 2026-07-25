@@ -111,6 +111,15 @@ public static class Program
             if (appState.CurrentScreen != null)
             {
                 await appState.CurrentScreen.HandleKeyAsync(key);
+
+                // Modal dismissed (CurrentScreen set to null) — restore and re-render parent
+                if (appState.CurrentScreen == null && appState.PreviousScreen != null)
+                {
+                    appState.CurrentScreen = appState.PreviousScreen;
+                    appState.PreviousScreen = null;
+                    await appState.CurrentScreen.OnEnterAsync();
+                    await appState.CurrentScreen.RenderAsync();
+                }
             }
         }
 

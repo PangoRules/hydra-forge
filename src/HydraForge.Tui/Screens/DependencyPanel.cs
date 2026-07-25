@@ -17,6 +17,7 @@ public class DependencyPanel : IScreen
     private string _searchText = "";
     private string _selectedType = "BlockedBy";
     private int _focusIndex; // 0=search, 1=type, 2=confirm
+    private int _resultCursor; // highlighted search result index
     private List<CardSearchResult> _searchResults = new();
 
     private static readonly string[] RelationshipTypes = ["BlockedBy", "Precedes", "Relates", "SpawnedFrom"];
@@ -75,10 +76,14 @@ public class DependencyPanel : IScreen
 
         if (_searchResults.Count > 0)
         {
-            var results = _searchResults.Select(r =>
-                new Markup($"  #{r.CardNumber} [grey]{Markup.Escape(r.Title)}[/]"));
+            var results = _searchResults.Select((r, i) =>
+            {
+                var isCursor = i == _resultCursor;
+                var cursorStr = isCursor ? "[blue]>[/] " : "  ";
+                return new Markup($"{cursorStr}#{r.CardNumber} [grey]{Markup.Escape(r.Title)}[/]");
+            });
             content = new Rows(new List<IRenderable> { content }
-                .Concat(results.Cast<IRenderable>()).ToList());
+                .Concat(results.Cast<IRenderable>().ToList()));
         }
 
         return new Panel(content)
@@ -125,18 +130,30 @@ public class DependencyPanel : IScreen
     {
         switch (key.Key)
         {
+            case ConsoleKey.Tab when key.Modifiers == ConsoleModifiers.Shift:
+                _focusIndex = (_focusIndex + 2) % 3;
+                await RenderAsync();
+                break;
+
             case ConsoleKey.Tab:
                 _focusIndex = (_focusIndex + 1) % 3;
                 await RenderAsync();
                 break;
 
             case ConsoleKey.Enter:
-                if (_focusIndex == 2)
+                if (_focusIndex == 0 && _searchResults.Count > 0)
+                {
                     await ConfirmAsync();
+                }
+                else if (_focusIndex == 2)
+                {
+                    await ConfirmAsync();
+                }
                 break;
 
             case ConsoleKey.Escape:
-                _appState.CurrentScreen = null; // Dismiss modal
+                _appState.PreviousScreen = null;
+                _appState.CurrentScreen = null;
                 break;
 
             case ConsoleKey.Backspace:
@@ -144,12 +161,18 @@ public class DependencyPanel : IScreen
                 {
                     _searchText = _searchText[..^1];
                     await SearchCardsAsync();
+                    _resultCursor = 0;
                     await RenderAsync();
                 }
                 break;
 
             case ConsoleKey.J or ConsoleKey.DownArrow:
-                if (_focusIndex == 1)
+                if (_focusIndex == 0 && _searchResults.Count > 0)
+                {
+                    _resultCursor = (_resultCursor + 1) % _searchResults.Count;
+                    await RenderAsync();
+                }
+                else if (_focusIndex == 1)
                 {
                     var idx = Array.IndexOf(RelationshipTypes, _selectedType);
                     idx = (idx + 1) % RelationshipTypes.Length;
@@ -159,7 +182,12 @@ public class DependencyPanel : IScreen
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
-                if (_focusIndex == 1)
+                if (_focusIndex == 0 && _searchResults.Count > 0)
+                {
+                    _resultCursor = (_resultCursor + _searchResults.Count - 1) % _searchResults.Count;
+                    await RenderAsync();
+                }
+                else if (_focusIndex == 1)
                 {
                     var idx = Array.IndexOf(RelationshipTypes, _selectedType);
                     idx = (idx + RelationshipTypes.Length - 1) % RelationshipTypes.Length;
@@ -173,6 +201,7 @@ public class DependencyPanel : IScreen
                 {
                     _searchText += key.KeyChar;
                     await SearchCardsAsync();
+                    _resultCursor = 0;
                     await RenderAsync();
                 }
                 break;
@@ -184,6 +213,7 @@ public class DependencyPanel : IScreen
         if (string.IsNullOrWhiteSpace(_searchText))
         {
             _searchResults.Clear();
+            _resultCursor = 0;
             return;
         }
 
@@ -194,9 +224,19 @@ public class DependencyPanel : IScreen
             _searchResults = list?.Cards
                 .Where(c => c.Id != _sourceCardId)
                 .Select(c => new CardSearchResult(c.Id, c.CardNumber, c.Title))
+                .Take(5)
                 .ToList() ?? new();
         }
-        catch { }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Search error: {ex.Message}");
+            _searchResults.Clear();
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            _searchResults.Clear();
+        }
     }
 
     private async Task ConfirmAsync()
@@ -207,7 +247,7 @@ public class DependencyPanel : IScreen
             return;
         }
 
-        var targetCard = _searchResults[0];
+        var targetCard = _searchResults[_resultCursor];
 
         try
         {
@@ -221,7 +261,8 @@ public class DependencyPanel : IScreen
             });
 
             AnsiConsole.MarkupLine($"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
-            _appState.CurrentScreen = null; // Dismiss
+            _appState.PreviousScreen = null;
+            _appState.CurrentScreen = null;
         }
         catch (ApiException ex)
         {
