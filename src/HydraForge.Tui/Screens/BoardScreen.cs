@@ -39,14 +39,34 @@ public class BoardScreen : IScreen
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         await LoadBoardAsync();
 
-        // Connect SignalR
-        _signalR = new SignalRConnectionManager(_apiClientFactory, _appState, _errorCollector);
+        // Connect SignalR — real-time sync degrades gracefully if the server is unreachable
+        _signalR = new SignalRConnectionManager(_appState, _errorCollector);
         _signalR.OnBoardEvent += HandleBoardEvent;
-        _signalR.OnCurrentUsers += users => _appState.OnlineCount = users.Count;
-        _signalR.OnUserJoined += _ => _appState.OnlineCount++;
-        _signalR.OnUserLeft += _ => _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
+        _signalR.OnCurrentUsers += async users =>
+        {
+            _appState.OnlineCount = users.Count;
+            await RenderAsync();
+        };
+        _signalR.OnUserJoined += async _ =>
+        {
+            _appState.OnlineCount++;
+            await RenderAsync();
+        };
+        _signalR.OnUserLeft += async _ =>
+        {
+            _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
+            await RenderAsync();
+        };
 
-        await _signalR.ConnectAsync(_projectId);
+        try
+        {
+            await _signalR.ConnectAsync(_projectId);
+        }
+        catch (Exception ex)
+        {
+            _appState.Connection = ConnectionStatus.Disconnected;
+            _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+        }
     }
 
     public async Task OnExitAsync()
@@ -61,7 +81,8 @@ public class BoardScreen : IScreen
 
         var totalCards = _columns.Sum(c => c.Cards.Count);
         var layout = _renderer.BuildLayout(
-            _columns, _selectedColumn, _selectedCard, _projectName, totalCards);
+            _columns, _selectedColumn, _selectedCard, _projectName, totalCards,
+            _appState.Connection, _appState.OnlineCount, _errorCollector.Count);
 
         AnsiConsole.Write(layout);
 

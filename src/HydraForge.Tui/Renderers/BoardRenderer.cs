@@ -1,6 +1,7 @@
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using System.Collections.Generic;
+using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Renderers;
 
@@ -30,7 +31,10 @@ public class BoardRenderer
         int selectedColumn,
         int selectedCard,
         string projectName,
-        int totalCards)
+        int totalCards,
+        ConnectionStatus connection = ConnectionStatus.Disconnected,
+        int onlineCount = 0,
+        int errorCount = 0)
     {
         var layout = new Layout("Root")
             .SplitRows(
@@ -100,10 +104,17 @@ var content = new Rows(new List<IRenderable>(cardPanels));
         var columnsRow = new Columns(columnLayouts);
         layout["Board"].Update(columnsRow);
 
-        // Status bar placeholder (full impl in Task 17)
+        // Status bar — connection/online/error counts are live; richer surfacing (notifications, dismiss) is Task 17
+        var (dotColor, statusText) = connection switch
+        {
+            ConnectionStatus.Connected => ("green", "Connected"),
+            ConnectionStatus.Reconnecting => ("yellow", "Reconnecting"),
+            _ => ("red", "Disconnected")
+        };
+
         layout["Status"].Update(
             new Panel(
-                new Markup("[grey]● Connected    |    0 online    |    0 errors[/]")
+                new Markup($"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {errorCount} errors[/]")
             ).Expand()
         );
 

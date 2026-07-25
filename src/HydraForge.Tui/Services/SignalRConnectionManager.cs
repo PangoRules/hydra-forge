@@ -7,7 +7,6 @@ namespace HydraForge.Tui.Services;
 
 public class SignalRConnectionManager : IAsyncDisposable
 {
-    private readonly ApiClientFactory _apiClientFactory;
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
 
@@ -27,11 +26,9 @@ public class SignalRConnectionManager : IAsyncDisposable
     };
 
     public SignalRConnectionManager(
-        ApiClientFactory apiClientFactory,
         AppState appState,
         ErrorCollector errorCollector)
     {
-        _apiClientFactory = apiClientFactory;
         _appState = appState;
         _errorCollector = errorCollector;
     }
@@ -74,7 +71,14 @@ public class SignalRConnectionManager : IAsyncDisposable
         _boardConnection.Reconnected += async _ =>
         {
             _appState.Connection = ConnectionStatus.Connected;
-            await _boardConnection.InvokeAsync("JoinProject", projectId);
+            try
+            {
+                await _boardConnection.InvokeAsync("JoinProject", projectId);
+            }
+            catch (Exception ex)
+            {
+                _errorCollector.Add("N/A", $"Board rejoin after reconnect failed: {ex.Message}");
+            }
         };
 
         _boardConnection.Closed += _ =>
@@ -129,6 +133,22 @@ public class SignalRConnectionManager : IAsyncDisposable
             if (unfocus != null)
                 OnCardUnfocused?.Invoke(unfocus.UserId);
         });
+
+        // Reconnect gives the connection a new ConnectionId server-side, so group
+        // membership and the presence-tracking dictionary entry are gone until
+        // JoinProject runs again — without this the user goes dark for presence
+        // (no online count updates, no card focus events) after any network blip.
+        _presenceConnection.Reconnected += async _ =>
+        {
+            try
+            {
+                await _presenceConnection.InvokeAsync("JoinProject", projectId);
+            }
+            catch (Exception ex)
+            {
+                _errorCollector.Add("N/A", $"Presence rejoin after reconnect failed: {ex.Message}");
+            }
+        };
 
         await _presenceConnection.StartAsync();
         await _presenceConnection.InvokeAsync("JoinProject", projectId);
