@@ -13,6 +13,7 @@ namespace HydraForge.Server.Controllers.Projects;
 public class SpecsController(SpecService specService) : ControllerBase
 {
     [HttpPost("cards/{cardId:guid}")]
+    [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
@@ -60,6 +61,7 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpGet("cards/{cardId:guid}")]
+    [ProducesResponseType(typeof(SpecListResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -91,6 +93,7 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpGet("{specId:guid}")]
+    [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetById(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -120,6 +123,7 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpPut("{specId:guid}")]
+    [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid specId,
@@ -162,6 +166,7 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpGet("{specId:guid}/versions")]
+    [ProducesResponseType(typeof(SpecVersionListResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> ListVersions(Guid projectId, Guid specId)
     {
         var userId = User.GetRequiredUserId();
@@ -190,6 +195,7 @@ public class SpecsController(SpecService specService) : ControllerBase
     }
 
     [HttpPost("{specId:guid}/restore")]
+    [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Restore(
         Guid projectId,
         Guid specId,
