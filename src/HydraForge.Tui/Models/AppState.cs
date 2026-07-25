@@ -14,4 +14,6 @@ public class AppState
     public List<(DateTime Timestamp, string CorrelationId, string Message)> Errors { get; } = new();
     public int OnlineCount { get; set; }
     public int UnreadNotifications { get; set; }
+    public int? BoardCursorCol { get; set; }
+    public int? BoardCursorCard { get; set; }
 }

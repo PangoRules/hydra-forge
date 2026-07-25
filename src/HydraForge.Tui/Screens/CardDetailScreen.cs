@@ -23,6 +23,7 @@ public class CardDetailScreen : IScreen
     private Guid _cardId;
     private int _sectionIndex;
     private int _checklistIndex;
+    private int _dependencyIndex;
 
     public CardDetailScreen(
         ApiClientFactory apiClientFactory,
@@ -102,6 +103,8 @@ public class CardDetailScreen : IScreen
                 yield return "[a] Comment";
                 break;
             case 4:
+                yield return "[j/k] Select";
+                yield return "[Enter] Open";
                 yield return "[d] Add dependency";
                 break;
         }
@@ -231,7 +234,14 @@ public class CardDetailScreen : IScreen
         if (_relationships.Count == 0)
             return new Markup("[grey](No dependencies)[/]");
 
-        var items = _relationships.Select(r => new Markup(DescribeRelationship(r)) as IRenderable);
+        var showCursor = _sectionIndex == 4;
+        var items = _relationships.Select((r, i) =>
+        {
+            var isSelected = showCursor && i == _dependencyIndex;
+            var cursor = isSelected ? "[blue]>[/] " : "  ";
+            var desc = DescribeRelationship(r);
+            return new Markup($"{cursor}{desc}") as IRenderable;
+        });
 
         return new Rows(items.ToArray());
     }
@@ -281,6 +291,11 @@ public class CardDetailScreen : IScreen
                     _checklistIndex = Math.Min(_checklistIndex + 1, _checklist.Count - 1);
                     await RenderAsync();
                 }
+                else if (_sectionIndex == 4 && _relationships.Count > 0)
+                {
+                    _dependencyIndex = Math.Min(_dependencyIndex + 1, _relationships.Count - 1);
+                    await RenderAsync();
+                }
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
@@ -288,6 +303,11 @@ public class CardDetailScreen : IScreen
                 if (_sectionIndex == 2 && _checklistIndex > 0)
                 {
                     _checklistIndex--;
+                    await RenderAsync();
+                }
+                else if (_sectionIndex == 4 && _dependencyIndex > 0)
+                {
+                    _dependencyIndex--;
                     await RenderAsync();
                 }
                 break;
@@ -324,6 +344,20 @@ public class CardDetailScreen : IScreen
                 await depPanel.RenderAsync();
                 break;
 
+            case ConsoleKey.Enter:
+                if (_sectionIndex == 4 && _relationships.Count > 0)
+                {
+                    var rel = _relationships[_dependencyIndex];
+                    var targetCardId = rel.SourceCardId == _cardId ? rel.TargetCardId : rel.SourceCardId;
+                    _appState.SelectedCardId = targetCardId;
+                    _appState.PreviousScreen = this;
+                    var detailScreen = new CardDetailScreen(_apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _appState.CurrentScreen = detailScreen;
+                    await detailScreen.OnEnterAsync();
+                    await detailScreen.RenderAsync();
+                }
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)
@@ -350,11 +384,12 @@ public class CardDetailScreen : IScreen
     private void ShowHelp() => HelpOverlay.Show("Card Detail", new (string, string)[]
     {
         ("Tab / Shift+Tab", "Next / prev section"),
-        ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist (Checklist section only)"),
+        ("j/k, ↑/↓, Ctrl+n/p", "Move in checklist / dependencies"),
         ("e", "Metadata: pick Title/Due Date/Assignees to edit; Description: edit in $EDITOR"),
         ("Space", "Toggle checklist item"),
         ("n", "New checklist item (Checklist section only)"),
         ("a", "Add comment (Comments section only)"),
+        ("Enter", "Open dependency card (Dependencies section only)"),
         ("Esc", "Back to board"),
         ("q", "Quit"),
         ("?", "This help"),

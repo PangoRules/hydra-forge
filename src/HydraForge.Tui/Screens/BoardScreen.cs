@@ -42,6 +42,19 @@ public class BoardScreen : IScreen
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         await LoadBoardAsync();
 
+        if (_appState.BoardCursorCol.HasValue && _appState.BoardCursorCard.HasValue)
+        {
+            _selectedColumn = Math.Clamp(_appState.BoardCursorCol.Value, 0, Math.Max(0, _columns.Count - 1));
+            _selectedCard = _appState.BoardCursorCard.Value;
+            if (_selectedColumn < _columns.Count)
+            {
+                var col = _columns[_selectedColumn];
+                _selectedCard = Math.Clamp(_selectedCard, 0, Math.Max(0, col.Cards.Count - 1));
+            }
+            _appState.BoardCursorCol = null;
+            _appState.BoardCursorCard = null;
+        }
+
         // Connect SignalR — real-time sync degrades gracefully if the server is unreachable.
         // Only create + connect once; OnExitAsync nulls _signalR so a true exit (not modal
         // return) triggers a fresh connect on next OnEnterAsync.
@@ -334,6 +347,8 @@ public class BoardScreen : IScreen
 
         var card = col.Cards[_selectedCard];
         _appState.SelectedCardId = card.Id;
+        _appState.BoardCursorCol = _selectedColumn;
+        _appState.BoardCursorCard = _selectedCard;
 
         await OnExitAsync();
         var detailScreen = new CardDetailScreen(_apiClientFactory, _appState, _errorCollector, _connectionManager);
