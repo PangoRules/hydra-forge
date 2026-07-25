@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
-using HydraForge.Application.Realtime;
+using HydraForge.Domain.Constants;
 using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Cards;
@@ -12,10 +12,10 @@ using HydraForge.Infrastructure.Comments;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
+using HydraForge.Infrastructure.Realtime;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
-using HydraForge.Infrastructure.Realtime;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -38,25 +38,29 @@ builder.Host.UseSerilog(
 );
 
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000";
-var corsOriginList = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var corsOriginList = corsOrigins.Split(
+    ',',
+    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+);
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(corsOriginList)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+        policy.WithOrigins(corsOriginList).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+    );
 });
 
 builder.Services.AddOpenApi(options =>
-    options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>());
+    options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>()
+);
 builder
     .Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        options.JsonSerializerOptions.Converters.Add(new HydraForge.Server.Serialization.UtcDateTimeConverter());
+        options.JsonSerializerOptions.Converters.Add(
+            new HydraForge.Server.Serialization.UtcDateTimeConverter()
+        );
     });
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
@@ -73,7 +77,7 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey =
     builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is required");
-var accessTokenMinutes = builder.Configuration.GetValue<int>("Jwt:AccessTokenMinutes", 60);
+var accessTokenMinutes = builder.Configuration.GetValue("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
@@ -98,8 +102,13 @@ builder
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    (path.StartsWithSegments("/hubs/board") || path.StartsWithSegments("/hubs/presence")))
+                if (
+                    !string.IsNullOrEmpty(accessToken)
+                    && (
+                        path.StartsWithSegments("/hubs/board")
+                        || path.StartsWithSegments("/hubs/presence")
+                    )
+                )
                 {
                     context.Token = accessToken;
                 }
@@ -108,17 +117,17 @@ builder
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy(
+builder
+    .Services.AddAuthorizationBuilder()
+    .AddPolicy(
         AuthPolicies.UserIdRequired,
         policy =>
         {
             policy.RequireAuthenticatedUser();
             policy.RequireAssertion(context => context.User.TryGetUserId(out _));
         }
-    );
-});
+    )
+    .AddPolicy(AuthPolicies.AdminRequired, policy => policy.RequireRole(Roles.Admin));
 
 builder.Services.AddSignalR();
 
@@ -133,9 +142,7 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<TestUserSeeder>();
-builder.Services.AddScoped<GetHealthHandler>(sp => new GetHealthHandler(
-    sp.GetServices<IHealthProbe>()
-));
+builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
 builder.Services.AddRealtimeServices();
 
@@ -147,7 +154,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-var applyMigrationsOnStartup = app.Configuration.GetValue<bool>(
+var applyMigrationsOnStartup = app.Configuration.GetValue(
     "Database:ApplyMigrationsOnStartup",
     true
 );
@@ -201,5 +208,3 @@ app.MapHub<BoardHub>("/hubs/board");
 app.MapHub<PresenceHub>("/hubs/presence");
 
 app.Run();
-
-public partial class Program { }

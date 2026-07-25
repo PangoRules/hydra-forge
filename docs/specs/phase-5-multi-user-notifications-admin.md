@@ -1005,7 +1005,7 @@ Recommended sequence: **cheapest wins first** (high-value, low-complexity items 
 
 Per CLAUDE.md, Application/Domain layers need >90% test coverage — each task below includes its own test subtask, not deferred to a separate pass.
 
-- [ ] Task 1: Fix JWT role claim — add shared `Roles.Admin` constant, `ClaimTypes.Role` emission in `JwtTokenIssuer.cs`; tests: token issuance includes role claim iff `user.IsAdmin`
+- [x] Task 1: Fix JWT role claim — add shared `Roles.Admin` constant, `ClaimTypes.Role` emission in `JwtTokenIssuer.cs`; tests: token issuance includes role claim iff `user.IsAdmin`
 - [ ] Task 2: Notification system — `Notification.Create()` factory + `MarkRead()` instance method on the entity (replacing the current property-bag shape), `INotificationRepository`, `INotificationService`/`NotifyRequest` with actor-exclusion no-op (§3.2/§3.4), `EfNotificationRepository`, DI registration; tests: `NotifyAsync` skips write+push when `UserId == ActorId`, repository CRUD, `MarkRead()`/`Create()` unit tests
 - [ ] Task 3: NotificationHub — create `Hubs/NotificationHub.cs`, register in `Program.cs`, implement `INotificationHubBus` via `SignalRNotificationHubBus`; tests: group join on connect, push payload shape
 - [ ] Task 4: Web UI bell icon + notification panel — `useNotifications` composable, layout change, panel component, `ApiRoutes.Notifications.*` in `routes.ts`; tests: composable unread-count/mark-read behavior
