@@ -101,6 +101,9 @@ public class CardDetailScreen : IScreen
             case 3:
                 yield return "[a] Comment";
                 break;
+            case 4:
+                yield return "[d] Add dependency";
+                break;
         }
 
         yield return "[Esc] Back";
