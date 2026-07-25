@@ -334,6 +334,25 @@ public class BoardScreen(
             var cardList = await Client.CardsGETAsync(_projectId);
             var cards = cardList?.Cards ?? [];
 
+            // Load blocked card IDs — non-fatal if it fails
+            var blockedCardIds = new HashSet<Guid>();
+            try
+            {
+                foreach (var card in cards)
+                {
+                    var rels = await Client.CardRelationshipsGETAsync(_projectId, card.Id);
+                    foreach (var rel in rels?.Relationships ?? [])
+                    {
+                        if (rel.Type == RelationshipType.BlockedBy)
+                            blockedCardIds.Add(rel.TargetCardId);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Non-fatal: board renders without blocked indicators
+            }
+
             // Build column data
             _columns =
             [
@@ -354,7 +373,7 @@ public class BoardScreen(
                                     c.CardNumber,
                                     c.Title,
                                     CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
-                                    false, // Blocked indicator — Task 12
+                                    blockedCardIds.Contains(c.Id),
                                     c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
                                         ?? [],
                                     c.Version
