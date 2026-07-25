@@ -88,6 +88,7 @@ var content = new Rows(new List<IRenderable>(cardPanels));
             {
                 Header = new PanelHeader($" {col.Name} "),
                 Border = BoxBorder.Rounded,
+                BorderStyle = new Style(foreground: color),
                 Expand = true,
             };
         }).ToList();
