@@ -109,6 +109,7 @@ builder
                     && (
                         path.StartsWithSegments("/hubs/board")
                         || path.StartsWithSegments("/hubs/presence")
+                        || path.StartsWithSegments("/hubs/notifications")
                     )
                 )
                 {
@@ -208,5 +209,6 @@ app.MapControllers();
 
 app.MapHub<BoardHub>("/hubs/board");
 app.MapHub<PresenceHub>("/hubs/presence");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
