@@ -179,7 +179,7 @@ Error panel expands on `E` key: shows last 5 errors with correlationId. `Del` di
 |---------|------|----------------|
 | `ApiClientFactory` | `Services/ApiClientFactory.cs` | Creates NSwag-generated HTTP client with JWT auth header, handles token refresh |
 | `SignalRConnectionManager` | `Services/SignalRConnectionManager.cs` | Manages `HubConnection` lifecycle for BoardHub + PresenceHub, reconnect/backoff |
-| `ConfigStore` | `Services/ConfigStore.cs` | Read/write `~/.config/hydraforge/config.json` with 0600 perms |
+| `ConfigStore` | `Services/ConfigStore.cs` | Read/write `.hydraforge/config.json` at the repo root (D-49) with 0600 perms |
 | `EditorLauncher` | `Services/EditorLauncher.cs` | Opens `$EDITOR` (or `vi`/`notepad.exe` fallback), waits for close, reads temp file |
 | `KeyboardDispatcher` | `Services/KeyboardDispatcher.cs` | Central key handler — routes keys to active screen, manages modal stack |
 | `ErrorCollector` | `Services/ErrorCollector.cs` | Collects errors with correlationId, exposes list for status bar, supports dismiss |
@@ -373,7 +373,7 @@ Received via `HubConnection.On<ProjectBoardEventEnvelope>("OnBoardEvent", ...)`:
 ### Startup Sequence
 
 ```
-1. Read config.json from ~/.config/hydraforge/config.json
+1. Read config.json from `.hydraforge/config.json` at the repo root (D-49)
    ├─ File exists? → Parse TuiConfig
    │   ├─ Token expired? → Try /api/auth/refresh
    │   │   ├─ Success → Update stored token, proceed
@@ -497,7 +497,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 | # | Task | Depends On | Effort |
 |---|------|------------|--------|
 | 1 | Scaffold: remove Application ref, add NuGet packages, NSwag codegen, `Program.cs` bootstrap | — | M |
-| 2 | ConfigStore: read/write `~/.config/hydraforge/config.json` with 0600 perms | 1 | S |
+| 2 | ConfigStore: read/write `.hydraforge/config.json` at the repo root (D-49) with 0600 perms | 1 | S |
 | 3 | ApiClientFactory: NSwag client with JWT auth header + token refresh | 1, 2 | M |
 | 4 | Auth: login screen + startup auth flow | 2, 3 | M |
 | 5 | Connection handling: lock screen, auto-reconnect, status bar indicators | 1 | M |
@@ -519,7 +519,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 ## Tasks
 
 - [x] Task 1: Scaffold — packages, NSwag codegen, Program.cs bootstrap, remove Application ref
-- [x] Task 2: ConfigStore — read/write `~/.config/hydraforge/config.json` with 0600 perms
+- [x] Task 2: ConfigStore — read/write `.hydraforge/config.json` at the repo root (D-49) with 0600 perms
 - [x] Task 3: ApiClientFactory — NSwag client with JWT auth, token refresh
 - [x] Task 4: Auth — login screen + startup auth flow
 - [ ] Task 5: Connection handling — lock screen, auto-reconnect, status bar indicators

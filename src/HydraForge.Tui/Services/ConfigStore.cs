@@ -15,19 +15,27 @@ public class ConfigStore
     private readonly string _configDir;
     private readonly string _configPath;
 
-    public ConfigStore() : this(DefaultConfigDir())
+    public ConfigStore() : this(Path.Combine(FindRepoRoot() ?? AppContext.BaseDirectory, ".hydraforge"))
     {
     }
 
-    private static string DefaultConfigDir()
+    // Walks up from the running assembly looking for the repo root (marked by
+    // HydraForge.slnx), so config lives inside the checkout (D-49) regardless
+    // of build configuration or working directory. Falls back to the assembly
+    // directory itself (e.g. a published single-file exe run outside a checkout).
+    private static string? FindRepoRoot()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "hydraforge");
-
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "hydraforge");
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "HydraForge.slnx")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        return null;
     }
 
-    // Internal ctor lets tests point at a throwaway directory instead of the real ~/.config/hydraforge.
+    // Internal ctor lets tests point at a throwaway directory instead of the repo-root default.
     internal ConfigStore(string configDir)
     {
         _configDir = configDir;
