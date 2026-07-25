@@ -90,9 +90,15 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/',
-      navigateFallbackAllowlist: [/^\/$/, /^\/projects/, /^\/login/],
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+      // No navigateFallback: HydraForge is server-authoritative with no offline mode
+      // (D-3/D-13 in docs/DECISIONS.md). navigateFallback: '/' previously made Workbox
+      // unconditionally serve the single precached '/' snapshot (via
+      // createHandlerBoundToURL, which never touches the network) for every navigation
+      // matching the allowlist — including /login and /projects. Since those are
+      // per-request SSR pages, not the '/' shell, Nuxt detected the payload/route
+      // mismatch on hydration and self-healed with a reload; the service worker
+      // intercepted that reload identically, looping forever with no thrown error.
+      globPatterns: ['**/*.{js,css,png,svg,ico}']
     }
   }
 })
