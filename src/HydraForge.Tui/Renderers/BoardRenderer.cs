@@ -1,6 +1,7 @@
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using System.Collections.Generic;
+using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Renderers;
@@ -21,7 +22,7 @@ public class BoardRenderer
         int CardNumber,
         string Title,
         string Type,
-        bool IsBlocked,
+        List<RelationBadge> Badges,
         List<string> AssigneeInitials,
         int Version
     );
@@ -52,17 +53,35 @@ public class BoardRenderer
             ).Expand()
         );
 
+        // Board area is whatever's left after the 3-row title bar and 3-row status bar;
+        // each column eats 2 more for its own border — what remains is the card viewport.
+        var innerHeight = Math.Max(0, AnsiConsole.Profile.Height - 3 - 3 - 2);
+
         // Board area — split into columns
         var columnLayouts = columns.Select((col, i) =>
         {
             var isSelected = i == selectedColumn;
             var color = ParseColor(col.Color) ?? Color.Grey;
 
-            var cardPanels = col.Cards.Select((card, j) =>
+            var cardHeights = col.Cards
+                .Select(c => ColumnScrollCalculator.CardBoxHeight(c.Badges.Count))
+                .ToList();
+            var window = ColumnScrollCalculator.ComputeVisibleRange(
+                cardHeights,
+                isSelected ? selectedCard : null,
+                innerHeight
+            );
+
+            var cardPanels = new List<IRenderable>();
+
+            if (window.HasMoreAbove)
+                cardPanels.Add(CardMargin(ScrollIndicator($"▲ {window.Start} more above")));
+
+            for (var j = window.Start; j < window.End; j++)
             {
+                var card = col.Cards[j];
                 var isCardSelected = isSelected && j == selectedCard;
                 var isBeingReordered = reorderCardId.HasValue && card.Id == reorderCardId.Value;
-                var prefix = card.IsBlocked ? "🔴 " : "";
                 var typeBadge = card.Type switch
                 {
                     "Task" => "[cyan1]T[/]",
@@ -80,18 +99,33 @@ public class BoardRenderer
                     ? card.Title[..22] + "..."
                     : card.Title;
 
-                var cardMarkup = $"{prefix}{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}";
+                var titleLine = $"{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}";
+                var shownBadges = card.Badges.Take(ColumnScrollCalculator.MaxBadgesPerCard).Select(FormatBadgeLine);
+                var overflowCount = card.Badges.Count - ColumnScrollCalculator.MaxBadgesPerCard;
+                var overflowLine = overflowCount > 0
+                    ? new[] { $"[grey]+{overflowCount} more (open card)[/]" }
+                    : [];
+                var cardMarkup = string.Join("\n", new[] { titleLine }.Concat(shownBadges).Concat(overflowLine));
 
-                return new Panel(new Markup(cardMarkup))
+                var panel = new Panel(new Markup(cardMarkup))
                 {
-                    Border = isCardSelected || isBeingReordered ? BoxBorder.Double : BoxBorder.None,
+                    Border = isCardSelected || isBeingReordered ? BoxBorder.Double : BoxBorder.Rounded,
                     BorderStyle = isBeingReordered
                         ? new Style(foreground: Color.Yellow)
-                        : isCardSelected ? new Style(foreground: Color.Blue) : null,
+                        : isCardSelected ? new Style(foreground: Color.Blue) : new Style(foreground: Color.Grey35),
+                    // Expand fills the column's width; without pinning Height back to its natural
+                    // content size, Expand also stretches the panel to fill leftover column height.
+                    Expand = true,
+                    Height = ColumnScrollCalculator.CardBoxHeight(card.Badges.Count),
                 };
-            }).ToList();
 
-var content = new Rows(new List<IRenderable>(cardPanels));
+                cardPanels.Add(CardMargin(panel));
+            }
+
+            if (window.HasMoreBelow)
+                cardPanels.Add(CardMargin(ScrollIndicator($"▼ {col.Cards.Count - window.End} more below")));
+
+            var content = new Rows(cardPanels);
             var wipText = col.WipLimit.HasValue
                 ? $" ({col.Cards.Count}/{col.WipLimit})"
                 : $" ({col.Cards.Count})";
@@ -123,6 +157,30 @@ var content = new Rows(new List<IRenderable>(cardPanels));
         );
 
         return layout;
+    }
+
+    // Symmetric 1-col left/right margin, no vertical gap — cards stack border-to-border,
+    // each box's own frame is what separates it from its neighbor (a terminal row is the
+    // smallest unit available, so a blank-row gap is the next size up, not "half a row").
+    // Padder's own default padding is (1,1,1,1), so every side must be given explicitly
+    // or top/bottom pick up an unwanted extra row.
+    private static IRenderable CardMargin(IRenderable content) =>
+        new Padder(content, new Padding(1, 0, 1, 0));
+
+    private static IRenderable ScrollIndicator(string text) =>
+        new Markup($"[grey italic]{text}[/]");
+
+    private static string FormatBadgeLine(RelationBadge badge)
+    {
+        var (glyph, color, verb) = badge.Type switch
+        {
+            RelationshipType.BlockedBy => ("🔴", "red", badge.IsSource ? "blocks" : "blocked by"),
+            RelationshipType.Precedes => ("⏩", "yellow", badge.IsSource ? "precedes" : "preceded by"),
+            RelationshipType.SpawnedFrom => ("🌱", "cyan1", badge.IsSource ? "spawned from" : "spawned"),
+            _ => ("🔗", "grey", "relates"),
+        };
+
+        return $"{glyph} [{color}]{verb} #{badge.OtherCardNumber}[/]";
     }
 
     private static Color? ParseColor(string? colorName) => colorName?.ToLower() switch

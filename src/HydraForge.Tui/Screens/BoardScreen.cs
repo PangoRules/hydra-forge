@@ -334,19 +334,22 @@ public class BoardScreen(
             var cardList = await Client.CardsGETAsync(_projectId);
             var cards = cardList?.Cards ?? [];
 
-            // Load blocked card IDs — non-fatal if it fails
-            var blockedCardIds = new HashSet<Guid>();
+            // Load relationship badges per card — non-fatal if it fails
+            var cardBadges = new Dictionary<Guid, List<RelationBadge>>();
             try
             {
                 foreach (var card in cards)
                 {
                     var rels = await Client.CardRelationshipsGETAsync(_projectId, card.Id);
-                    blockedCardIds.UnionWith(BlockedCardHelper.GetBlockedCardIds(rels?.Relationships ?? []));
+                    cardBadges[card.Id] = CardRelationshipIndicatorHelper.GetRelationBadges(
+                        card.Id,
+                        rels?.Relationships ?? []
+                    );
                 }
             }
             catch (Exception)
             {
-                // Non-fatal: board renders without blocked indicators
+                // Non-fatal: board renders without relationship indicators
             }
 
             // Build column data
@@ -369,7 +372,7 @@ public class BoardScreen(
                                     c.CardNumber,
                                     c.Title,
                                     CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
-                                    blockedCardIds.Contains(c.Id),
+                                    cardBadges.GetValueOrDefault(c.Id, []),
                                     c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
                                         ?? [],
                                     c.Version

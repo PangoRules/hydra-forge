@@ -106,9 +106,10 @@ Content: centered `Panel` with `⚠ Server unreachable. Retrying...` + spinner. 
   - Cards: list of `Panel` elements, each showing:
     - `CardNumber` + Title (truncated to column width)
     - Type badge (Task/Issue/Goal/Idea) in accent color
-    - Blocked indicator (`🔴` prefix if blocked)
     - Assignee avatar (first letter in colored circle)
-  - Scroll indicator if cards overflow column height
+    - Relationship badge lines (one per relationship, below title): `🔴 blocked by #N` / `🔴 blocks #N`, `⏩ precedes #N` / `⏩ preceded by #N`, `🌱 spawned from #N` / `🌱 spawned #N`, `🔗 relates #N` — glyph + color match `CardDetailScreen`'s dependency panel; no relationships means no extra lines; capped at 5 badge lines, with a `+N more (open card)` line beyond the cap (`ColumnScrollCalculator.MaxBadgesPerCard`)
+  - Card panels fill the column's full width with a symmetric 1-col left/right margin and a 1-row gap between cards (`BoardRenderer.CardMargin`) — border alone (Rounded/dim grey idle, Double/blue selected, Double/yellow mid-reorder) distinguishes cards, no double-height gap
+  - Column body is a scrolling viewport, not the full card list: `ColumnScrollCalculator` fits as many cards as the terminal height allows, keeping the selected card in view for the focused column (unfocused columns are top-anchored) and showing `▲ N more above` / `▼ N more below` indicators when cards are scrolled out of view
 - **Status bar** (bottom 2 rows): persistent
 
 Keyboard:
