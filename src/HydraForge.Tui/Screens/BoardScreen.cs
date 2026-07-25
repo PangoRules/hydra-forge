@@ -14,6 +14,7 @@ public class BoardScreen : IScreen
     private readonly ErrorCollector _errorCollector;
     private readonly ConnectionManager _connectionManager;
     private readonly BoardRenderer _renderer = new();
+    private SignalRConnectionManager? _signalR;
 
     private List<BoardRenderer.ColumnData> _columns = new();
     private int _selectedColumn;
@@ -37,9 +38,42 @@ public class BoardScreen : IScreen
     {
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         await LoadBoardAsync();
+
+        // Connect SignalR — real-time sync degrades gracefully if the server is unreachable
+        _signalR = new SignalRConnectionManager(_appState, _errorCollector);
+        _signalR.OnBoardEvent += HandleBoardEvent;
+        _signalR.OnCurrentUsers += async users =>
+        {
+            _appState.OnlineCount = users.Count;
+            await RenderAsync();
+        };
+        _signalR.OnUserJoined += async _ =>
+        {
+            _appState.OnlineCount++;
+            await RenderAsync();
+        };
+        _signalR.OnUserLeft += async _ =>
+        {
+            _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
+            await RenderAsync();
+        };
+
+        try
+        {
+            await _signalR.ConnectAsync(_projectId);
+        }
+        catch (Exception ex)
+        {
+            _appState.Connection = ConnectionStatus.Disconnected;
+            _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+        }
     }
 
-    public Task OnExitAsync() => Task.CompletedTask;
+    public async Task OnExitAsync()
+    {
+        if (_signalR != null)
+            await _signalR.DisconnectAsync();
+    }
 
     public async Task RenderAsync()
     {
@@ -47,7 +81,8 @@ public class BoardScreen : IScreen
 
         var totalCards = _columns.Sum(c => c.Cards.Count);
         var layout = _renderer.BuildLayout(
-            _columns, _selectedColumn, _selectedCard, _projectName, totalCards);
+            _columns, _selectedColumn, _selectedCard, _projectName, totalCards,
+            _appState.Connection, _appState.OnlineCount, _errorCollector.Count);
 
         AnsiConsole.Write(layout);
 
@@ -325,5 +360,13 @@ public class BoardScreen : IScreen
         {
             _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
         }
+    }
+
+    private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
+    {
+        // Reload board data on any event for simplicity
+        // (Future optimization: apply delta updates)
+        await LoadBoardAsync();
+        await RenderAsync();
     }
 }
