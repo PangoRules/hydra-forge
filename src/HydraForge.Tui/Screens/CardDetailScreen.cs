@@ -106,9 +106,21 @@ public class CardDetailScreen(
                 break;
         }
 
+        yield return "[s] " + SpecsPlansHintLabel();
         yield return "[Esc] Back";
         yield return "[q] Quit";
         yield return "[?] Help";
+    }
+
+    // Matches CardModal.vue's hasSpec/hasPlan gating (D-44): Idea has Specs only,
+    // Task has Plans only, Goal/Issue have both.
+    private string SpecsPlansHintLabel()
+    {
+        if (_card == null) return "Specs/Plans";
+        var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
+        var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
+        if (allowsSpec && allowsPlan) return "Specs/Plans";
+        return allowsSpec ? "Specs" : "Plans";
     }
 
     private Panel BuildSectionPanel(int index, bool isActive)
@@ -350,6 +362,7 @@ public class CardDetailScreen(
                 break;
 
             case ConsoleKey.S:
+                await OpenSpecsPlansAsync();
                 break;
 
             case ConsoleKey.D:
@@ -431,6 +444,45 @@ public class CardDetailScreen(
                 ("?", "This help"),
             ]
         );
+
+    // Which modes are offered mirrors CardModal.vue's hasSpec/hasPlan (D-44): Idea
+    // is Specs-only, Task is Plans-only, Goal/Issue get both and pick via the prompt.
+    private async Task OpenSpecsPlansAsync()
+    {
+        if (_card == null) return;
+
+        var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
+        var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
+
+        string mode;
+        if (allowsSpec && allowsPlan)
+        {
+            var choice = await ListPrompt.Show(
+                "View:",
+                ["Specs", "Plans"],
+                renderBackdrop: RenderAsync
+            );
+            if (choice == null)
+                return;
+            mode = choice == "Specs" ? "spec" : "plan";
+        }
+        else if (allowsSpec)
+        {
+            mode = "spec";
+        }
+        else
+        {
+            mode = "plan";
+        }
+
+        var specScreen = new SpecViewerScreen(
+            _apiClientFactory, _appState, _errorCollector,
+            _projectId, _cardId, _card.Type, mode);
+        _appState.PreviousScreen = this;
+        _appState.CurrentScreen = specScreen;
+        await specScreen.OnEnterAsync();
+        await specScreen.RenderAsync();
+    }
 
     private async Task EditCurrentSectionAsync()
     {

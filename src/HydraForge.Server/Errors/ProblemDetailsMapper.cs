@@ -59,6 +59,12 @@ public static class ProblemDetailsMapper
                 or DomainErrorCodes.Plans.MarkdownPayloadTooLarge => (413, "Payload too large"),
             DomainErrorCodes.Specs.CardDocumentProjectMismatch
                 or DomainErrorCodes.Plans.CardDocumentProjectMismatch => (409, "Card is in a different project"),
+            DomainErrorCodes.Specs.InvalidCardType
+                or DomainErrorCodes.Plans.InvalidCardType => (400, "Card type does not support this document"),
+            DomainErrorCodes.Specs.DocTypeMismatch => (400, "Doc type does not match card type"),
+            DomainErrorCodes.Specs.AlreadyExists => (409, "Card already has a Spec"),
+            DomainErrorCodes.Plans.SpecLinkNotAllowed => (400, "Plan cannot be linked to a Spec for this card type"),
+            DomainErrorCodes.Plans.SpecCardMismatch => (400, "SpecId must belong to the same card"),
             DomainErrorCodes.Relationships.NotFound => (404, "Relationship not found"),
             DomainErrorCodes.Relationships.Duplicate => (409, "Relationship already exists"),
             DomainErrorCodes.Relationships.CrossProjectDenied => (400, "Relationships must be in the same project"),

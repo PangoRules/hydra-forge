@@ -78,6 +78,27 @@ public class Card
         return null;
     }
 
+    // Spec.CardId owns max 1 Spec per Card; Spec is Goal/Idea/Issue only (see D-44).
+    public static Error? ValidateAllowsSpec(CardType type) =>
+        type is CardType.Goal or CardType.Idea or CardType.Issue
+            ? null
+            : new Error(DomainErrorCodes.Specs.InvalidCardType, $"{type} cards cannot have a Spec.");
+
+    // Plan.CardId is direct on Goal/Issue/Task; Idea has no Plans (see D-44).
+    public static Error? ValidateAllowsPlan(CardType type) =>
+        type is CardType.Goal or CardType.Issue or CardType.Task
+            ? null
+            : new Error(DomainErrorCodes.Plans.InvalidCardType, $"{type} cards cannot have a Plan.");
+
+    // Spec is typed by card: Goal->Specification, Idea->Concept, Issue->Report (see D-44).
+    public static DocType ExpectedSpecDocType(CardType type) => type switch
+    {
+        CardType.Goal => DocType.Specification,
+        CardType.Idea => DocType.Concept,
+        CardType.Issue => DocType.Report,
+        _ => throw new InvalidOperationException($"{type} cards have no Spec.")
+    };
+
     public static Error? ValidateNoCycle(Guid childId, Guid? parentId, IReadOnlyDictionary<Guid, Card> cardMap)
     {
         if (parentId == null)

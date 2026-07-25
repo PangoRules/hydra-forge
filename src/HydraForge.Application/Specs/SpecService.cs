@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
@@ -11,6 +12,7 @@ namespace HydraForge.Application.Specs;
 
 public class SpecService(
     ISpecRepository specRepo,
+    ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
@@ -18,6 +20,7 @@ public class SpecService(
 )
 {
     private readonly ISpecRepository _specRepo = specRepo;
+    private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
@@ -32,6 +35,37 @@ public class SpecService(
         if (membership == null)
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null)
+            return Result<SpecDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+        if (card.ProjectId != cmd.ProjectId)
+            return Result<SpecDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Specs.CardDocumentProjectMismatch,
+                    "Card is in a different project."
+                )
+            );
+
+        var cardTypeError = Card.ValidateAllowsSpec(card.Type);
+        if (cardTypeError != null)
+            return Result<SpecDto>.Failure(cardTypeError);
+
+        if (cmd.DocType != Card.ExpectedSpecDocType(card.Type))
+            return Result<SpecDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Specs.DocTypeMismatch,
+                    $"{card.Type} cards must use DocType {Card.ExpectedSpecDocType(card.Type)}."
+                )
+            );
+
+        var existingSpecs = await _specRepo.ListByCardAsync(cmd.CardId, new SpecListFilter(), ct);
+        if (existingSpecs.Count > 0)
+            return Result<SpecDto>.Failure(
+                new Error(DomainErrorCodes.Specs.AlreadyExists, "Card already has a Spec.")
             );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)

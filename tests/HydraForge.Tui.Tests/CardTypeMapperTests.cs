@@ -70,4 +70,39 @@ public class CardTypeMapperTests
     {
         Assert.Throws<ArgumentException>(() => CardTypeMapper.FromDisplayString("INVALID"));
     }
+
+    [Theory]
+    [InlineData(CardType.Goal, true)]
+    [InlineData(CardType.Idea, true)]
+    [InlineData(CardType.Issue, true)]
+    [InlineData(CardType.Task, false)]
+    public void AllowsSpec_Should_Match_Card_Type_Rules(CardType cardType, bool expected)
+    {
+        Assert.Equal(expected, CardTypeMapper.AllowsSpec(cardType));
+    }
+
+    [Theory]
+    [InlineData(CardType.Goal, true)]
+    [InlineData(CardType.Issue, true)]
+    [InlineData(CardType.Task, true)]
+    [InlineData(CardType.Idea, false)]
+    public void AllowsPlan_Should_Match_Card_Type_Rules(CardType cardType, bool expected)
+    {
+        Assert.Equal(expected, CardTypeMapper.AllowsPlan(cardType));
+    }
+
+    [Theory]
+    [InlineData(CardType.Goal, DocType.Specification)]
+    [InlineData(CardType.Idea, DocType.Concept)]
+    [InlineData(CardType.Issue, DocType.Report)]
+    public void ToDocType_Should_Return_Correct_Doc_Type(CardType cardType, DocType expected)
+    {
+        Assert.Equal(expected, CardTypeMapper.ToDocType(cardType));
+    }
+
+    [Fact]
+    public void ToDocType_Should_Throw_For_Task()
+    {
+        Assert.Throws<ArgumentException>(() => CardTypeMapper.ToDocType(CardType.Task));
+    }
 }
