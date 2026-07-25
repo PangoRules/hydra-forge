@@ -334,6 +334,24 @@ public class BoardScreen(
             var cardList = await Client.CardsGETAsync(_projectId);
             var cards = cardList?.Cards ?? [];
 
+            // Load relationship badges per card — non-fatal if it fails
+            var cardBadges = new Dictionary<Guid, List<RelationBadge>>();
+            try
+            {
+                foreach (var card in cards)
+                {
+                    var rels = await Client.CardRelationshipsGETAsync(_projectId, card.Id);
+                    cardBadges[card.Id] = CardRelationshipIndicatorHelper.GetRelationBadges(
+                        card.Id,
+                        rels?.Relationships ?? []
+                    );
+                }
+            }
+            catch (Exception)
+            {
+                // Non-fatal: board renders without relationship indicators
+            }
+
             // Build column data
             _columns =
             [
@@ -354,7 +372,7 @@ public class BoardScreen(
                                     c.CardNumber,
                                     c.Title,
                                     CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
-                                    false, // Blocked indicator — Task 12
+                                    cardBadges.GetValueOrDefault(c.Id, []),
                                     c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
                                         ?? [],
                                     c.Version
