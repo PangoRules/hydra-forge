@@ -1,160 +1,6 @@
-# Plan 7: Board View — Columns + Cards + LiveDisplay
-
-**Branch:** `task/tui-board-view`
-**Parent branch:** `feat/phase-4-tui`
-**Parent spec:** `2026-07-24-phase-4-tui.md` — Task 7
-
-**Goal:** Board view with Spectre.Console column/card layout, keyboard navigation (h/l/j/k), LiveDisplay for real-time updates. Uses NSwag-generated `HydraForgeApiClient` for all API calls.
-
-**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 4 (auth), Task 5 (ConnectionManager).
-
----
-
-## Step 1: Create `BoardRenderer`
-
-Create `src/HydraForge.Tui/Renderers/BoardRenderer.cs`:
-
-```csharp
-using Spectre.Console;
-
-namespace HydraForge.Tui.Renderers;
-
-public class BoardRenderer
-{
-    public record ColumnData(
-        Guid Id,
-        string Name,
-        int Position,
-        int? WipLimit,
-        string? Color,
-        List<CardData> Cards
-    );
-
-    public record CardData(
-        Guid Id,
-        int CardNumber,
-        string Title,
-        string Type,
-        bool IsBlocked,
-        List<string> AssigneeInitials,
-        int Version
-    );
-
-    public Layout BuildLayout(
-        List<ColumnData> columns,
-        int selectedColumn,
-        int selectedCard,
-        string projectName,
-        int totalCards)
-    {
-        var layout = new Layout("Root")
-            .SplitRows(
-                new Layout("Title"),
-                new Layout("Board"),
-                new Layout("Status")
-            );
-
-        // Title bar
-        layout["Title"].Update(
-            new Panel(
-                new Markup($"[blue bold]{Markup.Escape(projectName)}[/]  " +
-                           $"[grey]{columns.Count} columns  {totalCards} cards[/]")
-            ).Expand()
-        );
-
-        // Board area — split into columns
-        var columnLayouts = columns.Select((col, i) =>
-        {
-            var isSelected = i == selectedColumn;
-            var color = ParseColor(col.Color) ?? Color.Grey;
-            var borderColor = isSelected ? Color.Blue : color;
-
-            var cardPanels = col.Cards.Select((card, j) =>
-            {
-                var isCardSelected = isSelected && j == selectedCard;
-                var prefix = card.IsBlocked ? "🔴 " : "";
-                var typeBadge = card.Type switch
-                {
-                    "Task" => "[cyan1]T[/]",
-                    "Issue" => "[red]I[/]",
-                    "Goal" => "[yellow]G[/]",
-                    "Idea" => "[green]D[/]",
-                    _ => "[grey]?[/]"
-                };
-
-                var assignees = card.AssigneeInitials.Count > 0
-                    ? " " + string.Join("", card.AssigneeInitials.Select(a => $"[grey]{a}[/]"))
-                    : "";
-
-                var title = card.Title.Length > 25
-                    ? card.Title[..22] + "..."
-                    : card.Title;
-
-                var cardMarkup = $"{prefix}{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}";
-
-                return new Panel(new Markup(cardMarkup))
-                {
-                    Border = isCardSelected ? BoxBorder.Double : BoxBorder.None,
-                    BorderColor = isCardSelected ? Color.Blue : null,
-                };
-            }).ToList();
-
-            var wipText = col.WipLimit.HasValue
-                ? $" ({col.Cards.Count}/{col.WipLimit})"
-                : $" ({col.Cards.Count})";
-
-            var header = new Panel(
-                new Markup($"[{color.ToMarkup()} bold]{Markup.Escape(col.Name)}[/]{wipText}")
-            )
-            {
-                Border = BoxBorder.Rounded,
-                BorderColor = borderColor,
-            };
-
-            var content = new Rows(new List<IRenderable>(cardPanels));
-            return new Panel(content)
-            {
-                Header = new PanelHeader($" {col.Name} "),
-                Border = BoxBorder.Rounded,
-                BorderColor = borderColor,
-                Expand = true,
-            };
-        }).ToList();
-
-        var columnsRow = new Columns(columnLayouts.Cast<IRenderable>().ToList());
-        layout["Board"].Update(columnsRow);
-
-        // Status bar placeholder (full impl in Task 17)
-        layout["Status"].Update(
-            new Panel(
-                new Markup("[grey]● Connected    |    0 online    |    0 errors[/]")
-            ).Expand()
-        );
-
-        return layout;
-    }
-
-    private static Color? ParseColor(string? colorName) => colorName?.ToLower() switch
-    {
-        "red" => Color.Red,
-        "green" => Color.Green,
-        "blue" => Color.Blue,
-        "yellow" => Color.Yellow,
-        "purple" => Color.Purple,
-        "orange" => Color.Orange1,
-        "cyan" => Color.Cyan1,
-        _ => null
-    };
-}
-```
-
-## Step 2: Create `BoardScreen`
-
-Create `src/HydraForge.Tui/Screens/BoardScreen.cs`:
-
-```csharp
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using HydraForge.Tui.Renderers;
 using HydraForge.Tui.Services;
 using Spectre.Console;
@@ -205,7 +51,11 @@ public class BoardScreen : IScreen
 
         AnsiConsole.Write(layout);
 
-        AnsiConsole.MarkupLine("[grey][[h/l]] Columns  [[j/k]] Cards  [[Enter]] Detail  [[n]] New  [[m]] Move  [[?]] Help  [[Esc]] Back[/]");
+        KeyHintBar.Render(new[]
+        {
+            "[h/l] Columns", "[j/k] Cards", "[Enter] Detail", "[n] New",
+            "[m] Move", "[?] Help", "[Esc] Back", "[q] Quit",
+        });
     }
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
@@ -246,14 +96,14 @@ public class BoardScreen : IScreen
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.G:
-                _selectedColumn = 0;
+            case ConsoleKey.G when key.Modifiers == ConsoleModifiers.Shift:
+                _selectedColumn = Math.Max(0, _columns.Count - 1);
                 _selectedCard = 0;
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.G when key.Modifiers == ConsoleModifiers.Shift:
-                _selectedColumn = Math.Max(0, _columns.Count - 1);
+            case ConsoleKey.G:
+                _selectedColumn = 0;
                 _selectedCard = 0;
                 await RenderAsync();
                 break;
@@ -271,7 +121,12 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.Escape:
-                _appState.CurrentScreen = null; // Return to project list
+                var projectListScreen = new ProjectListScreen(
+                    _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                _appState.CurrentScreen = projectListScreen;
+                _appState.SelectedProjectId = null;
+                await projectListScreen.OnEnterAsync();
+                await projectListScreen.RenderAsync();
                 break;
 
             case ConsoleKey.D:
@@ -285,6 +140,12 @@ public class BoardScreen : IScreen
             case ConsoleKey.Delete:
                 await ArchiveCardAsync();
                 break;
+
+            case ConsoleKey.Q:
+                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                if (confirm)
+                    Environment.Exit(0);
+                break;
         }
     }
 
@@ -295,12 +156,12 @@ public class BoardScreen : IScreen
             var client = _apiClientFactory.GetClient();
 
             // Load project
-            var project = await client.ProjectsGETAsync(_projectId);
+            var project = await client.ProjectsGET2Async(_projectId);
             _projectName = project.Name;
 
             // Load cards
-            var cardList = await client.CardsAllAsync(_projectId);
-            var cards = cardList?.Cards ?? new List<CardInfo>();
+            var cardList = await client.CardsGETAsync(_projectId);
+            var cards = cardList?.Cards ?? new List<CardResponse>();
 
             // Build column data
             _columns = project.Columns
@@ -318,7 +179,7 @@ public class BoardScreen : IScreen
                             c.Id,
                             c.CardNumber,
                             c.Title,
-                            c.Type,
+                            c.Type.ToString(), // Convert enum to string
                             false, // Blocked indicator — Task 12
                             c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList() ?? new(),
                             c.Version
@@ -361,15 +222,15 @@ public class BoardScreen : IScreen
                     : ValidationResult.Success()));
 
         var type = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
+            new SelectionPrompt<HydraForge.Tui.Generated.CardType>()
                 .Title("Type:")
-                .AddChoices("Task", "Issue", "Goal", "Idea"));
+                .AddChoices(HydraForge.Tui.Generated.CardType.Task, HydraForge.Tui.Generated.CardType.Issue, HydraForge.Tui.Generated.CardType.Goal, HydraForge.Tui.Generated.CardType.Idea));
 
         try
         {
             var client = _apiClientFactory.GetClient();
 
-            await client.CardsCreateAsync(_projectId, new CreateCardRequest
+            await client.CardsPOSTAsync(_projectId, new CreateCardRequest
             {
                 ColumnId = col.Id,
                 Title = title,
@@ -412,7 +273,7 @@ public class BoardScreen : IScreen
         {
             var client = _apiClientFactory.GetClient();
 
-            await client.CardsMoveAsync(_projectId, card.Id, new MoveCardRequest
+            await client.MoveAsync(_projectId, card.Id, new MoveCardRequest
             {
                 TargetColumnId = targetCol.Id,
                 TargetPosition = targetCol.Cards.Count,
@@ -451,10 +312,7 @@ public class BoardScreen : IScreen
         {
             var client = _apiClientFactory.GetClient();
 
-            await client.CardsArchiveAsync(_projectId, card.Id, new ArchiveCardRequest
-            {
-                Version = card.Version
-            });
+            await client.ArchiveAsync(_projectId, card.Id, new ArchiveCardRequest { Version = card.Version });
 
             await LoadBoardAsync();
             await RenderAsync();
@@ -469,50 +327,3 @@ public class BoardScreen : IScreen
         }
     }
 }
-```
-
-**Key changes from raw-HttpClient version:**
-- No `System.Net.Http.Json` / `System.Text.Json` imports
-- No `JsonSerializerOptions` field
-- No manual DTO records (`ProjectDetail`, `ColumnInfo`, `CardList`, `CardInfo`, `AssigneeInfo`) — NSwag generates them
-- `client.ProjectsGETAsync(projectId)` — typed project fetch
-- `client.CardsAllAsync(projectId)` — typed cards list
-- `client.CardsCreateAsync(projectId, request)` — typed create
-- `client.CardsMoveAsync(projectId, cardId, request)` — typed move
-- `client.CardsArchiveAsync(projectId, cardId, request)` — typed archive
-- Catches `ApiException` for non-2xx responses, including `409 Conflict` for blocked moves
-
-## Step 3: Wire `BoardScreen` into `ProjectListScreen`
-
-Update `ProjectListScreen.HandleKeyAsync` — replace the `Enter` handler placeholder:
-
-```csharp
-case ConsoleKey.Enter:
-    if (_projects.Count > 0)
-    {
-        var selected = _projects[_selectedIndex];
-        _appState.SelectedProjectId = selected.Id;
-
-        var boardScreen = new BoardScreen(
-            _apiClientFactory, _appState, _errorCollector, _connectionManager);
-        _appState.CurrentScreen = boardScreen;
-        await boardScreen.OnEnterAsync();
-        await boardScreen.RenderAsync();
-    }
-    break;
-```
-
-## Step 4: Build verification
-
-```bash
-dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj
-```
-
-Expected: build succeeds.
-
-## Step 5: Commit
-
-```bash
-git add src/HydraForge.Tui/Renderers/BoardRenderer.cs src/HydraForge.Tui/Screens/BoardScreen.cs src/HydraForge.Tui/Screens/ProjectListScreen.cs
-git commit -m "feat(tui): add board view with column/card layout and keyboard navigation"
-```

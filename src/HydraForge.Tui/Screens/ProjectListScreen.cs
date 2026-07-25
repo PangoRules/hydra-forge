@@ -1,5 +1,6 @@
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using HydraForge.Tui.Services;
 using Spectre.Console;
 
@@ -61,15 +62,25 @@ public class ProjectListScreen : IScreen
         var sortArrow = _sortDescending ? "↓" : "↑";
         AnsiConsole.MarkupLine($"[grey]Sort: {_sortField} {sortArrow}   Role: {roleLabel}[/]");
 
-        // Table
+        // Table — Table.Expand() distributes leftover width EQUALLY across every
+        // column (including the narrow fixed ones), which just moves the blank
+        // gap inside each column instead of removing it. So instead we size
+        // "Name" explicitly to soak up whatever the terminal doesn't need for
+        // the other (inherently narrow) columns.
+        const int otherColumnsWidth = 3 + 9 + 8 + 10 + 10; // #, Members, Role, Created, Archived
+        const int columnCount = 6;
+        const int cellPadding = 2; // left+right padding per cell
+        var chrome = columnCount * cellPadding + (columnCount + 1); // padding + border/separator chars
+        var nameWidth = Math.Max(20, AnsiConsole.Profile.Width - otherColumnsWidth - chrome);
+
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .AddColumn(new TableColumn("#").Centered())
-            .AddColumn("Name")
-            .AddColumn(new TableColumn("Members").Centered())
-            .AddColumn("Role")
-            .AddColumn("Created")
-            .AddColumn("");
+            .AddColumn(new TableColumn("#").Centered().Width(3))
+            .AddColumn(new TableColumn("Name").Width(nameWidth))
+            .AddColumn(new TableColumn("Members").Centered().Width(9))
+            .AddColumn(new TableColumn("Role").Width(8))
+            .AddColumn(new TableColumn("Created").Width(10))
+            .AddColumn(new TableColumn("Archived").Centered().Width(10));
 
         for (int i = 0; i < _projects.Count; i++)
         {
@@ -88,27 +99,28 @@ public class ProjectListScreen : IScreen
                 p.MemberCount.ToString(),
                 GetRoleString(p.MyRole),
                 FormatRelative(p.CreatedAt),
-                p.ArchivedAt != null ? "[grey]A[/]" : ""
+                p.ArchivedAt != null ? "[grey]Yes[/]" : ""
             );
         }
 
         AnsiConsole.Write(table);
 
-        // Footer
-        AnsiConsole.WriteLine();
+        // Footer — sits directly under the table, no blank line in between.
         var totalPages = _totalCount == 0 ? 1 : (int)Math.Ceiling(_totalCount / (double)PageSize);
         var currentPage = _skip / PageSize + 1;
         var rangeStart = _totalCount == 0 ? 0 : _skip + 1;
         var rangeEnd = Math.Min(_skip + _projects.Count, _totalCount);
         AnsiConsole.MarkupLine($"[grey]Showing {rangeStart}-{rangeEnd} of {_totalCount} projects (page {currentPage}/{totalPages})[/]");
 
-        AnsiConsole.MarkupLine("[grey][[Enter]] Open  [[c]] Create  [[/]] Search  [[a]] Archived  [[q]] Quit[/]");
-
         var errors = _errorCollector.GetErrors();
-        var footerHint = errors.Count > 0
-            ? "[grey][[s]] Sort  [[Shift+S]] Direction  [[r]] Role filter  [[n]]/[[p]] Page  [[x]] Dismiss errors[/]"
-            : "[grey][[s]] Sort  [[Shift+S]] Direction  [[r]] Role filter  [[n]]/[[p]] Page[/]";
-        AnsiConsole.MarkupLine(footerHint);
+        var hints = new List<string>
+        {
+            "[Enter] Open", "[c] Create", "[/] Search", "[a] Archived", "[q] Quit",
+            "[s] Sort", "[Shift+S] Direction", "[r] Role filter", "[n]/[p] Page",
+        };
+        if (errors.Count > 0)
+            hints.Add("[x] Dismiss errors");
+        KeyHintBar.Render(hints);
 
         RenderErrors(errors);
     }
@@ -173,8 +185,12 @@ public class ProjectListScreen : IScreen
                 {
                     var selected = _projects[_selectedIndex];
                     _appState.SelectedProjectId = selected.Id;
-                    // Board screen will be wired in Task 7
-                    AnsiConsole.MarkupLine($"[green]Opening project: {Markup.Escape(selected.Name)}[/]");
+
+                    var boardScreen = new BoardScreen(
+                        _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                    _appState.CurrentScreen = boardScreen;
+                    await boardScreen.OnEnterAsync();
+                    await boardScreen.RenderAsync();
                 }
                 break;
 
