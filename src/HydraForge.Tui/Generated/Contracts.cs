@@ -133,7 +133,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CardListResponse> CardsGETAsync(System.Guid projectId, System.Guid? columnId = null, bool? includeArchived = null, System.Guid? assigneeUserId = null, int? type = null, string? search = null, int? archivedLimit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<CardListResponse> CardsGETAsync(System.Guid projectId, System.Guid? columnId = null, bool? includeArchived = null, System.Guid? assigneeUserId = null, CardType? type = null, string? search = null, int? archivedLimit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
@@ -253,7 +253,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, int? sortBy = null, bool? sortDescending = null, int? role = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, ProjectSortField? sortBy = null, bool? sortDescending = null, MemberRole? role = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
@@ -350,7 +350,8 @@ namespace HydraForge.Tui.Generated
         public System.Guid UserId { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("role", Required = Newtonsoft.Json.Required.Always)]
-        public int Role { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MemberRole Role { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -533,7 +534,8 @@ namespace HydraForge.Tui.Generated
         public string Description { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        public int Type { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CardType Type { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("position", Required = Newtonsoft.Json.Required.Always)]
         public int Position { get; set; } = default!;
@@ -573,6 +575,24 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CardType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Task")]
+        Task = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Issue")]
+        Issue = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Idea")]
+        Idea = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Goal")]
+        Goal = 3,
 
     }
 
@@ -631,6 +651,21 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ColumnTemplate
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Software")]
+        Software = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"General")]
+        General = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Blank")]
+        Blank = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateCardRequest
     {
 
@@ -644,7 +679,8 @@ namespace HydraForge.Tui.Generated
         public string Description { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        public int Type { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CardType Type { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("parentCardId", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.Guid? ParentCardId { get; set; } = default!;
@@ -779,7 +815,8 @@ namespace HydraForge.Tui.Generated
         public string? GitProvider { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("template", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int? Template { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ColumnTemplate? Template { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -800,7 +837,8 @@ namespace HydraForge.Tui.Generated
         public System.Guid TargetCardId { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        public int Type { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public RelationshipType Type { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -818,7 +856,8 @@ namespace HydraForge.Tui.Generated
     {
 
         [Newtonsoft.Json.JsonProperty("docType", Required = Newtonsoft.Json.Required.Always)]
-        public int DocType { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public DocType DocType { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
         public string Title { get; set; } = default!;
@@ -837,6 +876,21 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DocType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Specification")]
+        Specification = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Concept")]
+        Concept = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Report")]
+        Report = 2,
 
     }
 
@@ -905,7 +959,8 @@ namespace HydraForge.Tui.Generated
         public string Username { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("role", Required = Newtonsoft.Json.Required.Always)]
-        public int Role { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MemberRole Role { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("joinedAt", Required = Newtonsoft.Json.Required.Always)]
         public System.DateTimeOffset JoinedAt { get; set; } = default!;
@@ -918,6 +973,18 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum MemberRole
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Owner")]
+        Owner = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Member")]
+        Member = 1,
 
     }
 
@@ -945,6 +1012,21 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PlanStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Pending")]
+        Pending = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
+        Active = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Done")]
+        Done = 2,
 
     }
 
@@ -1022,7 +1104,8 @@ namespace HydraForge.Tui.Generated
         public int MemberCount { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("myRole", Required = Newtonsoft.Json.Required.Always)]
-        public int MyRole { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MemberRole MyRole { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1081,6 +1164,21 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ProjectSortField
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Name")]
+        Name = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CreatedAt")]
+        CreatedAt = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UpdatedAt")]
+        UpdatedAt = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class RefreshTokenResponse
     {
 
@@ -1098,6 +1196,24 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RelationshipType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"BlockedBy")]
+        BlockedBy = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Precedes")]
+        Precedes = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Relates")]
+        Relates = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SpawnedFrom")]
+        SpawnedFrom = 3,
 
     }
 
@@ -1196,7 +1312,8 @@ namespace HydraForge.Tui.Generated
     {
 
         [Newtonsoft.Json.JsonProperty("status", Required = Newtonsoft.Json.Required.Always)]
-        public int Status { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public PlanStatus Status { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1220,7 +1337,8 @@ namespace HydraForge.Tui.Generated
         public string Description { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        public int Type { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CardType Type { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("parentCardId", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.Guid? ParentCardId { get; set; } = default!;
@@ -1310,7 +1428,8 @@ namespace HydraForge.Tui.Generated
     {
 
         [Newtonsoft.Json.JsonProperty("role", Required = Newtonsoft.Json.Required.Always)]
-        public int Role { get; set; } = default!;
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MemberRole Role { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

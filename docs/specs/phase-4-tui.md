@@ -523,7 +523,7 @@ The work is organized into 14 tasks matching the Phase 4 checklist, ordered to m
 - [x] Task 3: ApiClientFactory — NSwag client with JWT auth, token refresh
 - [x] Task 4: Auth — login screen + startup auth flow
 - [x] Task 5: Connection handling — lock screen, auto-reconnect, status bar indicators
-- [ ] Task 6: Project list view + create project
+- [x] Task 6: Project list view + create project
 - [ ] Task 7: Board view — Spectre.Console column/card layout + keyboard nav
 - [ ] Task 8: SignalR integration — BoardHub + PresenceHub, LiveDisplay updates
 - [ ] Task 9: Card detail view — all fields, section nav, `$EDITOR` for description

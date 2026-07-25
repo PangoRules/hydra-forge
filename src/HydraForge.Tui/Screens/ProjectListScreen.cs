@@ -1,20 +1,3 @@
-# Plan 6: Project List View + Create Project
-
-**Branch:** `task/tui-project-list`
-**Parent branch:** `feat/phase-4-tui`
-**Parent spec:** `2026-07-24-phase-4-tui.md` — Task 6
-
-**Goal:** Full-screen project list table with keyboard nav, create project prompt workflow, filter/search. Uses NSwag-generated `HydraForgeApiClient` for all API calls.
-
-**Depends on:** Task 3 (ApiClientFactory wraps `HydraForgeApiClient`), Task 4 (auth flow in Program.cs).
-
----
-
-## Step 1: Create `ProjectListScreen`
-
-Create `src/HydraForge.Tui/Screens/ProjectListScreen.cs`:
-
-```csharp
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Services;
@@ -29,11 +12,20 @@ public class ProjectListScreen : IScreen
     private readonly ErrorCollector _errorCollector;
     private readonly ConnectionManager _connectionManager;
 
+    // Matches the Web UI's server-paginated project list convention
+    // (docs/specs/2026-07-07-project-list-redesign-design.md): page size 20,
+    // default sort CreatedAt descending.
+    private const int PageSize = 20;
+
     private List<ProjectItem> _projects = new();
     private int _selectedIndex;
     private bool _showArchived;
     private string _searchFilter = "";
     private int _totalCount;
+    private int _skip;
+    private ProjectSortField _sortField = ProjectSortField.CreatedAt;
+    private bool _sortDescending = true;
+    private MemberRole? _roleFilter;
 
     public ProjectListScreen(
         ApiClientFactory apiClientFactory,
@@ -59,11 +51,15 @@ public class ProjectListScreen : IScreen
         AnsiConsole.Clear();
 
         // Header
-        var header = new Rule("[blue]Projects[/]").LeftAligned();
+        var header = new Rule("[blue]Projects[/]");
         AnsiConsole.Write(header);
 
         if (_searchFilter.Length > 0)
-            AnsiConsole.MarkupLine($"[grey]Filter: \"{_searchFilter}\"[/]");
+            AnsiConsole.MarkupLine($"[grey]Filter: \"{Markup.Escape(_searchFilter)}\"[/]");
+
+        var roleLabel = _roleFilter.HasValue ? GetRoleString(_roleFilter.Value) : "All";
+        var sortArrow = _sortDescending ? "↓" : "↑";
+        AnsiConsole.MarkupLine($"[grey]Sort: {_sortField} {sortArrow}   Role: {roleLabel}[/]");
 
         // Table
         var table = new Table()
@@ -90,7 +86,7 @@ public class ProjectListScreen : IScreen
                 isSelected ? "[blue]>[/]" : " ",
                 $"{nameMarkup}{archivedBadge}",
                 p.MemberCount.ToString(),
-                p.MyRole,
+                GetRoleString(p.MyRole),
                 FormatRelative(p.CreatedAt),
                 p.ArchivedAt != null ? "[grey]A[/]" : ""
             );
@@ -100,8 +96,40 @@ public class ProjectListScreen : IScreen
 
         // Footer
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"[grey]{_totalCount} projects total[/]");
-        AnsiConsole.MarkupLine("[grey][[Enter]] Open  [[c]] Create  [[/]] Search  [[a]] Toggle Archived  [[q]] Quit[/]");
+        var totalPages = _totalCount == 0 ? 1 : (int)Math.Ceiling(_totalCount / (double)PageSize);
+        var currentPage = _skip / PageSize + 1;
+        var rangeStart = _totalCount == 0 ? 0 : _skip + 1;
+        var rangeEnd = Math.Min(_skip + _projects.Count, _totalCount);
+        AnsiConsole.MarkupLine($"[grey]Showing {rangeStart}-{rangeEnd} of {_totalCount} projects (page {currentPage}/{totalPages})[/]");
+
+        AnsiConsole.MarkupLine("[grey][[Enter]] Open  [[c]] Create  [[/]] Search  [[a]] Archived  [[q]] Quit[/]");
+
+        var errors = _errorCollector.GetErrors();
+        var footerHint = errors.Count > 0
+            ? "[grey][[s]] Sort  [[Shift+S]] Direction  [[r]] Role filter  [[n]]/[[p]] Page  [[x]] Dismiss errors[/]"
+            : "[grey][[s]] Sort  [[Shift+S]] Direction  [[r]] Role filter  [[n]]/[[p]] Page[/]";
+        AnsiConsole.MarkupLine(footerHint);
+
+        RenderErrors(errors);
+    }
+
+    // Nothing gets swallowed silently — every caught ApiException/HttpRequestException
+    // in this screen goes through _errorCollector, and this is where it surfaces.
+    private static void RenderErrors(IReadOnlyList<(DateTime Timestamp, string CorrelationId, string Message)> errors)
+    {
+        if (errors.Count == 0)
+            return;
+
+        AnsiConsole.WriteLine();
+        var panel = new Panel(
+            new Rows(errors.TakeLast(3).Select(e =>
+                new Markup($"[red]⚠ {Markup.Escape(e.Message)}[/] [grey]({e.Timestamp:HH:mm:ss}, correlationId: {Markup.Escape(e.CorrelationId)})[/]"))))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(foreground: Color.Red),
+            Header = new PanelHeader($" Errors ({errors.Count}) "),
+        };
+        AnsiConsole.Write(panel);
     }
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
@@ -120,13 +148,22 @@ public class ProjectListScreen : IScreen
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.G or ConsoleKey.Home:
+            case ConsoleKey.G when key.Modifiers == ConsoleModifiers.Shift:
+                _selectedIndex = Math.Max(0, _projects.Count - 1);
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.G:
                 _selectedIndex = 0;
                 await RenderAsync();
                 break;
 
-            case ConsoleKey.End when key.Modifiers == ConsoleModifiers.Shift:
-            case ConsoleKey.G when key.Modifiers == ConsoleModifiers.Shift:
+            case ConsoleKey.Home:
+                _selectedIndex = 0;
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.End:
                 _selectedIndex = Math.Max(0, _projects.Count - 1);
                 await RenderAsync();
                 break;
@@ -137,7 +174,7 @@ public class ProjectListScreen : IScreen
                     var selected = _projects[_selectedIndex];
                     _appState.SelectedProjectId = selected.Id;
                     // Board screen will be wired in Task 7
-                    AnsiConsole.MarkupLine($"[green]Opening project: {selected.Name}[/]");
+                    AnsiConsole.MarkupLine($"[green]Opening project: {Markup.Escape(selected.Name)}[/]");
                 }
                 break;
 
@@ -147,7 +184,10 @@ public class ProjectListScreen : IScreen
 
             case ConsoleKey.A:
                 _showArchived = !_showArchived;
+                _skip = 0;
+                _selectedIndex = 0;
                 await LoadProjectsAsync();
+                await RenderAsync();
                 break;
 
             case ConsoleKey.Divide or ConsoleKey.Oem2: // '/' key
@@ -155,7 +195,65 @@ public class ProjectListScreen : IScreen
                     new TextPrompt<string>("Search:")
                         .DefaultValue(_searchFilter)
                         .AllowEmpty());
+                _skip = 0;
+                _selectedIndex = 0;
                 await LoadProjectsAsync();
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.S when key.Modifiers == ConsoleModifiers.Shift:
+                _sortDescending = !_sortDescending;
+                _skip = 0;
+                _selectedIndex = 0;
+                await LoadProjectsAsync();
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.S:
+                _sortField = (ProjectSortField)(((int)_sortField + 1) % 3);
+                _skip = 0;
+                _selectedIndex = 0;
+                await LoadProjectsAsync();
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.R:
+                _roleFilter = _roleFilter switch
+                {
+                    null => MemberRole.Owner,
+                    MemberRole.Owner => MemberRole.Member,
+                    _ => null
+                };
+                _skip = 0;
+                _selectedIndex = 0;
+                await LoadProjectsAsync();
+                await RenderAsync();
+                break;
+
+            case ConsoleKey.N:
+                if (_skip + PageSize < _totalCount)
+                {
+                    _skip += PageSize;
+                    _selectedIndex = 0;
+                    await LoadProjectsAsync();
+                    await RenderAsync();
+                }
+                break;
+
+            case ConsoleKey.P:
+                if (_skip > 0)
+                {
+                    _skip = Math.Max(0, _skip - PageSize);
+                    _selectedIndex = 0;
+                    await LoadProjectsAsync();
+                    await RenderAsync();
+                }
+                break;
+
+            case ConsoleKey.X:
+                while (_errorCollector.Count > 0)
+                    _errorCollector.Dismiss(0);
+                await RenderAsync();
                 break;
 
             case ConsoleKey.Q:
@@ -172,11 +270,15 @@ public class ProjectListScreen : IScreen
         {
             var client = _apiClientFactory.GetClient();
 
-            // NSwag generates ProjectsAsync with optional parameters
-            var page = await client.ProjectsAsync(
+            // NSwag generates ProjectsGETAsync with optional parameters
+            var page = await client.ProjectsGETAsync(
                 includeArchived: _showArchived,
                 search: string.IsNullOrEmpty(_searchFilter) ? null : _searchFilter,
-                take: 50);
+                sortBy: _sortField,
+                sortDescending: _sortDescending,
+                role: _roleFilter,
+                skip: _skip,
+                take: PageSize);
 
             if (page != null)
             {
@@ -192,12 +294,17 @@ public class ProjectListScreen : IScreen
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Failed to load projects: {ex.StatusCode}");
+            _errorCollector.Add("N/A", $"Failed to load projects ({ex.StatusCode}): {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
             _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
-            await _connectionManager.WaitForConnectionAsync();
+            var connected = await _connectionManager.WaitForConnectionAsync();
+            if (connected)
+            {
+                await LoadProjectsAsync();
+                await RenderAsync();
+            }
         }
     }
 
@@ -222,19 +329,19 @@ public class ProjectListScreen : IScreen
         {
             var client = _apiClientFactory.GetClient();
 
-            await client.ProjectsCreateAsync(new CreateProjectRequest
+            await client.ProjectsPOSTAsync(new HydraForge.Tui.Generated.CreateProjectRequest
             {
                 Name = name,
                 Description = description,
                 Template = template switch
                 {
-                    "Software" => ProjectTemplate.Software,
-                    "Blank" => ProjectTemplate.Blank,
-                    _ => ProjectTemplate.General
+                    "Software" => ColumnTemplate.Software,
+                    "Blank" => ColumnTemplate.Blank,
+                    _ => ColumnTemplate.General
                 }
             });
 
-            AnsiConsole.MarkupLine($"[green]Project \"{name}\" created![/]");
+            AnsiConsole.MarkupLine($"[green]Project \"{Markup.Escape(name)}\" created![/]");
             await LoadProjectsAsync();
             await RenderAsync();
         }
@@ -248,9 +355,9 @@ public class ProjectListScreen : IScreen
         }
     }
 
-    private static string FormatRelative(DateTime dt)
+    private static string FormatRelative(DateTimeOffset dt)
     {
-        var diff = DateTime.UtcNow - dt;
+        var diff = DateTimeOffset.UtcNow - dt;
         if (diff.TotalDays > 365) return $"{(int)(diff.TotalDays / 365)}y ago";
         if (diff.TotalDays > 30) return $"{(int)(diff.TotalDays / 30)}mo ago";
         if (diff.TotalDays >= 1) return $"{(int)diff.TotalDays}d ago";
@@ -258,73 +365,11 @@ public class ProjectListScreen : IScreen
         return "just now";
     }
 
+    private static string GetRoleString(MemberRole role) => role.ToString();
+
     // Local view model — maps from NSwag-generated DTOs
     private record ProjectItem(
-        Guid Id, string Name, DateTime CreatedAt, DateTime? ArchivedAt,
-        int MemberCount, string MyRole
+        Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? ArchivedAt,
+        int MemberCount, MemberRole MyRole
     );
 }
-```
-
-**Key changes from raw-HttpClient version:**
-- No `System.Net.Http.Json` / `System.Text.Json` imports
-- No `JsonSerializerOptions` field
-- No manual `ProjectListPage` / `ProjectItem` DTO records — NSwag generates `ProjectListPage`, `ProjectItem`, `CreateProjectRequest`, `ProjectTemplate`
-- `client.ProjectsAsync(includeArchived, search, take)` — typed method with optional params
-- `client.ProjectsCreateAsync(request)` — typed create method
-- Catches `ApiException` for non-2xx responses
-- Local `ProjectItem` record maps from NSwag DTO to view model (keeps screen decoupled from generated types)
-
-## Step 2: Wire `ProjectListScreen` into `Program.cs`
-
-Update `src/HydraForge.Tui/Program.cs` — replace the placeholder at the end:
-
-```csharp
-// ... (keep existing auth flow code) ...
-
-// Initialize API client with valid token
-apiClientFactory.CreateClient();
-
-var connectionManager = new ConnectionManager(appState, apiClientFactory, errorCollector);
-
-// Show project list
-var projectListScreen = new ProjectListScreen(
-    apiClientFactory, appState, errorCollector, connectionManager);
-appState.CurrentScreen = projectListScreen;
-await projectListScreen.OnEnterAsync();
-await projectListScreen.RenderAsync();
-
-// Main input loop
-while (true)
-{
-    var key = Console.ReadKey(true);
-
-    // Global shortcuts
-    if (key.Key == ConsoleKey.Q && (key.Modifiers & ConsoleModifiers.Control) != 0)
-    {
-        Environment.Exit(0);
-    }
-
-    if (appState.CurrentScreen != null)
-    {
-        await appState.CurrentScreen.HandleKeyAsync(key);
-    }
-}
-
-return 0;
-```
-
-## Step 3: Build verification
-
-```bash
-dotnet build src/HydraForge.Tui/HydraForge.Tui.csproj
-```
-
-Expected: build succeeds.
-
-## Step 4: Commit
-
-```bash
-git add src/HydraForge.Tui/Screens/ProjectListScreen.cs src/HydraForge.Tui/Program.cs
-git commit -m "feat(tui): add project list view with create, search, and keyboard nav"
-```

@@ -1668,7 +1668,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CardListResponse> CardsGETAsync(System.Guid projectId, System.Guid? columnId = null, bool? includeArchived = null, System.Guid? assigneeUserId = null, int? type = null, string? search = null, int? archivedLimit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<CardListResponse> CardsGETAsync(System.Guid projectId, System.Guid? columnId = null, bool? includeArchived = null, System.Guid? assigneeUserId = null, CardType? type = null, string? search = null, int? archivedLimit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3815,7 +3815,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, int? sortBy = null, bool? sortDescending = null, int? role = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, ProjectSortField? sortBy = null, bool? sortDescending = null, MemberRole? role = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
