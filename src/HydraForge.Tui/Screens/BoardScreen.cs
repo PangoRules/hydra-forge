@@ -14,6 +14,7 @@ public class BoardScreen : IScreen
     private readonly ErrorCollector _errorCollector;
     private readonly ConnectionManager _connectionManager;
     private readonly BoardRenderer _renderer = new();
+    private SignalRConnectionManager? _signalR;
 
     private List<BoardRenderer.ColumnData> _columns = new();
     private int _selectedColumn;
@@ -37,9 +38,22 @@ public class BoardScreen : IScreen
     {
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         await LoadBoardAsync();
+
+        // Connect SignalR
+        _signalR = new SignalRConnectionManager(_apiClientFactory, _appState, _errorCollector);
+        _signalR.OnBoardEvent += HandleBoardEvent;
+        _signalR.OnCurrentUsers += users => _appState.OnlineCount = users.Count;
+        _signalR.OnUserJoined += _ => _appState.OnlineCount++;
+        _signalR.OnUserLeft += _ => _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
+
+        await _signalR.ConnectAsync(_projectId);
     }
 
-    public Task OnExitAsync() => Task.CompletedTask;
+    public async Task OnExitAsync()
+    {
+        if (_signalR != null)
+            await _signalR.DisconnectAsync();
+    }
 
     public async Task RenderAsync()
     {
@@ -325,5 +339,13 @@ public class BoardScreen : IScreen
         {
             _errorCollector.Add("N/A", $"Archive error: {ex.Message}");
         }
+    }
+
+    private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
+    {
+        // Reload board data on any event for simplicity
+        // (Future optimization: apply delta updates)
+        await LoadBoardAsync();
+        await RenderAsync();
     }
 }
