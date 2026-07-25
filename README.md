@@ -73,7 +73,7 @@ docs/                       Architecture & decision documents
 ## Docs
 
 - [`docs/requirements-and-architecture.md`](docs/requirements-and-architecture.md) — Index for the split scope, architecture, data model, glossary, and roadmap docs
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — Every architectural decision with rationale (D-1–D-32)
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — Every architectural decision with rationale (D-1–D-50)
 - [`docs/agent-platform-vision.md`](docs/agent-platform-vision.md) — Vision, agent pipeline, feature parity
 
 ## Contributing / AI agents

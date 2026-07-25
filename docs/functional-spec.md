@@ -519,24 +519,24 @@
 > ✅ **Pre-phase decisions resolved — see D-48:**
 > 1. **.NET API client strategy** — NSwag-generated typed C# client from `/openapi/v1.json`, regenerated as a build step. Mirrors the Web UI's openapi-typescript + `routes.ts` convention (CLAUDE.md "Web UI API routes").
 > 2. **SignalR .NET client wiring** — `Microsoft.AspNetCore.SignalR.Client` package for `BoardHub`/`PresenceHub` consumption. Connection lifecycle ownership and reconnect/backoff placement (relative to the "Connection handling" checklist item below) still decided at implementation time — D-48 settles the package choice, not the lifecycle design.
-> 3. **JWT config storage location/format** — plain file, `~/.config/hydraforge/config.json` (`%APPDATA%\hydraforge\config.json` on Windows), owner-only permissions (`0600` on POSIX). No OS keychain for MVP — see D-48 rationale (remote/SSH usage is the primary TUI persona, where a desktop keychain is often unavailable anyway).
+> 3. **JWT config storage location/format** — plain file, `.hydraforge/config.json` at the repo root (amended by D-49 — originally specified as `~/.config/hydraforge/`, moved project-relative per explicit preference), owner-only permissions (`0600` on POSIX). No OS keychain for MVP — see D-48 rationale (remote/SSH usage is the primary TUI persona, where a desktop keychain is often unavailable anyway).
 >
 > `src/HydraForge.Tui/Program.cs` is currently the unmodified `dotnet new console` template — no Spectre.Console package reference yet. Phase 4 starts from zero scaffolding.
 
-- [ ] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
-- [ ] Auth: login prompt on startup, JWT stored in user config
-- [ ] Project list view + create project
-- [ ] Board view: ASCII/rich columns + cards, real-time updates via SignalR
-- [ ] Card detail view: all fields editable (description opens in `$EDITOR`)
-- [ ] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
-- [ ] Dependency panel: `d` key → search/type card → select type → confirm
-- [ ] Blocked card indicator in board view
-- [ ] Spec + plan viewer/editor (opens in `$EDITOR`)
-- [ ] Comments: inline view + add
-- [ ] Checklists: toggle completion from keyboard
-- [ ] Keyboard shortcut reference: `?`
-- [ ] Status bar: sync status, unread notification count, online presence count
-- [ ] Error panel in status bar: surfaced errors with correlationId, dismissible
+- [x] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
+- [x] Auth: login prompt on startup, JWT stored in user config
+- [x] Project list view + create project
+- [x] Board view: ASCII/rich columns + cards, real-time updates via SignalR
+- [x] Card detail view: all fields editable (description opens in `$EDITOR`)
+- [x] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
+- [x] Dependency panel: `d` key → search/type card → select type → confirm
+- [x] Blocked card indicator in board view
+- [x] Spec + plan viewer/editor (opens in `$EDITOR`)
+- [x] Comments: inline view + add
+- [x] Checklists: toggle completion from keyboard
+- [x] Keyboard shortcut reference: `?`
+- [x] Status bar: sync status, online presence count (unread notification count deferred to Phase 5 — no notification API surface yet, see below)
+- [x] Error panel in status bar: surfaced errors with correlationId, dismissible
 
 ### Phase 5: Multi-User, Notifications & Admin 🔔
 > Goal: team collaboration working end-to-end. Admin can manage the install.

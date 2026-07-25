@@ -13,6 +13,8 @@ namespace HydraForge.Server.Controllers.Projects;
 public class CardRelationshipsController(CardRelationshipService service) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(CardRelationshipListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -23,6 +25,8 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(CardRelationshipDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
@@ -48,6 +52,8 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     }
 
     [HttpDelete("{relationshipId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId, Guid cardId, Guid relationshipId)
     {
         var userId = User.GetRequiredUserId();
@@ -59,6 +65,8 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     }
 
     [HttpGet("archive-impact")]
+    [ProducesResponseType(typeof(ArchiveImpactResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ArchiveImpact(Guid projectId, Guid cardId, [FromQuery] bool confirm = false)
     {
         var userId = User.GetRequiredUserId();
@@ -70,6 +78,8 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     }
 
     [HttpPost("archive-with-relationships")]
+    [ProducesResponseType(typeof(ArchiveImpactResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ArchiveWithRelationships(
         Guid projectId,
         Guid cardId,

@@ -525,6 +525,26 @@ public class CardService(
                     toUpdate.Add(c);
                 }
             }
+            else if (oldPosition < cmd.TargetPosition)
+            {
+                var allCards = await _cardRepo.ListByProjectAsync(
+                    cmd.ProjectId,
+                    new CardListFilter(cmd.TargetColumnId, true),
+                    ct
+                );
+                var cardsToShift = allCards
+                    .Where(c =>
+                        c.Position > oldPosition
+                        && c.Position <= cmd.TargetPosition
+                        && c.Id != card.Id
+                    )
+                    .ToList();
+                foreach (var c in cardsToShift)
+                {
+                    c.ShiftPosition(-1);
+                    toUpdate.Add(c);
+                }
+            }
         }
         else
         {

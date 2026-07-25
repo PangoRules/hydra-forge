@@ -49,12 +49,15 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+    options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>());
 builder
     .Services.AddControllers()
     .AddJsonOptions(options =>
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
-    );
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new HydraForge.Server.Serialization.UtcDateTimeConverter());
+    });
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddProjectServices();
 builder.Services.AddColumnServices();

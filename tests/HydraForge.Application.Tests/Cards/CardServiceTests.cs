@@ -306,6 +306,73 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task MoveAsync_SameColumnForward_ShiftsPassedCardsBack()
+    {
+        // Card at position 0 moves to position 4; the cards it hops over (1-4)
+        // should each shift back by one, landing the moved card cleanly at 4
+        // with no duplicate/gap positions.
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var columnId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+        var cardC = NewId();
+        var cardD = NewId();
+        var cardE = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 0, Version = 1 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Version = 1 });
+        cardRepo.Add(new Card { Id = cardC, ProjectId = projectId, ColumnId = columnId, CardNumber = 3, Position = 2, Version = 1 });
+        cardRepo.Add(new Card { Id = cardD, ProjectId = projectId, ColumnId = columnId, CardNumber = 4, Position = 3, Version = 1 });
+        cardRepo.Add(new Card { Id = cardE, ProjectId = projectId, ColumnId = columnId, CardNumber = 5, Position = 4, Version = 1 });
+        columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.MoveAsync(new MoveCardCommand(projectId, cardA, columnId, 4, actorId, false, 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(4, result.Value.Position);
+        Assert.Equal(0, cardRepo.Cards.First(c => c.Id == cardB).Position);
+        Assert.Equal(1, cardRepo.Cards.First(c => c.Id == cardC).Position);
+        Assert.Equal(2, cardRepo.Cards.First(c => c.Id == cardD).Position);
+        Assert.Equal(3, cardRepo.Cards.First(c => c.Id == cardE).Position);
+    }
+
+    [Fact]
+    public async Task MoveAsync_SameColumnBackward_ShiftsPassedCardsForward()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var actorId = NewId();
+        var columnId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+        var cardC = NewId();
+        var cardD = NewId();
+        var cardE = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 0, Version = 1 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 1, Version = 1 });
+        cardRepo.Add(new Card { Id = cardC, ProjectId = projectId, ColumnId = columnId, CardNumber = 3, Position = 2, Version = 1 });
+        cardRepo.Add(new Card { Id = cardD, ProjectId = projectId, ColumnId = columnId, CardNumber = 4, Position = 3, Version = 1 });
+        cardRepo.Add(new Card { Id = cardE, ProjectId = projectId, ColumnId = columnId, CardNumber = 5, Position = 4, Version = 1 });
+        columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.MoveAsync(new MoveCardCommand(projectId, cardE, columnId, 0, actorId, false, 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Value.Position);
+        Assert.Equal(1, cardRepo.Cards.First(c => c.Id == cardA).Position);
+        Assert.Equal(2, cardRepo.Cards.First(c => c.Id == cardB).Position);
+        Assert.Equal(3, cardRepo.Cards.First(c => c.Id == cardC).Position);
+        Assert.Equal(4, cardRepo.Cards.First(c => c.Id == cardD).Position);
+    }
+
+    [Fact]
     public async Task AssignAsync_CreatesCardAssigneeAndCardWatcher()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
