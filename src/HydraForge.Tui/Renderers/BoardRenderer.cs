@@ -80,6 +80,7 @@ public class BoardRenderer
                 return new Panel(new Markup(cardMarkup))
                 {
                     Border = isCardSelected ? BoxBorder.Double : BoxBorder.None,
+                    BorderStyle = isCardSelected ? new Style(foreground: Color.Blue) : null,
                 };
             }).ToList();
 
@@ -87,12 +88,7 @@ public class BoardRenderer
                 ? $" ({col.Cards.Count}/{col.WipLimit})"
                 : $" ({col.Cards.Count})";
 
-            var header = new Panel(
-                new Markup($"[{color.ToMarkup()} bold]{Markup.Escape(col.Name)}[/]{wipText}")
-            )
-            {
-                Border = BoxBorder.Rounded,
-            };
+
 
             var content = new Rows(new List<IRenderable>(cardPanels));
             return new Panel(content)
