@@ -523,11 +523,11 @@
 >
 > `src/HydraForge.Tui/Program.cs` is currently the unmodified `dotnet new console` template — no Spectre.Console package reference yet. Phase 4 starts from zero scaffolding.
 
-- [ ] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
+- [x] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
 - [x] Auth: login prompt on startup, JWT stored in user config
 - [x] Project list view + create project
-- [ ] Board view: ASCII/rich columns + cards, real-time updates via SignalR
-- [ ] Card detail view: all fields editable (description opens in `$EDITOR`)
+- [x] Board view: ASCII/rich columns + cards, real-time updates via SignalR
+- [x] Card detail view: all fields editable (description opens in `$EDITOR`)
 - [ ] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
 - [ ] Dependency panel: `d` key → search/type card → select type → confirm
 - [ ] Blocked card indicator in board view
