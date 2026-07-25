@@ -76,8 +76,17 @@ public class SpecViewerScreen : IScreen
 
     private Panel BuildListPanel()
     {
+        // Cap at a third of the terminal — the preview/history row below already
+        // claims half, so an unbounded list would push those off-screen.
+        var maxHeight = Math.Max(8, AnsiConsole.Profile.Height / 3);
+        var maxVisible = Math.Max(1, (maxHeight - 2) / 2);
+        var window = ListScrollWindow.Compute(_documents.Count, _selectedIndex, maxVisible);
+
         var rows = new List<IRenderable>();
-        for (int i = 0; i < _documents.Count; i++)
+        if (window.HasMoreAbove)
+            rows.Add(new Markup($"[grey]↑ {window.Start} more above[/]"));
+
+        for (int i = window.Start; i < window.End; i++)
         {
             var doc = _documents[i];
             var isSelected = i == _selectedIndex;
@@ -103,11 +112,15 @@ public class SpecViewerScreen : IScreen
             rows.Add(new Markup($"   [grey]v{doc.Version} — {doc.UpdatedAt:yyyy-MM-dd HH:mm}[/]"));
         }
 
+        if (window.HasMoreBelow)
+            rows.Add(new Markup($"[grey]↓ {_documents.Count - window.End} more below[/]"));
+
         return new Panel(new Rows(rows))
         {
             Header = new PanelHeader($" Documents ({_documents.Count}) "),
             Border = BoxBorder.Rounded,
             Expand = true,
+            Height = maxHeight,
         };
     }
 
@@ -179,7 +192,8 @@ public class SpecViewerScreen : IScreen
     {
         if (_documents.Count > 0)
         {
-            yield return "[j/k] Move";
+            if (_mode == "plan")
+                yield return "[j/k] Move";
             yield return "[Enter] View";
             yield return "[e] Edit";
             if (_mode == "plan")
@@ -202,21 +216,21 @@ public class SpecViewerScreen : IScreen
         switch (key.Key)
         {
             case ConsoleKey.J or ConsoleKey.DownArrow:
-                if (_selectedIndex < _documents.Count - 1)
+                if (_mode == "plan" && _selectedIndex < _documents.Count - 1)
                 {
                     _selectedIndex++;
                     await LoadVersionsForSelectedAsync();
+                    await RenderAsync();
                 }
-                await RenderAsync();
                 break;
 
             case ConsoleKey.K or ConsoleKey.UpArrow:
-                if (_selectedIndex > 0)
+                if (_mode == "plan" && _selectedIndex > 0)
                 {
                     _selectedIndex--;
                     await LoadVersionsForSelectedAsync();
+                    await RenderAsync();
                 }
-                await RenderAsync();
                 break;
 
             case ConsoleKey.Enter:
