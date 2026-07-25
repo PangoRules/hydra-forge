@@ -150,6 +150,12 @@ public class SpecViewerScreen : IScreen
         if (_selectedIndex >= _documents.Count) return;
         var doc = _documents[_selectedIndex];
 
+        if (_mode == "plan" && doc.Status == "Done")
+        {
+            AnsiConsole.MarkupLine("[yellow]Cannot edit a completed plan.[/]");
+            return;
+        }
+
         var newContent = await _editorLauncher.EditAsync(doc.Content);
         if (newContent == null)
         {
@@ -157,6 +163,12 @@ public class SpecViewerScreen : IScreen
             newContent = AnsiConsole.Prompt(
                 new TextPrompt<string>("Content:")
                     .DefaultValue(doc.Content));
+        }
+
+        if (newContent == doc.Content)
+        {
+            AnsiConsole.MarkupLine("[grey]No changes.[/]");
+            return;
         }
 
         try
