@@ -13,6 +13,7 @@ using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Realtime;
+using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
@@ -71,6 +72,7 @@ builder.Services.AddCommentServices();
 builder.Services.AddAttachmentServices(builder.Configuration);
 builder.Services.AddSpecServices();
 builder.Services.AddPlanServices();
+builder.Services.AddNotificationServices();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
