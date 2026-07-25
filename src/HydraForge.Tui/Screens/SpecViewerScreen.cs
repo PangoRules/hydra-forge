@@ -76,9 +76,12 @@ public class SpecViewerScreen : IScreen
 
     private Panel BuildListPanel()
     {
-        // Cap at a third of the terminal — the preview/history row below already
-        // claims half, so an unbounded list would push those off-screen.
-        var maxHeight = Math.Max(8, AnsiConsole.Profile.Height / 3);
+        // Grow with content, but cap at a quarter of the terminal — the
+        // preview/history row below already claims half, so past the cap
+        // j/k windows/scrolls through the list instead of growing further.
+        var capHeight = Math.Max(8, AnsiConsole.Profile.Height / 4);
+        var naturalHeight = 2 + _documents.Count * 2;
+        var maxHeight = Math.Min(capHeight, naturalHeight);
         var maxVisible = Math.Max(1, (maxHeight - 2) / 2);
         var window = ListScrollWindow.Compute(_documents.Count, _selectedIndex, maxVisible);
 
