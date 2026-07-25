@@ -30,6 +30,15 @@ public static class Program
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var apiClientFactory = new ApiClientFactory(configStore, appState, errorCollector);
+        var connectionManager = new ConnectionManager(appState, apiClientFactory, errorCollector);
+
+        // Gate startup on server reachability — show the lock screen and
+        // auto-retry until the server answers, instead of letting the user
+        // type credentials at a dead server.
+        if (!await connectionManager.CheckHealthAsync())
+        {
+            await RunLockScreenUntilConnectedAsync(connectionManager.CreateLockScreen(), appState);
+        }
 
         // Check if we have a valid JWT token
         var loadedConfig = configStore.Load();
@@ -86,5 +95,30 @@ public static class Program
         Console.ReadKey(true);
 
         return 0;
+    }
+
+    // No generic IScreen runner exists yet (board loop lands in a later task),
+    // so LockScreen drives its own render/input loop here until its background
+    // retry loop marks AppState.Connection as Connected.
+    private static async Task RunLockScreenUntilConnectedAsync(LockScreen lockScreen, AppState appState)
+    {
+        await lockScreen.OnEnterAsync();
+
+        while (appState.Connection != ConnectionStatus.Connected)
+        {
+            await lockScreen.RenderAsync();
+
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(intercept: true);
+                await lockScreen.HandleKeyAsync(key);
+            }
+            else
+            {
+                await Task.Delay(150);
+            }
+        }
+
+        await lockScreen.OnExitAsync();
     }
 }

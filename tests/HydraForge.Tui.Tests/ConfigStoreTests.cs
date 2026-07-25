@@ -113,4 +113,45 @@ public class ConfigStoreTests : IDisposable
 
         Assert.Throws<System.Text.Json.JsonException>(() => _store.Load());
     }
+
+    // D-49: default ctor must resolve to the repo root's .hydraforge/, found by
+    // walking up from the test assembly's bin/ dir looking for HydraForge.slnx —
+    // not ~/.config or the raw bin/ output directory.
+    [Fact]
+    public void DefaultConstructor_ResolvesToRepoRootHydraforgeDirectory()
+    {
+        var repoRoot = FindRepoRootFromTestAssembly();
+        var expectedDir = Path.Combine(repoRoot, ".hydraforge");
+        var expectedPath = Path.Combine(expectedDir, "config.json");
+        var alreadyExisted = File.Exists(expectedPath);
+        var backup = alreadyExisted ? File.ReadAllText(expectedPath) : null;
+
+        try
+        {
+            var store = new ConfigStore();
+            store.Save(new TuiConfig { ServerUrl = "https://repo-root-check.test" });
+
+            Assert.True(File.Exists(expectedPath));
+            Assert.Equal("https://repo-root-check.test", store.Load().ServerUrl);
+        }
+        finally
+        {
+            if (alreadyExisted)
+                File.WriteAllText(expectedPath, backup!);
+            else
+                File.Delete(expectedPath);
+        }
+    }
+
+    private static string FindRepoRootFromTestAssembly()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "HydraForge.slnx")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        throw new InvalidOperationException("HydraForge.slnx not found above test assembly — repo layout assumption broken.");
+    }
 }

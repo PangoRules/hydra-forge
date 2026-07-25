@@ -519,12 +519,12 @@
 > ✅ **Pre-phase decisions resolved — see D-48:**
 > 1. **.NET API client strategy** — NSwag-generated typed C# client from `/openapi/v1.json`, regenerated as a build step. Mirrors the Web UI's openapi-typescript + `routes.ts` convention (CLAUDE.md "Web UI API routes").
 > 2. **SignalR .NET client wiring** — `Microsoft.AspNetCore.SignalR.Client` package for `BoardHub`/`PresenceHub` consumption. Connection lifecycle ownership and reconnect/backoff placement (relative to the "Connection handling" checklist item below) still decided at implementation time — D-48 settles the package choice, not the lifecycle design.
-> 3. **JWT config storage location/format** — plain file, `~/.config/hydraforge/config.json` (`%APPDATA%\hydraforge\config.json` on Windows), owner-only permissions (`0600` on POSIX). No OS keychain for MVP — see D-48 rationale (remote/SSH usage is the primary TUI persona, where a desktop keychain is often unavailable anyway).
+> 3. **JWT config storage location/format** — plain file, `.hydraforge/config.json` at the repo root (amended by D-49 — originally specified as `~/.config/hydraforge/`, moved project-relative per explicit preference), owner-only permissions (`0600` on POSIX). No OS keychain for MVP — see D-48 rationale (remote/SSH usage is the primary TUI persona, where a desktop keychain is often unavailable anyway).
 >
 > `src/HydraForge.Tui/Program.cs` is currently the unmodified `dotnet new console` template — no Spectre.Console package reference yet. Phase 4 starts from zero scaffolding.
 
 - [ ] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
-- [ ] Auth: login prompt on startup, JWT stored in user config
+- [x] Auth: login prompt on startup, JWT stored in user config
 - [ ] Project list view + create project
 - [ ] Board view: ASCII/rich columns + cards, real-time updates via SignalR
 - [ ] Card detail view: all fields editable (description opens in `$EDITOR`)

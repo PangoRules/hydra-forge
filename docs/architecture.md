@@ -153,7 +153,7 @@ TUI / Web UI
 ### TUI Connectivity Behavior
 
 - **Online:** Normal operation. JWT auth on startup, stored in user config.
-- **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff.
+- **Connection lost:** Immediate lock screen — `⚠ Server unreachable. Retrying... (correlationId: ...)` with exponential backoff `[5s, 10s, 30s, 60s]`. Uses `LockScreen` and `ConnectionManager` services.
 - **Reconnected:** Auto-resumes. Re-fetches board state. No manual refresh required.
 
 ### SignalR Hubs
@@ -368,11 +368,10 @@ Failures in these services must never bring down the core board:
 
 ### 6.1. TUI Configuration Management
 
-The TUI manages user-specific settings and preferences in `~/.config/hydraforge/config.json`. This configuration is handled by the `ConfigStore` service, which provides:
+The TUI manages user-specific settings and preferences in `.hydraforge/config.json` at the repo root (D-49 — deliberately not the user's home directory). This configuration is handled by the `ConfigStore` service, which provides:
 
 - **Persistence:** Reads and writes settings to a JSON file with `0600` permissions (read/write for owner only).
-- **Schema Validation:** Ensures the configuration adheres to a defined schema, preventing invalid settings.
-- **Default Values:** Provides sensible defaults if the configuration file is missing or incomplete.
+- **Default Values:** Returns a default `TuiConfig` if the file is missing; malformed JSON throws rather than silently falling back, so a corrupted file surfaces as an error instead of a silent re-login.
 
 The `ConfigStore` is registered in `HydraForge.Tui`'s `Program.cs` and injected into services requiring access to user preferences.
 
