@@ -106,6 +106,7 @@ public class CardDetailScreen(
                 break;
         }
 
+        yield return "[s] Specs/Plans";
         yield return "[Esc] Back";
         yield return "[q] Quit";
         yield return "[?] Help";
@@ -358,6 +359,7 @@ public class CardDetailScreen(
                     _apiClientFactory, _appState, _errorCollector,
                     _projectId, _cardId,
                     mode == "Specs" ? "spec" : "plan");
+                _appState.PreviousScreen = this;
                 _appState.CurrentScreen = specScreen;
                 await specScreen.OnEnterAsync();
                 await specScreen.RenderAsync();

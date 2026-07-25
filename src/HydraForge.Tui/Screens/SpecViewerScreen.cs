@@ -168,7 +168,7 @@ public class SpecViewerScreen : IScreen
                 await client.SpecsPUTAsync(_projectId, doc.Id, new UpdateSpecRequest
                 {
                     Title = doc.Title,
-                    Description = null,
+                    Description = doc.Description,
                     Content = newContent
                 });
             }
@@ -177,7 +177,7 @@ public class SpecViewerScreen : IScreen
                 await client.PlansPUTAsync(_projectId, doc.Id, new UpdatePlanRequest
                 {
                     Title = doc.Title,
-                    Description = null,
+                    Description = doc.Description,
                     Content = newContent
                 });
             }
@@ -267,14 +267,14 @@ public class SpecViewerScreen : IScreen
             {
                 var list = await client.CardsGET2Async(_projectId, _cardId);
                 _documents = list.Specs.Select(s => new DocumentItem(
-                    s.Id, s.Title, s.Content, s.Version, s.UpdatedAt.DateTime, s.DocType.ToString(), null
+                    s.Id, s.Title, s.Content, s.Version, s.UpdatedAt.DateTime, s.DocType.ToString(), null, s.Description
                 )).ToList();
             }
             else
             {
                 var list = await client.CardsGETAsync(_projectId, _cardId);
                 _documents = list.Plans.Select(p => new DocumentItem(
-                    p.Id, p.Title, p.Content, p.Version, p.UpdatedAt.DateTime, null, p.Status.ToString()
+                    p.Id, p.Title, p.Content, p.Version, p.UpdatedAt.DateTime, null, p.Status.ToString(), p.Description
                 )).ToList();
             }
         }
@@ -298,6 +298,6 @@ public class SpecViewerScreen : IScreen
 
     private record DocumentItem(
         Guid Id, string Title, string Content, int Version,
-        DateTime UpdatedAt, string? DocType, string? Status
+        DateTime UpdatedAt, string? DocType, string? Status, string? Description
     );
 }
