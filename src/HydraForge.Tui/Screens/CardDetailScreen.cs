@@ -312,6 +312,14 @@ public class CardDetailScreen : IScreen
             case ConsoleKey.S:
                 break;
 
+            case ConsoleKey.D:
+                var depPanel = new DependencyPanel(
+                    _apiClientFactory, _appState, _errorCollector,
+                    _projectId, _cardId);
+                _appState.CurrentScreen = depPanel;
+                await depPanel.RenderAsync();
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)

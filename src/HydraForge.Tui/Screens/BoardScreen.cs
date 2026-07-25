@@ -219,7 +219,19 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.D:
-                // Dependency panel — Task 11
+                if (_columns.Count > 0)
+                {
+                    var col = _columns[_selectedColumn];
+                    if (_selectedCard < col.Cards.Count)
+                    {
+                        var card = col.Cards[_selectedCard];
+                        var depPanel = new DependencyPanel(
+                            _apiClientFactory, _appState, _errorCollector,
+                            _projectId, card.Id);
+                        _appState.CurrentScreen = depPanel;
+                        await depPanel.RenderAsync();
+                    }
+                }
                 break;
 
             case ConsoleKey.Delete:
