@@ -13,6 +13,8 @@ namespace HydraForge.Server.Controllers.Projects;
 public class CardCommentsController(CommentService commentService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(CommentListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
@@ -38,6 +40,8 @@ public class CardCommentsController(CommentService commentService) : ControllerB
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(CommentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(
         Guid projectId,
         Guid cardId,
@@ -67,6 +71,8 @@ public class CardCommentsController(CommentService commentService) : ControllerB
     }
 
     [HttpPut("{commentId:guid}")]
+    [ProducesResponseType(typeof(CommentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid cardId,
@@ -97,6 +103,8 @@ public class CardCommentsController(CommentService commentService) : ControllerB
     }
 
     [HttpDelete("{commentId:guid}")]
+    [ProducesResponseType(typeof(CommentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Archive(Guid projectId, Guid cardId, Guid commentId)
     {
         var userId = User.GetRequiredUserId();

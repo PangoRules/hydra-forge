@@ -15,6 +15,7 @@ public class BoardScreen : IScreen
     private readonly ConnectionManager _connectionManager;
     private readonly BoardRenderer _renderer = new();
     private SignalRConnectionManager? _signalR;
+    private readonly SemaphoreSlim _renderLock = new(1, 1);
 
     private List<BoardRenderer.ColumnData> _columns = new();
     private int _selectedColumn;
@@ -77,20 +78,32 @@ public class BoardScreen : IScreen
 
     public async Task RenderAsync()
     {
-        AnsiConsole.Clear();
-
-        var totalCards = _columns.Sum(c => c.Cards.Count);
-        var layout = _renderer.BuildLayout(
-            _columns, _selectedColumn, _selectedCard, _projectName, totalCards,
-            _appState.Connection, _appState.OnlineCount, _errorCollector.Count);
-
-        AnsiConsole.Write(layout);
-
-        KeyHintBar.Render(new[]
+        // Board mutations, presence updates, and key input can all trigger a render
+        // concurrently from independent SignalR callback threads — without this lock,
+        // overlapping Clear()+Write() calls interleave and leave stacked/duplicate
+        // frames (e.g. the key hint bar printing multiple times).
+        await _renderLock.WaitAsync();
+        try
         {
-            "[h/l] Columns", "[j/k] Cards", "[Enter] Detail", "[n] New",
-            "[m] Move", "[?] Help", "[Esc] Back", "[q] Quit",
-        });
+            AnsiConsole.Clear();
+
+            var totalCards = _columns.Sum(c => c.Cards.Count);
+            var layout = _renderer.BuildLayout(
+                _columns, _selectedColumn, _selectedCard, _projectName, totalCards,
+                _appState.Connection, _appState.OnlineCount, _errorCollector.Count);
+
+            AnsiConsole.Write(layout);
+
+            KeyHintBar.Render(new[]
+            {
+                "[h/l] Columns", "[j/k] Cards", "[Enter] Detail", "[n] New",
+                "[m] Move", "[?] Help", "[Esc] Back", "[q] Quit",
+            });
+        }
+        finally
+        {
+            _renderLock.Release();
+        }
     }
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
@@ -156,6 +169,7 @@ public class BoardScreen : IScreen
                 break;
 
             case ConsoleKey.Escape:
+                await OnExitAsync();
                 var projectListScreen = new ProjectListScreen(
                     _apiClientFactory, _appState, _errorCollector, _connectionManager);
                 _appState.CurrentScreen = projectListScreen;
@@ -214,7 +228,7 @@ public class BoardScreen : IScreen
                             c.Id,
                             c.CardNumber,
                             c.Title,
-                            c.Type.ToString(), // Convert enum to string
+                            CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
                             false, // Blocked indicator — Task 12
                             c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList() ?? new(),
                             c.Version
@@ -241,8 +255,12 @@ public class BoardScreen : IScreen
 
         var card = col.Cards[_selectedCard];
         _appState.SelectedCardId = card.Id;
-        // Card detail screen wired in Task 9
-        AnsiConsole.MarkupLine($"[green]Opening card #{card.CardNumber}...[/]");
+
+        await OnExitAsync();
+        var detailScreen = new CardDetailScreen(_apiClientFactory, _appState, _errorCollector, _connectionManager);
+        _appState.CurrentScreen = detailScreen;
+        await detailScreen.OnEnterAsync();
+        await detailScreen.RenderAsync();
     }
 
     private async Task CreateCardAsync()
