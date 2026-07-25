@@ -18,6 +18,7 @@ public class CardDetailScreen(
     private readonly AppState _appState = appState;
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly ConnectionManager _connectionManager = connectionManager;
+    private HydraForgeApiClient Client => _apiClientFactory.GetClient();
     private readonly EditorLauncher _editorLauncher = new();
 
     private CardResponse? _card;
@@ -521,8 +522,7 @@ public class CardDetailScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var members = (await client.MembersAllAsync(_projectId)).ToList();
+            var members = (await Client.MembersAllAsync(_projectId)).ToList();
             if (members.Count == 0)
             {
                 AnsiConsole.MarkupLine("[grey]No project members to assign.[/]");
@@ -550,8 +550,8 @@ public class CardDetailScreen(
             var member = members[pickedIndex];
 
             var updated = assignedIds.Contains(member.UserId)
-                ? await client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
-                : await client.AssigneesPOSTAsync(
+                ? await Client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
+                : await Client.AssigneesPOSTAsync(
                     _projectId,
                     _cardId,
                     new AssignCardRequest { AssigneeUserId = member.UserId }
@@ -578,8 +578,7 @@ public class CardDetailScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var updated = await client.CardsPUTAsync(
+            var updated = await Client.CardsPUTAsync(
                 _projectId,
                 _cardId,
                 new UpdateCardRequest
@@ -615,8 +614,7 @@ public class CardDetailScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.ToggleAsync(_projectId, _cardId, item.Id);
+            await Client.ToggleAsync(_projectId, _cardId, item.Id);
             await LoadChecklistAsync();
             await RenderAsync();
         }
@@ -644,8 +642,7 @@ public class CardDetailScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.CardChecklistPOSTAsync(
+            await Client.CardChecklistPOSTAsync(
                 _projectId,
                 _cardId,
                 new CreateChecklistItemRequest { Text = text }
@@ -678,8 +675,7 @@ public class CardDetailScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.CardCommentsPOSTAsync(
+            await Client.CardCommentsPOSTAsync(
                 _projectId,
                 _cardId,
                 new CreateCommentRequest { Content = content }
@@ -703,8 +699,7 @@ public class CardDetailScreen(
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            _card = await client.CardsGET2Async(_projectId, _cardId.ToString());
+            _card = await Client.CardsGET2Async(_projectId, _cardId.ToString());
 
             await LoadChecklistAsync();
             await LoadCommentsAsync();
@@ -724,8 +719,7 @@ public class CardDetailScreen(
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardChecklistGETAsync(_projectId, _cardId);
+            var list = await Client.CardChecklistGETAsync(_projectId, _cardId);
             _checklist = list?.Items?.ToList() ?? [];
             _checklistIndex = Math.Clamp(_checklistIndex, 0, Math.Max(0, _checklist.Count - 1));
         }
@@ -745,8 +739,7 @@ public class CardDetailScreen(
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardCommentsGETAsync(_projectId, _cardId);
+            var list = await Client.CardCommentsGETAsync(_projectId, _cardId);
             _comments = list?.Comments?.ToList() ?? [];
         }
         catch (ApiException ex)
@@ -765,8 +758,7 @@ public class CardDetailScreen(
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardRelationshipsGETAsync(_projectId, _cardId);
+            var list = await Client.CardRelationshipsGETAsync(_projectId, _cardId);
             _relationships = list?.Relationships?.ToList() ?? [];
         }
         catch (ApiException ex)

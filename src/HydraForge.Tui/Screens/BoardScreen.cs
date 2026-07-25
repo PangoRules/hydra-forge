@@ -18,6 +18,7 @@ public class BoardScreen(
     private readonly AppState _appState = appState;
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly ConnectionManager _connectionManager = connectionManager;
+    private HydraForgeApiClient Client => _apiClientFactory.GetClient();
     private readonly BoardRenderer _renderer = new();
     private SignalRConnectionManager? _signalR;
     private readonly SemaphoreSlim _renderLock = new(1, 1);
@@ -324,14 +325,13 @@ public class BoardScreen(
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
 
             // Load project
-            var project = await client.ProjectsGET2Async(_projectId);
+            var project = await Client.ProjectsGET2Async(_projectId);
             _projectName = project.Name;
 
             // Load cards
-            var cardList = await client.CardsGETAsync(_projectId);
+            var cardList = await Client.CardsGETAsync(_projectId);
             var cards = cardList?.Cards ?? [];
 
             // Build column data
@@ -419,9 +419,8 @@ public class BoardScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
-            await client.CardsPOSTAsync(
+            await Client.CardsPOSTAsync(
                 _projectId,
                 new CreateCardRequest
                 {
@@ -474,9 +473,8 @@ public class BoardScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
-            await client.MoveAsync(
+            await Client.MoveAsync(
                 _projectId,
                 card.Id,
                 new MoveCardRequest
@@ -522,9 +520,8 @@ public class BoardScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
-            await client.ArchiveAsync(
+            await Client.ArchiveAsync(
                 _projectId,
                 card.Id,
                 new ArchiveCardRequest { Version = card.Version }
@@ -554,7 +551,6 @@ public class BoardScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
             var newTitle = AnsiConsole.Prompt(
                 new TextPrompt<string>($"New title (current: {card.Title}):")
@@ -566,7 +562,7 @@ public class BoardScreen(
                     )
             );
 
-            await client.CardsPUTAsync(
+            await Client.CardsPUTAsync(
                 _projectId,
                 card.Id,
                 new UpdateCardRequest
@@ -628,9 +624,8 @@ public class BoardScreen(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
-            await client.MoveAsync(
+            await Client.MoveAsync(
                 _projectId,
                 card.Id,
                 new MoveCardRequest

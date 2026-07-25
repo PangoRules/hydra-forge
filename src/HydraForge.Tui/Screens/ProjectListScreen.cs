@@ -40,6 +40,8 @@ public class ProjectListScreen : IScreen
         _connectionManager = connectionManager;
     }
 
+    private HydraForgeApiClient Client => _apiClientFactory.GetClient();
+
     public async Task OnEnterAsync()
     {
         await LoadProjectsAsync();
@@ -310,10 +312,9 @@ public class ProjectListScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
 
             // NSwag generates ProjectsGETAsync with optional parameters
-            var page = await client.ProjectsGETAsync(
+            var page = await Client.ProjectsGETAsync(
                 includeArchived: _showArchived,
                 search: string.IsNullOrEmpty(_searchFilter) ? null : _searchFilter,
                 sortBy: _sortField,
@@ -369,9 +370,8 @@ public class ProjectListScreen : IScreen
 
         try
         {
-            var client = _apiClientFactory.GetClient();
 
-            await client.ProjectsPOSTAsync(new HydraForge.Tui.Generated.CreateProjectRequest
+            await Client.ProjectsPOSTAsync(new HydraForge.Tui.Generated.CreateProjectRequest
             {
                 Name = name,
                 Description = description,

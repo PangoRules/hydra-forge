@@ -19,6 +19,7 @@ public class DependencyPanel(
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly Guid _projectId = projectId;
     private readonly Guid _sourceCardId = sourceCardId;
+    private HydraForgeApiClient Client => _apiClientFactory.GetClient();
 
     private string _searchText = "";
     private string _selectedType = "BlockedBy";
@@ -220,8 +221,7 @@ public class DependencyPanel(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
-            var list = await client.CardsGETAsync(_projectId, search: _searchText);
+            var list = await Client.CardsGETAsync(_projectId, search: _searchText);
             _searchResults =
                 list?.Cards.Where(c => c.Id != _sourceCardId)
                     .Select(c => new CardSearchResult(c.Id, c.CardNumber, c.Title))
@@ -253,10 +253,9 @@ public class DependencyPanel(
 
         try
         {
-            var client = _apiClientFactory.GetClient();
             var relType = Enum.Parse<RelationshipType>(_selectedType);
 
-            await client.CardRelationshipsPOSTAsync(
+            await Client.CardRelationshipsPOSTAsync(
                 _projectId,
                 _sourceCardId,
                 new CreateRelationshipRequest { TargetCardId = targetCard.Id, Type = relType }
