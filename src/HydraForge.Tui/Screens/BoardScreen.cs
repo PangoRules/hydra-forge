@@ -214,7 +214,7 @@ public class BoardScreen : IScreen
                             c.Id,
                             c.CardNumber,
                             c.Title,
-                            c.Type.ToString(), // Convert enum to string
+                            CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
                             false, // Blocked indicator — Task 12
                             c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList() ?? new(),
                             c.Version
@@ -241,8 +241,11 @@ public class BoardScreen : IScreen
 
         var card = col.Cards[_selectedCard];
         _appState.SelectedCardId = card.Id;
-        // Card detail screen wired in Task 9
-        AnsiConsole.MarkupLine($"[green]Opening card #{card.CardNumber}...[/]");
+
+        var detailScreen = new CardDetailScreen(_apiClientFactory, _appState, _errorCollector);
+        _appState.CurrentScreen = detailScreen;
+        await detailScreen.OnEnterAsync();
+        await detailScreen.RenderAsync();
     }
 
     private async Task CreateCardAsync()
