@@ -49,7 +49,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+    options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>());
 builder
     .Services.AddControllers()
     .AddJsonOptions(options =>

@@ -87,14 +87,36 @@ public static class Program
             }
         }
 
-        // Create authenticated client for subsequent API calls
-        var client = apiClientFactory.CreateClient();
+        // Initialize API client with valid token
+        apiClientFactory.CreateClient();
 
-        // Placeholder: will wire up screens in later tasks
-        AnsiConsole.MarkupLine("Authentication successful. Press any key to continue...");
-        Console.ReadKey(true);
+        // Show project list
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory, appState, errorCollector, connectionManager);
+        appState.CurrentScreen = projectListScreen;
+        await projectListScreen.OnEnterAsync();
+        await projectListScreen.RenderAsync();
 
+        // Main input loop
+        while (true)
+        {
+            var key = Console.ReadKey(true);
+
+            // Global shortcuts
+            if (key.Key == ConsoleKey.Q && (key.Modifiers & ConsoleModifiers.Control) != 0)
+            {
+                Environment.Exit(0);
+            }
+
+            if (appState.CurrentScreen != null)
+            {
+                await appState.CurrentScreen.HandleKeyAsync(key);
+            }
+        }
+
+#pragma warning disable CS0162
         return 0;
+#pragma warning restore CS0162
     }
 
     // No generic IScreen runner exists yet (board loop lands in a later task),

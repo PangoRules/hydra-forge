@@ -525,7 +525,7 @@
 
 - [ ] Connection handling: lock screen when server unreachable (`⚠ Server unreachable. Retrying...`), auto-reconnect
 - [x] Auth: login prompt on startup, JWT stored in user config
-- [ ] Project list view + create project
+- [x] Project list view + create project
 - [ ] Board view: ASCII/rich columns + cards, real-time updates via SignalR
 - [ ] Card detail view: all fields editable (description opens in `$EDITOR`)
 - [ ] Create / edit / move cards via keyboard (`h/j/k/l` navigation, `n` new, `m` move)
