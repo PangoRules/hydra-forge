@@ -43,7 +43,9 @@ public class BoardScreen : IScreen
         await LoadBoardAsync();
 
         // Connect SignalR — real-time sync degrades gracefully if the server is unreachable
-        _signalR = new SignalRConnectionManager(_appState, _errorCollector);
+        // Guard against re-connection when restored from modal (OnExitAsync nulls _signalR first)
+        if (_signalR == null)
+            _signalR = new SignalRConnectionManager(_appState, _errorCollector);
         _signalR.OnBoardEvent += HandleBoardEvent;
         _signalR.OnCurrentUsers += async users =>
         {
@@ -263,7 +265,7 @@ public class BoardScreen : IScreen
         ("m", "Move card to column"),
         ("r", "Reorder mode (j/k to place, Enter to confirm, Esc to cancel)"),
         ("Del", "Archive card"),
-        ("d", "Dependency panel (coming soon)"),
+        ("d", "Add dependency"),
         ("Esc", "Back to project list"),
         ("q", "Quit"),
         ("?", "This help"),

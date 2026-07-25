@@ -152,7 +152,6 @@ public class DependencyPanel : IScreen
                 break;
 
             case ConsoleKey.Escape:
-                _appState.PreviousScreen = null;
                 _appState.CurrentScreen = null;
                 break;
 
@@ -261,7 +260,6 @@ public class DependencyPanel : IScreen
             });
 
             AnsiConsole.MarkupLine($"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
-            _appState.PreviousScreen = null;
             _appState.CurrentScreen = null;
         }
         catch (ApiException ex)
