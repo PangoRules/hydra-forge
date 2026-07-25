@@ -19,22 +19,14 @@ public static class CardTypeMapper
 
     public static CardType FromDisplayString(string displayString)
     {
-        try
+        return displayString.ToUpperInvariant() switch
         {
-            return displayString.ToUpperInvariant() switch
-            {
-                "TASK" => CardType.Task,
-                "ISSUE" => CardType.Issue,
-                "IDEA" => CardType.Idea,
-                "GOAL" => CardType.Goal,
-                _ => throw new ArgumentException($"Unknown card type: {displayString}", nameof(displayString))
-            };
-        }
-        catch (ArgumentException)
-        {
-            // Fallback to Task if mapping fails
-            return CardType.Task;
-        }
+            "TASK" => CardType.Task,
+            "ISSUE" => CardType.Issue,
+            "IDEA" => CardType.Idea,
+            "GOAL" => CardType.Goal,
+            _ => throw new ArgumentException($"Unknown card type: {displayString}", nameof(displayString))
+        };
     }
 
     public static string ToShortDisplayString(CardType cardType)
