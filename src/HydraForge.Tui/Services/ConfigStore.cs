@@ -15,11 +15,16 @@ public class ConfigStore
     private readonly string _configDir;
     private readonly string _configPath;
 
-    public ConfigStore() : this(Path.Combine(
-        AppContext.BaseDirectory,
-        "..", "..", "..",
-        ".hydraforge"))
+    public ConfigStore() : this(DefaultConfigDir())
     {
+    }
+
+    private static string DefaultConfigDir()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "hydraforge");
+
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "hydraforge");
     }
 
     // Internal ctor lets tests point at a throwaway directory instead of the real ~/.config/hydraforge.
