@@ -84,9 +84,13 @@ public class BoardRenderer
             }).ToList();
 
 var content = new Rows(new List<IRenderable>(cardPanels));
+            var wipText = col.WipLimit.HasValue
+                ? $" ({col.Cards.Count}/{col.WipLimit})"
+                : $" ({col.Cards.Count})";
+
             return new Panel(content)
             {
-                Header = new PanelHeader($" {col.Name} "),
+                Header = new PanelHeader($" {Markup.Escape(col.Name)}{wipText} "),
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(foreground: color),
                 Expand = true,
