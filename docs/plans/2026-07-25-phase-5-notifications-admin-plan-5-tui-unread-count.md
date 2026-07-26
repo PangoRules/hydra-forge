@@ -59,7 +59,7 @@ private async Task FetchUnreadCountAsync()
 {
     try
     {
-        var response = await Client.NotificationsUnreadCountAsync();
+        var response = await Client.UnreadCountAsync();
         _unreadCount = response.Count;
         _appState.UnreadNotifications = _unreadCount;
     }
@@ -87,10 +87,11 @@ var layout = _renderer.BuildLayout(
 );
 ```
 
-Call `FetchUnreadCountAsync()` in `OnEnterAsync()` after loading board:
+Call `FetchUnreadCountAsync()` in `OnEnterAsync()` after loading board and connecting SignalR:
 
 ```csharp
 await LoadBoardAsync();
+await _signalR.ConnectAsync(projectId);
 await FetchUnreadCountAsync();
 ```
 
@@ -116,10 +117,14 @@ _notificationConnection = new HubConnectionBuilder()
     .WithAutomaticReconnect()
     .Build();
 
-_notificationConnection.On<JsonElement>("NotificationReceived", _ =>
+        _notificationConnection.On<JsonElement>("OnNotificationReceived", envelope =>
 {
-    _appState.UnreadNotifications++;
-    OnUnreadCountChanged?.Invoke(_appState.UnreadNotifications);
+    var notification = JsonSerializer.Deserialize<NotificationReceivedEvent>(envelope.GetRawText(), JsonOptions);
+    if (notification != null && !notification.IsRead)
+    {
+        var newCount = _appState.IncrementUnreadNotifications();
+        OnUnreadCountChanged?.Invoke(newCount);
+    }
 });
 
 await _notificationConnection.StartAsync();
@@ -164,7 +169,7 @@ private async Task ShowNotificationsAsync()
 {
     try
     {
-        var notifications = await Client.NotificationsGETAsync(skip: 0, take: 50);
+        var notifications = await Client.NotificationsAsync(skip: 0, take: 50);
         if (notifications == null || notifications.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]No notifications.[/]");
@@ -180,18 +185,18 @@ private async Task ShowNotificationsAsync()
             return $"{prefix}[bold]{Markup.Escape(n.Title)}[/] [grey]{time}[/]";
         }).ToList();
 
+        AnsiConsole.Write(new Markup("[bold]Notifications[/]\n"));
         var selected = await ListPrompt.Show("Notifications", choices, renderBackdrop: RenderAsync);
         if (selected != null)
         {
-            var idx = choices.IndexOf(selected);
-            if (idx >= 0 && idx < notifications.Count)
+            int index = choices.IndexOf(selected);
+            if (index >= 0 && index < notifications.Count)
             {
-                var notif = notifications[idx];
+                var notif = notifications[index];
                 if (!notif.IsRead)
                 {
-                    await Client.NotificationsPUTAsync(notif.Id);
-                    _unreadCount = Math.Max(0, _unreadCount - 1);
-                    _appState.UnreadNotifications = _unreadCount;
+                    await Client.ReadAsync(notif.Id);
+                    await FetchUnreadCountAsync();
                 }
             }
         }
