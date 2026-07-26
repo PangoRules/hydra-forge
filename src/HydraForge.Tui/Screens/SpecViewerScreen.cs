@@ -448,18 +448,19 @@ public class SpecViewerScreen : IScreen
         var current = Enum.Parse<PlanStatus>(doc.Status);
         var choices = Enum.GetValues<PlanStatus>().Where(s => s != current).Select(s => s.ToString()).ToList();
 
-        var choice = await ListPrompt.Show("New status:", choices, renderBackdrop: RenderAsync);
-        if (choice == null) return;
+        var idx = await ListPrompt.Show("New status:", choices, renderBackdrop: RenderAsync);
+        if (!idx.HasValue) return;
 
+        var newStatus = choices[idx.Value];
         try
         {
             var client = _apiClientFactory.GetClient();
             await client.StatusAsync(_projectId, doc.Id, new SetPlanStatusRequest
             {
-                Status = Enum.Parse<PlanStatus>(choice)
+                Status = Enum.Parse<PlanStatus>(newStatus)
             });
 
-            AnsiConsole.MarkupLine($"[green]Status set to {choice}.[/]");
+            AnsiConsole.MarkupLine($"[green]Status set to {newStatus}.[/]");
             await LoadDocumentsAsync();
             await RenderAsync();
         }
@@ -485,10 +486,10 @@ public class SpecViewerScreen : IScreen
         }
 
         var choices = _versions.Select(v => $"v{v.Version} — {v.CreatedAt:yyyy-MM-dd HH:mm}").ToList();
-        var choice = await ListPrompt.Show("Restore version:", choices, renderBackdrop: RenderAsync);
-        if (choice == null) return;
+        var idx = await ListPrompt.Show("Restore version:", choices, renderBackdrop: RenderAsync);
+        if (!idx.HasValue) return;
 
-        var version = int.Parse(choice[1..choice.IndexOf(' ')]);
+        var version = _versions[idx.Value].Version;
 
         try
         {

@@ -36,7 +36,8 @@ public class BoardRenderer
         ConnectionStatus connection = ConnectionStatus.Disconnected,
         int onlineCount = 0,
         int errorCount = 0,
-        Guid? reorderCardId = null)
+        Guid? reorderCardId = null,
+        int unreadCount = 0)
     {
         var layout = new Layout("Root")
             .SplitRows(
@@ -152,7 +153,7 @@ public class BoardRenderer
 
         layout["Status"].Update(
             new Panel(
-                new Markup($"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {errorCount} errors[/]")
+                new Markup($"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {unreadCount} unread    |    {errorCount} errors[/]")
             ).Expand()
         );
 
