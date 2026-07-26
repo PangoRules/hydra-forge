@@ -120,5 +120,12 @@ export const ApiRoutes = {
 
   ProjectSnapshot: {
     get: (projectId: string) => `/api/projects/${projectId}/ProjectSnapshot`
+  },
+
+  Notifications: {
+    list: (skip = 0, take = 20) => `/api/Notifications?skip=${skip}&take=${take}`,
+    unreadCount: () => '/api/Notifications/unread-count',
+    markRead: (id: string) => `/api/Notifications/${id}/read`,
+    markAllRead: () => '/api/Notifications/read-all'
   }
 } as const

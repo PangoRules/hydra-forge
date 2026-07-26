@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
+import NotificationPanel from '~/components/notifications/NotificationPanel.vue'
 
 const { logout, isAuthenticated, checkAuth } = useAuth()
+const { fetchUnreadCount } = useNotifications()
 const {
   isExpired,
   isExpiringSoon,
@@ -18,7 +20,12 @@ const {
 // (which calls fetchBoard) fires right after the layout's onMounted.
 checkAuth()
 
-onMounted(() => startSessionManager())
+onMounted(() => {
+  startSessionManager()
+  if (isAuthenticated) {
+    fetchUnreadCount()
+  }
+})
 onUnmounted(() => stopSessionManager())
 
 const showSessionModal = computed(() => isExpiringSoon.value || isExpired.value)
@@ -48,6 +55,9 @@ function handleSessionLogout() {
       </template>
 
       <template #right>
+        <ClientOnly>
+          <NotificationPanel v-if="isAuthenticated" />
+        </ClientOnly>
         <UColorModeButton />
         <ClientOnly>
           <UButton
