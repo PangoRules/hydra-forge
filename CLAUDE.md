@@ -67,6 +67,13 @@ docker compose up -d postgres minio
 
 # MinIO console: http://localhost:9001 (user: minioadmin / pass: minioadmin)
 
+# Docker `server`/`web` services COPY source at image build time (no volume mount).
+# A code change is invisible in the running container until rebuilt:
+docker compose up -d --build server web
+# `pnpm dev` (Web UI) and `dotnet run` (Server) hot-reload as normal — this only
+# bites the Docker Compose path. If a feature "isn't showing up" in Docker but
+# the code is clearly there, rebuild before debugging further.
+
 # File storage toggle (Local ↔ S3):
 #   Set FILE_STORAGE_PROVIDER=S3 in .env to use MinIO instead of local FS
 ```
@@ -198,13 +205,13 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 5: Multi-User, Notifications & Admin (not started)
+## Current Phase — Phase 5: Multi-User, Notifications & Admin (in progress)
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
 Phase 4 (TUI) is **complete** — see `docs/functional-spec.md` §25 Phase 4 checklist (all items checked), `docs/archive/specs/2026-07-24-phase-4-tui-design.md` for the full task history, and `docs/archive/manual-validation/2026-07-24-phase-4-tui-matrix.md` for the consolidated validation matrix. All 17 tasks shipped: Spectre.Console scaffolding + NSwag codegen, `ConfigStore` (JWT at `.hydraforge/config.json` in the repo root, 0600 — see D-49), `ApiClientFactory` (NSwag client + token refresh), login screen + startup auth flow, connection handling (`LockScreen` + `ConnectionManager`, auto-retry backoff `[5s,10s,30s,60s]`), project list view (search/sort/role-filter/pagination), board view (column/card layout + keyboard nav), SignalR integration (BoardHub + PresenceHub), card detail view (sections, `$EDITOR`, checklist, comments), create/edit/move cards via keyboard, dependency panel, blocked card indicator, spec/plan viewer/editor, comments, checklists, keyboard shortcut reference (`?` — `Rendering/HelpOverlay.cs`, per-screen `ShowHelp()` binding tables), and status bar (connection/online/error counts, `ErrorPanelScreen` on `X`). Unread-notification count in the status bar is deferred to Phase 5 — no notification API surface exists in the generated client until ntfy integration lands. Infra pre-phase decisions (API client strategy, SignalR client wiring, JWT config storage) are resolved — see D-48/D-49 in `docs/DECISIONS.md`.
 
-Phase 5 (Multi-User, Notifications & Admin) has **not started** — see `docs/functional-spec.md` §25 Phase 5 for the checklist: ntfy integration, notification rules, in-app bell icon + TUI status-bar unread count, admin dashboard, audit log viewer.
+Phase 5 (Multi-User, Notifications & Admin) is **in progress** — see `docs/functional-spec.md` §25 Phase 5 for the checklist: ntfy integration, notification rules, in-app bell icon + TUI status-bar unread count, admin dashboard, audit log viewer. Task plans live under `docs/plans/2026-07-25-phase-5-notifications-admin-plan-*.md` (13 plans). Shipped so far: Plan 1 (JWT role claim + `Roles.Admin`), Plan 2 (notification domain/app/infra — `NotificationService`, `EfNotificationRepository`), Plan 3 (`NotificationHub` + SignalR push), Plan 4 (Web UI bell icon + panel + `NotificationsController` — manual validation partial pass, see `docs/manual-validation/2026-07-25-phase-5-notifications-admin-plan-4-web-ui-bell-matrix.md`). Notification triggers (card move/assign/comment/@mention/dependency-resolved → `NotifyAsync`) aren't wired to any domain event yet — that's Plan 7; until then notifications only exist if inserted directly (SQL or a future seeder). Next up: Plan 5 (TUI unread count in status bar + `U` key notifications list, `docs/plans/2026-07-25-phase-5-notifications-admin-plan-5-tui-unread-count.md`).
 
 ### Nuxt UI v4 patterns
 

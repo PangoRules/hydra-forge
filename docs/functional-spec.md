@@ -543,7 +543,8 @@
 
 - [ ] ntfy integration: per-user topic `hydraforge-{userId}`, configurable ntfy server URL
 - [ ] Notification rules: card move → assignees, card assigned → user, comment → watchers, @mention → user, dependency resolved → unblocked assignees, project archived/edited → all members, PR created → all members
-- [ ] In-app bell icon (Web UI) + unread count in TUI status bar
+- [x] In-app bell icon (Web UI) — see `docs/manual-validation/2026-07-25-phase-5-notifications-admin-plan-4-web-ui-bell-matrix.md` (partial pass — happy path done, some edge cases/regressions still pending)
+- [ ] Unread count in TUI status bar
 - [ ] Admin dashboard: users list, all projects overview, system health
 - [ ] Admin: create user, disable user, reset password, assign admin role
 - [ ] Admin: system settings (ntfy URL, SearXNG URL, platform branding)
