@@ -99,7 +99,9 @@ public class ProjectListScreenTests
         var mockApiClient = new ProjectListTestApiClient();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
 
         // Act & Assert - RenderAsync should not throw
         await projectListScreen.RenderAsync();
@@ -116,7 +118,9 @@ public class ProjectListScreenTests
         var mockApiClient = new ProjectListTestApiClient();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
         
         // Load some test projects
         await projectListScreen.OnEnterAsync();
@@ -149,7 +153,9 @@ public class ProjectListScreenTests
         var mockApiClient = new ProjectListTestApiClient();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
         
         // Load some test projects
         await projectListScreen.OnEnterAsync();
@@ -178,12 +184,16 @@ public class ProjectListScreenTests
         var errorCollector = new ErrorCollector();
         var mockApiClient = new ProjectListTestApiClient { ThrowApiExceptionOnProjects = true };
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
 
         await projectListScreen.OnEnterAsync();
 
-        Assert.Equal(1, errorCollector.Count);
-        Assert.Contains("Failed to load projects", errorCollector.GetErrors()[0].Message);
+        // OnEnterAsync also attempts to connect NotificationHub, which fails against the
+        // fake server URL and adds its own (expected, non-fatal) error — assert on the
+        // project-load failure specifically rather than an exact total count.
+        Assert.Contains(errorCollector.GetErrors(), e => e.Message.Contains("Failed to load projects"));
     }
 
     [Fact]
@@ -196,7 +206,9 @@ public class ProjectListScreenTests
         errorCollector.Add("corr-1", "Simulated failure");
         var mockApiClient = new ProjectListTestApiClient();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
 
         var exception = await Record.ExceptionAsync(projectListScreen.RenderAsync);
 
@@ -214,7 +226,9 @@ public class ProjectListScreenTests
         errorCollector.Add("corr-2", "Second failure");
         var mockApiClient = new ProjectListTestApiClient();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
         await projectListScreen.OnEnterAsync();
 
         await projectListScreen.HandleKeyAsync(new ConsoleKeyInfo('x', ConsoleKey.X, false, false, false));
@@ -345,7 +359,9 @@ public class ProjectListScreenTests
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var screen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var screen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector), signalRConnectionManager, notificationCenter);
         return (screen, errorCollector);
     }
 }

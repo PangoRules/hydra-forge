@@ -35,6 +35,8 @@ public static class Program
         var errorCollector = new ErrorCollector();
         var apiClientFactory = new ApiClientFactory(configStore, appState, errorCollector);
         var connectionManager = new ConnectionManager(appState, apiClientFactory, errorCollector);
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
 
         // Gate startup on server reachability — show the lock screen and
         // auto-retry until the server answers, instead of letting the user
@@ -113,7 +115,9 @@ public static class Program
             apiClientFactory,
             appState,
             errorCollector,
-            connectionManager
+            connectionManager,
+            signalRConnectionManager,
+            notificationCenter
         );
         appState.CurrentScreen = projectListScreen;
         await projectListScreen.OnEnterAsync();

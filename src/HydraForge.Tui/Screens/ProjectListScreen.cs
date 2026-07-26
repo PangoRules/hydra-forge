@@ -12,6 +12,9 @@ public class ProjectListScreen : IScreen
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
     private readonly ConnectionManager _connectionManager;
+    private readonly SignalRConnectionManager _signalRConnectionManager;
+    private readonly NotificationCenter _notificationCenter;
+    private bool _signalRSubscribed;
 
     // Matches the Web UI's server-paginated project list convention
     // (docs/specs/2026-07-07-project-list-redesign-design.md): page size 20,
@@ -32,12 +35,16 @@ public class ProjectListScreen : IScreen
         ApiClientFactory apiClientFactory,
         AppState appState,
         ErrorCollector errorCollector,
-        ConnectionManager connectionManager)
+        ConnectionManager connectionManager,
+        SignalRConnectionManager signalRConnectionManager,
+        NotificationCenter notificationCenter)
     {
         _apiClientFactory = apiClientFactory;
         _appState = appState;
         _errorCollector = errorCollector;
         _connectionManager = connectionManager;
+        _signalRConnectionManager = signalRConnectionManager;
+        _notificationCenter = notificationCenter;
     }
 
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
@@ -45,9 +52,41 @@ public class ProjectListScreen : IScreen
     public async Task OnEnterAsync()
     {
         await LoadProjectsAsync();
+
+        // NotificationHub is user-scoped and connects once here, the first screen after
+        // login — idempotent, so re-entering the project list is a cheap no-op.
+        try
+        {
+            await _signalRConnectionManager.ConnectNotificationsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorCollector.Add("N/A", $"Notification connection failed: {ex.Message}");
+        }
+
+        if (!_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnUnreadCountChanged += HandleUnreadCountChanged;
+            _signalRSubscribed = true;
+        }
+
+        await _notificationCenter.FetchUnreadCountAsync();
     }
 
-    public Task OnExitAsync() => Task.CompletedTask;
+    public Task OnExitAsync()
+    {
+        if (_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnUnreadCountChanged -= HandleUnreadCountChanged;
+            _signalRSubscribed = false;
+        }
+        return Task.CompletedTask;
+    }
+
+    private async void HandleUnreadCountChanged(int count)
+    {
+        await RenderAsync();
+    }
 
     public async Task RenderAsync()
     {
@@ -112,13 +151,14 @@ public class ProjectListScreen : IScreen
         var currentPage = _skip / PageSize + 1;
         var rangeStart = _totalCount == 0 ? 0 : _skip + 1;
         var rangeEnd = Math.Min(_skip + _projects.Count, _totalCount);
-        AnsiConsole.MarkupLine($"[grey]Showing {rangeStart}-{rangeEnd} of {_totalCount} projects (page {currentPage}/{totalPages})[/]");
+        AnsiConsole.MarkupLine(
+            $"[grey]Showing {rangeStart}-{rangeEnd} of {_totalCount} projects (page {currentPage}/{totalPages})    |    {_appState.UnreadNotifications} unread[/]");
 
         var errors = _errorCollector.GetErrors();
         var hints = new List<string>
         {
-            "[Enter] Open", "[c] Create", "[/] Search", "[a] Archived", "[q] Quit",
-            "[s] Sort", "[Shift+S] Direction", "[r] Role filter", "[n]/[p] Page",
+            "[Enter] Open", "[c] Create", "[/] Search", "[a] Archived", "[u] Notifications",
+            "[q] Quit", "[s] Sort", "[Shift+S] Direction", "[r] Role filter", "[n]/[p] Page",
             "[?] Help",
         };
         if (errors.Count > 0)
@@ -193,7 +233,8 @@ public class ProjectListScreen : IScreen
 
                     await OnExitAsync();
                     var boardScreen = new BoardScreen(
-                        _apiClientFactory, _appState, _errorCollector, _connectionManager);
+                        _apiClientFactory, _appState, _errorCollector, _connectionManager,
+                        _signalRConnectionManager, _notificationCenter);
                     _appState.CurrentScreen = boardScreen;
                     await boardScreen.OnEnterAsync();
                     await boardScreen.RenderAsync();
@@ -278,6 +319,10 @@ public class ProjectListScreen : IScreen
                 await RenderAsync();
                 break;
 
+            case ConsoleKey.U:
+                await _notificationCenter.ShowNotificationsAsync(RenderAsync);
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)
@@ -303,6 +348,7 @@ public class ProjectListScreen : IScreen
         ("Shift+S", "Toggle sort direction"),
         ("r", "Cycle role filter"),
         ("n / p", "Next / prev page"),
+        ("u", "Notifications"),
         ("x", "Dismiss errors"),
         ("q", "Quit"),
         ("?", "This help"),

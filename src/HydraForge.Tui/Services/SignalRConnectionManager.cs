@@ -12,6 +12,8 @@ public class SignalRConnectionManager : IAsyncDisposable
 
     private HubConnection? _boardConnection;
     private HubConnection? _presenceConnection;
+    private HubConnection? _notificationConnection;
+    private Guid _currentProjectId;
 
     public event Action<BoardEvent>? OnBoardEvent;
     public event Action<List<PresenceUser>>? OnCurrentUsers;
@@ -19,6 +21,8 @@ public class SignalRConnectionManager : IAsyncDisposable
     public event Action<PresenceUser>? OnUserLeft;
     public event Action<Guid, Guid>? OnCardFocused;
     public event Action<Guid>? OnCardUnfocused;
+    public event Action<int>? OnUnreadCountChanged;
+    protected virtual void RaiseUnreadCountChanged(int count) => OnUnreadCountChanged?.Invoke(count);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -35,6 +39,16 @@ public class SignalRConnectionManager : IAsyncDisposable
 
     public async Task ConnectAsync(Guid projectId)
     {
+        // Already connected to this project — nothing to do.
+        if (_currentProjectId == projectId && _boardConnection != null)
+            return;
+
+        // Switching projects — tear down old board/presence connections first.
+        // NotificationHub is user-scoped, not project-scoped, and has its own
+        // lifecycle via ConnectNotificationsAsync — leave it alone here.
+        await DisconnectAsync();
+        _currentProjectId = projectId;
+
         var config = new ConfigStore().Load();
         var serverUrl = config.ServerUrl.TrimEnd('/');
         var token = config.JwtToken ?? "";
@@ -156,23 +170,67 @@ public class SignalRConnectionManager : IAsyncDisposable
         _appState.Connection = ConnectionStatus.Connected;
     }
 
+    // NotificationHub is user-scoped, not project-scoped — connect once, before any
+    // project is even opened (ProjectListScreen.OnEnterAsync), and leave it running for
+    // the app's lifetime. Idempotent: safe to call again on every re-entry to the project list.
+    public async Task ConnectNotificationsAsync()
+    {
+        if (_notificationConnection != null)
+            return;
+
+        var config = new ConfigStore().Load();
+        var serverUrl = config.ServerUrl.TrimEnd('/');
+        var token = config.JwtToken ?? "";
+
+        _notificationConnection = new HubConnectionBuilder()
+            .WithUrl($"{serverUrl}/hubs/notifications", options =>
+            {
+                options.AccessTokenProvider = () => Task.FromResult(token)!;
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _notificationConnection.On<JsonElement>("OnNotificationReceived", envelope =>
+        {
+            var notification = JsonSerializer.Deserialize<NotificationReceivedEvent>(envelope.GetRawText(), JsonOptions);
+            if (notification != null && !notification.IsRead)
+            {
+                var newCount = _appState.IncrementUnreadNotifications();
+                OnUnreadCountChanged?.Invoke(newCount);
+            }
+        });
+
+        await _notificationConnection.StartAsync();
+    }
+
+    // Tears down the project-scoped BoardHub/PresenceHub connections. NotificationHub is
+    // intentionally untouched — it outlives project navigation (see ConnectNotificationsAsync).
     public async Task DisconnectAsync()
     {
         if (_boardConnection != null)
         {
             await _boardConnection.StopAsync();
             await _boardConnection.DisposeAsync();
+            _boardConnection = null;
         }
         if (_presenceConnection != null)
         {
             await _presenceConnection.StopAsync();
             await _presenceConnection.DisposeAsync();
+            _presenceConnection = null;
         }
+        _currentProjectId = Guid.Empty;
     }
 
     public async ValueTask DisposeAsync()
     {
         await DisconnectAsync();
+        if (_notificationConnection != null)
+        {
+            await _notificationConnection.StopAsync();
+            await _notificationConnection.DisposeAsync();
+            _notificationConnection = null;
+        }
     }
 
     // Event DTOs
@@ -184,4 +242,15 @@ public class SignalRConnectionManager : IAsyncDisposable
     public record PresenceUser(Guid UserId, string Username, string ConnectionId);
     public record CardFocusData(Guid UserId, Guid CardId, string ConnectionId);
     public record CardUnfocusData(Guid UserId, string ConnectionId);
+
+    public record NotificationReceivedEvent(
+        Guid Id,
+        string Title,
+        string? Body,
+        Guid? CardId,
+        Guid? ProjectId,
+        string? ActionUrl,
+        DateTime CreatedAt,
+        bool IsRead
+    );
 }

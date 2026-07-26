@@ -11,13 +11,17 @@ public class CardDetailScreen(
     ApiClientFactory apiClientFactory,
     AppState appState,
     ErrorCollector errorCollector,
-    ConnectionManager connectionManager
+    ConnectionManager connectionManager,
+    SignalRConnectionManager signalRConnectionManager,
+    NotificationCenter notificationCenter
 ) : IScreen
 {
     private readonly ApiClientFactory _apiClientFactory = apiClientFactory;
     private readonly AppState _appState = appState;
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly ConnectionManager _connectionManager = connectionManager;
+    private readonly SignalRConnectionManager _signalRConnectionManager = signalRConnectionManager;
+    private readonly NotificationCenter _notificationCenter = notificationCenter;
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
     private readonly EditorLauncher _editorLauncher = new();
 
@@ -156,7 +160,7 @@ public class CardDetailScreen(
         {
             Header = new PanelHeader(header),
             Border = isActive ? BoxBorder.Double : BoxBorder.Rounded,
-            BorderStyle = isActive ? new Style(foreground: Color.Blue) : null,
+            BorderStyle = isActive ? new Style(foreground: Color.Blue) : new Style(),
             Expand = true,
         };
     }
@@ -390,7 +394,9 @@ public class CardDetailScreen(
                         _apiClientFactory,
                         _appState,
                         _errorCollector,
-                        _connectionManager
+                        _connectionManager,
+                        _signalRConnectionManager,
+                        _notificationCenter
                     );
                     _appState.CurrentScreen = detailScreen;
                     await detailScreen.OnEnterAsync();
@@ -410,7 +416,9 @@ public class CardDetailScreen(
                     _apiClientFactory,
                     _appState,
                     _errorCollector,
-                    _connectionManager
+                    _connectionManager,
+                    _signalRConnectionManager,
+                    _notificationCenter
                 );
                 _appState.CurrentScreen = boardScreen;
                 _appState.SelectedCardId = null;
@@ -457,14 +465,14 @@ public class CardDetailScreen(
         string mode;
         if (allowsSpec && allowsPlan)
         {
-            var choice = await ListPrompt.Show(
+            var viewIdx = await ListPrompt.Show(
                 "View:",
                 ["Specs", "Plans"],
                 renderBackdrop: RenderAsync
             );
-            if (choice == null)
+            if (!viewIdx.HasValue)
                 return;
-            mode = choice == "Specs" ? "spec" : "plan";
+            mode = viewIdx == 0 ? "spec" : "plan";
         }
         else if (allowsSpec)
         {
@@ -493,14 +501,14 @@ public class CardDetailScreen(
         switch (_sectionIndex)
         {
             case 0:
-                var field = await ListPrompt.Show(
+                var fieldIdx = await ListPrompt.Show(
                     "Edit field:",
                     ["Title", "Due Date", "Assignees"],
                     renderBackdrop: RenderAsync
                 );
-                switch (field)
+                switch (fieldIdx)
                 {
-                    case "Title":
+                    case 0: // Title
                         var newTitle = AnsiConsole.Prompt(
                             new TextPrompt<string>(
                                 "Title ([grey]Enter unchanged to cancel[/]):"
@@ -510,11 +518,11 @@ public class CardDetailScreen(
                             await UpdateCardAsync(title: newTitle);
                         break;
 
-                    case "Due Date":
+                    case 1: // Due Date
                         await EditDueDateAsync();
                         break;
 
-                    case "Assignees":
+                    case 2: // Assignees
                         await EditAssigneesAsync();
                         break;
                 }
@@ -590,16 +598,15 @@ public class CardDetailScreen(
                 )
                 .ToList();
 
-            var picked = await ListPrompt.Show(
+            var pickedIdx = await ListPrompt.Show(
                 "Toggle assignee (Enter to select):",
                 labels,
                 renderBackdrop: RenderAsync
             );
-            if (picked == null)
+            if (!pickedIdx.HasValue)
                 return;
 
-            var pickedIndex = labels.IndexOf(picked);
-            var member = members[pickedIndex];
+            var member = members[pickedIdx.Value];
 
             var updated = assignedIds.Contains(member.UserId)
                 ? await Client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
