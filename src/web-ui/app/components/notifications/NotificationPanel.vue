@@ -62,7 +62,7 @@ function timeAgo(dateStr: string): string {
 
       <template #content>
         <div class="w-80 max-h-96 overflow-y-auto">
-          <div class="flex items-center justify-between p-3 border-b">
+          <div class="sticky top-0 z-10 flex items-center justify-between p-3 border-b bg-white dark:bg-gray-900">
             <span class="font-semibold">Notifications</span>
             <UButton
               label="Mark all read"
@@ -90,11 +90,11 @@ function timeAgo(dateStr: string): string {
             <div class="flex items-start gap-2">
               <span
                 v-if="!notif.isRead"
-                class="w-2 h-2 mt-1.5 rounded-full bg-blue-500 flex-shrink-0"
+                class="w-2 h-2 mt-1.5 rounded-full bg-blue-500 shrink-0"
               />
               <span
                 v-else
-                class="w-2 flex-shrink-0"
+                class="w-2 shrink-0"
               />
               <div class="min-w-0">
                 <p class="text-sm font-medium truncate">
