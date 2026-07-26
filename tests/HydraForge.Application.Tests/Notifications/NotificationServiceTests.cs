@@ -41,11 +41,23 @@ public class NotificationServiceTests
             throw new NotImplementedException();
     }
 
+    private class FakeNotificationHubBus : INotificationHubBus
+    {
+        public List<(Guid UserId, Notification Notification)> Sent { get; } = [];
+
+        public Task SendNotificationAsync(Guid userId, Notification notification, CancellationToken ct = default)
+        {
+            Sent.Add((userId, notification));
+            return Task.CompletedTask;
+        }
+    }
+
     [Fact]
     public async Task NotifyAsync_WhenUserIdEqualsActorId_DoesNotAddNotification()
     {
         var repo = new FakeNotificationRepository();
-        var service = new NotificationService(repo);
+        var hubBus = new FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
         var userId = Guid.NewGuid();
 
         await service.NotifyAsync(
@@ -53,13 +65,15 @@ public class NotificationServiceTests
         );
 
         Assert.Empty(repo.Added);
+        Assert.Empty(hubBus.Sent);
     }
 
     [Fact]
     public async Task NotifyAsync_WhenDifferentUser_AddsNotification()
     {
         var repo = new FakeNotificationRepository();
-        var service = new NotificationService(repo);
+        var hubBus = new FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
         var userId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
 
@@ -80,12 +94,46 @@ public class NotificationServiceTests
     public async Task NotifyAsync_WhenMessageIsNull_UsesTitleAsMessage()
     {
         var repo = new FakeNotificationRepository();
-        var service = new NotificationService(repo);
+        var hubBus = new FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
 
         await service.NotifyAsync(
             new NotifyRequest(Guid.NewGuid(), Guid.NewGuid(), "Title", null, null, null, null, null)
         );
 
         Assert.Equal("Title", repo.Added[0].Message);
+    }
+
+    [Fact]
+    public async Task NotifyAsync_WhenDifferentUser_SendsToHubBus()
+    {
+        var repo = new FakeNotificationRepository();
+        var hubBus = new FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
+        var userId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+
+        await service.NotifyAsync(
+            new NotifyRequest(userId, actorId, "Title", null, null, null, null, null)
+        );
+
+        Assert.Single(hubBus.Sent);
+        Assert.Equal(userId, hubBus.Sent[0].UserId);
+        Assert.Equal("Title", hubBus.Sent[0].Notification.Title);
+    }
+
+    [Fact]
+    public async Task NotifyAsync_WhenUserIdEqualsActorId_DoesNotSendToHubBus()
+    {
+        var repo = new FakeNotificationRepository();
+        var hubBus = new FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
+        var userId = Guid.NewGuid();
+
+        await service.NotifyAsync(
+            new NotifyRequest(userId, userId, "Title", null, null, null, null, null)
+        );
+
+        Assert.Empty(hubBus.Sent);
     }
 }
