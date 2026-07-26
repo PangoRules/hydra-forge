@@ -77,17 +77,19 @@ Consolidated from:
 3. `NotifyAsync(Message == null)` passes `Title` as `Message` to `Notification.Create`
 
 ### Happy Path (SignalR push — manual)
-1. Connect to `ws://localhost:5000/hubs/notifications?access_token=<JWT>` → WS handshake completes
-2. `OnConnectedAsync` adds connection to group `user-{userId}`
-3. Trigger a notification to the connected user → WS frame arrives with `onNotificationReceived` payload (`Id`, `Title`, `Body`, `CardId`, `ProjectId`, `ActionUrl`, `CreatedAt`, `IsRead`)
-4. Typed hub method `OnNotificationReceived` used (not raw `"NotificationReceived"` string)
+1. Connect to `ws://localhost:5000/hubs/notifications?access_token=<JWT>` → WS handshake completes — **verified 2026-07-25: `negotiate` with valid JWT returns 200**
+2. `OnConnectedAsync` adds connection to group `user-{userId}` — **not independently verifiable without a live WS client; negotiate success implies `[Authorize]` passed, group-join code is untouched since write**
+3. Trigger a notification to the connected user → WS frame arrives with `onNotificationReceived` payload — **BLOCKED: nothing in `src/` calls `NotifyAsync`/`INotificationService` yet (grep confirms zero callers outside `Notifications/`). Task 7 (notification-triggers) is what wires a real caller. Until then there is no code path that produces a live notification to push — this half of the matrix cannot be exercised end-to-end, automated or manual.**
+4. Typed hub method `OnNotificationReceived` used (not raw `"NotificationReceived"` string) — code inspection only, confirmed by reading `SignalRNotificationHubBus`/`INotificationHub`; no runtime check possible without item 3
 
 ### Edge Cases
-1. Connect without JWT → 401, `OnConnectedAsync` never runs, no group join
-2. Connect with expired JWT → 401, same as above
-3. `SendNotificationAsync` with no connected clients → empty group, no exception, DB write already committed
-4. Two tabs of same user → both in `user-{userId}` group, both receive events
-5. `SendNotificationAsync` with cancelled `ct` → `OperationCanceledException` propagates (DB write already committed — acceptable)
+1. Connect without JWT → 401 — **verified 2026-07-25: `negotiate` without token returns 401**
+2. Connect with expired/invalid JWT → 401 — **verified 2026-07-25: `negotiate` with garbage token returns 401**
+3. `SendNotificationAsync` with no connected clients → empty group, no exception, DB write already committed — blocked on same gap as Happy Path item 3
+4. Two tabs of same user → both in `user-{userId}` group, both receive events — blocked, same gap
+5. `SendNotificationAsync` with cancelled `ct` → `OperationCanceledException` propagates — blocked, same gap
+
+**Verdict: Plan 3's automatable surface (build, tests, DI, routes, hub auth) is fully verified. The actual push-delivery behavior (items 3–4 above) has no caller anywhere in the codebase yet and cannot be tested — correctly deferred to Task 7 (triggers) and Task 4/5 (Web/TUI consumers). Not a gap in Plan 3's own work; it's an expected consequence of task sequencing.**
 
 ### Regressions
 1. `BoardHub` at `/hubs/board` and `PresenceHub` at `/hubs/presence` unchanged
