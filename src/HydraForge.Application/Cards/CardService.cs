@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Logging;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
@@ -21,7 +22,8 @@ public class CardService(
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher,
-    INotificationService notifService
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly ICardRepository _cardRepo = cardRepo;
@@ -35,6 +37,7 @@ public class CardService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
@@ -599,16 +602,23 @@ public class CardService(
 
         foreach (var recipientId in recipientIds)
         {
-            await _notifService.NotifyAsync(new NotifyRequest(
-                recipientId,
-                cmd.ActorId,
-                $"{actorName} moved #{card.CardNumber} to {columnName}",
-                null,
-                null,
-                card.Id,
-                cmd.ProjectId,
-                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-            ), ct);
+            try
+            {
+                await _notifService.NotifyAsync(new NotifyRequest(
+                    recipientId,
+                    cmd.ActorId,
+                    $"{actorName} moved #{card.CardNumber} to {columnName}",
+                    null,
+                    null,
+                    card.Id,
+                    cmd.ProjectId,
+                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+                ), ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send move notification to {recipientId}: {ex.Message}");
+            }
         }
 
         await NotifyResolvedDependenciesAsync(card, cmd.ProjectId, cmd.ActorId, ct);
@@ -689,16 +699,23 @@ public class CardService(
 
         // Notify new assignee
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
-        await _notifService.NotifyAsync(new NotifyRequest(
-            cmd.AssigneeUserId,
-            cmd.ActorId,
-            $"{actorName} assigned you to #{card.CardNumber}",
-            card.Title,
-            null,
-            card.Id,
-            cmd.ProjectId,
-            $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-        ), ct);
+        try
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                cmd.AssigneeUserId,
+                cmd.ActorId,
+                $"{actorName} assigned you to #{card.CardNumber}",
+                card.Title,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ), ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send assignment notification: {ex.Message}");
+        }
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -1019,16 +1036,23 @@ public class CardService(
                 var assignees = await _assigneeRepo.ListByCardAsync(blockedCard.Id, ct);
                 foreach (var assignee in assignees)
                 {
-                    await _notifService.NotifyAsync(new NotifyRequest(
-                        assignee.UserId,
-                        actorId,
-                        $"#{blockedCard.CardNumber} is no longer blocked",
-                        $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
-                        null,
-                        blockedCard.Id,
-                        projectId,
-                        $"/projects/{projectId}/board?card={blockedCard.Id}"
-                    ), ct);
+                    try
+                    {
+                        await _notifService.NotifyAsync(new NotifyRequest(
+                            assignee.UserId,
+                            actorId,
+                            $"#{blockedCard.CardNumber} is no longer blocked",
+                            $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
+                            null,
+                            blockedCard.Id,
+                            projectId,
+                            $"/projects/{projectId}/board?card={blockedCard.Id}"
+                        ), ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _warnLogger.LogWarning($"Failed to send unblock notification to {assignee.UserId}: {ex.Message}");
+                    }
                 }
             }
         }

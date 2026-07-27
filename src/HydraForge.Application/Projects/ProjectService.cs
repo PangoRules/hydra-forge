@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Logging;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
@@ -19,7 +20,8 @@ public class ProjectService(
     IProjectBoardEventPublisher publisher,
     IAuditLogWriter auditLogWriter,
     IUserRepository userRepo,
-    INotificationService notifService
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
@@ -27,6 +29,7 @@ public class ProjectService(
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
     
 
     public async Task<Result<ProjectDto>> CreateAsync(
@@ -249,16 +252,23 @@ public class ProjectService(
 
         foreach (var member in members)
         {
-            await _notifService.NotifyAsync(new NotifyRequest(
-                member.UserId,
-                cmd.ActorId,
-                $"{project.Name} was updated by {actorName}",
-                null,
-                null,
-                null,
-                cmd.ProjectId,
-                $"/projects/{cmd.ProjectId}/board"
-            ), ct);
+            try
+            {
+                await _notifService.NotifyAsync(new NotifyRequest(
+                    member.UserId,
+                    cmd.ActorId,
+                    $"{project.Name} was updated by {actorName}",
+                    null,
+                    null,
+                    null,
+                    cmd.ProjectId,
+                    $"/projects/{cmd.ProjectId}/board"
+                ), ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send project-update notification to {member.UserId}: {ex.Message}");
+            }
         }
 
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
@@ -334,16 +344,23 @@ public class ProjectService(
 
         foreach (var member in members)
         {
-            await _notifService.NotifyAsync(new NotifyRequest(
-                member.UserId,
-                cmd.ActorId,
-                $"{project.Name} has been {action}",
-                null,
-                null,
-                null,
-                cmd.ProjectId,
-                isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
-            ), ct);
+            try
+            {
+                await _notifService.NotifyAsync(new NotifyRequest(
+                    member.UserId,
+                    cmd.ActorId,
+                    $"{project.Name} has been {action}",
+                    null,
+                    null,
+                    null,
+                    cmd.ProjectId,
+                    isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
+                ), ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send archive-notification to {member.UserId}: {ex.Message}");
+            }
         }
 
         return Result.Success();

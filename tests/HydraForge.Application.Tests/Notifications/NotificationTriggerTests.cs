@@ -18,14 +18,15 @@ public class NotificationTriggerTests
     [Fact]
     public async Task NotifyAsync_SameUserAsActor_IsSkipped()
     {
-        var service = new NotificationService(
-            new NotificationServiceTests.FakeNotificationRepository(),
-            new NotificationServiceTests.FakeNotificationHubBus());
+        var repo = new NotificationServiceTests.FakeNotificationRepository();
+        var hubBus = new NotificationServiceTests.FakeNotificationHubBus();
+        var service = new NotificationService(repo, hubBus);
 
         var userId = Guid.NewGuid();
         await service.NotifyAsync(new NotifyRequest(userId, userId, "Title", null, null, null, null, null));
 
-        Assert.True(true);
+        Assert.Empty(repo.Added);
+        Assert.Empty(hubBus.Sent);
     }
 
     [Fact]

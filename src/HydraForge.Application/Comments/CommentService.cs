@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Logging;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
@@ -21,7 +22,8 @@ public class CommentService(
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher,
-    INotificationService notifService
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly ICommentRepository _commentRepo = commentRepo;
@@ -33,6 +35,7 @@ public class CommentService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
     private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
     {
@@ -173,31 +176,45 @@ public class CommentService(
 
         foreach (var watcher in watchers)
         {
-            await _notifService.NotifyAsync(new NotifyRequest(
-                watcher.UserId,
-                cmd.ActorId,
-                $"{actorName} commented on #{card.CardNumber}",
-                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
-                null,
-                card.Id,
-                cmd.ProjectId,
-                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-            ), ct);
+            try
+            {
+                await _notifService.NotifyAsync(new NotifyRequest(
+                    watcher.UserId,
+                    cmd.ActorId,
+                    $"{actorName} commented on #{card.CardNumber}",
+                    cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                    null,
+                    card.Id,
+                    cmd.ProjectId,
+                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+                ), ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send comment notification to {watcher.UserId}: {ex.Message}");
+            }
         }
 
         // Notify @mentioned users
         foreach (var mentionedUserId in mentionedUserIds)
         {
-            await _notifService.NotifyAsync(new NotifyRequest(
-                mentionedUserId,
-                cmd.ActorId,
-                $"{actorName} mentioned you in #{card.CardNumber}",
-                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
-                null,
-                card.Id,
-                cmd.ProjectId,
-                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-            ), ct);
+            try
+            {
+                await _notifService.NotifyAsync(new NotifyRequest(
+                    mentionedUserId,
+                    cmd.ActorId,
+                    $"{actorName} mentioned you in #{card.CardNumber}",
+                    cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                    null,
+                    card.Id,
+                    cmd.ProjectId,
+                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+                ), ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send mention notification to {mentionedUserId}: {ex.Message}");
+            }
         }
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
