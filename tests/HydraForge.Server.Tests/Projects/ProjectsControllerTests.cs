@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -257,6 +259,8 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             services.AddScoped<IChatArchiveService>(_ => new TestChatArchiveService());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+            services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
             services.AddScoped<ProjectService>();
             services.AddScoped<ProjectMemberService>();

@@ -5,7 +5,7 @@ namespace HydraForge.Application.Tests.Notifications;
 
 public class NotificationServiceTests
 {
-    private class FakeNotificationRepository : INotificationRepository
+    internal class FakeNotificationRepository : INotificationRepository
     {
         public List<Notification> Added { get; } = [];
 
@@ -41,7 +41,7 @@ public class NotificationServiceTests
             throw new NotImplementedException();
     }
 
-    private class FakeNotificationHubBus : INotificationHubBus
+    internal class FakeNotificationHubBus : INotificationHubBus
     {
         public List<(Guid UserId, Notification Notification)> Sent { get; } = [];
 

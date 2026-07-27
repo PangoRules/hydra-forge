@@ -20,7 +20,7 @@ public class ProjectBoardEventPublisherTests
     public async Task PublishAsync_CalledOnSuccess()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, new FakeNotificationService());
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -41,7 +41,7 @@ public class ProjectBoardEventPublisherTests
     public async Task PublishAsync_NotCalledOnFailure()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, new FakeNotificationService());
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();

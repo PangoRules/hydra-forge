@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
@@ -19,7 +20,8 @@ public class CommentService(
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    INotificationService notifService
 )
 {
     private readonly ICommentRepository _commentRepo = commentRepo;
@@ -30,6 +32,7 @@ public class CommentService(
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly INotificationService _notifService = notifService;
 
     private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
     {
@@ -162,6 +165,40 @@ public class CommentService(
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Created, ct);
+
+        // Notify card watchers about new comment
+        var card = validation.Value.Item2;
+        var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+
+        foreach (var watcher in watchers)
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                watcher.UserId,
+                cmd.ActorId,
+                $"{actorName} commented on #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ), ct);
+        }
+
+        // Notify @mentioned users
+        foreach (var mentionedUserId in mentionedUserIds)
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                mentionedUserId,
+                cmd.ActorId,
+                $"{actorName} mentioned you in #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ), ct);
+        }
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }

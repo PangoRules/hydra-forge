@@ -3,7 +3,9 @@ namespace HydraForge.Server.Tests.Plans;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -315,6 +317,8 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IAuditLogWriter>(_ => new PlansTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+            services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
             services.AddScoped<PlanService>();
         });

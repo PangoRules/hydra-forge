@@ -1,4 +1,6 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -15,12 +17,16 @@ public class ProjectService(
     IChatArchiveService chatArchiveService,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IUserRepository userRepo,
+    INotificationService notifService
 )
 {
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IUserRepository _userRepo = userRepo;
+    private readonly INotificationService _notifService = notifService;
     
 
     public async Task<Result<ProjectDto>> CreateAsync(
@@ -239,6 +245,22 @@ public class ProjectService(
         var columns = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
 
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+
+        foreach (var member in members)
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                member.UserId,
+                cmd.ActorId,
+                $"{project.Name} was updated by {actorName}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board"
+            ), ct);
+        }
+
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
@@ -304,6 +326,25 @@ public class ProjectService(
             ),
             ct
         );
+
+        // Notify all project members
+        var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        var action = isArchiving ? "archived" : "restored";
+
+        foreach (var member in members)
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                member.UserId,
+                cmd.ActorId,
+                $"{project.Name} has been {action}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
+            ), ct);
+        }
 
         return Result.Success();
     }

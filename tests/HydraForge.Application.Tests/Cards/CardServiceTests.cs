@@ -17,8 +17,8 @@ public class CardServiceTests
     [Fact]
     public async Task CreateAsync_AssignsMaxCardNumberPlus1()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -37,8 +37,8 @@ public class CardServiceTests
     [Fact]
     public async Task CreateAsync_AppendsToTargetColumn()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -57,7 +57,7 @@ public class CardServiceTests
     [Fact]
     public async Task CreateAsync_NeverReusesArchivedCardNumbers()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -65,7 +65,7 @@ public class CardServiceTests
         cardRepo.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, CardNumber = 5, ArchivedAt = DateTime.UtcNow });
         columnRepo.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
 
         var result = await service.CreateAsync(new CreateCardCommand(projectId, columnId, actorId, "New Card", "", CardType.Task, null, null, null));
 
@@ -76,8 +76,8 @@ public class CardServiceTests
     [Fact]
     public async Task ListAsync_FiltersByColumn()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = NewId();
@@ -97,8 +97,8 @@ public class CardServiceTests
     [Fact]
     public async Task ListAsync_FiltersArchived()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -117,8 +117,8 @@ public class CardServiceTests
     [Fact]
     public async Task ListAsync_FiltersByType()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -137,8 +137,8 @@ public class CardServiceTests
     [Fact]
     public async Task ListAsync_FiltersByAssignee()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var assigneeId = NewId();
@@ -161,8 +161,8 @@ public class CardServiceTests
     [Fact]
     public async Task GetByIdAsync_ExistingCard_ReturnsCard()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -179,8 +179,8 @@ public class CardServiceTests
     [Fact]
     public async Task GetByNumberAsync_ExistingNumber_ReturnsCard()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -196,8 +196,8 @@ public class CardServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersion()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -215,8 +215,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_CompactsOldColumnAndSetsMovedAt()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -238,8 +238,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_BlockedCardWithoutConfirm_ReturnsWarningResult()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -262,8 +262,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_PredecessorWithoutConfirm_ReturnsWarningResult()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -285,8 +285,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_ConfirmBlockedMove_Succeeds()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -311,8 +311,8 @@ public class CardServiceTests
         // Card at position 0 moves to position 4; the cards it hops over (1-4)
         // should each shift back by one, landing the moved card cleanly at 4
         // with no duplicate/gap positions.
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -343,8 +343,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_SameColumnBackward_ShiftsPassedCardsForward()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -375,8 +375,8 @@ public class CardServiceTests
     [Fact]
     public async Task AssignAsync_CreatesCardAssigneeAndCardWatcher()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -396,8 +396,8 @@ public class CardServiceTests
     [Fact]
     public async Task AssignAsync_DuplicateAssign_ReturnsError()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -417,8 +417,8 @@ public class CardServiceTests
     [Fact]
     public async Task UnassignAsync_RemovesAssigneeOnly()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -439,8 +439,8 @@ public class CardServiceTests
     [Fact]
     public async Task ArchiveAsync_SetsArchivedAtAndCompactsPositions()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -462,8 +462,8 @@ public class CardServiceTests
     [Fact]
     public async Task RestoreAsync_ClearsArchivedAtAndRestoresToEndOfColumn()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -484,8 +484,8 @@ public class CardServiceTests
     [Fact]
     public async Task RestoreAsync_NotArchived_ReturnsFailure()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -502,8 +502,8 @@ public class CardServiceTests
     [Fact]
     public async Task RestoreAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -526,8 +526,8 @@ public class CardServiceTests
     [Fact]
     public async Task DeleteAsync_HardDeletesOnlyIfAllowed()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher());
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -547,8 +547,8 @@ public class CardServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -571,8 +571,8 @@ public class CardServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -595,8 +595,8 @@ public class CardServiceTests
     [Fact]
     public async Task MoveAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -622,8 +622,8 @@ public class CardServiceTests
     [Fact]
     public async Task AssignAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -648,8 +648,8 @@ public class CardServiceTests
     [Fact]
     public async Task UnassignAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -674,8 +674,8 @@ public class CardServiceTests
     [Fact]
     public async Task ArchiveAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -698,8 +698,8 @@ public class CardServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -729,7 +729,8 @@ public class CardServiceTests
         InMemoryUserRepository userRepo,
         InMemoryAuditLogWriter auditWriter,
         NullSnapshotRefresher snapshotRefresher,
-        FakeProjectBoardEventPublisher publisher
+        FakeProjectBoardEventPublisher publisher,
+        FakeNotificationService notifService
     ) CreateMocks()
     {
         return (
@@ -742,7 +743,8 @@ public class CardServiceTests
             new InMemoryUserRepository(),
             new InMemoryAuditLogWriter(),
             new NullSnapshotRefresher(),
-            new FakeProjectBoardEventPublisher()
+            new FakeProjectBoardEventPublisher(),
+            new FakeNotificationService()
         );
     }
 }

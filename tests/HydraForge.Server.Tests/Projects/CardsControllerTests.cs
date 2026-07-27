@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -374,6 +375,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();

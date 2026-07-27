@@ -3,6 +3,7 @@ namespace HydraForge.Server.Tests.Projects;
 using System.Net;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Notifications;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -446,6 +447,7 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
             services.AddScoped<IAuditLogWriter>(_ => new CCTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<HydraForge.Application.Checklist.IChecklistItemRepository>(_ => new CCTestChecklistItemRepository(_checklistItems));
             services.AddScoped<HydraForge.Application.Comments.ICommentRepository>(_ => new CCTestCommentRepository(_comments));
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();

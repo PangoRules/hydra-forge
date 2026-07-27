@@ -18,8 +18,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_CreatesComment_AuthorAutoAddedAsWatcher()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -45,8 +45,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_WithMention_ExtractsMentionedUser()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -67,8 +67,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_MentionDisabledUser_IgnoresMention()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -89,8 +89,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_MentionNonMember_IgnoresMention()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -110,8 +110,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_AlreadyWatching_DoesNotDuplicateWatcher()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -131,8 +131,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var nonMemberId = NewId();
@@ -146,8 +146,8 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_UpdatesContent_ReExtractsMentions()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -171,8 +171,8 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_ArchivedComment_ReturnsArchived()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -192,8 +192,8 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_SetsArchivedAt()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -213,8 +213,8 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_AlreadyArchived_ReturnsArchived()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -234,8 +234,8 @@ public class CommentServiceTests
     [Fact]
     public async Task ListAsync_ReturnsCommentsWithMentions()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -260,8 +260,8 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -285,8 +285,8 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -312,8 +312,8 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -336,7 +336,7 @@ public class CommentServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
-    private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
+    private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher, FakeNotificationService) CreateMocks()
     {
         var commentRepo = new InMemoryCommentRepository();
         var watcherRepo = new InMemoryCardWatcherRepository();
@@ -344,7 +344,7 @@ public class CommentServiceTests
         var memberRepo = new InMemoryProjectMemberRepository();
         var userRepo = new InMemoryUserRepository();
         var auditWriter = new InMemoryAuditLogWriter();
-        return (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher());
+        return (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), new FakeNotificationService());
     }
 }
 

@@ -1,5 +1,6 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
@@ -19,7 +20,8 @@ public class CardService(
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    INotificationService notifService
 )
 {
     private readonly ICardRepository _cardRepo = cardRepo;
@@ -32,6 +34,7 @@ public class CardService(
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly INotificationService _notifService = notifService;
 
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
@@ -583,6 +586,33 @@ public class CardService(
 
         await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Moved, ct);
 
+        // Notify assignees + watchers about card move
+        var assignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
+        var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+        var recipientIds = assignees.Select(a => a.UserId)
+            .Concat(watchers.Select(w => w.UserId))
+            .Distinct()
+            .ToList();
+
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        var columnName = targetColumn.Name;
+
+        foreach (var recipientId in recipientIds)
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                recipientId,
+                cmd.ActorId,
+                $"{actorName} moved #{card.CardNumber} to {columnName}",
+                null,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ), ct);
+        }
+
+        await NotifyResolvedDependenciesAsync(card, cmd.ProjectId, cmd.ActorId, ct);
+
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
@@ -656,6 +686,19 @@ public class CardService(
         );
 
         await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Assigned, ct);
+
+        // Notify new assignee
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        await _notifService.NotifyAsync(new NotifyRequest(
+            cmd.AssigneeUserId,
+            cmd.ActorId,
+            $"{actorName} assigned you to #{card.CardNumber}",
+            card.Title,
+            null,
+            card.Id,
+            cmd.ProjectId,
+            $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+        ), ct);
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -944,5 +987,50 @@ public class CardService(
             assigneeDtos,
             watcherDtos
         );
+    }
+
+    private async Task NotifyResolvedDependenciesAsync(
+        Card movedCard, Guid projectId, Guid actorId, CancellationToken ct)
+    {
+        var relationships = await _relationshipRepo.ListActiveByCardAsync(movedCard.Id, ct);
+        var blockedByRels = relationships.Where(r =>
+            r.Type == RelationshipType.BlockedBy && r.SourceCardId == movedCard.Id);
+
+        foreach (var rel in blockedByRels)
+        {
+            var blockedCard = await _cardRepo.GetByIdAsync(rel.TargetCardId, ct);
+            if (blockedCard == null || blockedCard.ArchivedAt != null)
+                continue;
+
+            var remainingBlockers = await _relationshipRepo.ListBlockersForCardAsync(blockedCard.Id, ct);
+            var hasActiveBlockers = false;
+            foreach (var blocker in remainingBlockers)
+            {
+                var blockerCard = await _cardRepo.GetByIdAsync(blocker.SourceCardId, ct);
+                if (blockerCard != null && blockerCard.ArchivedAt == null)
+                {
+                    hasActiveBlockers = true;
+                    break;
+                }
+            }
+
+            if (!hasActiveBlockers)
+            {
+                var assignees = await _assigneeRepo.ListByCardAsync(blockedCard.Id, ct);
+                foreach (var assignee in assignees)
+                {
+                    await _notifService.NotifyAsync(new NotifyRequest(
+                        assignee.UserId,
+                        actorId,
+                        $"#{blockedCard.CardNumber} is no longer blocked",
+                        $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
+                        null,
+                        blockedCard.Id,
+                        projectId,
+                        $"/projects/{projectId}/board?card={blockedCard.Id}"
+                    ), ct);
+                }
+            }
+        }
     }
 }
