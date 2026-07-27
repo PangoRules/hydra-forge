@@ -125,7 +125,10 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - All errors have a typed error code (e.g. `CARD_NOT_FOUND`, `DEPENDENCY_CYCLE_DETECTED`)
 - Controllers map expected `Result<T, Error>` failures to ProblemDetails RFC 7807 with `correlationId` and named `code`; global exception middleware catches everything else
 - Stack traces never reach clients
-- External service failures (LLM, Git, ntfy) must never crash the board
+### Notification trigger patterns (Plan 7 lessons)
+
+- **`NotifyAsync` calls must be wrapped in `try/catch`** — a notification failure must not block the business operation (card move, comment, project update). Each trigger call site wraps `await _notifService.NotifyAsync(...)` in try/catch. The `IWarnLogger` abstraction (`IWarnLogger.LogWarning`) logs failures instead of letting them propagate — optional constructor param with `NullWarnLogger` default so existing DI registrations don't break. `ConsoleWarnLogger` writes to `stderr`. External service failures (LLM, Git, ntfy, notification) must never crash the board.
+- **Test fakes shared across test files** — `FakeNotificationRepository` and `FakeNotificationHubBus` in `NotificationServiceTests` changed from `private` to `public` (with `[assembly: InternalsVisibleTo]`) so `NotificationTriggerTests` can reuse them. When a new test file needs the same fake, make it `public` instead of duplicating.
 
 **Domain entity patterns — non-negotiable:**
 - Domain entities encapsulate state transitions via instance methods — services orchestrate but NEVER set entity properties directly
