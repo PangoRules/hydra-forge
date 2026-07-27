@@ -113,6 +113,7 @@ services:
   ntfy:
     image: binwiederhier/ntfy:v2.11.0
     profiles: ["notifications"]
+    command: serve
     environment:
       TZ: UTC
       NTFY_BASE_URL: http://ntfy:80
