@@ -81,19 +81,6 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
   return client
 }
 
-// Module-level singleton — initialized lazily on first use so the
-// auth store (which must be called in setup context) is available.
-let _api: ReturnType<typeof createApiClient> | undefined
-let _store: ReturnType<typeof useAuthStore> | undefined
-
-function getApi() {
-  if (!_api) {
-    _store = useAuthStore()
-    _api = createApiClient(_store)
-  }
-  return _api
-}
-
 // Re-export ApiError so callers can catch it
 export { ApiError }
 
@@ -101,9 +88,17 @@ export { ApiError }
  * useApi — wraps openapi-fetch with auth middleware and 401 handling.
  * Route paths come from ApiRoutes constants (lib/routes.ts).
  * Response data is typed via `as` casts at call sites.
+ *
+ * Builds a fresh client + store lookup on every call — this app is SSR
+ * (nuxt.config.ts has no ssr: false), and a module-level cached singleton
+ * here would freeze onto whichever request's Pinia store happened to call
+ * this first, then silently reuse that stale store's token for every other
+ * user's request for the lifetime of the server process. useAuthStore()
+ * and createClient() are both cheap; there is no real cost to not caching.
  */
 export function useApi() {
-  const client = getApi()
+  const store = useAuthStore()
+  const client = createApiClient(store)
 
   // openapi-fetch client is typed to Paths from the spec; our ApiRoutes are
   // string URLs built dynamically — cast through `unknown` to satisfy the type
