@@ -250,6 +250,7 @@ Each entry has:
 | D-49 | Credential storage location | Repo-root `.hydraforge/config.json` (found via `HydraForge.slnx` walk), not `~/.config` | ✅ |
 | D-50 | OpenAPI enum schemas | EnumSchemaTransformer corrects `type: integer` → `type: string` in schema; NSwag generates real C# enums | ✅ |
 | D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler but no live SignalR connection; polling-only for now | 🔜 |
+| D-52 | ntfy client implementation | `INtfyClient` port in Application; `NtfyClient` + `NtfyOptions` in Infrastructure; `SystemSettings.NtfyServerUrl`; docker-compose `ntfy` service; best-effort push (null URL = no-op) | ✅ |
 
 ---
 
@@ -832,3 +833,17 @@ Chats
 | **Rationale** | `NotificationHub` in the server is fully implemented and used by the TUI (`SignalRConnectionManager.ConnectAsync` wires the NotificationHub alongside BoardHub and PresenceHub). The Web UI's `useNotifications.ts` composable was scaffolded with the `onNotificationReceived` handler placeholder but the SignalR connection establishment (`new HubConnectionBuilder().WithUrl(...)...StartAsync()`) was not wired into the composable or the app startup. Completing this requires `HubConnection` lifecycle management in the composable (connect on app init, reconnect logic, cleanup on unmount) and is a Phase 5 follow-up task. |
 | **Alternatives considered** | 1. Keep Web UI polling-only indefinitely (rejected — Phase 5 follow-up exists specifically to complete real-time notifications in Web UI). 2. Use `EventSource` instead of SignalR (rejected — `NotificationHub` uses SignalR's bidirectional channel, not server-sent events). |
 | **Impact** | Web UI notification bell does not update in real-time. TUI does receive real-time updates via `SignalRConnectionManager`. The TUI implementation is the reference for what the Web UI will eventually replicate. |
+
+## D-52: ntfy Client Implementation
+
+| Field | Value |
+|---|---|
+| **Topic** | ntfy push client — INtfyClient port, NtfyClient impl, NtfyOptions, SystemSettings.NtfyServerUrl, docker-compose service |
+| **Date** | 2026-07-25, corrected 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `INtfyClient` port in Application layer; `NtfyClient` in Infrastructure; `NtfyOptions` for priority/defaults; `SystemSettings.NtfyServerUrl` field stores admin-configured URL; URL wired via `CachedSettingsProvider` (Task 10 — not yet built, so `NtfyClient`'s `serverUrl` ctor param currently resolves to `null` through the DI container with no explicit factory needed); docker-compose `ntfy` service with `profiles: ["notifications"]`; `.env.example` has `NTFY_BASE_URL`. |
+| **Rationale** | Decouples push logic from Application layer — `NotificationService` holds `INtfyClient?` and calls `PublishAsync` after DB write. Null client = graceful no-op. Makes ntfy fully opt-in: no URL configured = no push, in-app SignalR still works. Best-effort: HTTP failures are caught and swallowed, never propagate. |
+| **Topic naming** | Per-user topic: `hydraforge-{userId}` — deterministic, no per-notification topic creation. |
+| **Alternatives considered** | 1. Topic-per-notification (rejected — creates topics dynamically on ntfy server, harder to manage ACLs). 2. Throw on ntfy failure (rejected — push is best-effort, server/ntfy down must not crash board). |
+| **Impact** | `NotificationService` now optionally pushes to ntfy after every `NotifyAsync` call. `AddSystemSettingsFields` EF migration adds `NtfyServerUrl`, `SearXngUrl`, `BrandName`, `BrandLogoUrl` as nullable text columns. `SystemSettingsSingletonId` moved from `HydraForgeDbContext` to `SystemSettings.SingletonId`. `NtfyClient` registered via `AddHttpClient<INtfyClient, NtfyClient>()` with `NtfyOptions` configured. |
+| **2026-07-27 correction** | The original 2026-07-25 close-out marked this ✅ without the branch ever building — `INtfyClient.cs` and `NtfyOptions.cs` were referenced but never committed (CS0246 on `dotnet build`), and Step 1 (`SystemSettings` fields, `UpdateSettings()`, singleton-id move, migration) was never written at all. `docker-compose.yml`'s `ntfy` service also had no `command`, so the container exited immediately instead of serving (fixed: added `command: serve`). All gaps closed on `task/ntfy-integration` 2026-07-27; see the corrected Plan 6 section in `docs/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md` for what was actually re-verified. |

@@ -4,6 +4,7 @@ Consolidated from:
 - `2026-07-25-phase-5-notifications-admin-plan-1-jwt-role-claim-fix-matrix.md`
 - `2026-07-25-phase-5-notifications-admin-plan-2-notification-system-matrix.md`
 - `2026-07-25-phase-5-notifications-admin-plan-3-notification-hub-matrix.md`
+- `2026-07-25-phase-5-notifications-admin-plan-6-ntfy-integration-matrix.md`
 
 ---
 
@@ -102,3 +103,48 @@ Consolidated from:
 1. `NotificationHub.cs` placed in `src/HydraForge.Infrastructure/Realtime/` (not `src/HydraForge.Server/Hubs/`). Matches `BoardHub` location and typed-hub convention.
 2. Uses typed `INotificationHub.OnNotificationReceived(...)` instead of untyped `SendAsync("NotificationReceived", ...)`. Wire name: `onNotificationReceived` (camelCase default).
 3. `INotificationHub` and `NotificationReceivedEvent` created in `src/HydraForge.Application/Realtime/`.
+
+---
+
+## Plan 6: ntfy Integration
+
+**Correction (2026-07-27):** The prior "closed" pass (D-52, commit `8af0a51`) marked this plan done, but 3 of 12 planned files/steps were never actually committed in `d5df06e`: `INtfyClient.cs` (Application port), `NtfyOptions.cs` (Infrastructure), and all of `SystemSettings` Step 1 (new fields, `UpdateSettings()`, `SystemSettingsSingletonId` move) plus the `AddSystemSettingsFields` migration. **`dotnet build` was actually failing on this branch** (`CS0246: INtfyClient could not be found`) — the matrix below was never runnable as written. Also found: `docker-compose.yml`'s `ntfy` service had no `command`, so the container printed help text and exited immediately instead of serving. All of the above fixed on `task/ntfy-integration` 2026-07-27; results below are from actually running each check, not carried over from the original (incorrect) close-out.
+
+### Setup
+- [x] `docker compose up -d postgres minio` (host ports 5433, 9000, 9001) — **verified 2026-07-27**
+- [x] `PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef database update --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server` — `AddSystemSettingsFields` migration applied clean — **verified 2026-07-27** (migration didn't exist before this pass; created + applied)
+- [x] `docker compose --profile notifications up -d ntfy` — ntfy container starts — **verified 2026-07-27** (required adding `command: serve` to `docker-compose.yml`; image has no default entrypoint command)
+- [x] `dotnet run --project src/HydraForge.Server` — server starts, no DI errors — **verified 2026-07-27**: `Now listening on: http://localhost:5000`, no unresolved-service exceptions. `NtfyClient`'s `string? serverUrl` ctor param resolves to `null` via the container (unregistered reference type → `GetService` returns null) — no factory lambda needed for this to work, contrary to the original plan text's assumption
+- [x] `curl http://localhost:8083/v1/health` → returns 200 — **verified 2026-07-27**, after the `command: serve` fix
+
+### Happy Path
+1. Migration applies on a DB that already has the `system_settings` row → `NtfyServerUrl`, `SearXngUrl`, `BrandName`, `BrandLogoUrl` columns added as nullable `text`, existing row preserved with nulls — **verified 2026-07-27**: `SELECT * FROM system_settings` shows singleton row `00000000-0000-0000-0000-000000000001` with all 4 new columns `NULL`
+2. Trigger any notification (e.g. assign a card to another user) → row appears in `notifications` table; SignalR `NotificationReceived` fires on the recipient's hub connection — **still BLOCKED, same gap as Plan 3 item 3**: nothing calls `NotifyAsync` from a real domain event yet (Task 7). Not retested here; carried over from Plan 3's verdict, not re-verified independently.
+3. `docker compose ps` shows `ntfy` service `healthy` after ~30s — **verified 2026-07-27**: `Up 32 seconds (healthy)`
+4. `docker compose logs ntfy | tail -20` — no crash, auth.db + cache.db created in `/var/lib/ntfy` — **verified 2026-07-27**: `Listening on :80[http]`, `ls /var/lib/ntfy` shows both files
+
+### Edge Cases
+1. `NotificationService` constructed with `ntfyClient: null` → no exception, DB write + SignalR push still succeed — **verified**: `NtfyClientTests.NotificationService_WithNullNtfyClient_DoesNotThrow` (Application.Tests) passes
+2. `NtfyClient.PublishAsync` with `_serverUrl = null` → no HTTP call, returns immediately — **verified**: new `Infrastructure.Tests/Notifications/NtfyClientTests.PublishAsync_WithNullServerUrl_MakesNoHttpCall` (was previously untested — only the `NotificationService`-level null-client path had coverage, not `NtfyClient` itself)
+3. `NtfyClient.PublishAsync` with unreachable server URL → exception caught, no rethrow (best-effort) — **verified**: new `PublishAsync_WithUnreachableServer_SwallowsException`, using a throwing `HttpMessageHandler`
+4. Concurrent notifications for many users → `hydraforge-{userId}` topic per user, no cross-talk — **verified by code inspection + test**: new `PublishAsync_WithServerUrl_PostsToPerUserTopic` asserts the posted URL is `{serverUrl}/hydraforge-{userId}`; no shared-state between calls so cross-talk isn't structurally possible
+5. `UserId == ActorId` → service short-circuits, no DB write, no push, no SignalR event — **verified**: existing `NotificationServiceTests` coverage, unaffected by this change
+
+### Regressions
+1. Existing notification flow (DB + SignalR) still works end-to-end — **verified**: no `useApi` or SignalR client changes; Application/Server test suites unaffected
+2. `system_settings` seed row retains `Id = 00000000-0000-0000-0000-000000000001` — **verified 2026-07-27** via direct SQL query
+3. TUI/Web UI notification bell + count still updates on new notifications — not retested here (no code path touches this; carried over as unaffected)
+4. `dotnet build` clean, `dotnet test` all suites pass, EF drift check reports "No pending model changes" — **verified 2026-07-27**: 617 tests pass (59 Domain + 213 Application + 77 Infrastructure + 152 Server + 116 Tui), `has-pending-model-changes` reports none
+5. `SystemSettingsSingletonId` moved from `HydraForgeDbContext` to `SystemSettings.SingletonId` — **verified 2026-07-27**: grep confirms only `DbContext.cs` referenced it, updated in the same pass; build/tests green after the move
+
+### Docker
+1. `docker compose --profile notifications config` — services include `ntfy` with `profiles: ["notifications"]` — **verified 2026-07-27**
+2. `docker compose --profile notifications config --volumes` — `ntfy-data` volume declared — **verified 2026-07-27** (note: plain `docker compose config --volumes` without the profile flag does NOT list it — profile-gated volumes only appear when the profile is active)
+3. `ntfy` env: `NTFY_AUTH_DEFAULT_ACCESS: deny-all` set (no anonymous publish) — **verified 2026-07-27**
+4. `NTFY_BASE_URL=http://localhost:8083` present in `.env.example` — **verified 2026-07-27**
+
+**Verdict: All automatable surface (build, tests incl. 3 new `NtfyClient`-level tests, migration, DI/server boot, docker health) now genuinely passes — it did not before this pass, despite being marked ✅ closed. The only remaining gap (Happy Path item 2 — real end-to-end push) is correctly blocked on Task 7 (notification triggers), same as Plan 3; not a Plan 6 defect.**
+
+### Cleanup
+- [x] `docker compose --profile notifications down` (volumes preserved, no `-v`) — done 2026-07-27
+- [x] No test data created — used the seeded `system_settings` singleton row only

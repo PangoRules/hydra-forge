@@ -314,7 +314,7 @@ public class HydraForgeDbContext : DbContext
         {
             b.HasData(new SystemSettings
             {
-                Id = SystemSettingsSingletonId,
+                Id = HydraForge.Domain.Entities.PersonalSpace.SystemSettings.SingletonId,
                 ArchivedItemRetentionDays = 730,
                 AuditLogRetentionDays = 90,
                 NotificationRetentionDays = 30,
@@ -367,8 +367,6 @@ public class HydraForgeDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
-
-    public static readonly Guid SystemSettingsSingletonId = new("00000000-0000-0000-0000-000000000001");
 
     private static void ConfigureEntity<T>(ModelBuilder modelBuilder, string tableName, Action<Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T>>? configure = null)
         where T : class

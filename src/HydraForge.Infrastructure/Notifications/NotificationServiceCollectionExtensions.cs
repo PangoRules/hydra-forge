@@ -1,5 +1,6 @@
 using HydraForge.Application.Notifications;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace HydraForge.Infrastructure.Notifications;
 
@@ -9,6 +10,10 @@ public static class NotificationServiceCollectionExtensions
     {
         services.AddScoped<INotificationRepository, EfNotificationRepository>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.Configure<NtfyOptions>(_ => { });
+
+        services.AddHttpClient<INtfyClient, NtfyClient>();
+
         return services;
     }
 }
