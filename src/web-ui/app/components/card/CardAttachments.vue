@@ -15,7 +15,10 @@ const props = defineProps<{
   cardId: string
   projectId: string
   readonly?: boolean
+  refreshKey?: number
 }>()
+
+watch(() => props.refreshKey, fetchAttachments)
 
 const attachments = ref<AttachmentResponse[]>([])
 const loading = ref(true)

@@ -1,4 +1,7 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
+using HydraForge.Application.Logging;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -15,12 +18,18 @@ public class ProjectService(
     IChatArchiveService chatArchiveService,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher,
-    IAuditLogWriter auditLogWriter
+    IAuditLogWriter auditLogWriter,
+    IUserRepository userRepo,
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IUserRepository _userRepo = userRepo;
+    private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
     
 
     public async Task<Result<ProjectDto>> CreateAsync(
@@ -239,6 +248,28 @@ public class ProjectService(
         var columns = await columnRepo.GetByProjectIdAsync(cmd.ProjectId, ct);
         var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
 
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+
+        var updateRequests = members
+            .Where(m => m.UserId != cmd.ActorId)
+            .Select(m => new NotifyRequest(
+                m.UserId,
+                cmd.ActorId,
+                $"{project.Name} was updated by {actorName}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board"
+            ))
+            .ToList();
+
+        if (updateRequests.Count > 0)
+        {
+            try { await _notifService.NotifyBatchAsync(updateRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send project-update notifications: {ex.Message}"); }
+        }
+
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
@@ -304,6 +335,31 @@ public class ProjectService(
             ),
             ct
         );
+
+        // Notify all project members
+        var members = await memberRepo.ListMembersAsync(cmd.ProjectId, ct);
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        var action = isArchiving ? "archived" : "restored";
+
+        var archiveRequests = members
+            .Where(m => m.UserId != cmd.ActorId)
+            .Select(m => new NotifyRequest(
+                m.UserId,
+                cmd.ActorId,
+                $"{project.Name} has been {action}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
+            ))
+            .ToList();
+
+        if (archiveRequests.Count > 0)
+        {
+            try { await _notifService.NotifyBatchAsync(archiveRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send archive-notifications: {ex.Message}"); }
+        }
 
         return Result.Success();
     }

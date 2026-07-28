@@ -190,6 +190,33 @@ X-Correlation-Id: smoke-test-card-013
 
 ###
 
+# ── Watch / Unwatch ──────────────────────────────────────────
+
+# @name watchCard
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/watch HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-013b
+
+
+###
+
+# Idempotent — watching again should not duplicate the watcher row
+
+POST {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/watch HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-013c
+
+
+###
+
+DELETE {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/cards/{{createTask.response.body.$.id}}/watch HTTP/1.1
+Authorization: Bearer {{adminToken}}
+X-Correlation-Id: smoke-test-card-013d
+
+
+###
+
 # ── Blocked Move Preflight ───────────────────────────────────
 # Create a task that will block moving the epic
 

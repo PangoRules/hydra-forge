@@ -168,7 +168,7 @@ public class CardRelationshipService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, relationship.Id, relationship.SourceCardId, BoardAction.Created, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         cardsById.TryGetValue(relationship.SourceCardId, out var s);
@@ -222,7 +222,7 @@ public class CardRelationshipService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Deleted, ct);
+        await PublishAsync(cmd.ProjectId, relationship.Id, relationship.SourceCardId, BoardAction.Deleted, ct);
 
         return Result.Success();
     }
@@ -346,7 +346,7 @@ public class CardRelationshipService(
         );
     }
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid entityId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -356,7 +356,8 @@ public class CardRelationshipService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

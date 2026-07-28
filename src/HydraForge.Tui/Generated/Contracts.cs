@@ -203,6 +203,16 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CardResponse> WatchPOSTAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<CardResponse> WatchDELETEAsync(System.Guid projectId, System.Guid cardId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ColumnResponse>> ColumnsAllAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -556,6 +566,37 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CardRelationshipBadgeResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("relatedCardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid RelatedCardId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("relatedCardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int RelatedCardNumber { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("relatedCardTitle", Required = Newtonsoft.Json.Required.Always)]
+        public string RelatedCardTitle { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public RelationshipType Type { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isSource", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsSource { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CardRelationshipDto
     {
 
@@ -677,6 +718,12 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("watchers", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<CardWatcherResponse> Watchers { get; set; } = new System.Collections.ObjectModel.Collection<CardWatcherResponse>();
+
+        [Newtonsoft.Json.JsonProperty("relationshipBadges", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<CardRelationshipBadgeResponse> RelationshipBadges { get; set; } = new System.Collections.ObjectModel.Collection<CardRelationshipBadgeResponse>();
+
+        [Newtonsoft.Json.JsonProperty("relationshipCount", Required = Newtonsoft.Json.Required.Always)]
+        public int RelationshipCount { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

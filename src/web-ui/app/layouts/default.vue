@@ -2,8 +2,10 @@
 import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
 import NotificationPanel from '~/components/notifications/NotificationPanel.vue'
 
-const { logout, isAuthenticated, checkAuth } = useAuth()
+const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
+const authStore = useAuthStore()
 const { fetchUnreadCount } = useNotifications()
+const notificationHub = useNotificationHub()
 const {
   isExpired,
   isExpiringSoon,
@@ -19,14 +21,19 @@ const {
 // mounts or API calls fire. onMounted is too late: the page's onMounted
 // (which calls fetchBoard) fires right after the layout's onMounted.
 checkAuth()
+listenForAuthChanges()
 
 onMounted(() => {
   startSessionManager()
   if (isAuthenticated) {
     fetchUnreadCount()
+    notificationHub.connect()
   }
 })
-onUnmounted(() => stopSessionManager())
+onUnmounted(() => {
+  stopSessionManager()
+  notificationHub.disconnect()
+})
 
 const showSessionModal = computed(() => isExpiringSoon.value || isExpired.value)
 
@@ -60,6 +67,10 @@ function handleSessionLogout() {
         </ClientOnly>
         <UColorModeButton />
         <ClientOnly>
+          <span
+            v-if="isAuthenticated && authStore.user"
+            class="text-sm text-muted mr-2"
+          >{{ authStore.user.username }}</span>
           <UButton
             v-if="isAuthenticated"
             label="Logout"

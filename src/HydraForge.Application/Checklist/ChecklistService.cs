@@ -28,7 +28,7 @@ public class ChecklistService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid entityId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -38,7 +38,8 @@ public class ChecklistService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }
@@ -135,7 +136,7 @@ public class ChecklistService(
             ),
             ct
         );
-        await PublishAsync(cmd.ProjectId, item.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Created, ct);
 
         string? assigneeUsername = null;
         if (cmd.AssignedTo.HasValue)
@@ -213,6 +214,7 @@ public class ChecklistService(
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -264,6 +266,7 @@ public class ChecklistService(
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -357,6 +360,7 @@ public class ChecklistService(
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -407,6 +411,7 @@ public class ChecklistService(
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Deleted, ct);
 
         return Result.Success();
     }

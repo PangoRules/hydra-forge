@@ -1,11 +1,13 @@
 using HydraForge.Application.Notifications;
 using HydraForge.Domain.Entities.PersonalSpace;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("HydraForge.Application.Tests")]
+
 namespace HydraForge.Application.Tests.Notifications;
 
 public class NotificationServiceTests
 {
-    private class FakeNotificationRepository : INotificationRepository
+    public class FakeNotificationRepository : INotificationRepository
     {
         public List<Notification> Added { get; } = [];
 
@@ -41,7 +43,7 @@ public class NotificationServiceTests
             throw new NotImplementedException();
     }
 
-    private class FakeNotificationHubBus : INotificationHubBus
+    public class FakeNotificationHubBus : INotificationHubBus
     {
         public List<(Guid UserId, Notification Notification)> Sent { get; } = [];
 

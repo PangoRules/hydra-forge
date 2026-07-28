@@ -12,12 +12,20 @@ public class SpecViewerScreen : IScreen
     private readonly ApiClientFactory _apiClientFactory;
     private readonly AppState _appState;
     private readonly ErrorCollector _errorCollector;
+    private readonly SignalRConnectionManager _signalRConnectionManager;
     private readonly EditorLauncher _editorLauncher = new();
 
     private readonly Guid _projectId;
     private readonly Guid _cardId;
     private readonly CardType _cardType;
     private readonly string _mode;
+    private bool _signalRSubscribed;
+
+    // A key-triggered render (create/edit/etc.) and the SignalR echo of that same action
+    // (the server broadcasts back to the actor's own connection too) can land concurrently
+    // — without this, overlapping Clear()+Write() calls interleave into duplicate/garbled
+    // frames. Same pattern BoardScreen already uses for the identical reason.
+    private readonly SemaphoreSlim _renderLock = new(1, 1);
 
     private List<DocumentItem> _documents = new();
     private List<VersionItem> _versions = new();
@@ -27,6 +35,7 @@ public class SpecViewerScreen : IScreen
         ApiClientFactory apiClientFactory,
         AppState appState,
         ErrorCollector errorCollector,
+        SignalRConnectionManager signalRConnectionManager,
         Guid projectId,
         Guid cardId,
         CardType cardType,
@@ -35,6 +44,7 @@ public class SpecViewerScreen : IScreen
         _apiClientFactory = apiClientFactory;
         _appState = appState;
         _errorCollector = errorCollector;
+        _signalRConnectionManager = signalRConnectionManager;
         _projectId = projectId;
         _cardId = cardId;
         _cardType = cardType;
@@ -45,33 +55,71 @@ public class SpecViewerScreen : IScreen
     {
         await LoadDocumentsAsync();
         await LoadVersionsForSelectedAsync();
+
+        if (!_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
+            _signalRSubscribed = true;
+        }
     }
 
-    public Task OnExitAsync() => Task.CompletedTask;
+    public Task OnExitAsync()
+    {
+        if (_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
+            _signalRSubscribed = false;
+        }
+        return Task.CompletedTask;
+    }
+
+    // Entered from CardDetailScreen by direct _appState.CurrentScreen assignment (an
+    // overlay-style push, see OpenSpecsPlansAsync), so the connection it rode in on is
+    // already alive — no need to Connect/Disconnect here, only (un)subscribe the handler.
+    private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
+    {
+        if (evt.ProjectId != _projectId || evt.CardId != _cardId) return;
+
+        var expectedEntityType = _mode == "spec" ? "Spec" : "Plan";
+        if (evt.EntityType != expectedEntityType) return;
+
+        await LoadDocumentsAsync();
+        await LoadVersionsForSelectedAsync();
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
 
     public async Task RenderAsync()
     {
-        AnsiConsole.Clear();
-
-        var title = _mode == "spec" ? "Specifications" : "Plans";
-        AnsiConsole.Write(new Rule($"[blue]{title}[/]"));
-
-        if (_documents.Count == 0)
+        await _renderLock.WaitAsync();
+        try
         {
-            var empty = new Panel(new Markup($"[grey]No {_mode}s for this card.[/]"))
-            {
-                Header = new PanelHeader(" Documents "),
-                Border = BoxBorder.Rounded,
-                Expand = true,
-            };
-            AnsiConsole.Write(empty);
-            KeyHintBar.Render(BuildHints());
-            return;
-        }
+            AnsiConsole.Clear();
 
-        AnsiConsole.Write(BuildListPanel());
-        AnsiConsole.Write(BuildDetailSplit());
-        KeyHintBar.Render(BuildHints());
+            var title = _mode == "spec" ? "Specifications" : "Plans";
+            AnsiConsole.Write(new Rule($"[blue]{title}[/]"));
+
+            if (_documents.Count == 0)
+            {
+                var empty = new Panel(new Markup($"[grey]No {_mode}s for this card.[/]"))
+                {
+                    Header = new PanelHeader(" Documents "),
+                    Border = BoxBorder.Rounded,
+                    Expand = true,
+                };
+                AnsiConsole.Write(empty);
+                KeyHintBar.Render(BuildHints());
+                return;
+            }
+
+            AnsiConsole.Write(BuildListPanel());
+            AnsiConsole.Write(BuildDetailSplit());
+            KeyHintBar.Render(BuildHints());
+        }
+        finally
+        {
+            _renderLock.Release();
+        }
     }
 
     private Panel BuildListPanel()

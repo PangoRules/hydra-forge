@@ -24,7 +24,12 @@ public class BoardRenderer
         string Type,
         List<RelationBadge> Badges,
         List<string> AssigneeInitials,
-        int Version
+        int Version,
+        int? ParentCardNumber = null,
+        string? ParentCardType = null,
+        int ChildCount = 0,
+        DateTimeOffset? DueAt = null,
+        bool IsWatching = false
     );
 
     public Layout BuildLayout(
@@ -65,7 +70,7 @@ public class BoardRenderer
             var color = ParseColor(col.Color) ?? Color.Grey;
 
             var cardHeights = col.Cards
-                .Select(c => ColumnScrollCalculator.CardBoxHeight(c.Badges.Count))
+                .Select(c => ColumnScrollCalculator.CardBoxHeight(c.Badges.Count, ExtraLineCount(c)))
                 .ToList();
             var window = ColumnScrollCalculator.ComputeVisibleRange(
                 cardHeights,
@@ -83,30 +88,26 @@ public class BoardRenderer
                 var card = col.Cards[j];
                 var isCardSelected = isSelected && j == selectedCard;
                 var isBeingReordered = reorderCardId.HasValue && card.Id == reorderCardId.Value;
-                var typeBadge = card.Type switch
-                {
-                    "Task" => "[cyan1]T[/]",
-                    "Issue" => "[red]I[/]",
-                    "Goal" => "[yellow]G[/]",
-                    "Idea" => "[green]D[/]",
-                    _ => "[grey]?[/]"
-                };
+                var typeBadge = TypeBadge(card.Type);
 
                 var assignees = card.AssigneeInitials.Count > 0
                     ? " " + string.Join("", card.AssigneeInitials.Select(a => $"[grey]{a}[/]"))
                     : "";
 
+                var watching = card.IsWatching ? " 👀" : "";
+
                 var title = card.Title.Length > 25
                     ? card.Title[..22] + "..."
                     : card.Title;
 
-                var titleLine = $"{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}";
+                var titleLine = $"{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}{watching}";
                 var shownBadges = card.Badges.Take(ColumnScrollCalculator.MaxBadgesPerCard).Select(FormatBadgeLine);
                 var overflowCount = card.Badges.Count - ColumnScrollCalculator.MaxBadgesPerCard;
                 var overflowLine = overflowCount > 0
                     ? new[] { $"[grey]+{overflowCount} more (open card)[/]" }
                     : [];
-                var cardMarkup = string.Join("\n", new[] { titleLine }.Concat(shownBadges).Concat(overflowLine));
+                var extraLines = FormatExtraLines(card);
+                var cardMarkup = string.Join("\n", new[] { titleLine }.Concat(shownBadges).Concat(overflowLine).Concat(extraLines));
 
                 var panel = new Panel(new Markup(cardMarkup))
                 {
@@ -117,7 +118,7 @@ public class BoardRenderer
                     // Expand fills the column's width; without pinning Height back to its natural
                     // content size, Expand also stretches the panel to fill leftover column height.
                     Expand = true,
-                    Height = ColumnScrollCalculator.CardBoxHeight(card.Badges.Count),
+                    Height = ColumnScrollCalculator.CardBoxHeight(card.Badges.Count, ExtraLineCount(card)),
                 };
 
                 cardPanels.Add(CardMargin(panel));
@@ -170,6 +171,39 @@ public class BoardRenderer
 
     private static IRenderable ScrollIndicator(string text) =>
         new Markup($"[grey italic]{text}[/]");
+
+    private static string TypeBadge(string type) => type switch
+    {
+        "Task" => "[cyan1]T[/]",
+        "Issue" => "[red]I[/]",
+        "Goal" => "[yellow]G[/]",
+        "Idea" => "[green]D[/]",
+        _ => "[grey]?[/]"
+    };
+
+    // Parent/children/due-date lines are conditional — most cards show 0 or 1 of them,
+    // keeping the common case cheap. CardBoxHeight must stay in sync with this count.
+    private static int ExtraLineCount(CardData card) =>
+        (card.ParentCardNumber.HasValue ? 1 : 0) +
+        (card.ChildCount > 0 ? 1 : 0) +
+        (card.DueAt.HasValue ? 1 : 0);
+
+    private static IEnumerable<string> FormatExtraLines(CardData card)
+    {
+        if (card.ParentCardNumber.HasValue)
+            yield return $"📌 {TypeBadge(card.ParentCardType ?? "")} #{card.ParentCardNumber}";
+
+        if (card.ChildCount > 0)
+            yield return $"🌿 [grey]{card.ChildCount} child{(card.ChildCount == 1 ? "" : "ren")}[/]";
+
+        if (card.DueAt.HasValue)
+        {
+            var overdue = card.DueAt.Value.UtcDateTime < DateTime.UtcNow;
+            yield return overdue
+                ? $"📅 [red]{card.DueAt.Value:yyyy-MM-dd} (overdue)[/]"
+                : $"📅 [grey]{card.DueAt.Value:yyyy-MM-dd}[/]";
+        }
+    }
 
     private static string FormatBadgeLine(RelationBadge badge)
     {

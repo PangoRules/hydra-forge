@@ -249,8 +249,10 @@ Each entry has:
 | D-48 | TUI API client + SignalR + credential storage | NSwag codegen; `Microsoft.AspNetCore.SignalR.Client`; plain JSON file at `.hydraforge/config.json` | ✅ |
 | D-49 | Credential storage location | Repo-root `.hydraforge/config.json` (found via `HydraForge.slnx` walk), not `~/.config` | ✅ |
 | D-50 | OpenAPI enum schemas | EnumSchemaTransformer corrects `type: integer` → `type: string` in schema; NSwag generates real C# enums | ✅ |
-| D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler but no live SignalR connection; polling-only for now | 🔜 |
+| D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler; wired to a live SignalR connection via `useNotificationHub.ts`, connected from `layouts/default.vue` on mount (D-51 follow-up, 2026-07-27) | ✅ |
 | D-52 | ntfy client implementation | `INtfyClient` port in Application; `NtfyClient` + `NtfyOptions` in Infrastructure; `SystemSettings.NtfyServerUrl`; docker-compose `ntfy` service; best-effort push (null URL = no-op) | ✅ |
+| D-53 | SignalR JsonStringEnumConverter | Hub payload enums must serialize as strings, not ints — TUI silently drops int-encoded board events | ✅ |
+| D-54 | Targeted realtime board patching | `useRealtime.ts` routes by entity type for per-entity re-fetch instead of full board refresh; `CardId` on envelope for card-scoped sub-entities | ✅ |
 
 ---
 
@@ -847,3 +849,27 @@ Chats
 | **Alternatives considered** | 1. Topic-per-notification (rejected — creates topics dynamically on ntfy server, harder to manage ACLs). 2. Throw on ntfy failure (rejected — push is best-effort, server/ntfy down must not crash board). |
 | **Impact** | `NotificationService` now optionally pushes to ntfy after every `NotifyAsync` call. `AddSystemSettingsFields` EF migration adds `NtfyServerUrl`, `SearXngUrl`, `BrandName`, `BrandLogoUrl` as nullable text columns. `SystemSettingsSingletonId` moved from `HydraForgeDbContext` to `SystemSettings.SingletonId`. `NtfyClient` registered via `AddHttpClient<INtfyClient, NtfyClient>()` with `NtfyOptions` configured. |
 | **2026-07-27 correction** | The original 2026-07-25 close-out marked this ✅ without the branch ever building — `INtfyClient.cs` and `NtfyOptions.cs` were referenced but never committed (CS0246 on `dotnet build`), and Step 1 (`SystemSettings` fields, `UpdateSettings()`, singleton-id move, migration) was never written at all. `docker-compose.yml`'s `ntfy` service also had no `command`, so the container exited immediately instead of serving (fixed: added `command: serve`). All gaps closed on `task/ntfy-integration` 2026-07-27; see the corrected Plan 6 section in `docs/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md` for what was actually re-verified. |
+
+---
+
+## D-53: SignalR Hub Protocol Must Use JsonStringEnumConverter
+
+| Field | Value |
+|---|---|
+| **Topic** | Hub payload enums must serialize as strings, not ints |
+| **Date** | 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `builder.Services.AddSignalR().AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))` in `Program.cs`. |
+| **Rationale** | Without this, hub payload enums (`BoardEntityType`, `BoardAction`, etc.) serialize as ints. MVC's `JsonStringEnumConverter` (via `builder.Services.ConfigureHttpJsonOptions`) only covers REST responses, not the SignalR hub protocol. The TUI `SignalRConnectionManager` deserializes these fields as strings (from the NSwag-generated contracts), so a mismatched int throws inside the client's message handler and is silently swallowed by the `HubConnection` — making board-event pushes a silent no-op. The TUI sees no board updates, no error, no reconnect. |
+| **Impact** | `Program.cs` now has `AddJsonProtocol` with `JsonStringEnumConverter`. All future SignalR hubs inherit this serializer. Found and fixed in `9b26412`. |
+
+## D-54: Targeted Realtime Board Patching
+
+| Field | Value |
+|---|---|
+| **Topic** | Per-entity-type realtime event routing instead of full board refresh |
+| **Date** | 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `useRealtime.ts` routes `BoardEntityEvent` by `envelope.entityType` to targeted handlers: `Card`/`Column` → single-entity re-fetch via `applyRealtimeCardEvent`/`applyRealtimeColumnEvent`; `CardRelationship` → full `board.fetchBoard`; others → `signalCardContentEvent` for open CardModals. `ProjectBoardEventEnvelope` gains `Guid? CardId` for card-scoped sub-entities. |
+| **Rationale** | The original code called `board.fetchBoard(projectId)` on every `BoardEntityEvent` — a full board re-fetch that flickers the UI and wastes bandwidth, especially during rapid edits (checklist toggles, comment posts). Per-entity patching: no board blink, lower latency, no wasted data. `CardRelationship` still does full refresh because the event affects badges on both the source and target card (neither is the relationship's own `entityId`), and this event is rare enough that full refresh is acceptable. The `CardId` field lets the client route card-scoped sub-entity events (comment posted, checklist toggled) to the right open CardModal without guessing. |
+| **Impact** | `useRealtime.ts` event handler restructured; `BoardStore` gains `applyRealtimeCardEvent`, `applyRealtimeColumnEvent`, `signalCardContentEvent`; `ProjectBoardEventEnvelope` has new `CardId` field (all sub-entity services now pass it). Added in `72afc95`.

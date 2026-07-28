@@ -40,6 +40,7 @@ const templates = [
 ]
 
 const api = useApi()
+const authStore = useAuthStore()
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 function onClose() {
@@ -72,9 +73,14 @@ async function searchUsers() {
   searching.value = true
   try {
     const { data } = await api.GET(ApiRoutes.Users.search(searchQuery.value))
-    const existingIds = new Set(selectedMembers.value.map(m => m.id))
+    const excludedIds = new Set(selectedMembers.value.map(m => m.id))
+    // The creator becomes Owner automatically on project creation (there's no
+    // project yet to pass excludeProjectId for) — exclude them here so they
+    // can't also be added as a Member, which fails as a duplicate-membership
+    // error on submit.
+    if (authStore.user) excludedIds.add(authStore.user.userId)
     searchResults.value = ((data as Array<{ id: string, username: string }>) ?? [])
-      .filter(u => !existingIds.has(u.id))
+      .filter(u => !excludedIds.has(u.id))
   } catch {
     searchResults.value = []
   } finally {

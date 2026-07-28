@@ -34,7 +34,14 @@ const props = withDefaults(defineProps<{
   projectId: string
   docType?: string
   readonly?: boolean
+  refreshKey?: number
 }>(), { docType: 'Specification' })
+
+// Skip the auto-refresh while the user has an unsaved edit in progress — fetchSpec()
+// overwrites title/content directly, which would silently discard their draft.
+watch(() => props.refreshKey, () => {
+  if (!isDirty.value) fetchSpec()
+})
 
 const emit = defineEmits<{
   'update:specId': [string | null]

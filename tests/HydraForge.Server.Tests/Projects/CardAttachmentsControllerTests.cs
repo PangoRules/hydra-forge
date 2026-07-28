@@ -6,6 +6,7 @@ using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Attachments;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -286,6 +287,7 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddScoped<IAuditLogWriter>(_ => new AttachmentsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.Attachments.IFileStore>(_ => _fakeFileStore);
             services.AddScoped<HydraForge.Application.Attachments.IAttachmentRepository>(_ => new AttachmentsTestAttachmentRepository(_attachments));
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();
@@ -488,6 +490,8 @@ internal class AttachmentsTestCardRelationshipRepository : HydraForge.Applicatio
     public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<CardRelationship?>(null);

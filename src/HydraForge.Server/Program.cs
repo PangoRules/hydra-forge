@@ -132,7 +132,16 @@ builder
     )
     .AddPolicy(AuthPolicies.AdminRequired, policy => policy.RequireRole(Roles.Admin));
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        // Without this, hub payload enums (BoardEntityType, BoardAction, etc.) serialize
+        // as ints — MVC's JsonStringEnumConverter (above) only covers REST responses, not
+        // the SignalR hub protocol. The TUI client deserializes these fields as strings,
+        // so a mismatched int throws inside the client's message handler and is silently
+        // swallowed by the SignalR client, making board-event pushes a silent no-op.
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();

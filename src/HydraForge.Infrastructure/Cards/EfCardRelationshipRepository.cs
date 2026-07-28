@@ -77,6 +77,13 @@ public class EfCardRelationshipRepository(HydraForgeDbContext context) : ICardRe
         await Task.CompletedTask;
     }
 
+    public async Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+    {
+        return await context.CardRelationships
+            .Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null)
+            .ToListAsync(ct);
+    }
+
     public async Task ArchiveAsync(Guid id, CancellationToken ct = default)
     {
         var rel = await context.CardRelationships.FirstOrDefaultAsync(r => r.Id == id, ct);

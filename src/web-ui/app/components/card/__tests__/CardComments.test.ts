@@ -31,7 +31,7 @@ describe('CardComments', () => {
       props: { cardId: 'c1', projectId: 'p1' }
     })
     await flushPromises()
-    expect(wrapper.find('textarea[placeholder="Write a comment..."]').exists()).toBe(true)
+    expect(wrapper.find('textarea[placeholder="Write a comment... (@ to mention)"]').exists()).toBe(true)
   })
 
   it('shows empty state when no comments', async () => {

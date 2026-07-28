@@ -1,5 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Logging;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
@@ -19,7 +21,9 @@ public class CardService(
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly ICardRepository _cardRepo = cardRepo;
@@ -32,6 +36,8 @@ public class CardService(
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
@@ -284,11 +290,77 @@ public class CardService(
                 ? await _userRepo.FindByIdsAsync(allUserIds, ct)
                 : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
 
+        // One project-wide relationship fetch instead of a per-card query — a related
+        // card not present in `cardsById` (archived/out of this filtered result) is
+        // simply skipped when building badges, same as the single-card path.
+        var relationships = await _relationshipRepo.ListActiveByProjectAsync(projectId, ct);
+        var cardsById = cards.ToDictionary(c => c.Id);
+        var relationshipCounts = relationships
+            .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId })
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var relationshipsByCard = relationships
+            .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId }.Distinct().Select(id => (CardId: id, Relationship: r)))
+            .ToLookup(x => x.CardId, x => x.Relationship);
+
         var dtos = cards
-            .Select(card => MapCardToDto(card, assigneeLookupFinal, watcherLookupFinal, usersById))
+            .Select(card => MapCardToDto(
+                card,
+                assigneeLookupFinal,
+                watcherLookupFinal,
+                usersById,
+                cardsById,
+                relationshipCounts,
+                relationshipsByCard
+            ))
             .ToList();
 
         return Result<IReadOnlyList<CardDto>>.Success(dtos);
+    }
+
+    public async Task<Result<CardDto>> WatchAsync(WatchCardCommand cmd, CancellationToken ct = default)
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        var existing = await _watcherRepo.GetByCardAndUserAsync(cmd.CardId, cmd.ActorId, ct);
+        if (existing == null)
+        {
+            await _watcherRepo.AddAsync(
+                new CardWatcher { CardId = cmd.CardId, UserId = cmd.ActorId, AddedAt = DateTime.UtcNow },
+                ct
+            );
+        }
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+    }
+
+    public async Task<Result<CardDto>> UnwatchAsync(UnwatchCardCommand cmd, CancellationToken ct = default)
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        await _watcherRepo.RemoveAsync(cmd.CardId, cmd.ActorId, ct);
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
     public async Task<Result<CardDto>> UpdateAsync(
@@ -466,21 +538,25 @@ public class CardService(
 
         var blockingRelationships = (
             await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct)
-        ).Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct));
-        var hasBlockers = false;
-        foreach (var relationship in blockingRelationships)
+        ).Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct)).ToList();
+
+        var blockingRelatedCardIds = blockingRelationships
+            .Select(r => r.SourceCardId == cmd.CardId ? r.TargetCardId : r.SourceCardId)
+            .Distinct()
+            .ToList();
+        var blockingRelatedCardsById = blockingRelatedCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(blockingRelatedCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var hasBlockers = blockingRelationships.Any(relationship =>
         {
             var relatedCardId =
                 relationship.SourceCardId == cmd.CardId
                     ? relationship.TargetCardId
                     : relationship.SourceCardId;
-            var relatedCard = await _cardRepo.GetByIdAsync(relatedCardId, ct);
-            if (relatedCard != null && relatedCard.ArchivedAt == null)
-            {
-                hasBlockers = true;
-                break;
-            }
-        }
+            return blockingRelatedCardsById.TryGetValue(relatedCardId, out var relatedCard)
+                && relatedCard.ArchivedAt == null;
+        });
 
         if (hasBlockers && !cmd.ConfirmBlockedMove)
         {
@@ -583,6 +659,40 @@ public class CardService(
 
         await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Moved, ct);
 
+        // Notify assignees + watchers about card move
+        var assignees = await _assigneeRepo.ListByCardAsync(card.Id, ct);
+        var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+        var recipientIds = assignees.Select(a => a.UserId)
+            .Concat(watchers.Select(w => w.UserId))
+            .Distinct()
+            .ToList();
+
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        var columnName = targetColumn.Name;
+
+        var moveRequests = recipientIds
+            .Where(id => id != cmd.ActorId)
+            .Select(id => new NotifyRequest(
+                id,
+                cmd.ActorId,
+                $"{actorName} moved #{card.CardNumber} to {columnName}",
+                null,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        try
+        {
+            await _notifService.NotifyBatchAsync(moveRequests, ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send move notifications: {ex.Message}");
+        }
+
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
@@ -656,6 +766,26 @@ public class CardService(
         );
 
         await PublishAsync(cmd.ProjectId, BoardEntityType.Card, card.Id, BoardAction.Assigned, ct);
+
+        // Notify new assignee
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+        try
+        {
+            await _notifService.NotifyAsync(new NotifyRequest(
+                cmd.AssigneeUserId,
+                cmd.ActorId,
+                $"{actorName} assigned you to #{card.CardNumber}",
+                card.Title,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ), ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send assignment notification: {ex.Message}");
+        }
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
@@ -738,6 +868,10 @@ public class CardService(
         await _cardRepo.UpdateAsync(card, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+        // Archiving is the only action that can actually resolve a "blocked by" dependency —
+        // moving a card never sets ArchivedAt, so a blocker only stops counting as active here.
+        await NotifyResolvedDependenciesAsync(card, cmd.ProjectId, cmd.ActorId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -880,6 +1014,18 @@ public class CardService(
             ))
             .ToList();
 
+        var relationships = await _relationshipRepo.ListByCardAsync(card.Id, ct);
+
+        var relatedCardIds = relationships
+            .Select(r => r.SourceCardId == card.Id ? r.TargetCardId : r.SourceCardId)
+            .Distinct()
+            .ToList();
+        var relatedCardsById = relatedCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var relationshipBadges = BuildRelationshipBadges(card.Id, relationships, relatedCardsById);
+
         return new CardDto(
             card.Id,
             card.ProjectId,
@@ -897,15 +1043,60 @@ public class CardService(
             card.ArchivedAt,
             card.ParentCardId,
             assigneeDtos,
-            watcherDtos
+            watcherDtos,
+            relationshipBadges,
+            relationships.Count
         );
+    }
+
+    // Ordering mirrors the TUI's CardRelationshipIndicatorHelper.TypeOrder — blocking
+    // relationships surface first, informational ones last. Capped so a heavily-linked
+    // card doesn't blow up the board payload; RelationshipCount on the DTO carries the
+    // true total for a "+N more" indicator.
+    private const int MaxRelationshipBadges = 5;
+
+    private static readonly Dictionary<RelationshipType, int> RelationshipTypeOrder = new()
+    {
+        [RelationshipType.BlockedBy] = 0,
+        [RelationshipType.Precedes] = 1,
+        [RelationshipType.SpawnedFrom] = 2,
+        [RelationshipType.Relates] = 3,
+    };
+
+    private static List<CardRelationshipBadgeDto> BuildRelationshipBadges(
+        Guid cardId,
+        IReadOnlyList<CardRelationship> relationships,
+        IReadOnlyDictionary<Guid, Card> relatedCardsById
+    )
+    {
+        var badges = new List<CardRelationshipBadgeDto>();
+        foreach (var rel in relationships)
+        {
+            var isSource = rel.SourceCardId == cardId;
+            var otherId = isSource ? rel.TargetCardId : rel.SourceCardId;
+            if (!relatedCardsById.TryGetValue(otherId, out var otherCard))
+                continue;
+
+            badges.Add(new CardRelationshipBadgeDto(
+                otherCard.Id,
+                otherCard.CardNumber,
+                otherCard.Title,
+                rel.Type,
+                isSource
+            ));
+        }
+
+        return [.. badges.OrderBy(b => RelationshipTypeOrder[b.Type]).Take(MaxRelationshipBadges)];
     }
 
     private static CardDto MapCardToDto(
         Card card,
         ILookup<Guid, CardAssignee> assigneeLookup,
         ILookup<Guid, CardWatcher> watcherLookup,
-        IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById
+        IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById,
+        IReadOnlyDictionary<Guid, Card> cardsById,
+        IReadOnlyDictionary<Guid, int> relationshipCounts,
+        ILookup<Guid, CardRelationship> relationshipsByCard
     )
     {
         var assigneeDtos = assigneeLookup[card.Id]
@@ -925,6 +1116,9 @@ public class CardService(
             ))
             .ToList();
 
+        var relationshipCount = relationshipCounts.TryGetValue(card.Id, out var count) ? count : 0;
+        var relationshipBadges = BuildRelationshipBadges(card.Id, [.. relationshipsByCard[card.Id]], cardsById);
+
         return new CardDto(
             card.Id,
             card.ProjectId,
@@ -942,7 +1136,80 @@ public class CardService(
             card.ArchivedAt,
             card.ParentCardId,
             assigneeDtos,
-            watcherDtos
+            watcherDtos,
+            relationshipBadges,
+            relationshipCount
         );
+    }
+
+    private async Task NotifyResolvedDependenciesAsync(
+        Card archivedCard, Guid projectId, Guid actorId, CancellationToken ct)
+    {
+        var relationships = await _relationshipRepo.ListActiveByCardAsync(archivedCard.Id, ct);
+        var blockedByRels = relationships.Where(r =>
+            r.Type == RelationshipType.BlockedBy && r.SourceCardId == archivedCard.Id);
+
+        // Single query for all cards archivedCard blocks
+        var blockedCardIds = blockedByRels.Select(r => r.TargetCardId).Distinct().ToList();
+        if (blockedCardIds.Count == 0) return;
+
+        var blockedCardsById = await _cardRepo.GetByIdsAsync(blockedCardIds, ct);
+        var activeBlockedCards = blockedCardsById.Values
+            .Where(c => c.ArchivedAt == null)
+            .ToList();
+        if (activeBlockedCards.Count == 0) return;
+
+        // Check remaining blockers for all blocked cards in one query
+        var allRemainingBlockers = await _relationshipRepo.ListBlockersForCardsAsync(
+            activeBlockedCards.Select(c => c.Id).ToList(), ct);
+
+        // Blocker cards are a DIFFERENT set than blockedCardsById (which only holds cards
+        // archivedCard itself blocks) — a blocked card can have OTHER active blockers too,
+        // so their archived state has to come from its own batch fetch, not be looked up
+        // against blockedCardsById (that was the bug: an unrelated still-active blocker
+        // silently failed the TryGetValue and got treated as already resolved).
+        var blockerCardIds = allRemainingBlockers.Select(r => r.SourceCardId).Distinct().ToList();
+        var blockerCardsById = blockerCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(blockerCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var assigneesByCard = await _assigneeRepo.ListByCardIdsAsync(
+            activeBlockedCards.Select(c => c.Id).ToList(), ct);
+
+        var requests = new List<NotifyRequest>();
+        foreach (var blockedCard in activeBlockedCards)
+        {
+            var hasActiveBlockers = allRemainingBlockers
+                .Where(r => r.TargetCardId == blockedCard.Id)
+                .Any(r => blockerCardsById.TryGetValue(r.SourceCardId, out var bc) && bc.ArchivedAt == null);
+
+            if (hasActiveBlockers) continue;
+
+            foreach (var assignee in assigneesByCard[blockedCard.Id])
+            {
+                if (assignee.UserId == actorId) continue;
+                requests.Add(new NotifyRequest(
+                    assignee.UserId,
+                    actorId,
+                    $"#{blockedCard.CardNumber} is no longer blocked",
+                    $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
+                    null,
+                    blockedCard.Id,
+                    projectId,
+                    $"/projects/{projectId}/board?card={blockedCard.Id}"
+                ));
+            }
+        }
+
+        if (requests.Count == 0) return;
+
+        try
+        {
+            await _notifService.NotifyBatchAsync(requests, ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send unblock notifications: {ex.Message}");
+        }
     }
 }

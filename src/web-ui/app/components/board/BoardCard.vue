@@ -3,8 +3,10 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import { formatDueDate, isOverdue } from '~/lib/date'
 import { cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
+import { formatRelationshipBadge } from '~/lib/card-relationship'
 import { onClickOutside } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import CardRelationshipBadges from '~/components/board/CardRelationshipBadges.vue'
 
 type CardResponse = components['schemas']['CardResponse']
 
@@ -12,7 +14,6 @@ const props = defineProps<{
   card: CardResponse
   projectId: string
   readonly?: boolean
-  blocked?: boolean
   selected?: boolean
 }>()
 
@@ -26,6 +27,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
+const authStore = useAuthStore()
 
 const showMenu = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
@@ -55,8 +57,26 @@ const childCount = computed(() => {
   return count
 })
 
-const plainDescription = computed(() =>
-  (props.card.description ?? '').replace(/<[^>]*>/g, '')
+const isWatching = computed(() =>
+  props.card.watchers?.some(w => w.userId === authStore.user?.userId) ?? false
+)
+
+const relationshipCount = computed(() => Number(props.card.relationshipCount))
+
+const relationshipBadgeViews = computed(() =>
+  (props.card.relationshipBadges ?? []).map((b) => {
+    const style = formatRelationshipBadge(b.type, b.isSource)
+    return {
+      relatedCardId: b.relatedCardId,
+      cardNumber: Number(b.relatedCardNumber),
+      title: b.relatedCardTitle,
+      ...style
+    }
+  })
+)
+
+const relationshipOverflow = computed(() =>
+  Math.max(0, relationshipCount.value - relationshipBadgeViews.value.length)
 )
 
 function toggleMenu() {
@@ -96,6 +116,22 @@ async function handleRestore() {
     toast.success('Card restored')
   } catch {
     toast.error('Failed to restore card')
+  }
+}
+
+async function toggleWatch() {
+  closeMenu()
+  const wasWatching = isWatching.value
+  try {
+    if (wasWatching) {
+      await api.DELETE(ApiRoutes.Cards.watch(props.projectId, props.card.id))
+    } else {
+      await api.POST(ApiRoutes.Cards.watch(props.projectId, props.card.id))
+    }
+    board.fetchBoard(props.projectId)
+    toast.success(wasWatching ? 'Unwatched card' : 'Now watching card')
+  } catch {
+    toast.error(wasWatching ? 'Failed to unwatch card' : 'Failed to watch card')
   }
 }
 
@@ -174,16 +210,12 @@ function handleCardDrop(event: DragEvent) {
           >
             {{ typeOption.label }}
           </span>
-          <span
-            v-if="blocked"
-            class="text-warning flex items-center gap-0.5"
-            title="Card is blocked"
-          >
-            <UIcon
-              name="i-lucide-lock"
-              class="size-3"
-            />
-          </span>
+          <UIcon
+            v-if="isWatching"
+            name="i-lucide-eye"
+            class="size-3 shrink-0 text-primary ml-auto"
+            title="You are watching this card"
+          />
         </div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
           {{ card.title }}
@@ -194,12 +226,6 @@ function handleCardDrop(event: DragEvent) {
             (archived)
           </span>
         </h4>
-        <p
-          v-if="plainDescription"
-          class="text-xs text-gray-500 mt-1 line-clamp-2"
-        >
-          {{ plainDescription }}
-        </p>
       </div>
 
       <!-- Move up/down arrows -->
@@ -262,6 +288,18 @@ function handleCardDrop(event: DragEvent) {
           @click.stop
         >
           <button
+            tabindex="-1"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            @click="toggleWatch"
+          >
+            <UIcon
+              :name="isWatching ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              class="size-4"
+              aria-hidden="true"
+            />
+            {{ isWatching ? 'Unwatch' : 'Watch' }}
+          </button>
+          <button
             v-if="card.archivedAt"
             tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
@@ -291,68 +329,78 @@ function handleCardDrop(event: DragEvent) {
       </div>
     </div>
 
-    <div class="flex items-center justify-between mt-2">
-      <div class="flex items-center gap-3">
-        <div
-          v-if="parentCard"
-          class="flex flex-col"
-        >
-          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
-          <span
-            class="text-xs text-primary flex items-center gap-1"
-            :title="parentCard.title"
-          >
-            <UIcon
-              :name="cardTypeOption(parentCard.type).icon"
-              class="size-3"
-            />
-            {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
-          </span>
-        </div>
-        <div
-          v-if="childCount > 0"
-          class="flex flex-col"
-        >
-          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Children:</span>
-          <span
-            class="text-xs text-gray-400 flex items-center gap-1"
-            :title="`Has ${childCount} child card${childCount === 1 ? '' : 's'}`"
-          >
-            <UIcon
-              name="i-lucide-git-merge"
-              class="size-3"
-            />
-            {{ childCount }}
-          </span>
-        </div>
-        <div
-          v-if="card.assignees.length > 0"
-          class="flex -space-x-1"
-        >
-          <div
-            v-for="assignee in card.assignees.slice(0, 3)"
-            :key="assignee.userId"
-            class="size-5 rounded-full bg-primary text-white flex items-center justify-center text-xs"
-            :title="assignee.username"
-          >
-            {{ (assignee.username[0] ?? '?').toUpperCase() }}
-          </div>
-        </div>
-      </div>
+    <CardRelationshipBadges
+      v-if="relationshipBadgeViews.length > 0"
+      class="mt-2"
+      :badges="relationshipBadgeViews"
+      :overflow="relationshipOverflow"
+    />
 
-      <div class="flex items-center gap-2">
+    <div
+      v-if="parentCard || childCount > 0"
+      class="flex items-center gap-3 mt-2"
+    >
+      <div
+        v-if="parentCard"
+        class="flex flex-col"
+      >
+        <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
         <span
-          v-if="formattedDue"
-          class="text-xs"
-          :class="cardIsOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
+          class="text-xs text-primary flex items-center gap-1"
+          :title="parentCard.title"
         >
           <UIcon
-            name="i-lucide-calendar"
-            class="size-3 inline"
+            :name="cardTypeOption(parentCard.type).icon"
+            class="size-3"
           />
-          {{ formattedDue }}
+          {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
         </span>
       </div>
+      <div
+        v-if="childCount > 0"
+        class="flex flex-col"
+      >
+        <span class="text-[10px] text-gray-400 leading-none mb-0.5">Children:</span>
+        <span
+          class="text-xs text-gray-400 flex items-center gap-1"
+          :title="`Has ${childCount} child card${childCount === 1 ? '' : 's'}`"
+        >
+          <UIcon
+            name="i-lucide-git-merge"
+            class="size-3"
+          />
+          {{ childCount }}
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mt-2">
+      <div
+        v-if="card.assignees.length > 0"
+        class="flex -space-x-1"
+      >
+        <div
+          v-for="assignee in card.assignees.slice(0, 3)"
+          :key="assignee.userId"
+          class="size-5 rounded-full bg-primary text-white flex items-center justify-center text-xs"
+          :title="assignee.username"
+        >
+          {{ (assignee.username[0] ?? '?').toUpperCase() }}
+        </div>
+      </div>
+      <span v-else />
+
+      <span
+        v-if="formattedDue"
+        class="text-xs"
+        :class="cardIsOverdue ? 'text-red-500 font-medium' : 'text-gray-400'"
+      >
+        <UIcon
+          name="i-lucide-calendar"
+          class="size-3 inline"
+        />
+        {{ formattedDue }}
+      </span>
     </div>
   </div>
 

@@ -125,7 +125,26 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - All errors have a typed error code (e.g. `CARD_NOT_FOUND`, `DEPENDENCY_CYCLE_DETECTED`)
 - Controllers map expected `Result<T, Error>` failures to ProblemDetails RFC 7807 with `correlationId` and named `code`; global exception middleware catches everything else
 - Stack traces never reach clients
-- External service failures (LLM, Git, ntfy) must never crash the board
+### Notification trigger patterns (Plan 7 lessons)
+
+- **`NotifyAsync` calls must be wrapped in `try/catch`** — a notification failure must not block the business operation (card move, comment, project update). Each trigger call site wraps `await _notifService.NotifyAsync(...)` in try/catch. The `IWarnLogger` abstraction (`IWarnLogger.LogWarning`) logs failures instead of letting them propagate — optional constructor param with `NullWarnLogger` default so existing DI registrations don't break. `ConsoleWarnLogger` writes to `stderr`. External service failures (LLM, Git, ntfy, notification) must never crash the board.
+- **Test fakes shared across test files** — `FakeNotificationRepository` and `FakeNotificationHubBus` in `NotificationServiceTests` changed from `private` to `public` (with `[assembly: InternalsVisibleTo]`) so `NotificationTriggerTests` can reuse them. When a new test file needs the same fake, make it `public` instead of duplicating.
+- **Dependency resolution notification fires on archive, not move:** Plan 7 originally placed `NotifyResolvedDependenciesAsync` in `MoveAsync`, but the implementation moved it to `ArchiveAsync` — moving a card never sets `ArchivedAt`, so a blocker only stops counting as active when archived. The `CardRelationship.ArchivedAt` check in the notification helper requires `ArchivedAt != null` to consider a blocker resolved. Notify on the action that actually changes archive state, not on a move that doesn't.
+
+### SignalR conventions
+
+- **SignalR `AddJsonProtocol` + `JsonStringEnumConverter` is required.** Without `options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())` on `builder.Services.AddSignalR()`, hub payload enums (`BoardEntityType`, `BoardAction`, etc.) serialize as ints. The TUI client deserializes these fields as strings, so a mismatched int throws inside the client's message handler and is silently swallowed by the SignalR client — making board-event pushes a silent no-op. MVC's `JsonStringEnumConverter` (via `builder.Services.ConfigureHttpJsonOptions`) only covers REST responses, not the SignalR hub protocol. This was fixed in `9b26412` (commit message details the root cause).
+- **`ProjectBoardEventEnvelope` has a `CardId` field** (`Guid?`, default `null`) — populated for card-scoped sub-entities (Comment, ChecklistItem, Attachment, Spec, Plan, CardRelationship) so a client with a specific card open can tell "does this event belong to what I'm looking at" without relying on `EntityId` alone (which is always the sub-entity's own id, not the card it's on). Null for entity types that don't hang off a single card (Project, Column) or where `EntityId` already IS the card id (Card itself). Added in `72afc95`.
+- **Web UI `useRealtime.ts` routes by entity type for targeted patching:**
+  - `Card` / `Column` → `board.applyRealtimeCardEvent` / `applyRealtimeColumnEvent` (single-entity re-fetch, no full board blink)
+  - `CardRelationship` → full `board.fetchBoard` (affects badges on both source and target card — neither is the relationship's own entityId; this event is rare enough that full refresh is fine)
+  - `Comment` / `ChecklistItem` / `Attachment` / `Spec` / `Plan` → `board.signalCardContentEvent` (CardModal picks it up if open for that card; nothing to patch on the board tile itself)
+  - This was added in `72afc95` as part of realtime UX polish — the previous code did a full `fetchBoard` on every event, causing board flicker.
+
+### Web UI NotificationHub
+
+- **`useNotificationHub.ts`** composable connects to the NotificationHub (user-scoped, not project-scoped — unlike `useRealtime`'s BoardHub). Connected once per session from `layouts/default.vue` on mount. Uses `useAuthToken().getToken()` for the JWT access token factory. Disconnects on unmount. Falls back silently if the connection fails — the notification bell already fetches the live list on click regardless of realtime state.
+- **`useRealtime.ts`** (BoardHub) connects per-project from `board.vue` — the NotificationHub is separate and persists across project navigation.
 
 **Domain entity patterns — non-negotiable:**
 - Domain entities encapsulate state transitions via instance methods — services orchestrate but NEVER set entity properties directly
@@ -157,6 +176,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - pgvector extension required (`CREATE EXTENSION IF NOT EXISTS vector`, declared via `modelBuilder.HasPostgresExtension("vector")`)
 - Card numbers are sequential per project (`CardNumber int`, unique per ProjectId) — never expose raw GUIDs to users
 - Archive is `ArchivedAt: DateTime?`, not `IsArchived: bool`. Default query filters use `.Where(x => x.ArchivedAt == null)` manually — no global query filter, so admin/audit views see archived rows by default
+- **EF Core 10 `HasSentinel()` for enum defaults:** When using `HasConversion<int>().HasDefaultValue(SomeEnum.Value)` on an enum property, also chain `.HasSentinel(default(SomeEnum))`. EF 10 treats the 0-value sentinel as the default unless explicitly overridden — without `HasSentinel`, the default value is silently overwritten by the sentinel. This bit `DocType` and `PlanStatus` in `HydraForgeDbContext` (fixed in `12f1f2a`).
 
 **Code style:**
 - Readable like a newspaper — method names explain intent, no clever tricks
@@ -171,11 +191,13 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Never write inline API path strings in components, stores, or composables. If a route is not in `routes.ts`, add it there first.
 - `useApi()` wraps openapi-fetch with auth middleware (attaches JWT, handles 401 redirect). Always use `useApi()` instead of importing openapi-fetch directly.
 - **`useApi()` throws — it never resolves with a populated `error` field.** Every call site MUST wrap `await api.X(...)` in try/catch. `const { error } = await api.X(...); if (error) { ... }` with no surrounding try/catch is a bug: the `await` itself throws first, the destructuring never runs, and the function's promise rejects unhandled — silently skipping whatever the `if (error)` branch was supposed to do (see D-40). This broke archive/restore/create error toasts in three components before being caught. **PATCH support added to `useApi.ts` composable.**
+- **`useApi()` must NOT use a module-level singleton.** The app is SSR (no `ssr: false` in nuxt.config), and a cached client + store at module scope freezes onto whichever request's Pinia store happens to call it first — every subsequent user's request silently reuses that stale store's token for the lifetime of the server process. `useAuthStore()` and `createClient()` are both cheap; build a fresh client per call (fixed in `12f1f2a`).
 
 **Auth:**
 - JWT — admin seeded on first boot
 - No SSO, no OAuth, no external auth providers
 - Admin cannot access user personal data (chats, memory, notes, calendar, gallery)
+- **BroadcastChannel cross-tab auth sync:** `useAuth.ts` posts `{ type: 'login' | 'logout' }` to a `BroadcastChannel('hydraforge-auth')` so other tabs on the same origin sync immediately. `listenForAuthChanges()` is called once per tab from `layouts/default.vue`. Module-level `BroadcastChannel` is fine (per-tab, holds no per-request/user state) — unlike the old `useApi.ts` singleton which was removed for the same pattern (fixed in `12f1f2a`).
 
 **LLM:**
 - Server is the only component that calls LLMs — TUI and Web UI never call LLMs directly
@@ -194,6 +216,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - `Card.CardNumber` is sequential per project — assigned at creation, never reused after deletion
 - Blocked card move: returns `409 Conflict` with warning payload when `confirmBlockedMove=false`. `confirmBlockedMove=true` is a capability of the API contract, available to any client — it is not a requirement that every client exposes an override. The Web UI deliberately does not: on `409` it toasts and stops, full stop (D-46) — the intended path is to resolve the actual blocking card, not force past it. 200 OK is wrong — the move was not executed.
 - `CardRelationship` forms a DAG — `CardDependencyService.ValidateAcyclic()` must be called on every insert
+- **`CardRelationshipBadge` model** replaces `IsBlocked`/`PrimaryRelatedCard` on `CardDto`. Each badge has `Type` + `IsSource` so both clients derive the same directional verb ("blocks"/"blocked by", "precedes"/"preceded by", "spawned"/"spawned from", "relates"). Ordering: `BlockedBy` first, `Relates` last. Capped at 5 per card (`MaxRelationshipBadges`). `RelationshipCount` on the parent DTO carries the true total for "+N more" overflow. Built by `CardService.BuildRelationshipBadges()`; `ListAsync` fetches all project relationships once and maps via `ILookup` instead of per-card queries. Added in `8193745`.
 - `ProjectContextSnapshot.TemplateContent` regenerated on every board mutation (instant, no LLM)
 - `ProjectContextSnapshot.AiNarrative` generated by nightly scheduled job only (never on mutation)
 - AI proposes board mutations — human confirms — never mutate board state from AI without explicit user approval

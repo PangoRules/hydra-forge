@@ -10,7 +10,7 @@ public class NtfyClient : INtfyClient
     private readonly NtfyOptions _options;
     private readonly string? _serverUrl;
 
-    public NtfyClient(HttpClient http, IOptions<NtfyOptions> options, string? serverUrl)
+    public NtfyClient(HttpClient http, IOptions<NtfyOptions> options, string? serverUrl = null)
     {
         _http = http;
         _options = options.Value;

@@ -2,6 +2,7 @@ namespace HydraForge.Server.Tests.Realtime;
 
 using System.Reflection;
 using HydraForge.Application.Audit;
+using HydraForge.Application.Notifications;
 using HydraForge.Server.Tests.Projects;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,7 @@ public class BoardHubIntegrationTests
                 services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
                 services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
                 services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher, HydraForge.Infrastructure.Realtime.SignalRProjectBoardEventPublisher>();
+                services.AddScoped<INotificationService>(_ => new FakeNotificationService());
                 services.AddScoped<HydraForge.Application.Projects.ProjectService>();
                 services.AddScoped<HydraForge.Application.Columns.ColumnService>();
                 services.AddScoped<HydraForge.Application.Cards.CardService>();
@@ -92,6 +94,8 @@ public class BoardHubIntegrationTests
                 options.AccessTokenProvider = () => Task.FromResult(token)!;
                 options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
             })
+            .AddJsonProtocol(o =>
+                o.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()))
             .Build();
 
         var tcs = new TaskCompletionSource<HydraForge.Application.Realtime.ProjectBoardEventEnvelope>();

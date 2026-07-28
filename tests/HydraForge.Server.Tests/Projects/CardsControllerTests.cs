@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -374,6 +375,7 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<HydraForge.Application.Projects.ProjectService>();
             services.AddScoped<HydraForge.Application.Columns.ColumnService>();
             services.AddScoped<HydraForge.Application.Cards.CardService>();
@@ -572,6 +574,8 @@ internal class CardsTestCardRelationshipRepository : HydraForge.Application.Card
         => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
     public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
     public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)

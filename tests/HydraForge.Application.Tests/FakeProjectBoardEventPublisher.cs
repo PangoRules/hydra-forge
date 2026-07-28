@@ -1,3 +1,4 @@
+using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -11,6 +12,23 @@ internal class FakeProjectBoardEventPublisher : IProjectBoardEventPublisher
     public Task PublishAsync(ProjectBoardEventEnvelope envelope, CancellationToken ct = default)
     {
         PublishedEvents.Add(envelope);
+        return Task.CompletedTask;
+    }
+}
+
+internal class FakeNotificationService : INotificationService
+{
+    public List<NotifyRequest> Calls { get; } = [];
+
+    public Task NotifyAsync(NotifyRequest request, CancellationToken ct = default)
+    {
+        Calls.Add(request);
+        return Task.CompletedTask;
+    }
+
+    public Task NotifyBatchAsync(IReadOnlyList<NotifyRequest> requests, CancellationToken ct = default)
+    {
+        Calls.AddRange(requests);
         return Task.CompletedTask;
     }
 }

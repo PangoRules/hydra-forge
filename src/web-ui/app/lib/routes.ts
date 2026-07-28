@@ -62,7 +62,8 @@ export const ApiRoutes = {
       `/api/projects/${projectId}/Cards/${cardId}/assignees/${assigneeUserId}`,
     archive: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/archive`,
     restore: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/restore`,
-    delete: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}`
+    delete: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}`,
+    watch: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/watch`
   },
 
   Checklist: {

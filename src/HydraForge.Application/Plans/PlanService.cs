@@ -133,7 +133,7 @@ public class PlanService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Created, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -264,7 +264,7 @@ public class PlanService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Updated, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -368,7 +368,7 @@ public class PlanService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Restored, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Restored, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -394,12 +394,12 @@ public class PlanService(
 
         await _planRepo.UpdateAsync(plan, ct);
         await _planRepo.SaveChangesAsync(ct);
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Updated, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid planId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid planId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -409,7 +409,8 @@ public class PlanService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

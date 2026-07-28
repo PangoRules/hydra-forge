@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
@@ -289,6 +290,7 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IAuditLogWriter>(_ => new SpecsTestAuditLogWriter());
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
         });

@@ -34,7 +34,10 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const showArchiveWarning = ref(false)
 const archiveDependents = ref<{ id: string, title: string, type: string }[]>([])
-const checklistRefresh = ref(0)
+// Bumped both by a child panel's own @updated (immediate local feedback) and by the
+// realtime watcher below (remote change to this open card) — one signal, every panel
+// re-fetches off the same counter.
+const contentRefresh = ref(0)
 
 // API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
 const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
@@ -73,7 +76,6 @@ const tabs = computed(() => [
 
 const desktopTabs = computed(() => [
   { label: 'Details', value: 'details' as const },
-  { label: 'Checklist', value: 'checklist' as const },
   { label: 'Comments', value: 'comments' as const },
   ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
 ])
@@ -184,6 +186,17 @@ async function fetchCard() {
   }
 }
 
+// Same fetch, but for a background realtime refresh — doesn't touch loading/error,
+// so a remote edit updates the modal in place instead of flashing the spinner.
+async function refetchCardQuietly() {
+  try {
+    const { data } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
+    if (data) card.value = data as CardResponse
+  } catch {
+    // best-effort — the modal keeps showing its last-known-good state
+  }
+}
+
 function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
@@ -212,7 +225,34 @@ onBeforeUnmount(() => {
 const authStore = useAuthStore()
 const presenceStore = usePresenceStore()
 
+// Live-update while open — useRealtime.ts writes here on any BoardHub event; if it's
+// about the card this modal has open, refresh in place instead of requiring close+reopen.
+const board = useBoardStore()
+watch(() => board.cardContentEvent, (event) => {
+  if (!event || !card.value || event.cardId !== card.value.id) return
+  if (event.entityType === 'Card') refetchCardQuietly()
+  else contentRefresh.value++
+})
+
 const currentUserId = computed(() => authStore.user?.userId)
+
+const isWatching = computed(() =>
+  card.value?.watchers?.some(w => w.userId === currentUserId.value) ?? false
+)
+
+async function toggleWatch() {
+  if (!card.value) return
+  const wasWatching = isWatching.value
+  try {
+    const { data } = wasWatching
+      ? await api.DELETE(ApiRoutes.Cards.watch(props.projectId, card.value.id))
+      : await api.POST(ApiRoutes.Cards.watch(props.projectId, card.value.id))
+    applyCardUpdate(data as CardResponse)
+    toast.success(wasWatching ? 'Unwatched card' : 'Now watching card')
+  } catch {
+    toast.error(wasWatching ? 'Failed to unwatch card' : 'Failed to watch card')
+  }
+}
 
 /** Look up username from presence store (online users) instead of
  *  boardStore.members — members may not be loaded yet when CardModal
@@ -245,13 +285,35 @@ const otherViewers = computed(() => {
     :title="card?.title"
     :loading="loading"
     :error="error"
-    width="sm:max-w-4xl"
+    width="sm:max-w-6xl"
     :show-close="!!card"
     @update:open="handleOpenChange"
     @close="onClose"
   >
+    <template #header>
+      <span
+        v-if="isWatching"
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary shrink-0"
+      >
+        <UIcon
+          name="i-lucide-eye"
+          class="size-3"
+        />
+        Watching
+      </span>
+    </template>
+
     <template #header-trailing>
       <div class="flex items-center gap-1">
+        <UButton
+          v-if="card"
+          variant="ghost"
+          size="sm"
+          :icon="isWatching ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+          :color="isWatching ? 'primary' : 'neutral'"
+          :title="isWatching ? 'Watching — click to unwatch' : 'Not watching — click to watch'"
+          @click="toggleWatch"
+        />
         <UButton
           v-if="card && !props.readonly && !isArchived"
           variant="ghost"
@@ -303,28 +365,13 @@ const otherViewers = computed(() => {
                   @update:card="applyCardUpdate"
                 />
               </div>
-              <div v-else-if="activeTab === 'checklist'">
-                <CardChecklist
-                  :card-id="card.id"
-                  :project-id="projectId"
-                  :readonly="isReadonly"
-                  :refresh-key="checklistRefresh"
-                  @updated="checklistRefresh++"
-                />
-              </div>
               <div v-else-if="activeTab === 'comments'">
                 <CardComments
                   :card-id="card.id"
                   :project-id="projectId"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                 />
-              </div>
-              <div v-else-if="activeTab === 'related'">
-                <div class="space-y-4">
-                  <p class="text-sm text-muted">
-                    Attachments, dependencies, specs, plans coming soon
-                  </p>
-                </div>
               </div>
               <div
                 v-else-if="activeTab === 'docs'"
@@ -336,6 +383,7 @@ const otherViewers = computed(() => {
                   :project-id="projectId"
                   :doc-type="specDocType"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                   @update:spec-id="linkedSpecId = $event"
                 />
                 <template v-if="hasPlan">
@@ -345,6 +393,7 @@ const otherViewers = computed(() => {
                     :project-id="projectId"
                     :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                     :readonly="isReadonly"
+                    :refresh-key="contentRefresh"
                   />
                 </template>
               </div>
@@ -362,21 +411,23 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
-                :refresh-key="checklistRefresh"
+                :refresh-key="contentRefresh"
                 :visible-limit="4"
-                @updated="checklistRefresh++"
+                @updated="contentRefresh++"
               />
               <USeparator />
               <CardAttachments
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
               <USeparator />
               <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
           </div>
@@ -427,6 +478,7 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
 
@@ -435,6 +487,7 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
 
@@ -446,12 +499,14 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
               <USeparator />
               <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
             <div
@@ -464,6 +519,7 @@ const otherViewers = computed(() => {
                 :project-id="projectId"
                 :doc-type="specDocType"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
                 @update:spec-id="linkedSpecId = $event"
               />
               <template v-if="hasPlan">
@@ -473,6 +529,7 @@ const otherViewers = computed(() => {
                   :project-id="projectId"
                   :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                 />
               </template>
             </div>
