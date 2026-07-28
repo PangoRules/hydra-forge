@@ -2,6 +2,12 @@
 
 7 triggers across 4 services. Automated tests cover NotifyRequest recording + actor-skip; manual covers real wiring end-to-end.
 
+### Code review findings (triggers 4–7, prior to manual pass)
+
+- **Trigger 4 (@mention)** — backend already fully implemented (`CommentService.cs`): regex-parses `@username` from raw comment text, resolves to project members only, notifies independently of the watcher notification. **No autocomplete/suggestion UI exists yet** in `CardComments.vue` (plain textarea) — to test, type the literal text `@UserB` by hand; the backend doesn't need any client-side mention markup.
+- **Trigger 5 (dependency resolved) — was broken, now fixed.** The notify call was wired into `CardService.MoveAsync`, but only `Archive()` sets `ArchivedAt`, and Move never does — so the "last active blocker" check always saw the moved card itself as still-active and never fired, regardless of which column it moved to (there's no "Archived column" concept in this codebase). Fixed by moving the call into `CardService.ArchiveAsync` (the actual place `ArchivedAt` gets set). Added two regression tests (`ArchiveAsync_ArchivingLastActiveBlocker_NotifiesBlockedCardAssignees`, `ArchiveAsync_OtherActiveBlockerRemains_DoesNotNotify`) — this had zero automated coverage before, which is why the wiring bug went unnoticed. **To test this trigger: archive card #2 via the Archive action (not by moving it to any column) — there is no "Archived" pseudo-column.**
+- **Triggers 6 & 7 (project archived / updated)** — confirmed working as specced, including edge case 5 (single-field edits still notify).
+
 ### Setup
 
 - [x] Docker Compose up (postgres + minio)
@@ -19,7 +25,7 @@
 2. **Card assigned** — User A assigns card #1 to User B → User B gets notification: "{UserA} assigned you to #1"
 3. **Comment added** — User A adds comment to card #1 → User B (watcher) gets notification: "{UserA} commented on #1"
 4. **@mention in comment** — User A adds comment "@UserB look at this" → User B gets notification: "{UserA} mentioned you in #1"
-5. **Dependency resolved** — User A moves card #2 (blocker of #1) to Archived → User B (assignee of #1) gets notification: "#1 is no longer blocked"
+5. **Dependency resolved** — User A archives card #2 (blocker of #1, via the Archive action, not a column move) → User B (assignee of #1) gets notification: "#1 is no longer blocked"
 6. **Project archived** — User A archives the test project → every project member gets notification: "{project} has been archived"
 7. **Project updated** — User A edits project name/description → every project member gets notification: "{project} was updated by {UserA}"
 

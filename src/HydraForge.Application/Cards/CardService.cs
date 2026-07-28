@@ -687,8 +687,6 @@ public class CardService(
             }
         }
 
-        await NotifyResolvedDependenciesAsync(card, cmd.ProjectId, cmd.ActorId, ct);
-
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
@@ -864,6 +862,10 @@ public class CardService(
         await _cardRepo.UpdateAsync(card, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
+
+        // Archiving is the only action that can actually resolve a "blocked by" dependency —
+        // moving a card never sets ArchivedAt, so a blocker only stops counting as active here.
+        await NotifyResolvedDependenciesAsync(card, cmd.ProjectId, cmd.ActorId, ct);
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -1135,11 +1137,11 @@ public class CardService(
     }
 
     private async Task NotifyResolvedDependenciesAsync(
-        Card movedCard, Guid projectId, Guid actorId, CancellationToken ct)
+        Card archivedCard, Guid projectId, Guid actorId, CancellationToken ct)
     {
-        var relationships = await _relationshipRepo.ListActiveByCardAsync(movedCard.Id, ct);
+        var relationships = await _relationshipRepo.ListActiveByCardAsync(archivedCard.Id, ct);
         var blockedByRels = relationships.Where(r =>
-            r.Type == RelationshipType.BlockedBy && r.SourceCardId == movedCard.Id);
+            r.Type == RelationshipType.BlockedBy && r.SourceCardId == archivedCard.Id);
 
         foreach (var rel in blockedByRels)
         {

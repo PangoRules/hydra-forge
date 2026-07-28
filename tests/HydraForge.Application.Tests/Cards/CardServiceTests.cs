@@ -604,6 +604,59 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task ArchiveAsync_ArchivingLastActiveBlocker_NotifiesBlockedCardAssignees()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var blockerCardId = NewId();
+        var blockedCardId = NewId();
+        var assigneeUserId = NewId();
+        var columnId = NewId();
+
+        cardRepo.Add(new Card { Id = blockerCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 0, Version = 1 });
+        cardRepo.Add(new Card { Id = blockedCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 1 });
+        relationshipRepo.Add(new CardRelationship { SourceCardId = blockerCardId, TargetCardId = blockedCardId, Type = RelationshipType.BlockedBy });
+        assigneeRepo.Add(new CardAssignee { CardId = blockedCardId, UserId = assigneeUserId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.ArchiveAsync(new ArchiveCardCommand(projectId, blockerCardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        var unblockNotification = Assert.Single(notifService.Calls);
+        Assert.Equal(assigneeUserId, unblockNotification.UserId);
+        Assert.Contains("no longer blocked", unblockNotification.Title);
+    }
+
+    [Fact]
+    public async Task ArchiveAsync_OtherActiveBlockerRemains_DoesNotNotify()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var blockerCardId = NewId();
+        var otherBlockerCardId = NewId();
+        var blockedCardId = NewId();
+        var assigneeUserId = NewId();
+        var columnId = NewId();
+
+        cardRepo.Add(new Card { Id = blockerCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 2, Position = 0, Version = 1 });
+        cardRepo.Add(new Card { Id = otherBlockerCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 3, Position = 1 });
+        cardRepo.Add(new Card { Id = blockedCardId, ProjectId = projectId, ColumnId = columnId, CardNumber = 1, Position = 2 });
+        relationshipRepo.Add(new CardRelationship { SourceCardId = blockerCardId, TargetCardId = blockedCardId, Type = RelationshipType.BlockedBy });
+        relationshipRepo.Add(new CardRelationship { SourceCardId = otherBlockerCardId, TargetCardId = blockedCardId, Type = RelationshipType.BlockedBy });
+        assigneeRepo.Add(new CardAssignee { CardId = blockedCardId, UserId = assigneeUserId });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.ArchiveAsync(new ArchiveCardCommand(projectId, blockerCardId, actorId, 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(notifService.Calls);
+    }
+
+    [Fact]
     public async Task RestoreAsync_ClearsArchivedAtAndRestoresToEndOfColumn()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
