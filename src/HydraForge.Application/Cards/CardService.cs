@@ -538,21 +538,25 @@ public class CardService(
 
         var blockingRelationships = (
             await _relationshipRepo.ListBlockersForCardAsync(cmd.CardId, ct)
-        ).Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct));
-        var hasBlockers = false;
-        foreach (var relationship in blockingRelationships)
+        ).Concat(await _relationshipRepo.ListPredecessorsAsync(cmd.CardId, ct)).ToList();
+
+        var blockingRelatedCardIds = blockingRelationships
+            .Select(r => r.SourceCardId == cmd.CardId ? r.TargetCardId : r.SourceCardId)
+            .Distinct()
+            .ToList();
+        var blockingRelatedCardsById = blockingRelatedCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(blockingRelatedCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var hasBlockers = blockingRelationships.Any(relationship =>
         {
             var relatedCardId =
                 relationship.SourceCardId == cmd.CardId
                     ? relationship.TargetCardId
                     : relationship.SourceCardId;
-            var relatedCard = await _cardRepo.GetByIdAsync(relatedCardId, ct);
-            if (relatedCard != null && relatedCard.ArchivedAt == null)
-            {
-                hasBlockers = true;
-                break;
-            }
-        }
+            return blockingRelatedCardsById.TryGetValue(relatedCardId, out var relatedCard)
+                && relatedCard.ArchivedAt == null;
+        });
 
         if (hasBlockers && !cmd.ConfirmBlockedMove)
         {
@@ -1145,12 +1149,12 @@ public class CardService(
         var blockedByRels = relationships.Where(r =>
             r.Type == RelationshipType.BlockedBy && r.SourceCardId == archivedCard.Id);
 
-        // Single query for all blocked cards
+        // Single query for all cards archivedCard blocks
         var blockedCardIds = blockedByRels.Select(r => r.TargetCardId).Distinct().ToList();
         if (blockedCardIds.Count == 0) return;
 
-        var blockedCards = await _cardRepo.GetByIdsAsync(blockedCardIds, ct);
-        var activeBlockedCards = blockedCards.Values
+        var blockedCardsById = await _cardRepo.GetByIdsAsync(blockedCardIds, ct);
+        var activeBlockedCards = blockedCardsById.Values
             .Where(c => c.ArchivedAt == null)
             .ToList();
         if (activeBlockedCards.Count == 0) return;
@@ -1159,17 +1163,29 @@ public class CardService(
         var allRemainingBlockers = await _relationshipRepo.ListBlockersForCardsAsync(
             activeBlockedCards.Select(c => c.Id).ToList(), ct);
 
+        // Blocker cards are a DIFFERENT set than blockedCardsById (which only holds cards
+        // archivedCard itself blocks) — a blocked card can have OTHER active blockers too,
+        // so their archived state has to come from its own batch fetch, not be looked up
+        // against blockedCardsById (that was the bug: an unrelated still-active blocker
+        // silently failed the TryGetValue and got treated as already resolved).
+        var blockerCardIds = allRemainingBlockers.Select(r => r.SourceCardId).Distinct().ToList();
+        var blockerCardsById = blockerCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(blockerCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var assigneesByCard = await _assigneeRepo.ListByCardIdsAsync(
+            activeBlockedCards.Select(c => c.Id).ToList(), ct);
+
         var requests = new List<NotifyRequest>();
         foreach (var blockedCard in activeBlockedCards)
         {
             var hasActiveBlockers = allRemainingBlockers
                 .Where(r => r.TargetCardId == blockedCard.Id)
-                .Any(r => blockedCards.TryGetValue(r.SourceCardId, out var bc) && bc.ArchivedAt == null);
+                .Any(r => blockerCardsById.TryGetValue(r.SourceCardId, out var bc) && bc.ArchivedAt == null);
 
             if (hasActiveBlockers) continue;
 
-            var assignees = await _assigneeRepo.ListByCardAsync(blockedCard.Id, ct);
-            foreach (var assignee in assignees)
+            foreach (var assignee in assigneesByCard[blockedCard.Id])
             {
                 if (assignee.UserId == actorId) continue;
                 requests.Add(new NotifyRequest(

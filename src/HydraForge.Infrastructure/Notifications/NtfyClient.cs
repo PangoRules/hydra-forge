@@ -43,4 +43,13 @@ public class NtfyClient : INtfyClient
             // ntfy is best-effort — never throw on push failure
         }
     }
+
+    // ntfy has no multi-topic publish endpoint — one topic (= one user) per request,
+    // so this is still N sequential POSTs. Kept here rather than in NotificationService
+    // so the caller only ever sees one call regardless of how ntfy's API actually works.
+    public async Task PublishBatchAsync(IReadOnlyList<(Guid UserId, string Title, string? Body)> items, CancellationToken ct = default)
+    {
+        foreach (var (userId, title, body) in items)
+            await PublishAsync(userId, title, body, ct);
+    }
 }
