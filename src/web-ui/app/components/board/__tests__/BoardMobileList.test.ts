@@ -9,7 +9,8 @@ const makeColumn = (id: string, name: string, wipLimit: number | null = null) =>
   color: null,
 })
 
-const makeCard = (id: string, columnId: string, title: string, type = 0, assignees = []) => ({
+type CardType = 'Task' | 'Issue' | 'Idea' | 'Goal'
+const makeCard = (id: string, columnId: string, title: string, type: CardType = 'Task', assignees: never[] = []) => ({
   id,
   projectId: 'p1',
   columnId,
@@ -27,6 +28,9 @@ const makeCard = (id: string, columnId: string, title: string, type = 0, assigne
   parentCardId: null,
   assignees,
   watchers: [],
+  isBlocked: false,
+  relationshipCount: 0,
+  primaryRelatedCard: null,
 })
 
 describe('BoardMobileList', () => {

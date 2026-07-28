@@ -29,7 +29,7 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     cardNumber: 1,
     title: 'Test',
     description: 'Initial description',
-    type: 0,
+    type: 'Task',
     position: 0,
     dueAt: null,
     version: 1,
@@ -40,6 +40,9 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     parentCardId: null,
     assignees: [],
     watchers: [],
+    isBlocked: false,
+    relationshipCount: 0,
+    primaryRelatedCard: null,
     ...overrides
   }
 }

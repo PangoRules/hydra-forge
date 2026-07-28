@@ -5,6 +5,7 @@ import NotificationPanel from '~/components/notifications/NotificationPanel.vue'
 const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
 const authStore = useAuthStore()
 const { fetchUnreadCount } = useNotifications()
+const notificationHub = useNotificationHub()
 const {
   isExpired,
   isExpiringSoon,
@@ -26,9 +27,13 @@ onMounted(() => {
   startSessionManager()
   if (isAuthenticated) {
     fetchUnreadCount()
+    notificationHub.connect()
   }
 })
-onUnmounted(() => stopSessionManager())
+onUnmounted(() => {
+  stopSessionManager()
+  notificationHub.disconnect()
+})
 
 const showSessionModal = computed(() => isExpiringSoon.value || isExpired.value)
 

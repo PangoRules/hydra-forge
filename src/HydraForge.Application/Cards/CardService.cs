@@ -290,11 +290,86 @@ public class CardService(
                 ? await _userRepo.FindByIdsAsync(allUserIds, ct)
                 : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
 
+        // One project-wide relationship fetch instead of a per-card query — a card
+        // not present in `cardsById` (archived/out of this filtered result) is
+        // treated as "not blocking", matching GetBlockedMoveWarningAsync's
+        // ArchivedAt == null check.
+        var relationships = await _relationshipRepo.ListActiveByProjectAsync(projectId, ct);
+        var cardsById = cards.ToDictionary(c => c.Id);
+        var blockedByLookup = relationships
+            .Where(r => r.Type == RelationshipType.BlockedBy)
+            .ToLookup(r => r.TargetCardId);
+        var relationshipCounts = relationships
+            .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId })
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var relatedCardIdLookup = relationships
+            .SelectMany(r => new[]
+            {
+                (CardId: r.SourceCardId, OtherId: r.TargetCardId),
+                (CardId: r.TargetCardId, OtherId: r.SourceCardId)
+            })
+            .ToLookup(x => x.CardId, x => x.OtherId);
+
         var dtos = cards
-            .Select(card => MapCardToDto(card, assigneeLookupFinal, watcherLookupFinal, usersById))
+            .Select(card => MapCardToDto(
+                card,
+                assigneeLookupFinal,
+                watcherLookupFinal,
+                usersById,
+                blockedByLookup,
+                cardsById,
+                relationshipCounts,
+                relatedCardIdLookup
+            ))
             .ToList();
 
         return Result<IReadOnlyList<CardDto>>.Success(dtos);
+    }
+
+    public async Task<Result<CardDto>> WatchAsync(WatchCardCommand cmd, CancellationToken ct = default)
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        var existing = await _watcherRepo.GetByCardAndUserAsync(cmd.CardId, cmd.ActorId, ct);
+        if (existing == null)
+        {
+            await _watcherRepo.AddAsync(
+                new CardWatcher { CardId = cmd.CardId, UserId = cmd.ActorId, AddedAt = DateTime.UtcNow },
+                ct
+            );
+        }
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
+    }
+
+    public async Task<Result<CardDto>> UnwatchAsync(UnwatchCardCommand cmd, CancellationToken ct = default)
+    {
+        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+        if (membership == null)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
+
+        var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        if (card == null || card.ProjectId != cmd.ProjectId)
+            return Result<CardDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+
+        await _watcherRepo.RemoveAsync(cmd.CardId, cmd.ActorId, ct);
+
+        return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
     }
 
     public async Task<Result<CardDto>> UpdateAsync(
@@ -940,6 +1015,24 @@ public class CardService(
             ))
             .ToList();
 
+        var blockers = await _relationshipRepo.ListBlockersForCardAsync(card.Id, ct);
+        var relationships = await _relationshipRepo.ListByCardAsync(card.Id, ct);
+
+        var relatedCardIds = relationships
+            .Select(r => r.SourceCardId == card.Id ? r.TargetCardId : r.SourceCardId)
+            .Distinct()
+            .ToList();
+        var relatedCardsById = relatedCardIds.Count > 0
+            ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
+            : new Dictionary<Guid, Card>();
+
+        var isBlocked = blockers.Any(b =>
+            relatedCardsById.TryGetValue(b.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null
+        );
+        var primaryRelatedCard = relatedCardIds
+            .Select(id => relatedCardsById.TryGetValue(id, out var c) ? c : null)
+            .FirstOrDefault(c => c != null);
+
         return new CardDto(
             card.Id,
             card.ProjectId,
@@ -957,7 +1050,12 @@ public class CardService(
             card.ArchivedAt,
             card.ParentCardId,
             assigneeDtos,
-            watcherDtos
+            watcherDtos,
+            isBlocked,
+            relationships.Count,
+            primaryRelatedCard != null
+                ? new CardRelatedSummaryDto(primaryRelatedCard.Id, primaryRelatedCard.CardNumber, primaryRelatedCard.Title)
+                : null
         );
     }
 
@@ -965,7 +1063,11 @@ public class CardService(
         Card card,
         ILookup<Guid, CardAssignee> assigneeLookup,
         ILookup<Guid, CardWatcher> watcherLookup,
-        IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById
+        IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById,
+        ILookup<Guid, CardRelationship> blockedByLookup,
+        IReadOnlyDictionary<Guid, Card> cardsById,
+        IReadOnlyDictionary<Guid, int> relationshipCounts,
+        ILookup<Guid, Guid> relatedCardIdLookup
     )
     {
         var assigneeDtos = assigneeLookup[card.Id]
@@ -985,6 +1087,14 @@ public class CardService(
             ))
             .ToList();
 
+        var isBlocked = blockedByLookup[card.Id].Any(r =>
+            cardsById.TryGetValue(r.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null
+        );
+        var relationshipCount = relationshipCounts.TryGetValue(card.Id, out var count) ? count : 0;
+        var primaryRelatedCard = relatedCardIdLookup[card.Id]
+            .Select(otherId => cardsById.TryGetValue(otherId, out var c) ? c : null)
+            .FirstOrDefault(c => c != null);
+
         return new CardDto(
             card.Id,
             card.ProjectId,
@@ -1002,7 +1112,12 @@ public class CardService(
             card.ArchivedAt,
             card.ParentCardId,
             assigneeDtos,
-            watcherDtos
+            watcherDtos,
+            isBlocked,
+            relationshipCount,
+            primaryRelatedCard != null
+                ? new CardRelatedSummaryDto(primaryRelatedCard.Id, primaryRelatedCard.CardNumber, primaryRelatedCard.Title)
+                : null
         );
     }
 

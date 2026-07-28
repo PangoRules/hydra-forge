@@ -31,11 +31,12 @@ mockNuxtImport('useBoardStore', () => () => ({
 function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
   return {
     id: 'c1', projectId: 'p1', columnId: 'col1', cardNumber: 1,
-    title: 'Test', description: '', type: 0, position: 0,
+    title: 'Test', description: '', type: 'Task', position: 0,
     dueAt: null, version: 1,
     createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
     movedAt: '2024-01-01T00:00:00Z', archivedAt: null, parentCardId: null,
     assignees: [], watchers: [],
+    isBlocked: false, relationshipCount: 0, primaryRelatedCard: null,
     ...overrides
   }
 }

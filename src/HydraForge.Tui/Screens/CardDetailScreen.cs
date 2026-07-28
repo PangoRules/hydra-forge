@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Rendering;
@@ -193,12 +194,17 @@ public class CardDetailScreen(
                 ? string.Join(", ", _card.Assignees.Select(a => Markup.Escape(a.Username)))
                 : "[grey]Unassigned[/]";
 
+        var watchingText = IsCurrentUserWatching()
+            ? "[green]Yes[/]"
+            : "[grey]No[/]";
+
         return new Rows(
             new Markup(
                 $"Type: [{GetTypeColor(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"
             ),
             new Markup($"Due: {dueText}"),
             new Markup($"Assignees: {assignees}"),
+            new Markup($"Watching: {watchingText}"),
             new Markup($"Version: [grey]{_card.Version}[/]"),
             new Markup($"Created: [grey]{_card.CreatedAt:yyyy-MM-dd HH:mm}[/]")
         );
@@ -369,6 +375,11 @@ public class CardDetailScreen(
                 await OpenSpecsPlansAsync();
                 break;
 
+            case ConsoleKey.W:
+                await ToggleWatchAsync();
+                await RenderAsync();
+                break;
+
             case ConsoleKey.D:
                 _appState.PreviousScreen = this;
                 var depPanel = new DependencyPanel(
@@ -446,6 +457,7 @@ public class CardDetailScreen(
                 ("Space", "Toggle checklist item"),
                 ("n", "New checklist item (Checklist section only)"),
                 ("a", "Add comment (Comments section only)"),
+                ("w", "Toggle watching this card"),
                 ("Enter", "Open dependency card (Dependencies section only)"),
                 ("Esc", "Back to board"),
                 ("q", "Quit"),
@@ -622,6 +634,60 @@ public class CardDetailScreen(
         {
             _errorCollector.Add("N/A", $"Assign failed: {ex.Message}");
             AnsiConsole.MarkupLine($"[red]Assign failed: {Markup.Escape(ex.Message)}[/]");
+        }
+    }
+
+    private bool IsCurrentUserWatching()
+    {
+        var userId = GetCurrentUserId();
+        return userId.HasValue && (_card?.Watchers?.Any(w => w.UserId == userId.Value) ?? false);
+    }
+
+    private async Task ToggleWatchAsync()
+    {
+        if (_card == null)
+            return;
+
+        try
+        {
+            _card = IsCurrentUserWatching()
+                ? await Client.WatchDELETEAsync(_projectId, _cardId)
+                : await Client.WatchPOSTAsync(_projectId, _cardId);
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Toggle watch failed: {ex.Message}");
+        }
+    }
+
+    // JWT `sub` claim decode — the TUI doesn't persist a decoded user id anywhere
+    // (ConfigStore only stores the raw token), so this mirrors the Web UI's
+    // useAuthStore.restoreToken() base64-decode approach on demand.
+    private static Guid? GetCurrentUserId()
+    {
+        var token = new ConfigStore().Load().JwtToken;
+        if (string.IsNullOrEmpty(token))
+            return null;
+
+        var parts = token.Split('.');
+        if (parts.Length < 2)
+            return null;
+
+        var payload = parts[1].Replace('-', '+').Replace('_', '/');
+        payload = payload.PadRight(payload.Length + ((4 - (payload.Length % 4)) % 4), '=');
+
+        try
+        {
+            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("sub", out var sub)
+                && Guid.TryParse(sub.GetString(), out var id)
+                ? id
+                : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 

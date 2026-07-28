@@ -415,6 +415,143 @@ public class CardServiceTests
     }
 
     [Fact]
+    public async Task WatchAsync_AddsWatcher_WhenNotAlreadyWatching()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.WatchAsync(new WatchCardCommand(projectId, cardId, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(watcherRepo.Watchers);
+        Assert.Contains(result.Value.Watchers, w => w.UserId == actorId);
+    }
+
+    [Fact]
+    public async Task WatchAsync_WhenAlreadyWatching_IsIdempotent()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        watcherRepo.Add(new CardWatcher { CardId = cardId, UserId = actorId });
+
+        var result = await service.WatchAsync(new WatchCardCommand(projectId, cardId, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(watcherRepo.Watchers);
+    }
+
+    [Fact]
+    public async Task UnwatchAsync_RemovesWatcher()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        watcherRepo.Add(new CardWatcher { CardId = cardId, UserId = actorId });
+
+        var result = await service.UnwatchAsync(new UnwatchCardCommand(projectId, cardId, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(watcherRepo.Watchers);
+    }
+
+    [Fact]
+    public async Task UnwatchAsync_WhenNotWatching_IsIdempotent()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+
+        var result = await service.UnwatchAsync(new UnwatchCardCommand(projectId, cardId, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(watcherRepo.Watchers);
+    }
+
+    [Fact]
+    public async Task ListAsync_IsBlocked_TrueWhenActiveBlockerExists()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var blockedCardId = NewId();
+        var blockerCardId = NewId();
+
+        cardRepo.Add(new Card { Id = blockedCardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Blocked" });
+        cardRepo.Add(new Card { Id = blockerCardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 2, Title = "Blocker" });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        relationshipRepo.Relationships.Add(new CardRelationship
+        {
+            SourceCardId = blockerCardId,
+            TargetCardId = blockedCardId,
+            Type = RelationshipType.BlockedBy
+        });
+
+        var result = await service.ListAsync(projectId, new CardListFilter(), actorId);
+
+        Assert.True(result.IsSuccess);
+        var blocked = result.Value.Single(c => c.Id == blockedCardId);
+        var blocker = result.Value.Single(c => c.Id == blockerCardId);
+        Assert.True(blocked.IsBlocked);
+        Assert.Equal(1, blocked.RelationshipCount);
+        Assert.False(blocker.IsBlocked);
+        Assert.Equal(1, blocker.RelationshipCount);
+        Assert.NotNull(blocked.PrimaryRelatedCard);
+        Assert.Equal(blockerCardId, blocked.PrimaryRelatedCard!.CardId);
+        Assert.Equal(2, blocked.PrimaryRelatedCard.CardNumber);
+        Assert.Equal("Blocker", blocked.PrimaryRelatedCard.Title);
+    }
+
+    [Fact]
+    public async Task ListAsync_IsBlocked_FalseWhenBlockerIsArchived()
+    {
+        var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
+        var projectId = NewId();
+        var actorId = NewId();
+        var blockedCardId = NewId();
+        var blockerCardId = NewId();
+
+        cardRepo.Add(new Card { Id = blockedCardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Blocked" });
+        cardRepo.Add(new Card { Id = blockerCardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 2, Title = "Blocker", ArchivedAt = DateTime.UtcNow });
+        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        relationshipRepo.Relationships.Add(new CardRelationship
+        {
+            SourceCardId = blockerCardId,
+            TargetCardId = blockedCardId,
+            Type = RelationshipType.BlockedBy
+        });
+
+        var result = await service.ListAsync(projectId, new CardListFilter(), actorId);
+
+        Assert.True(result.IsSuccess);
+        var blocked = result.Value.Single(c => c.Id == blockedCardId);
+        Assert.False(blocked.IsBlocked);
+    }
+
+    [Fact]
     public async Task UnassignAsync_RemovesAssigneeOnly()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
@@ -873,7 +1010,7 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 
     public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.ArchivedAt == null).ToList());
 
     public void Add(CardRelationship relationship) => Relationships.Add(relationship);
 }

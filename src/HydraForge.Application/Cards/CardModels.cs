@@ -70,6 +70,18 @@ public record DeleteCardCommand(
     Guid ActorId
 );
 
+public record WatchCardCommand(
+    Guid ProjectId,
+    Guid CardId,
+    Guid ActorId
+);
+
+public record UnwatchCardCommand(
+    Guid ProjectId,
+    Guid CardId,
+    Guid ActorId
+);
+
 public record CardDto(
     Guid Id,
     Guid ProjectId,
@@ -87,7 +99,16 @@ public record CardDto(
     DateTime? ArchivedAt,
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeDto> Assignees,
-    IReadOnlyList<CardWatcherDto> Watchers
+    IReadOnlyList<CardWatcherDto> Watchers,
+    bool IsBlocked,
+    int RelationshipCount,
+    CardRelatedSummaryDto? PrimaryRelatedCard
+);
+
+public record CardRelatedSummaryDto(
+    Guid CardId,
+    int CardNumber,
+    string Title
 );
 
 public record CardAssigneeDto(
@@ -185,7 +206,16 @@ public record CardResponse(
     DateTime? ArchivedAt,
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeResponse> Assignees,
-    IReadOnlyList<CardWatcherResponse> Watchers
+    IReadOnlyList<CardWatcherResponse> Watchers,
+    bool IsBlocked,
+    int RelationshipCount,
+    CardRelatedSummaryResponse? PrimaryRelatedCard
+);
+
+public record CardRelatedSummaryResponse(
+    Guid CardId,
+    int CardNumber,
+    string Title
 );
 
 public record CardAssigneeResponse(

@@ -249,7 +249,7 @@ Each entry has:
 | D-48 | TUI API client + SignalR + credential storage | NSwag codegen; `Microsoft.AspNetCore.SignalR.Client`; plain JSON file at `.hydraforge/config.json` | ✅ |
 | D-49 | Credential storage location | Repo-root `.hydraforge/config.json` (found via `HydraForge.slnx` walk), not `~/.config` | ✅ |
 | D-50 | OpenAPI enum schemas | EnumSchemaTransformer corrects `type: integer` → `type: string` in schema; NSwag generates real C# enums | ✅ |
-| D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler but no live SignalR connection; polling-only for now | 🔜 |
+| D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler; wired to a live SignalR connection via `useNotificationHub.ts`, connected from `layouts/default.vue` on mount (D-51 follow-up, 2026-07-27) | ✅ |
 | D-52 | ntfy client implementation | `INtfyClient` port in Application; `NtfyClient` + `NtfyOptions` in Infrastructure; `SystemSettings.NtfyServerUrl`; docker-compose `ntfy` service; best-effort push (null URL = no-op) | ✅ |
 
 ---

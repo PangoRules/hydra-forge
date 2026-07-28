@@ -214,6 +214,24 @@ const presenceStore = usePresenceStore()
 
 const currentUserId = computed(() => authStore.user?.userId)
 
+const isWatching = computed(() =>
+  card.value?.watchers?.some(w => w.userId === currentUserId.value) ?? false
+)
+
+async function toggleWatch() {
+  if (!card.value) return
+  const wasWatching = isWatching.value
+  try {
+    const { data } = wasWatching
+      ? await api.DELETE(ApiRoutes.Cards.watch(props.projectId, card.value.id))
+      : await api.POST(ApiRoutes.Cards.watch(props.projectId, card.value.id))
+    applyCardUpdate(data as CardResponse)
+    toast.success(wasWatching ? 'Unwatched card' : 'Now watching card')
+  } catch {
+    toast.error(wasWatching ? 'Failed to unwatch card' : 'Failed to watch card')
+  }
+}
+
 /** Look up username from presence store (online users) instead of
  *  boardStore.members — members may not be loaded yet when CardModal
  *  mounts, but online presence data is always available for connected users. */
@@ -252,6 +270,15 @@ const otherViewers = computed(() => {
   >
     <template #header-trailing>
       <div class="flex items-center gap-1">
+        <UButton
+          v-if="card"
+          variant="ghost"
+          size="sm"
+          :icon="isWatching ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+          :color="isWatching ? 'primary' : 'neutral'"
+          :title="isWatching ? 'Watching — click to unwatch' : 'Not watching — click to watch'"
+          @click="toggleWatch"
+        />
         <UButton
           v-if="card && !props.readonly && !isArchived"
           variant="ghost"

@@ -26,6 +26,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
+const authStore = useAuthStore()
 
 const showMenu = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
@@ -58,6 +59,12 @@ const childCount = computed(() => {
 const plainDescription = computed(() =>
   (props.card.description ?? '').replace(/<[^>]*>/g, '')
 )
+
+const isWatching = computed(() =>
+  props.card.watchers?.some(w => w.userId === authStore.user?.userId) ?? false
+)
+
+const relationshipCount = computed(() => Number(props.card.relationshipCount))
 
 function toggleMenu() {
   showMenu.value = !showMenu.value
@@ -96,6 +103,22 @@ async function handleRestore() {
     toast.success('Card restored')
   } catch {
     toast.error('Failed to restore card')
+  }
+}
+
+async function toggleWatch() {
+  closeMenu()
+  const wasWatching = isWatching.value
+  try {
+    if (wasWatching) {
+      await api.DELETE(ApiRoutes.Cards.watch(props.projectId, props.card.id))
+    } else {
+      await api.POST(ApiRoutes.Cards.watch(props.projectId, props.card.id))
+    }
+    board.fetchBoard(props.projectId)
+    toast.success(wasWatching ? 'Unwatched card' : 'Now watching card')
+  } catch {
+    toast.error(wasWatching ? 'Failed to unwatch card' : 'Failed to watch card')
   }
 }
 
@@ -262,6 +285,18 @@ function handleCardDrop(event: DragEvent) {
           @click.stop
         >
           <button
+            tabindex="-1"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            @click="toggleWatch"
+          >
+            <UIcon
+              :name="isWatching ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              class="size-4"
+              aria-hidden="true"
+            />
+            {{ isWatching ? 'Unwatch' : 'Watch' }}
+          </button>
+          <button
             v-if="card.archivedAt"
             tabindex="-1"
             class="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-primary"
@@ -323,6 +358,32 @@ function handleCardDrop(event: DragEvent) {
               class="size-3"
             />
             {{ childCount }}
+          </span>
+        </div>
+        <div
+          v-if="relationshipCount > 0"
+          class="flex flex-col min-w-0 max-w-32"
+        >
+          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Related:</span>
+          <span
+            class="text-xs text-gray-400 flex items-center gap-1 min-w-0"
+            :title="card.primaryRelatedCard
+              ? `#${card.primaryRelatedCard.cardNumber} ${card.primaryRelatedCard.title}${relationshipCount > 1 ? ` (+${relationshipCount - 1} more)` : ''}`
+              : `${relationshipCount} relationship${relationshipCount === 1 ? '' : 's'}`"
+          >
+            <UIcon
+              name="i-lucide-link"
+              class="size-3 shrink-0"
+            />
+            <span
+              v-if="card.primaryRelatedCard"
+              class="truncate"
+            >#{{ card.primaryRelatedCard.cardNumber }} {{ card.primaryRelatedCard.title }}</span>
+            <span v-else>{{ relationshipCount }}</span>
+            <span
+              v-if="card.primaryRelatedCard && relationshipCount > 1"
+              class="shrink-0"
+            >+{{ relationshipCount - 1 }}</span>
           </span>
         </div>
         <div

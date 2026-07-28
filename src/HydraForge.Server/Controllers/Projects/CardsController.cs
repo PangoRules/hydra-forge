@@ -298,6 +298,42 @@ public class CardsController(CardService cardService) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{cardId:guid}/watch")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Watch(Guid projectId, Guid cardId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new AppCards.WatchCardCommand(projectId, cardId, userId);
+        var result = await cardService.WatchAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return Ok(MapToResponse(result.Value));
+    }
+
+    [HttpDelete("{cardId:guid}/watch")]
+    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unwatch(Guid projectId, Guid cardId)
+    {
+        var userId = User.GetRequiredUserId();
+
+        var cmd = new AppCards.UnwatchCardCommand(projectId, cardId, userId);
+        var result = await cardService.UnwatchAsync(cmd);
+
+        if (result.IsFailure)
+        {
+            return this.ToProblemResult(result.Error);
+        }
+
+        return Ok(MapToResponse(result.Value));
+    }
+
     private static AppCards.CardResponse MapToResponse(AppCards.CardDto dto) =>
         new(
             dto.Id,
@@ -329,6 +365,15 @@ public class CardsController(CardService cardService) : ControllerBase
                     w.Username,
                     AddedAt: w.AddedAt
                 )),
-            ]
+            ],
+            dto.IsBlocked,
+            dto.RelationshipCount,
+            dto.PrimaryRelatedCard != null
+                ? new AppCards.CardRelatedSummaryResponse(
+                    dto.PrimaryRelatedCard.CardId,
+                    dto.PrimaryRelatedCard.CardNumber,
+                    dto.PrimaryRelatedCard.Title
+                )
+                : null
         );
 }

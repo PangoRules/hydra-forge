@@ -71,9 +71,16 @@ public class SignalRConnectionManager : IAsyncDisposable
 
         _boardConnection.On<JsonElement>("OnBoardEvent", envelope =>
         {
-            var evt = JsonSerializer.Deserialize<BoardEvent>(envelope.GetRawText(), JsonOptions);
-            if (evt != null)
-                OnBoardEvent?.Invoke(evt);
+            try
+            {
+                var evt = JsonSerializer.Deserialize<BoardEvent>(envelope.GetRawText(), JsonOptions);
+                if (evt != null)
+                    OnBoardEvent?.Invoke(evt);
+            }
+            catch (JsonException ex)
+            {
+                _errorCollector.Add(Guid.NewGuid().ToString("N")[..8], $"Board event deserialize failed: {ex.Message}");
+            }
         });
 
         _boardConnection.Reconnecting += _ =>
