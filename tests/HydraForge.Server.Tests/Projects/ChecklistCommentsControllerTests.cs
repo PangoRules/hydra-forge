@@ -617,6 +617,8 @@ internal class CCTestCardRelationshipRepository : HydraForge.Application.Cards.I
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<CardRelationship?>(null);
     public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)

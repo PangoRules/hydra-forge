@@ -175,47 +175,45 @@ public class CommentService(
         var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
 
-        foreach (var watcher in watchers)
+        var watcherRequests = watchers
+            .Where(w => w.UserId != cmd.ActorId)
+            .Select(w => new NotifyRequest(
+                w.UserId,
+                cmd.ActorId,
+                $"{actorName} commented on #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        if (watcherRequests.Count > 0)
         {
-            try
-            {
-                await _notifService.NotifyAsync(new NotifyRequest(
-                    watcher.UserId,
-                    cmd.ActorId,
-                    $"{actorName} commented on #{card.CardNumber}",
-                    cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
-                    null,
-                    card.Id,
-                    cmd.ProjectId,
-                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-                ), ct);
-            }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning($"Failed to send comment notification to {watcher.UserId}: {ex.Message}");
-            }
+            try { await _notifService.NotifyBatchAsync(watcherRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send comment notifications: {ex.Message}"); }
         }
 
         // Notify @mentioned users
-        foreach (var mentionedUserId in mentionedUserIds)
+        var mentionRequests = mentionedUserIds
+            .Where(id => id != cmd.ActorId)
+            .Select(id => new NotifyRequest(
+                id,
+                cmd.ActorId,
+                $"{actorName} mentioned you in #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        if (mentionRequests.Count > 0)
         {
-            try
-            {
-                await _notifService.NotifyAsync(new NotifyRequest(
-                    mentionedUserId,
-                    cmd.ActorId,
-                    $"{actorName} mentioned you in #{card.CardNumber}",
-                    cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
-                    null,
-                    card.Id,
-                    cmd.ProjectId,
-                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-                ), ct);
-            }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning($"Failed to send mention notification to {mentionedUserId}: {ex.Message}");
-            }
+            try { await _notifService.NotifyBatchAsync(mentionRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send mention notifications: {ex.Message}"); }
         }
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);

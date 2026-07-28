@@ -13,6 +13,11 @@ public class NotificationTriggerTests
             Calls.Add(request);
             return Task.CompletedTask;
         }
+        public Task NotifyBatchAsync(IReadOnlyList<NotifyRequest> requests, CancellationToken ct = default)
+        {
+            Calls.AddRange(requests);
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]

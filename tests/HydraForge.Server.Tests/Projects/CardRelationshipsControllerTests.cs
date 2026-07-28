@@ -423,6 +423,8 @@ internal class SharedCardRelationshipRepository : ICardRelationshipRepository
         => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
     public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
     public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)

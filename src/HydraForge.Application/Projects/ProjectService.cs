@@ -250,25 +250,24 @@ public class ProjectService(
 
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
 
-        foreach (var member in members)
+        var updateRequests = members
+            .Where(m => m.UserId != cmd.ActorId)
+            .Select(m => new NotifyRequest(
+                m.UserId,
+                cmd.ActorId,
+                $"{project.Name} was updated by {actorName}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board"
+            ))
+            .ToList();
+
+        if (updateRequests.Count > 0)
         {
-            try
-            {
-                await _notifService.NotifyAsync(new NotifyRequest(
-                    member.UserId,
-                    cmd.ActorId,
-                    $"{project.Name} was updated by {actorName}",
-                    null,
-                    null,
-                    null,
-                    cmd.ProjectId,
-                    $"/projects/{cmd.ProjectId}/board"
-                ), ct);
-            }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning($"Failed to send project-update notification to {member.UserId}: {ex.Message}");
-            }
+            try { await _notifService.NotifyBatchAsync(updateRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send project-update notifications: {ex.Message}"); }
         }
 
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
@@ -342,25 +341,24 @@ public class ProjectService(
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
         var action = isArchiving ? "archived" : "restored";
 
-        foreach (var member in members)
+        var archiveRequests = members
+            .Where(m => m.UserId != cmd.ActorId)
+            .Select(m => new NotifyRequest(
+                m.UserId,
+                cmd.ActorId,
+                $"{project.Name} has been {action}",
+                null,
+                null,
+                null,
+                cmd.ProjectId,
+                isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
+            ))
+            .ToList();
+
+        if (archiveRequests.Count > 0)
         {
-            try
-            {
-                await _notifService.NotifyAsync(new NotifyRequest(
-                    member.UserId,
-                    cmd.ActorId,
-                    $"{project.Name} has been {action}",
-                    null,
-                    null,
-                    null,
-                    cmd.ProjectId,
-                    isArchiving ? "/projects" : $"/projects/{cmd.ProjectId}/board"
-                ), ct);
-            }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning($"Failed to send archive-notification to {member.UserId}: {ex.Message}");
-            }
+            try { await _notifService.NotifyBatchAsync(archiveRequests, ct); }
+            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send archive-notifications: {ex.Message}"); }
         }
 
         return Result.Success();

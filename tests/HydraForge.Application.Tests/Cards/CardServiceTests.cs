@@ -1072,6 +1072,10 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
     public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.ArchivedAt == null).ToList());
 
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<CardRelationship>>(
+            Relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+
     public void Add(CardRelationship relationship) => Relationships.Add(relationship);
 }
 

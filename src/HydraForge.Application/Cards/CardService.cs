@@ -666,25 +666,27 @@ public class CardService(
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
         var columnName = targetColumn.Name;
 
-        foreach (var recipientId in recipientIds)
+        var moveRequests = recipientIds
+            .Where(id => id != cmd.ActorId)
+            .Select(id => new NotifyRequest(
+                id,
+                cmd.ActorId,
+                $"{actorName} moved #{card.CardNumber} to {columnName}",
+                null,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        try
         {
-            try
-            {
-                await _notifService.NotifyAsync(new NotifyRequest(
-                    recipientId,
-                    cmd.ActorId,
-                    $"{actorName} moved #{card.CardNumber} to {columnName}",
-                    null,
-                    null,
-                    card.Id,
-                    cmd.ProjectId,
-                    $"/projects/{cmd.ProjectId}/board?card={card.Id}"
-                ), ct);
-            }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning($"Failed to send move notification to {recipientId}: {ex.Message}");
-            }
+            await _notifService.NotifyBatchAsync(moveRequests, ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send move notifications: {ex.Message}");
         }
 
         return Result<CardDto>.Success(await MapToDtoAsync(card, ct));
@@ -1143,48 +1145,55 @@ public class CardService(
         var blockedByRels = relationships.Where(r =>
             r.Type == RelationshipType.BlockedBy && r.SourceCardId == archivedCard.Id);
 
-        foreach (var rel in blockedByRels)
+        // Single query for all blocked cards
+        var blockedCardIds = blockedByRels.Select(r => r.TargetCardId).Distinct().ToList();
+        if (blockedCardIds.Count == 0) return;
+
+        var blockedCards = await _cardRepo.GetByIdsAsync(blockedCardIds, ct);
+        var activeBlockedCards = blockedCards.Values
+            .Where(c => c.ArchivedAt == null)
+            .ToList();
+        if (activeBlockedCards.Count == 0) return;
+
+        // Check remaining blockers for all blocked cards in one query
+        var allRemainingBlockers = await _relationshipRepo.ListBlockersForCardsAsync(
+            activeBlockedCards.Select(c => c.Id).ToList(), ct);
+
+        var requests = new List<NotifyRequest>();
+        foreach (var blockedCard in activeBlockedCards)
         {
-            var blockedCard = await _cardRepo.GetByIdAsync(rel.TargetCardId, ct);
-            if (blockedCard == null || blockedCard.ArchivedAt != null)
-                continue;
+            var hasActiveBlockers = allRemainingBlockers
+                .Where(r => r.TargetCardId == blockedCard.Id)
+                .Any(r => blockedCards.TryGetValue(r.SourceCardId, out var bc) && bc.ArchivedAt == null);
 
-            var remainingBlockers = await _relationshipRepo.ListBlockersForCardAsync(blockedCard.Id, ct);
-            var hasActiveBlockers = false;
-            foreach (var blocker in remainingBlockers)
-            {
-                var blockerCard = await _cardRepo.GetByIdAsync(blocker.SourceCardId, ct);
-                if (blockerCard != null && blockerCard.ArchivedAt == null)
-                {
-                    hasActiveBlockers = true;
-                    break;
-                }
-            }
+            if (hasActiveBlockers) continue;
 
-            if (!hasActiveBlockers)
+            var assignees = await _assigneeRepo.ListByCardAsync(blockedCard.Id, ct);
+            foreach (var assignee in assignees)
             {
-                var assignees = await _assigneeRepo.ListByCardAsync(blockedCard.Id, ct);
-                foreach (var assignee in assignees)
-                {
-                    try
-                    {
-                        await _notifService.NotifyAsync(new NotifyRequest(
-                            assignee.UserId,
-                            actorId,
-                            $"#{blockedCard.CardNumber} is no longer blocked",
-                            $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
-                            null,
-                            blockedCard.Id,
-                            projectId,
-                            $"/projects/{projectId}/board?card={blockedCard.Id}"
-                        ), ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _warnLogger.LogWarning($"Failed to send unblock notification to {assignee.UserId}: {ex.Message}");
-                    }
-                }
+                if (assignee.UserId == actorId) continue;
+                requests.Add(new NotifyRequest(
+                    assignee.UserId,
+                    actorId,
+                    $"#{blockedCard.CardNumber} is no longer blocked",
+                    $"All blocking cards for #{blockedCard.CardNumber} have been resolved.",
+                    null,
+                    blockedCard.Id,
+                    projectId,
+                    $"/projects/{projectId}/board?card={blockedCard.Id}"
+                ));
             }
+        }
+
+        if (requests.Count == 0) return;
+
+        try
+        {
+            await _notifService.NotifyBatchAsync(requests, ct);
+        }
+        catch (Exception ex)
+        {
+            _warnLogger.LogWarning($"Failed to send unblock notifications: {ex.Message}");
         }
     }
 }
