@@ -73,7 +73,6 @@ const tabs = computed(() => [
 
 const desktopTabs = computed(() => [
   { label: 'Details', value: 'details' as const },
-  { label: 'Checklist', value: 'checklist' as const },
   { label: 'Comments', value: 'comments' as const },
   ...(hasDocsTab.value ? [{ label: 'Docs', value: 'docs' as const }] : [])
 ])
@@ -263,11 +262,24 @@ const otherViewers = computed(() => {
     :title="card?.title"
     :loading="loading"
     :error="error"
-    width="sm:max-w-4xl"
+    width="sm:max-w-6xl"
     :show-close="!!card"
     @update:open="handleOpenChange"
     @close="onClose"
   >
+    <template #header>
+      <span
+        v-if="isWatching"
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary shrink-0"
+      >
+        <UIcon
+          name="i-lucide-eye"
+          class="size-3"
+        />
+        Watching
+      </span>
+    </template>
+
     <template #header-trailing>
       <div class="flex items-center gap-1">
         <UButton
@@ -328,15 +340,6 @@ const otherViewers = computed(() => {
                   :project-id="projectId"
                   :is-archived="isReadonly"
                   @update:card="applyCardUpdate"
-                />
-              </div>
-              <div v-else-if="activeTab === 'checklist'">
-                <CardChecklist
-                  :card-id="card.id"
-                  :project-id="projectId"
-                  :readonly="isReadonly"
-                  :refresh-key="checklistRefresh"
-                  @updated="checklistRefresh++"
                 />
               </div>
               <div v-else-if="activeTab === 'comments'">

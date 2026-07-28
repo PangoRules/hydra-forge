@@ -7,7 +7,9 @@ import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
+import { formatRelationshipBadge } from '~/lib/card-relationship'
 import { useColumnReorder } from '~/composables/useColumnReorder'
+import CardRelationshipBadges from '~/components/board/CardRelationshipBadges.vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
 type CardResponse = components['schemas']['CardResponse']
@@ -31,6 +33,7 @@ const emit = defineEmits<{
 const api = useApi()
 const board = useBoardStore()
 const toast = useAppToast()
+const authStore = useAuthStore()
 const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
 
 const showArchiveConfirm = ref(false)
@@ -250,8 +253,24 @@ function handleArchive(card: CardResponse) {
   showArchiveConfirm.value = true
 }
 
-function stripHtml(text: string): string {
-  return text.replace(/<[^>]*>/g, '')
+function isWatching(card: CardResponse): boolean {
+  return card.watchers?.some(w => w.userId === authStore.user?.userId) ?? false
+}
+
+async function toggleWatch(card: CardResponse) {
+  menuOpenFor.value = null
+  const wasWatching = isWatching(card)
+  try {
+    if (wasWatching) {
+      await api.DELETE(ApiRoutes.Cards.watch(props.projectId, card.id))
+    } else {
+      await api.POST(ApiRoutes.Cards.watch(props.projectId, card.id))
+    }
+    board.fetchBoard(props.projectId)
+    toast.success(wasWatching ? 'Unwatched card' : 'Now watching card')
+  } catch {
+    toast.error(wasWatching ? 'Failed to unwatch card' : 'Failed to watch card')
+  }
 }
 
 function getParentCard(card: CardResponse): CardResponse | null {
@@ -269,6 +288,22 @@ function getChildCount(card: CardResponse): number {
     count += cards.filter(c => c.parentCardId === card.id).length
   }
   return count
+}
+
+function getRelationshipBadges(card: CardResponse) {
+  return (card.relationshipBadges ?? []).map((b) => {
+    const style = formatRelationshipBadge(b.type, b.isSource)
+    return {
+      relatedCardId: b.relatedCardId,
+      cardNumber: Number(b.relatedCardNumber),
+      title: b.relatedCardTitle,
+      ...style
+    }
+  })
+}
+
+function getRelationshipOverflow(card: CardResponse): number {
+  return Math.max(0, Number(card.relationshipCount) - getRelationshipBadges(card).length)
 }
 </script>
 
@@ -539,123 +574,145 @@ function getChildCount(card: CardResponse): number {
                     {{ cardTypeOption(card.type).label }}
                   </span>
 
-                  <!-- Three-dot menu -->
-                  <div
-                    v-if="!readonly"
-                    class="relative ml-auto"
-                  >
-                    <button
-                      :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
-                      type="button"
-                      class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                      aria-label="Card options"
-                      :aria-expanded="menuOpenFor === card.id"
-                      :aria-controls="`card-menu-${card.id}`"
-                      @click.stop="openMenu(card.id)"
-                      @keydown.down.prevent.stop="openMenu(card.id)"
-                      @keydown.enter.prevent.stop="openMenu(card.id)"
-                      @keydown.space.prevent.stop="openMenu(card.id)"
-                    >
-                      <UIcon
-                        name="i-lucide-more-horizontal"
-                        class="size-4"
-                      />
-                    </button>
+                  <div class="ml-auto flex items-center gap-1.5">
+                    <UIcon
+                      v-if="isWatching(card)"
+                      name="i-lucide-eye"
+                      class="size-3 shrink-0 text-primary"
+                      title="You are watching this card"
+                    />
 
+                    <!-- Three-dot menu -->
                     <div
-                      v-if="menuOpenFor === card.id"
-                      :id="`card-menu-${card.id}`"
-                      :ref="setMenuRef"
-                      role="menu"
-                      class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-44 whitespace-nowrap"
+                      v-if="!readonly"
+                      class="relative"
                     >
-                      <template v-if="card.archivedAt">
+                      <button
+                        :ref="(el: Element | null) => { if (el) buttonRef = el as HTMLElement }"
+                        type="button"
+                        class="shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        aria-label="Card options"
+                        :aria-expanded="menuOpenFor === card.id"
+                        :aria-controls="`card-menu-${card.id}`"
+                        @click.stop="openMenu(card.id)"
+                        @keydown.down.prevent.stop="openMenu(card.id)"
+                        @keydown.enter.prevent.stop="openMenu(card.id)"
+                        @keydown.space.prevent.stop="openMenu(card.id)"
+                      >
+                        <UIcon
+                          name="i-lucide-more-horizontal"
+                          class="size-4"
+                        />
+                      </button>
+
+                      <div
+                        v-if="menuOpenFor === card.id"
+                        :id="`card-menu-${card.id}`"
+                        :ref="setMenuRef"
+                        role="menu"
+                        class="absolute right-0 z-20 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 min-w-44 whitespace-nowrap"
+                      >
                         <button
                           role="menuitem"
                           tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
-                          @click.stop="handleRestore(card)"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                          @click.stop="toggleWatch(card)"
                         >
                           <UIcon
-                            name="i-lucide-archive-restore"
+                            :name="isWatching(card) ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                             class="size-4"
                           />
-                          Restore
-                        </button>
-                      </template>
-                      <template v-else>
-                        <button
-                          role="menuitem"
-                          tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          @click.stop="handleArchive(card)"
-                        >
-                          <UIcon
-                            name="i-lucide-archive"
-                            class="size-4"
-                          />
-                          Archive
+                          {{ isWatching(card) ? 'Unwatch' : 'Watch' }}
                         </button>
                         <USeparator class="my-1" />
-                        <button
-                          role="menuitem"
-                          tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                          @click.stop="handleMoveUp(card)"
-                        >
-                          <UIcon
-                            name="i-lucide-chevron-up"
-                            class="size-4"
-                          />
-                          Move up
-                        </button>
-                        <button
-                          role="menuitem"
-                          tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                          @click.stop="handleMoveDown(card)"
-                        >
-                          <UIcon
-                            name="i-lucide-chevron-down"
-                            class="size-4"
-                          />
-                          Move down
-                        </button>
-                        <button
-                          role="menuitem"
-                          tabindex="0"
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                          @click.stop="startMoveToColumn(card.id)"
-                        >
-                          <UIcon
-                            name="i-lucide-arrow-right"
-                            class="size-4"
-                          />
-                          Move to column...
-                        </button>
-                        <div
-                          v-if="showMoveToColumn[card.id]"
-                          class="border-t mt-1 pt-1"
-                        >
+                        <template v-if="card.archivedAt">
                           <button
-                            v-for="col in columns"
-                            :key="col.id"
                             role="menuitem"
                             tabindex="0"
-                            class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                            :class="{ 'font-semibold': col.id === card.columnId }"
-                            :disabled="col.id === card.columnId"
-                            @click.stop="moveToColumn(card.id, col.id)"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click.stop="handleRestore(card)"
                           >
-                            <div
-                              v-if="col.color"
-                              class="size-2 rounded-full"
-                              :style="{ backgroundColor: col.color }"
+                            <UIcon
+                              name="i-lucide-archive-restore"
+                              class="size-4"
                             />
-                            {{ col.name }}
+                            Restore
                           </button>
-                        </div>
-                      </template>
+                        </template>
+                        <template v-else>
+                          <button
+                            role="menuitem"
+                            tabindex="0"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click.stop="handleArchive(card)"
+                          >
+                            <UIcon
+                              name="i-lucide-archive"
+                              class="size-4"
+                            />
+                            Archive
+                          </button>
+                          <USeparator class="my-1" />
+                          <button
+                            role="menuitem"
+                            tabindex="0"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click.stop="handleMoveUp(card)"
+                          >
+                            <UIcon
+                              name="i-lucide-chevron-up"
+                              class="size-4"
+                            />
+                            Move up
+                          </button>
+                          <button
+                            role="menuitem"
+                            tabindex="0"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click.stop="handleMoveDown(card)"
+                          >
+                            <UIcon
+                              name="i-lucide-chevron-down"
+                              class="size-4"
+                            />
+                            Move down
+                          </button>
+                          <button
+                            role="menuitem"
+                            tabindex="0"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click.stop="startMoveToColumn(card.id)"
+                          >
+                            <UIcon
+                              name="i-lucide-arrow-right"
+                              class="size-4"
+                            />
+                            Move to column...
+                          </button>
+                          <div
+                            v-if="showMoveToColumn[card.id]"
+                            class="border-t mt-1 pt-1"
+                          >
+                            <button
+                              v-for="col in columns"
+                              :key="col.id"
+                              role="menuitem"
+                              tabindex="0"
+                              class="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                              :class="{ 'font-semibold': col.id === card.columnId }"
+                              :disabled="col.id === card.columnId"
+                              @click.stop="moveToColumn(card.id, col.id)"
+                            >
+                              <div
+                                v-if="col.color"
+                                class="size-2 rounded-full"
+                                :style="{ backgroundColor: col.color }"
+                              />
+                              {{ col.name }}
+                            </button>
+                          </div>
+                        </template>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -669,29 +726,19 @@ function getChildCount(card: CardResponse): number {
                   >(archived)</span>
                 </h4>
 
-                <!-- Row 3: description -->
-                <p
-                  v-if="card.description"
-                  class="text-xs text-gray-500 mt-1 line-clamp-2"
-                >
-                  {{ stripHtml(card.description) }}
-                </p>
+                <!-- Row 3: relations -->
+                <CardRelationshipBadges
+                  v-if="getRelationshipBadges(card).length > 0"
+                  class="mt-1"
+                  :badges="getRelationshipBadges(card)"
+                  :overflow="getRelationshipOverflow(card)"
+                />
 
-                <!-- Row 4: due date -->
-                <p
-                  v-if="formatDueDate(card.dueAt)"
-                  class="text-xs mt-1"
-                  :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
+                <!-- Row 4: parent + children -->
+                <div
+                  v-if="getParentCard(card) || getChildCount(card) > 0"
+                  class="flex items-center gap-3 mt-1"
                 >
-                  <UIcon
-                    name="i-lucide-calendar"
-                    class="size-3 inline mr-0.5"
-                  />
-                  {{ formatDueDate(card.dueAt) }}
-                </p>
-
-                <!-- Row 5: parent + children -->
-                <div class="flex items-center gap-3">
                   <div
                     v-if="getParentCard(card)"
                     class="flex flex-col"
@@ -724,6 +771,36 @@ function getChildCount(card: CardResponse): number {
                       {{ getChildCount(card) }}
                     </p>
                   </div>
+                </div>
+
+                <!-- Row 5: assignees + due date -->
+                <div class="flex items-center justify-between mt-1">
+                  <div
+                    v-if="card.assignees.length > 0"
+                    class="flex -space-x-1"
+                  >
+                    <div
+                      v-for="assignee in card.assignees.slice(0, 3)"
+                      :key="assignee.userId"
+                      class="size-5 rounded-full bg-primary text-white flex items-center justify-center text-xs"
+                      :title="assignee.username"
+                    >
+                      {{ (assignee.username[0] ?? '?').toUpperCase() }}
+                    </div>
+                  </div>
+                  <span v-else />
+
+                  <span
+                    v-if="formatDueDate(card.dueAt)"
+                    class="text-xs"
+                    :class="isOverdue(card.dueAt) ? 'text-red-500 font-medium' : 'text-gray-400'"
+                  >
+                    <UIcon
+                      name="i-lucide-calendar"
+                      class="size-3 inline mr-0.5"
+                    />
+                    {{ formatDueDate(card.dueAt) }}
+                  </span>
                 </div>
               </div>
             </div>

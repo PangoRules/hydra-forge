@@ -6,11 +6,11 @@ public static class ColumnScrollCalculator
 {
     public const int MaxBadgesPerCard = 5;
 
-    public static int CardBoxHeight(int badgeCount)
+    public static int CardBoxHeight(int badgeCount, int extraLines = 0)
     {
         var shown = Math.Min(badgeCount, MaxBadgesPerCard);
         var overflowLine = badgeCount > MaxBadgesPerCard ? 1 : 0;
-        return 2 /* border */ + 1 /* title */ + shown + overflowLine;
+        return 2 /* border */ + 1 /* title */ + shown + overflowLine + extraLines;
     }
 
     public record ScrollWindow(int Start, int End, bool HasMoreAbove, bool HasMoreBelow);

@@ -376,6 +376,15 @@ public class BoardScreen(
                 // Non-fatal: board renders without relationship indicators
             }
 
+            // Parent lookup + child count are derived client-side from the already-loaded
+            // card list, same as the web UI does — there's no dedicated endpoint for either.
+            var cardsById = cards.ToDictionary(c => c.Id);
+            var childCounts = cards
+                .Where(c => c.ParentCardId.HasValue)
+                .GroupBy(c => c.ParentCardId!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var currentUserId = CurrentUser.GetId();
+
             // Build column data
             _columns =
             [
@@ -391,16 +400,28 @@ public class BoardScreen(
                             .. cards
                                 .Where(c => c.ColumnId == col.Id)
                                 .OrderBy(c => c.Position)
-                                .Select(c => new BoardRenderer.CardData(
-                                    c.Id,
-                                    c.CardNumber,
-                                    c.Title,
-                                    CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
-                                    cardBadges.GetValueOrDefault(c.Id, []),
-                                    c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
-                                        ?? [],
-                                    c.Version
-                                )),
+                                .Select(c =>
+                                {
+                                    var parent = c.ParentCardId.HasValue
+                                        ? cardsById.GetValueOrDefault(c.ParentCardId.Value)
+                                        : null;
+
+                                    return new BoardRenderer.CardData(
+                                        c.Id,
+                                        c.CardNumber,
+                                        c.Title,
+                                        CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
+                                        cardBadges.GetValueOrDefault(c.Id, []),
+                                        c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
+                                            ?? [],
+                                        c.Version,
+                                        parent?.CardNumber,
+                                        parent != null ? CardTypeMapper.ToDisplayString(parent.Type) : null,
+                                        childCounts.GetValueOrDefault(c.Id, 0),
+                                        c.DueAt,
+                                        currentUserId.HasValue && (c.Watchers?.Any(w => w.UserId == currentUserId.Value) ?? false)
+                                    );
+                                }),
                         ]
                     )),
             ];

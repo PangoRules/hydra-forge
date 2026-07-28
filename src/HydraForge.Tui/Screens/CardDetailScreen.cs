@@ -1,4 +1,3 @@
-using System.Text.Json;
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Rendering;
@@ -639,7 +638,7 @@ public class CardDetailScreen(
 
     private bool IsCurrentUserWatching()
     {
-        var userId = GetCurrentUserId();
+        var userId = CurrentUser.GetId();
         return userId.HasValue && (_card?.Watchers?.Any(w => w.UserId == userId.Value) ?? false);
     }
 
@@ -657,37 +656,6 @@ public class CardDetailScreen(
         catch (ApiException ex)
         {
             _errorCollector.Add("N/A", $"Toggle watch failed: {ex.Message}");
-        }
-    }
-
-    // JWT `sub` claim decode — the TUI doesn't persist a decoded user id anywhere
-    // (ConfigStore only stores the raw token), so this mirrors the Web UI's
-    // useAuthStore.restoreToken() base64-decode approach on demand.
-    private static Guid? GetCurrentUserId()
-    {
-        var token = new ConfigStore().Load().JwtToken;
-        if (string.IsNullOrEmpty(token))
-            return null;
-
-        var parts = token.Split('.');
-        if (parts.Length < 2)
-            return null;
-
-        var payload = parts[1].Replace('-', '+').Replace('_', '/');
-        payload = payload.PadRight(payload.Length + ((4 - (payload.Length % 4)) % 4), '=');
-
-        try
-        {
-            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("sub", out var sub)
-                && Guid.TryParse(sub.GetString(), out var id)
-                ? id
-                : null;
-        }
-        catch
-        {
-            return null;
         }
     }
 

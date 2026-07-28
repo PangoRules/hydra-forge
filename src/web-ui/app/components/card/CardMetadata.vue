@@ -383,8 +383,13 @@ onMounted(() => {
           <div
             v-if="parentCard"
             class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
+            :title="parentCard.title"
           >
-            {{ `#${parentCard.cardNumber} — ${parentCard.title}` }}
+            <UIcon
+              :name="cardTypeOption(parentCard.type).icon"
+              class="size-3"
+            />
+            {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
             <button
               class="ml-0.5 text-gray-400 hover:text-red-500"
               :disabled="savingParent"
@@ -408,9 +413,20 @@ onMounted(() => {
           />
         </div>
         <span
+          v-else-if="parentCard"
+          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600"
+          :title="parentCard.title"
+        >
+          <UIcon
+            :name="cardTypeOption(parentCard.type).icon"
+            class="size-3"
+          />
+          {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
+        </span>
+        <span
           v-else
           class="text-sm"
-        >{{ parentCard?.title ?? '—' }}</span>
+        >—</span>
       </div>
 
       <!-- Children -->
