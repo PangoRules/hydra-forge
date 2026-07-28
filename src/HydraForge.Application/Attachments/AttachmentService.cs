@@ -94,7 +94,7 @@ public partial class AttachmentService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, attachment.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, attachment.Id, attachment.CardId, BoardAction.Created, ct);
 
         return Result<AttachmentDto>.Success(MapToDto(attachment));
     }
@@ -211,12 +211,12 @@ public partial class AttachmentService(
             ct
         );
 
-        await PublishAsync(projectId, attachmentId, BoardAction.Deleted, ct);
+        await PublishAsync(projectId, attachmentId, cardId, BoardAction.Deleted, ct);
 
         return Result.Success();
     }
 
-    private async Task PublishAsync(Guid projectId, Guid attachmentId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid attachmentId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -226,7 +226,8 @@ public partial class AttachmentService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

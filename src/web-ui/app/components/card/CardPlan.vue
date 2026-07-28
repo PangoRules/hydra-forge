@@ -42,6 +42,7 @@ const props = defineProps<{
   projectId: string
   specId?: string | null
   readonly?: boolean
+  refreshKey?: number
 }>()
 
 const toast = useAppToast()
@@ -105,13 +106,18 @@ async function fetchPlans() {
     const list = data as { plans: PlanResponse[] } | undefined
     plans.value = (list?.plans ?? []).sort((a, b) => a.position - b.position)
     for (const p of plans.value) initEditState(p)
-  } catch (error) {
-    console.error('Failed to fetch plans:', error)
+  } catch {
     toast.error('Failed to load plans')
   } finally {
     loading.value = false
   }
 }
+
+// Skip the auto-refresh if ANY plan has an unsaved edit in progress — fetchPlans()
+// reinitializes edit state for every plan, which would silently discard a draft.
+watch(() => props.refreshKey, () => {
+  if (!plans.value.some(isPlanDirty)) fetchPlans()
+})
 
 function deriveDescription(md: string): string {
   const para = md.trim().split('\n\n')[0]

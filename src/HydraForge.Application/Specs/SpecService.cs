@@ -122,7 +122,7 @@ public class SpecService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Created, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
@@ -248,7 +248,7 @@ public class SpecService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Updated, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
@@ -349,12 +349,12 @@ public class SpecService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Restored, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Restored, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid specId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid specId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -364,7 +364,8 @@ public class SpecService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

@@ -34,7 +34,10 @@ const toast = useAppToast()
 const showArchiveConfirm = ref(false)
 const showArchiveWarning = ref(false)
 const archiveDependents = ref<{ id: string, title: string, type: string }[]>([])
-const checklistRefresh = ref(0)
+// Bumped both by a child panel's own @updated (immediate local feedback) and by the
+// realtime watcher below (remote change to this open card) — one signal, every panel
+// re-fetches off the same counter.
+const contentRefresh = ref(0)
 
 // API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
 const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
@@ -183,6 +186,17 @@ async function fetchCard() {
   }
 }
 
+// Same fetch, but for a background realtime refresh — doesn't touch loading/error,
+// so a remote edit updates the modal in place instead of flashing the spinner.
+async function refetchCardQuietly() {
+  try {
+    const { data } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
+    if (data) card.value = data as CardResponse
+  } catch {
+    // best-effort — the modal keeps showing its last-known-good state
+  }
+}
+
 function applyCardUpdate(updated: CardResponse) {
   card.value = updated
 }
@@ -210,6 +224,15 @@ onBeforeUnmount(() => {
 // Presence indicator
 const authStore = useAuthStore()
 const presenceStore = usePresenceStore()
+
+// Live-update while open — useRealtime.ts writes here on any BoardHub event; if it's
+// about the card this modal has open, refresh in place instead of requiring close+reopen.
+const board = useBoardStore()
+watch(() => board.cardContentEvent, (event) => {
+  if (!event || !card.value || event.cardId !== card.value.id) return
+  if (event.entityType === 'Card') refetchCardQuietly()
+  else contentRefresh.value++
+})
 
 const currentUserId = computed(() => authStore.user?.userId)
 
@@ -347,14 +370,8 @@ const otherViewers = computed(() => {
                   :card-id="card.id"
                   :project-id="projectId"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                 />
-              </div>
-              <div v-else-if="activeTab === 'related'">
-                <div class="space-y-4">
-                  <p class="text-sm text-muted">
-                    Attachments, dependencies, specs, plans coming soon
-                  </p>
-                </div>
               </div>
               <div
                 v-else-if="activeTab === 'docs'"
@@ -366,6 +383,7 @@ const otherViewers = computed(() => {
                   :project-id="projectId"
                   :doc-type="specDocType"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                   @update:spec-id="linkedSpecId = $event"
                 />
                 <template v-if="hasPlan">
@@ -375,6 +393,7 @@ const otherViewers = computed(() => {
                     :project-id="projectId"
                     :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                     :readonly="isReadonly"
+                    :refresh-key="contentRefresh"
                   />
                 </template>
               </div>
@@ -392,21 +411,23 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
-                :refresh-key="checklistRefresh"
+                :refresh-key="contentRefresh"
                 :visible-limit="4"
-                @updated="checklistRefresh++"
+                @updated="contentRefresh++"
               />
               <USeparator />
               <CardAttachments
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
               <USeparator />
               <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
           </div>
@@ -457,6 +478,7 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
 
@@ -465,6 +487,7 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
 
@@ -476,12 +499,14 @@ const otherViewers = computed(() => {
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
               <USeparator />
               <CardDependencies
                 :card-id="card.id"
                 :project-id="projectId"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
               />
             </div>
             <div
@@ -494,6 +519,7 @@ const otherViewers = computed(() => {
                 :project-id="projectId"
                 :doc-type="specDocType"
                 :readonly="isReadonly"
+                :refresh-key="contentRefresh"
                 @update:spec-id="linkedSpecId = $event"
               />
               <template v-if="hasPlan">
@@ -503,6 +529,7 @@ const otherViewers = computed(() => {
                   :project-id="projectId"
                   :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
                   :readonly="isReadonly"
+                  :refresh-key="contentRefresh"
                 />
               </template>
             </div>

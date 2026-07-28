@@ -177,6 +177,34 @@ public class SignalRConnectionManager : IAsyncDisposable
         _appState.Connection = ConnectionStatus.Connected;
     }
 
+    public async Task FocusCardAsync(Guid projectId, Guid cardId)
+    {
+        if (_presenceConnection?.State != HubConnectionState.Connected)
+            return;
+        try
+        {
+            await _presenceConnection.InvokeAsync("FocusCard", projectId, cardId);
+        }
+        catch (Exception ex)
+        {
+            _errorCollector.Add("N/A", $"FocusCard failed: {ex.Message}");
+        }
+    }
+
+    public async Task UnfocusCardAsync(Guid projectId)
+    {
+        if (_presenceConnection?.State != HubConnectionState.Connected)
+            return;
+        try
+        {
+            await _presenceConnection.InvokeAsync("UnfocusCard", projectId);
+        }
+        catch (Exception ex)
+        {
+            _errorCollector.Add("N/A", $"UnfocusCard failed: {ex.Message}");
+        }
+    }
+
     // NotificationHub is user-scoped, not project-scoped — connect once, before any
     // project is even opened (ProjectListScreen.OnEnterAsync), and leave it running for
     // the app's lifetime. Idempotent: safe to call again on every re-entry to the project list.
@@ -243,7 +271,8 @@ public class SignalRConnectionManager : IAsyncDisposable
     // Event DTOs
     public record BoardEvent(
         Guid EventId, Guid ProjectId, string EntityType, Guid EntityId,
-        string Action, int Version, DateTime OccurredAt, JsonElement Payload
+        string Action, int Version, DateTime OccurredAt, JsonElement Payload,
+        Guid? CardId = null
     );
 
     public record PresenceUser(Guid UserId, string Username, string ConnectionId);

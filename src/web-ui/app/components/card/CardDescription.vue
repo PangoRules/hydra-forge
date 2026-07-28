@@ -22,6 +22,12 @@ const saving = ref(false)
 const dirty = ref(false)
 const saveError = ref<string | null>(null)
 
+// Sync from a live refetch (realtime card update) — but never while the user has an
+// unsaved edit in progress, or it'd silently overwrite what they're typing.
+watch(() => props.card.description, (value) => {
+  if (!dirty.value) description.value = value ?? ''
+})
+
 const api = useApi()
 const board = useBoardStore()
 

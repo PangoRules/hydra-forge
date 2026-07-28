@@ -126,18 +126,11 @@ describe('BoardCard', () => {
     expect(wrapper.text()).toContain('#99')
   })
 
-  it('shows description when present', async () => {
+  it('never shows description preview on the compact card tile', async () => {
     const wrapper = await mountSuspended(BoardCard, {
       props: { card: makeCard({ description: 'Some description' }), projectId: 'p1' }
     })
-    expect(wrapper.text()).toContain('Some description')
-  })
-
-  it('hides description when absent', async () => {
-    const wrapper = await mountSuspended(BoardCard, {
-      props: { card: makeCard({ description: '' }), projectId: 'p1' }
-    })
-    expect(wrapper.text()).not.toContain('description')
+    expect(wrapper.text()).not.toContain('Some description')
   })
 
   it('shows archived badge when archived', async () => {

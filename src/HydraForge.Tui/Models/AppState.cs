@@ -20,6 +20,13 @@ public class AppState
     public List<(DateTime Timestamp, string CorrelationId, string Message)> Errors { get; } = [];
     public int OnlineCount { get; set; }
 
+    // Presence — userId keyed so joins/leaves/reconnects are idempotent. Populated by
+    // whichever screen currently owns the PresenceHub subscription (BoardScreen,
+    // CardDetailScreen); read by BoardRenderer's status bar and CardDetailScreen's
+    // "N viewing" line.
+    public Dictionary<Guid, string> OnlineUsers { get; } = [];
+    public Dictionary<Guid, Guid> FocusedCards { get; } = [];
+
     private int _unreadNotifications;
     public int UnreadNotifications
     {

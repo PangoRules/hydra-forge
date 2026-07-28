@@ -61,7 +61,7 @@ public class DependencyPanel(
         };
 
         AnsiConsole.Write(panel);
-        AnsiConsole.MarkupLine("[grey][[Tab]] Switch focus  [[Enter]] Confirm  [[Esc]] Cancel[/]");
+        AnsiConsole.MarkupLine("[grey][[Tab]] Switch focus  [[Enter]] Select/Confirm  [[Esc]] Cancel[/]");
     }
 
     private Panel BuildSearchSection()
@@ -143,7 +143,12 @@ public class DependencyPanel(
             case ConsoleKey.Enter:
                 if (_focusIndex == 0 && _searchResults.Count > 0)
                 {
-                    await ConfirmAsync();
+                    // Enter here locks in the highlighted search result and advances to
+                    // the Type step — it must not submit immediately, or a reflex Enter
+                    // right after the dropdown populates creates the relationship with
+                    // whatever type/result happened to be under the cursor by default.
+                    _focusIndex = 1;
+                    await RenderAsync();
                 }
                 else if (_focusIndex == 2)
                 {

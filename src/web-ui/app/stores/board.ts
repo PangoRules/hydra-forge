@@ -32,6 +32,14 @@ export const useBoardStore = defineStore('board', () => {
   const members = ref<MemberResponse[]>([])
   const selectedCardIds = ref<Record<string, boolean>>({})
 
+  // Bridge for CardModal (and any other open-card UI) to react to realtime events without
+  // owning its own SignalR connection — same pattern presence already uses (a shared
+  // reactive store written by useRealtime.ts, read by whoever has that card open).
+  const cardContentEvent = ref<{ cardId: string, entityType: string, action: string } | null>(null)
+  function signalCardContentEvent(cardId: string, entityType: string, action: string) {
+    cardContentEvent.value = { cardId, entityType, action }
+  }
+
   const selectedCount = computed(() => Object.values(selectedCardIds.value).filter(Boolean).length)
 
   function toggleSelectCard(cardId: string) {
@@ -171,6 +179,53 @@ export const useBoardStore = defineStore('board', () => {
     return columns.value.filter(c => colIdsWithCards.has(c.id))
   })
 
+  // Realtime board patching — routes a BoardHub event to a single-entity re-fetch +
+  // targeted store mutation instead of a full fetchBoard(), so the rest of the board
+  // doesn't blink on every remote card/column change. Created/Deleted/Archived/Restored
+  // stay on the full-refresh fallback: whether a card should even be in view depends on
+  // the current filter set (includeArchived etc.), and getting that filter check right
+  // client-side isn't worth it for these comparatively rare transitions.
+  async function applyRealtimeCardEvent(projectId: string, cardId: string, action: string) {
+    if (action === 'Created' || action === 'Deleted' || action === 'Archived' || action === 'Restored') {
+      await fetchBoard(projectId)
+      return
+    }
+
+    const { data, error } = await api.GET(ApiRoutes.Cards.detail(projectId, cardId))
+    if (error || !data) return
+    const card = data as CardResponse
+
+    for (const [, cards] of cardsByColumn.value) {
+      const idx = cards.findIndex((c: CardResponse) => c.id === card.id)
+      if (idx !== -1) {
+        cards.splice(idx, 1)
+        break
+      }
+    }
+
+    const targetCards = cardsByColumn.value.get(card.columnId) ?? []
+    const insertAt = Math.min(Number(card.position), targetCards.length)
+    targetCards.splice(insertAt, 0, card)
+    cardsByColumn.value.set(card.columnId, targetCards)
+  }
+
+  async function applyRealtimeColumnEvent(projectId: string, columnId: string, action: string) {
+    if (action === 'Created' || action === 'Deleted') {
+      await fetchBoard(projectId)
+      return
+    }
+
+    if (action === 'Moved') {
+      const { data, error } = await api.GET(ApiRoutes.Columns.list(projectId))
+      if (!error && data) columns.value = (data as ColumnResponse[]) ?? []
+      return
+    }
+
+    const { data, error } = await api.GET(ApiRoutes.Columns.detail(projectId, columnId))
+    if (error || !data) return
+    updateColumnInStore(columnId, data as ColumnResponse)
+  }
+
   async function fetchMembers(projectId: string) {
     const { data, error } = await api.GET(ApiRoutes.Projects.members(projectId))
     if (!error && data) {
@@ -182,6 +237,8 @@ export const useBoardStore = defineStore('board', () => {
     project, columns, cardsByColumn, loading, error,
     fetchBoard, moveCard, rollbackMove, addCard, updateCard, removeCard, setColumnOrder,
     addColumn, updateColumnInStore, removeColumnFromStore,
+    applyRealtimeCardEvent, applyRealtimeColumnEvent,
+    cardContentEvent, signalCardContentEvent,
     boardFilters, visibleColumns,
     members, fetchMembers,
     selectedCardIds, selectedCount, toggleSelectCard, clearSelection

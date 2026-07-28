@@ -37,7 +37,7 @@ public class CommentService(
     private readonly INotificationService _notifService = notifService;
     private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(Guid projectId, Guid entityId, Guid cardId, BoardAction action, CancellationToken ct)
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -47,7 +47,8 @@ public class CommentService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }
@@ -167,7 +168,7 @@ public class CommentService(
         await EnsureWatcherAsync(cmd.CardId, cmd.ActorId, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Created, ct);
 
         // Notify card watchers about new comment
         var card = validation.Value.Item2;
@@ -248,7 +249,7 @@ public class CommentService(
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Updated", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Updated, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -277,7 +278,7 @@ public class CommentService(
         await _commentRepo.UpdateAsync(comment, ct);
         await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Archived", ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Archived, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Archived, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, [], ct);
     }
