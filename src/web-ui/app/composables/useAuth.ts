@@ -14,9 +14,9 @@ interface AuthUser {
   isAdmin: boolean
 }
 
-type AuthChannelMessage =
-  | { type: 'login'; token: string; user: AuthUser }
-  | { type: 'logout' }
+type AuthChannelMessage
+  = | { type: 'login', token: string, user: AuthUser }
+    | { type: 'logout' }
 
 // Cross-tab sync: the auth_token cookie is shared by every tab on this origin,
 // but each tab's Pinia store only reads that cookie once, at layout mount

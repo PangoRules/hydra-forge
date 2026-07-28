@@ -52,12 +52,6 @@ public class NotificationServiceTests
             Sent.Add((userId, notification));
             return Task.CompletedTask;
         }
-
-        public Task SendNotificationsBatchAsync(IReadOnlyList<(Guid UserId, Notification Notification)> items, CancellationToken ct = default)
-        {
-            Sent.AddRange(items);
-            return Task.CompletedTask;
-        }
     }
 
     [Fact]
