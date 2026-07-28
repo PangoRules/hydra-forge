@@ -36,7 +36,7 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
     movedAt: '2024-01-01T00:00:00Z', archivedAt: null, parentCardId: null,
     assignees: [], watchers: [],
-    isBlocked: false, relationshipCount: 0, primaryRelatedCard: null,
+    relationshipBadges: [], relationshipCount: 0,
     ...overrides
   }
 }

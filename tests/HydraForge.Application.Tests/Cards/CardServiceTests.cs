@@ -490,7 +490,7 @@ public class CardServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_IsBlocked_TrueWhenActiveBlockerExists()
+    public async Task ListAsync_RelationshipBadges_ShowTypeAndDirectionForBothSides()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
         var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
@@ -514,18 +514,24 @@ public class CardServiceTests
         Assert.True(result.IsSuccess);
         var blocked = result.Value.Single(c => c.Id == blockedCardId);
         var blocker = result.Value.Single(c => c.Id == blockerCardId);
-        Assert.True(blocked.IsBlocked);
+
         Assert.Equal(1, blocked.RelationshipCount);
-        Assert.False(blocker.IsBlocked);
+        var blockedBadge = Assert.Single(blocked.RelationshipBadges);
+        Assert.Equal(blockerCardId, blockedBadge.RelatedCardId);
+        Assert.Equal(2, blockedBadge.RelatedCardNumber);
+        Assert.Equal("Blocker", blockedBadge.RelatedCardTitle);
+        Assert.Equal(RelationshipType.BlockedBy, blockedBadge.Type);
+        Assert.False(blockedBadge.IsSource);
+
         Assert.Equal(1, blocker.RelationshipCount);
-        Assert.NotNull(blocked.PrimaryRelatedCard);
-        Assert.Equal(blockerCardId, blocked.PrimaryRelatedCard!.CardId);
-        Assert.Equal(2, blocked.PrimaryRelatedCard.CardNumber);
-        Assert.Equal("Blocker", blocked.PrimaryRelatedCard.Title);
+        var blockerBadge = Assert.Single(blocker.RelationshipBadges);
+        Assert.Equal(blockedCardId, blockerBadge.RelatedCardId);
+        Assert.Equal(RelationshipType.BlockedBy, blockerBadge.Type);
+        Assert.True(blockerBadge.IsSource);
     }
 
     [Fact]
-    public async Task ListAsync_IsBlocked_FalseWhenBlockerIsArchived()
+    public async Task ListAsync_RelationshipBadges_SkipsUnresolvableRelatedCardButKeepsCount()
     {
         var (cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateMocks();
         var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, new FakeProjectBoardEventPublisher(), notifService);
@@ -548,7 +554,8 @@ public class CardServiceTests
 
         Assert.True(result.IsSuccess);
         var blocked = result.Value.Single(c => c.Id == blockedCardId);
-        Assert.False(blocked.IsBlocked);
+        Assert.Empty(blocked.RelationshipBadges);
+        Assert.Equal(1, blocked.RelationshipCount);
     }
 
     [Fact]

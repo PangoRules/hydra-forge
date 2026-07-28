@@ -366,14 +366,15 @@ public class CardsController(CardService cardService) : ControllerBase
                     AddedAt: w.AddedAt
                 )),
             ],
-            dto.IsBlocked,
-            dto.RelationshipCount,
-            dto.PrimaryRelatedCard != null
-                ? new AppCards.CardRelatedSummaryResponse(
-                    dto.PrimaryRelatedCard.CardId,
-                    dto.PrimaryRelatedCard.CardNumber,
-                    dto.PrimaryRelatedCard.Title
-                )
-                : null
+            [
+                .. dto.RelationshipBadges.Select(b => new AppCards.CardRelationshipBadgeResponse(
+                    b.RelatedCardId,
+                    b.RelatedCardNumber,
+                    b.RelatedCardTitle,
+                    b.Type,
+                    b.IsSource
+                )),
+            ],
+            dto.RelationshipCount
         );
 }

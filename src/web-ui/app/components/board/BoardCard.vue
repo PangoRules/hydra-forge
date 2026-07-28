@@ -3,6 +3,7 @@ import type { components } from '~/types/api'
 import { ApiRoutes } from '~/lib/routes'
 import { formatDueDate, isOverdue } from '~/lib/date'
 import { cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
+import { formatRelationshipBadge } from '~/lib/card-relationship'
 import { onClickOutside } from '@vueuse/core'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
@@ -12,7 +13,6 @@ const props = defineProps<{
   card: CardResponse
   projectId: string
   readonly?: boolean
-  blocked?: boolean
   selected?: boolean
 }>()
 
@@ -65,6 +65,22 @@ const isWatching = computed(() =>
 )
 
 const relationshipCount = computed(() => Number(props.card.relationshipCount))
+
+const relationshipBadgeViews = computed(() =>
+  (props.card.relationshipBadges ?? []).map((b) => {
+    const style = formatRelationshipBadge(b.type, b.isSource)
+    return {
+      relatedCardId: b.relatedCardId,
+      cardNumber: Number(b.relatedCardNumber),
+      title: b.relatedCardTitle,
+      ...style
+    }
+  })
+)
+
+const relationshipOverflow = computed(() =>
+  Math.max(0, relationshipCount.value - relationshipBadgeViews.value.length)
+)
 
 function toggleMenu() {
   showMenu.value = !showMenu.value
@@ -196,16 +212,6 @@ function handleCardDrop(event: DragEvent) {
             :class="cardTypeColorClass(typeOption)"
           >
             {{ typeOption.label }}
-          </span>
-          <span
-            v-if="blocked"
-            class="text-warning flex items-center gap-0.5"
-            title="Card is blocked"
-          >
-            <UIcon
-              name="i-lucide-lock"
-              class="size-3"
-            />
           </span>
         </div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
@@ -361,30 +367,26 @@ function handleCardDrop(event: DragEvent) {
           </span>
         </div>
         <div
-          v-if="relationshipCount > 0"
-          class="flex flex-col min-w-0 max-w-32"
+          v-if="relationshipBadgeViews.length > 0"
+          class="flex flex-col gap-0.5 min-w-0 max-w-40"
         >
-          <span class="text-[10px] text-gray-400 leading-none mb-0.5">Related:</span>
-          <span
-            class="text-xs text-gray-400 flex items-center gap-1 min-w-0"
-            :title="card.primaryRelatedCard
-              ? `#${card.primaryRelatedCard.cardNumber} ${card.primaryRelatedCard.title}${relationshipCount > 1 ? ` (+${relationshipCount - 1} more)` : ''}`
-              : `${relationshipCount} relationship${relationshipCount === 1 ? '' : 's'}`"
+          <div
+            v-for="badge in relationshipBadgeViews"
+            :key="badge.relatedCardId"
+            class="text-xs flex items-center gap-1 min-w-0"
+            :class="badge.colorClass"
+            :title="`${badge.verb} #${badge.cardNumber} ${badge.title}`"
           >
             <UIcon
-              name="i-lucide-link"
+              :name="badge.icon"
               class="size-3 shrink-0"
             />
-            <span
-              v-if="card.primaryRelatedCard"
-              class="truncate"
-            >#{{ card.primaryRelatedCard.cardNumber }} {{ card.primaryRelatedCard.title }}</span>
-            <span v-else>{{ relationshipCount }}</span>
-            <span
-              v-if="card.primaryRelatedCard && relationshipCount > 1"
-              class="shrink-0"
-            >+{{ relationshipCount - 1 }}</span>
-          </span>
+            <span class="truncate">{{ badge.verb }} #{{ badge.cardNumber }} {{ badge.title }}</span>
+          </div>
+          <span
+            v-if="relationshipOverflow > 0"
+            class="text-[10px] text-gray-400"
+          >+{{ relationshipOverflow }} more</span>
         </div>
         <div
           v-if="card.assignees.length > 0"

@@ -4,11 +4,11 @@
 
 ### Setup
 
-- [ ] Docker Compose up (postgres + minio)
-- [ ] Server running (`dotnet run --project src/HydraForge.Server`)
-- [ ] Web UI or TUI running (or use raw HTTP / `.http` file)
-- [ ] Two users exist (User A, User B) — both members of a test project
-- [ ] Test project has at least one card (#1) assigned to User B
+- [x] Docker Compose up (postgres + minio)
+- [x] Server running (`dotnet run --project src/HydraForge.Server`)
+- [x] Web UI or TUI running (or use raw HTTP / `.http` file)
+- [x] Two users exist (User A, User B) — both members of a test project
+- [x] Test project has at least one card (#1) assigned to User B
 - [ ] User B is watcher on card #1
 - [ ] Card #1 has a "blocked by" relationship from another card (#2) in the same project
 - [ ] User A is the actor for all actions

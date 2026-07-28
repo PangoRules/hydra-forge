@@ -3026,12 +3026,14 @@ export interface components {
         CardListResponse: {
             cards: components["schemas"]["CardResponse"][];
         };
-        CardRelatedSummaryResponse: {
+        CardRelationshipBadgeResponse: {
             /** Format: uuid */
-            cardId: string;
+            relatedCardId: string;
             /** Format: int32 */
-            cardNumber: number | string;
-            title: string;
+            relatedCardNumber: number | string;
+            relatedCardTitle: string;
+            type: components["schemas"]["RelationshipType"];
+            isSource: boolean;
         };
         CardRelationshipDto: {
             /** Format: uuid */
@@ -3087,10 +3089,9 @@ export interface components {
             parentCardId: null | string;
             assignees: components["schemas"]["CardAssigneeResponse"][];
             watchers: components["schemas"]["CardWatcherResponse"][];
-            isBlocked: boolean;
+            relationshipBadges: components["schemas"]["CardRelationshipBadgeResponse"][];
             /** Format: int32 */
             relationshipCount: number | string;
-            primaryRelatedCard: null | components["schemas"]["CardRelatedSummaryResponse"];
         };
         /** @enum {string} */
         CardType: "Task" | "Issue" | "Idea" | "Goal";

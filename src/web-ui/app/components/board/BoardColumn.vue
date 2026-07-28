@@ -139,7 +139,6 @@ function handleDrop(event: DragEvent) {
           :card="card"
           :project-id="projectId"
           :readonly="readonly"
-          :blocked="card.isBlocked"
           :selected="card.id === selectedCardId"
           @click="emit('card-click', card)"
           @move-up="(id) => emit('card-move', id, column.id, Math.max(0, Number(card.position) - 1))"

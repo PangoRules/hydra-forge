@@ -43,9 +43,8 @@ const makeCard = (overrides: Partial<CardResponse> = {}): CardResponse => ({
   parentCardId: null,
   assignees: [],
   watchers: [],
-  isBlocked: false,
+  relationshipBadges: [],
   relationshipCount: 0,
-  primaryRelatedCard: null,
   ...overrides,
 })
 
@@ -185,40 +184,69 @@ describe('BoardCard', () => {
     expect(wrapper.find('.size-3').exists()).toBe(true)
   })
 
-  it('shows the primary related card number and title, truncated', async () => {
+  it('shows a typed relationship badge with verb, card number and title, truncated', async () => {
     const wrapper = await mountSuspended(BoardCard, {
       props: {
         card: makeCard({
           relationshipCount: 1,
-          primaryRelatedCard: { cardId: 'r1', cardNumber: 7, title: 'A very long related card title indeed' }
+          relationshipBadges: [{
+            relatedCardId: 'r1',
+            relatedCardNumber: 7,
+            relatedCardTitle: 'A very long related card title indeed',
+            type: 'BlockedBy',
+            isSource: false
+          }]
         }),
         projectId: 'p1'
       }
     })
-    expect(wrapper.text()).toContain('#7 A very long related card title indeed')
+    expect(wrapper.text()).toContain('blocked by #7 A very long related card title indeed')
     expect(wrapper.find('.truncate').exists()).toBe(true)
   })
 
-  it('shows a +N indicator when there is more than one relationship', async () => {
+  it('uses the source-side verb when this card is the relationship source', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: {
+        card: makeCard({
+          relationshipCount: 1,
+          relationshipBadges: [{
+            relatedCardId: 'r1',
+            relatedCardNumber: 4,
+            relatedCardTitle: 'Downstream card',
+            type: 'BlockedBy',
+            isSource: true
+          }]
+        }),
+        projectId: 'p1'
+      }
+    })
+    expect(wrapper.text()).toContain('blocks #4 Downstream card')
+  })
+
+  it('shows a +N indicator when relationshipCount exceeds the badge list', async () => {
     const wrapper = await mountSuspended(BoardCard, {
       props: {
         card: makeCard({
           relationshipCount: 3,
-          primaryRelatedCard: { cardId: 'r1', cardNumber: 7, title: 'Blocker' }
+          relationshipBadges: [{
+            relatedCardId: 'r1',
+            relatedCardNumber: 7,
+            relatedCardTitle: 'Blocker',
+            type: 'BlockedBy',
+            isSource: false
+          }]
         }),
         projectId: 'p1'
       }
     })
-    expect(wrapper.text()).toContain('+2')
+    expect(wrapper.text()).toContain('+2 more')
   })
 
-  it('falls back to a bare count when relationships exist but primaryRelatedCard is null', async () => {
+  it('shows no relationship section and no lock icon when there are no relationships', async () => {
     const wrapper = await mountSuspended(BoardCard, {
-      props: {
-        card: makeCard({ relationshipCount: 2, primaryRelatedCard: null }),
-        projectId: 'p1'
-      }
+      props: { card: makeCard(), projectId: 'p1' }
     })
-    expect(wrapper.text()).toContain('Related:')
+    expect(wrapper.text()).not.toContain('Related')
+    expect(wrapper.find('[class*="i-lucide-lock"]').exists()).toBe(false)
   })
 })

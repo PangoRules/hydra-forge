@@ -40,9 +40,8 @@ function makeCard(type: string): CardResponse {
     parentCardId: null,
     assignees: [],
     watchers: [],
-    isBlocked: false,
-    relationshipCount: 0,
-    primaryRelatedCard: null
+    relationshipBadges: [],
+    relationshipCount: 0
   }
 }
 

@@ -100,15 +100,21 @@ public record CardDto(
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeDto> Assignees,
     IReadOnlyList<CardWatcherDto> Watchers,
-    bool IsBlocked,
-    int RelationshipCount,
-    CardRelatedSummaryDto? PrimaryRelatedCard
+    IReadOnlyList<CardRelationshipBadgeDto> RelationshipBadges,
+    int RelationshipCount
 );
 
-public record CardRelatedSummaryDto(
-    Guid CardId,
-    int CardNumber,
-    string Title
+// Mirrors the TUI's CardRelationshipIndicatorHelper.RelationBadge / BoardRenderer.FormatBadgeLine —
+// same Type + IsSource + other-card-number shape, so both clients derive the same verb
+// ("blocks"/"blocked by", "precedes"/"preceded by", "spawned"/"spawned from", "relates").
+// Capped to a handful per card (matches TUI's MaxBadgesPerCard); RelationshipCount on the
+// parent CardDto is the true total, for a "+N more" overflow indicator.
+public record CardRelationshipBadgeDto(
+    Guid RelatedCardId,
+    int RelatedCardNumber,
+    string RelatedCardTitle,
+    RelationshipType Type,
+    bool IsSource
 );
 
 public record CardAssigneeDto(
@@ -207,15 +213,16 @@ public record CardResponse(
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeResponse> Assignees,
     IReadOnlyList<CardWatcherResponse> Watchers,
-    bool IsBlocked,
-    int RelationshipCount,
-    CardRelatedSummaryResponse? PrimaryRelatedCard
+    IReadOnlyList<CardRelationshipBadgeResponse> RelationshipBadges,
+    int RelationshipCount
 );
 
-public record CardRelatedSummaryResponse(
-    Guid CardId,
-    int CardNumber,
-    string Title
+public record CardRelationshipBadgeResponse(
+    Guid RelatedCardId,
+    int RelatedCardNumber,
+    string RelatedCardTitle,
+    RelationshipType Type,
+    bool IsSource
 );
 
 public record CardAssigneeResponse(

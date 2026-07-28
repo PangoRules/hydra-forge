@@ -566,17 +566,24 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CardRelatedSummaryResponse
+    public partial class CardRelationshipBadgeResponse
     {
 
-        [Newtonsoft.Json.JsonProperty("cardId", Required = Newtonsoft.Json.Required.Always)]
-        public System.Guid CardId { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("relatedCardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid RelatedCardId { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("cardNumber", Required = Newtonsoft.Json.Required.Always)]
-        public int CardNumber { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("relatedCardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int RelatedCardNumber { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
-        public string Title { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("relatedCardTitle", Required = Newtonsoft.Json.Required.Always)]
+        public string RelatedCardTitle { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public RelationshipType Type { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isSource", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsSource { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -712,14 +719,11 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("watchers", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<CardWatcherResponse> Watchers { get; set; } = new System.Collections.ObjectModel.Collection<CardWatcherResponse>();
 
-        [Newtonsoft.Json.JsonProperty("isBlocked", Required = Newtonsoft.Json.Required.Always)]
-        public bool IsBlocked { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("relationshipBadges", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<CardRelationshipBadgeResponse> RelationshipBadges { get; set; } = new System.Collections.ObjectModel.Collection<CardRelationshipBadgeResponse>();
 
         [Newtonsoft.Json.JsonProperty("relationshipCount", Required = Newtonsoft.Json.Required.Always)]
         public int RelationshipCount { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("primaryRelatedCard", Required = Newtonsoft.Json.Required.AllowNull)]
-        public CardRelatedSummaryResponse? PrimaryRelatedCard { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

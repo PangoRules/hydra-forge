@@ -290,26 +290,18 @@ public class CardService(
                 ? await _userRepo.FindByIdsAsync(allUserIds, ct)
                 : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
 
-        // One project-wide relationship fetch instead of a per-card query — a card
-        // not present in `cardsById` (archived/out of this filtered result) is
-        // treated as "not blocking", matching GetBlockedMoveWarningAsync's
-        // ArchivedAt == null check.
+        // One project-wide relationship fetch instead of a per-card query — a related
+        // card not present in `cardsById` (archived/out of this filtered result) is
+        // simply skipped when building badges, same as the single-card path.
         var relationships = await _relationshipRepo.ListActiveByProjectAsync(projectId, ct);
         var cardsById = cards.ToDictionary(c => c.Id);
-        var blockedByLookup = relationships
-            .Where(r => r.Type == RelationshipType.BlockedBy)
-            .ToLookup(r => r.TargetCardId);
         var relationshipCounts = relationships
             .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId })
             .GroupBy(id => id)
             .ToDictionary(g => g.Key, g => g.Count());
-        var relatedCardIdLookup = relationships
-            .SelectMany(r => new[]
-            {
-                (CardId: r.SourceCardId, OtherId: r.TargetCardId),
-                (CardId: r.TargetCardId, OtherId: r.SourceCardId)
-            })
-            .ToLookup(x => x.CardId, x => x.OtherId);
+        var relationshipsByCard = relationships
+            .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId }.Distinct().Select(id => (CardId: id, Relationship: r)))
+            .ToLookup(x => x.CardId, x => x.Relationship);
 
         var dtos = cards
             .Select(card => MapCardToDto(
@@ -317,10 +309,9 @@ public class CardService(
                 assigneeLookupFinal,
                 watcherLookupFinal,
                 usersById,
-                blockedByLookup,
                 cardsById,
                 relationshipCounts,
-                relatedCardIdLookup
+                relationshipsByCard
             ))
             .ToList();
 
@@ -1015,7 +1006,6 @@ public class CardService(
             ))
             .ToList();
 
-        var blockers = await _relationshipRepo.ListBlockersForCardAsync(card.Id, ct);
         var relationships = await _relationshipRepo.ListByCardAsync(card.Id, ct);
 
         var relatedCardIds = relationships
@@ -1026,12 +1016,7 @@ public class CardService(
             ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
             : new Dictionary<Guid, Card>();
 
-        var isBlocked = blockers.Any(b =>
-            relatedCardsById.TryGetValue(b.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null
-        );
-        var primaryRelatedCard = relatedCardIds
-            .Select(id => relatedCardsById.TryGetValue(id, out var c) ? c : null)
-            .FirstOrDefault(c => c != null);
+        var relationshipBadges = BuildRelationshipBadges(card.Id, relationships, relatedCardsById);
 
         return new CardDto(
             card.Id,
@@ -1051,12 +1036,49 @@ public class CardService(
             card.ParentCardId,
             assigneeDtos,
             watcherDtos,
-            isBlocked,
-            relationships.Count,
-            primaryRelatedCard != null
-                ? new CardRelatedSummaryDto(primaryRelatedCard.Id, primaryRelatedCard.CardNumber, primaryRelatedCard.Title)
-                : null
+            relationshipBadges,
+            relationships.Count
         );
+    }
+
+    // Ordering mirrors the TUI's CardRelationshipIndicatorHelper.TypeOrder — blocking
+    // relationships surface first, informational ones last. Capped so a heavily-linked
+    // card doesn't blow up the board payload; RelationshipCount on the DTO carries the
+    // true total for a "+N more" indicator.
+    private const int MaxRelationshipBadges = 5;
+
+    private static readonly Dictionary<RelationshipType, int> RelationshipTypeOrder = new()
+    {
+        [RelationshipType.BlockedBy] = 0,
+        [RelationshipType.Precedes] = 1,
+        [RelationshipType.SpawnedFrom] = 2,
+        [RelationshipType.Relates] = 3,
+    };
+
+    private static List<CardRelationshipBadgeDto> BuildRelationshipBadges(
+        Guid cardId,
+        IReadOnlyList<CardRelationship> relationships,
+        IReadOnlyDictionary<Guid, Card> relatedCardsById
+    )
+    {
+        var badges = new List<CardRelationshipBadgeDto>();
+        foreach (var rel in relationships)
+        {
+            var isSource = rel.SourceCardId == cardId;
+            var otherId = isSource ? rel.TargetCardId : rel.SourceCardId;
+            if (!relatedCardsById.TryGetValue(otherId, out var otherCard))
+                continue;
+
+            badges.Add(new CardRelationshipBadgeDto(
+                otherCard.Id,
+                otherCard.CardNumber,
+                otherCard.Title,
+                rel.Type,
+                isSource
+            ));
+        }
+
+        return [.. badges.OrderBy(b => RelationshipTypeOrder[b.Type]).Take(MaxRelationshipBadges)];
     }
 
     private static CardDto MapCardToDto(
@@ -1064,10 +1086,9 @@ public class CardService(
         ILookup<Guid, CardAssignee> assigneeLookup,
         ILookup<Guid, CardWatcher> watcherLookup,
         IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User> usersById,
-        ILookup<Guid, CardRelationship> blockedByLookup,
         IReadOnlyDictionary<Guid, Card> cardsById,
         IReadOnlyDictionary<Guid, int> relationshipCounts,
-        ILookup<Guid, Guid> relatedCardIdLookup
+        ILookup<Guid, CardRelationship> relationshipsByCard
     )
     {
         var assigneeDtos = assigneeLookup[card.Id]
@@ -1087,13 +1108,8 @@ public class CardService(
             ))
             .ToList();
 
-        var isBlocked = blockedByLookup[card.Id].Any(r =>
-            cardsById.TryGetValue(r.SourceCardId, out var blockerCard) && blockerCard.ArchivedAt == null
-        );
         var relationshipCount = relationshipCounts.TryGetValue(card.Id, out var count) ? count : 0;
-        var primaryRelatedCard = relatedCardIdLookup[card.Id]
-            .Select(otherId => cardsById.TryGetValue(otherId, out var c) ? c : null)
-            .FirstOrDefault(c => c != null);
+        var relationshipBadges = BuildRelationshipBadges(card.Id, [.. relationshipsByCard[card.Id]], cardsById);
 
         return new CardDto(
             card.Id,
@@ -1113,11 +1129,8 @@ public class CardService(
             card.ParentCardId,
             assigneeDtos,
             watcherDtos,
-            isBlocked,
-            relationshipCount,
-            primaryRelatedCard != null
-                ? new CardRelatedSummaryDto(primaryRelatedCard.Id, primaryRelatedCard.CardNumber, primaryRelatedCard.Title)
-                : null
+            relationshipBadges,
+            relationshipCount
         );
     }
 
