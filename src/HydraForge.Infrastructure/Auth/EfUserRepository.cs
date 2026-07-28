@@ -57,6 +57,11 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.AnyAsync(u => u.IsAdmin);
     }
 
+    public async Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await context.Users.AnyAsync(u => u.Id == userId && u.IsAdmin, ct);
+    }
+
     public async Task CreateAsync(User user)
     {
         user.UsernameNormalized = user.Username.ToLowerInvariant();

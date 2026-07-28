@@ -13,6 +13,7 @@ public interface IUserRepository
     Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default);
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();
+    Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default);
     Task CreateAsync(User user);
 }
 
