@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { ApiRoutes } from '~/lib/routes'
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
@@ -260,6 +260,13 @@ function hashColor(id: string): string {
   <div class="flex-1 flex flex-col min-h-0">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2 min-w-0">
+        <UButton
+          icon="i-lucide-arrow-left"
+          variant="ghost"
+          size="sm"
+          :to="UiRoutes.Projects.List"
+          aria-label="Back to projects"
+        />
         <h1 class="text-xl font-bold truncate">
           {{ projectName || 'Board' }}
         </h1>

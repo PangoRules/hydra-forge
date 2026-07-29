@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
+import DataTable from '~/components/shared/DataTable.vue'
+import UserCreateModal from '~/components/admin/UserCreateModal.vue'
+import UserResetPasswordModal from '~/components/admin/UserResetPasswordModal.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -27,7 +30,7 @@ const totalCount = ref(0)
 const loading = ref(false)
 const search = ref('')
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 
 const columns = [
   { accessorKey: 'username', header: 'Username' },
@@ -42,12 +45,16 @@ watch(search, () => {
   page.value = 1
   loadUsers()
 })
+watch(pageSize, () => {
+  page.value = 1
+  loadUsers()
+})
 
 async function loadUsers() {
   loading.value = true
   try {
     const { data, error } = await api.GET<{ items: UserRow[], totalCount: number }>(
-      ApiRoutes.Admin.usersList((page.value - 1) * pageSize, pageSize, search.value || undefined))
+      ApiRoutes.Admin.usersList((page.value - 1) * pageSize.value, pageSize.value, search.value || undefined))
     if (error) throw error
     users.value = data!.items
     totalCount.value = data!.totalCount
@@ -83,46 +90,20 @@ async function toggleAdmin(userId: string) {
 }
 
 const showCreateModal = ref(false)
-const creating = ref(false)
-const newUser = reactive({ username: '', password: '', name: '', lastName: '', email: '', isAdmin: false })
-
-const showResetPasswordModal = ref(false)
 const resetPasswordTarget = ref<string | null>(null)
-const newPassword = ref('')
-const resetting = ref(false)
 
 function openResetPassword(userId: string) {
   resetPasswordTarget.value = userId
-  newPassword.value = ''
-  showResetPasswordModal.value = true
 }
 
-async function resetPassword() {
-  if (!resetPasswordTarget.value) return
-  resetting.value = true
-  try {
-    await api.POST(ApiRoutes.Admin.userResetPassword(resetPasswordTarget.value), { body: { newPassword: newPassword.value } })
-    showResetPasswordModal.value = false
-    toast.add({ title: 'Password reset', color: 'success' })
-  } catch (e) {
-    toast.add({ title: (e as Error).message || 'Reset failed', color: 'error' })
-  } finally {
-    resetting.value = false
-  }
+function onUserCreated() {
+  loadUsers()
+  toast.add({ title: 'User created', color: 'success' })
 }
 
-async function createUser() {
-  creating.value = true
-  try {
-    await api.POST(ApiRoutes.Admin.userCreate(), { body: { ...newUser } })
-    showCreateModal.value = false
-    await loadUsers()
-    toast.add({ title: 'User created', color: 'success' })
-  } catch (e) {
-    toast.add({ title: (e as Error).message || 'Create failed', color: 'error' })
-  } finally {
-    creating.value = false
-  }
+function onPasswordReset() {
+  resetPasswordTarget.value = null
+  toast.add({ title: 'Password reset', color: 'success' })
 }
 
 onMounted(() => loadUsers())
@@ -146,10 +127,16 @@ onMounted(() => loadUsers())
       class="mb-4"
     />
 
-    <UTable
+    <DataTable
       :data="users"
       :columns="columns"
       :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total-count="totalCount"
+      :row-key="(item: UserRow) => item.id"
+      @update:page="page = $event"
+      @update:page-size="pageSize = $event"
     >
       <template #isDisabled-cell="{ row }">
         <UBadge :color="row.original.isDisabled ? 'error' : 'success'">
@@ -193,96 +180,71 @@ onMounted(() => loadUsers())
           </UButton>
         </div>
       </template>
-    </UTable>
 
-    <UPagination
-      v-model:page="page"
-      :total="totalCount"
-      :page-size="pageSize"
-      class="mt-4"
-      @update:page="loadUsers"
+      <template #card="{ item }">
+        <UCard>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="min-w-0">
+              <p class="font-medium truncate">
+                {{ item.username }}
+              </p>
+              <p class="text-xs text-muted truncate">
+                {{ item.name }}
+              </p>
+            </div>
+            <UBadge
+              v-if="item.isAdmin"
+              color="info"
+            >
+              Admin
+            </UBadge>
+          </div>
+          <p class="text-sm text-muted truncate mb-2">
+            {{ item.email }}
+          </p>
+          <UBadge
+            :color="item.isDisabled ? 'error' : 'success'"
+            class="mb-3"
+          >
+            {{ item.isDisabled ? 'Disabled' : 'Active' }}
+          </UBadge>
+          <div class="flex flex-wrap gap-1">
+            <UButton
+              size="xs"
+              color="neutral"
+              @click="toggleDisable(item.id, item.isDisabled)"
+            >
+              {{ item.isDisabled ? 'Enable' : 'Disable' }}
+            </UButton>
+            <UButton
+              size="xs"
+              color="neutral"
+              @click="toggleAdmin(item.id)"
+            >
+              {{ item.isAdmin ? 'Remove Admin' : 'Make Admin' }}
+            </UButton>
+            <UButton
+              size="xs"
+              color="neutral"
+              @click="openResetPassword(item.id)"
+            >
+              Reset Password
+            </UButton>
+          </div>
+        </UCard>
+      </template>
+    </DataTable>
+
+    <UserCreateModal
+      v-model:open="showCreateModal"
+      @created="onUserCreated"
     />
 
-    <p class="text-sm text-gray-500 mt-3">
-      {{ totalCount }} total users
-    </p>
-
-    <UModal v-model:open="showResetPasswordModal">
-      <template #body>
-        <div class="p-4 space-y-3">
-          <h2 class="text-lg font-semibold">
-            Reset Password
-          </h2>
-          <UInput
-            v-model="newPassword"
-            type="password"
-            placeholder="New password"
-          />
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2 p-4">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            @click="showResetPasswordModal = false"
-          />
-          <UButton
-            label="Reset"
-            :loading="resetting"
-            @click="resetPassword"
-          />
-        </div>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="showCreateModal">
-      <template #body>
-        <div class="p-4 space-y-3">
-          <h2 class="text-lg font-semibold">
-            Create User
-          </h2>
-          <UInput
-            v-model="newUser.username"
-            label="Username"
-          />
-          <UInput
-            v-model="newUser.password"
-            label="Password"
-            type="password"
-          />
-          <UInput
-            v-model="newUser.name"
-            label="First Name"
-          />
-          <UInput
-            v-model="newUser.lastName"
-            label="Last Name"
-          />
-          <UInput
-            v-model="newUser.email"
-            label="Email"
-          />
-          <UCheckbox
-            v-model="newUser.isAdmin"
-            label="Admin"
-          />
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2 p-4">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            @click="showCreateModal = false"
-          />
-          <UButton
-            label="Create"
-            :loading="creating"
-            @click="createUser"
-          />
-        </div>
-      </template>
-    </UModal>
+    <UserResetPasswordModal
+      v-if="resetPasswordTarget"
+      :user-id="resetPasswordTarget"
+      @close="resetPasswordTarget = null"
+      @reset="onPasswordReset"
+    />
   </div>
 </template>
