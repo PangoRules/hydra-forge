@@ -10,6 +10,40 @@ using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Tests.Checklist;
 
+internal sealed class FakeUserRepositoryAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
+internal sealed class FakeUserRepositoryNonAdmin : IUserRepository
+{
+    public List<User> Users { get; } = [];
+
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
+
+    public Task<User?> FindByUsernameAsync(string username)
+        => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+}
+
 public class ChecklistServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
@@ -339,6 +373,27 @@ public class ChecklistServiceTests
         Assert.Equal("B", result.Value[1].Text);
     }
 
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var repo = new InMemoryChecklistItemRepository();
+        var cardRepo = new InMemoryCardRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepositoryAdmin();
+        var auditWriter = new InMemoryAuditLogWriter();
+        var service = new ChecklistService(repo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher());
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+
+        var result = await service.CreateAsync(new CreateChecklistItemCommand(projectId, cardId, actorId, "Admin checklist item", null, null));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Admin checklist item", result.Value.Text);
+    }
+
     // ─── Audit tests ───────────────────────────────────────────────────────────
 
     [Fact]
@@ -473,12 +528,12 @@ public class ChecklistServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
-    private static (InMemoryChecklistItemRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
+    private static (InMemoryChecklistItemRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, FakeUserRepositoryNonAdmin, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
     {
         var repo = new InMemoryChecklistItemRepository();
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
-        var userRepo = new InMemoryUserRepository();
+        var userRepo = new FakeUserRepositoryNonAdmin();
         var auditWriter = new InMemoryAuditLogWriter();
         return (repo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher());
     }
@@ -630,6 +685,7 @@ internal class InMemoryUserRepository : IUserRepository
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
 }
 

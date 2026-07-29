@@ -71,7 +71,8 @@ public static class AttachmentServiceCollectionExtensions
             var auditWriter = sp.GetRequiredService<HydraForge.Application.Audit.IAuditLogWriter>();
             var snapshotRefresher = sp.GetRequiredService<IProjectSnapshotRefresher>();
             var publisher = sp.GetRequiredService<HydraForge.Application.Realtime.IProjectBoardEventPublisher>();
-            return new AttachmentService(attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
+            var userRepo = sp.GetRequiredService<HydraForge.Application.Auth.IUserRepository>();
+            return new AttachmentService(attachmentRepo, cardRepo, memberRepo, userRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
         });
 
         return services;

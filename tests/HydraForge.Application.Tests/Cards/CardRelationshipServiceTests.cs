@@ -1,6 +1,7 @@
 namespace HydraForge.Application.Tests.Cards;
 
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -9,26 +10,64 @@ using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Result = HydraForge.Domain.Common.Result;
 
+internal sealed class CardRelationshipFakeUserRepo : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
+internal sealed class CardRelationshipFakeUserRepoForAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
 public class CardRelationshipServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
 
-    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, FakeProjectBoardEventPublisher publisher, CardRelationshipService service) CreateService()
+    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, CardRelationshipFakeUserRepo userRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, FakeProjectBoardEventPublisher publisher, CardRelationshipService service) CreateService()
     {
         var relationshipRepo = new InMemoryCardRelationshipRepository2();
         var cardRepo = new InMemoryCardRepository2();
         var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new CardRelationshipFakeUserRepo();
         var auditWriter = new InMemoryAuditLogWriter();
         var snapshotRefresher = new NullSnapshotRefresher();
         var publisher = new FakeProjectBoardEventPublisher();
-        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
-        return (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service);
+        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        return (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service);
+    }
+
+    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, CardRelationshipFakeUserRepoForAdmin userRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, FakeProjectBoardEventPublisher publisher, CardRelationshipService service) CreateAdminService()
+    {
+        var relationshipRepo = new InMemoryCardRelationshipRepository2();
+        var cardRepo = new InMemoryCardRepository2();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new CardRelationshipFakeUserRepoForAdmin();
+        var auditWriter = new InMemoryAuditLogWriter();
+        var snapshotRefresher = new NullSnapshotRefresher();
+        var publisher = new FakeProjectBoardEventPublisher();
+        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        return (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service);
     }
 
     [Fact]
     public async Task CreateAsync_self_link_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
@@ -45,7 +84,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_cross_project_denied()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var otherProjectId = NewId();
         var actorId = NewId();
@@ -65,7 +104,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_duplicate_active_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -86,7 +125,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_blockedby_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -109,7 +148,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_precedes_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -132,7 +171,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_relates_does_not_participate_in_cycle()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -154,7 +193,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ListAsync_returns_active_only()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -175,7 +214,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task DeleteAsync_archives_relationship()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -200,7 +239,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task GetArchiveImpactAsync_returns_dependent_cards()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -223,7 +262,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_archives_card_and_relationships()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -252,7 +291,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_confirm_required_when_dependents_exist()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -281,7 +320,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_success()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -304,7 +343,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -329,7 +368,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -359,7 +398,7 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
@@ -383,6 +422,27 @@ public class CardRelationshipServiceTests
         Assert.Equal(cardA, req.EntityId);
         Assert.Equal("ArchivedWithRelationships", req.Action);
         Assert.Equal(projectId, req.ProjectId);
+    }
+
+    // ─── Admin bypass tests ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service) = CreateAdminService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardA = NewId();
+        var cardB = NewId();
+
+        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
+        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
+
+        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(cardA, result.Value.SourceCardId);
+        Assert.Equal(cardB, result.Value.TargetCardId);
     }
 
     // ─── In-memory repositories ─────────────────────────────────────────────

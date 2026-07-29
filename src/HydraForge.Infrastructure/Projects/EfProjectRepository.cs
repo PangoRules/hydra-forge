@@ -73,6 +73,47 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
         return new ProjectListPage(items, totalCount);
     }
 
+    public async Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var query = context.Projects.AsQueryable();
+
+        if (!includeArchived)
+            query = query.Where(p => p.ArchivedAt == null);
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(p =>
+                EF.Functions.ILike(p.Name, $"%{search}%")
+                || (p.Description != null && EF.Functions.ILike(p.Description, $"%{search}%"))
+            );
+
+        var totalCount = await query.CountAsync(ct);
+
+        query = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending
+                ? query.OrderByDescending(p => p.Name)
+                : query.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending
+                ? query.OrderByDescending(p => p.UpdatedAt)
+                : query.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending
+                ? query.OrderByDescending(p => p.CreatedAt)
+                : query.OrderBy(p => p.CreatedAt),
+        };
+
+        var items = await query.Skip(skip).Take(take).ToListAsync(ct);
+
+        return new ProjectListPage(items, totalCount);
+    }
+
     public async Task UpdateAsync(Project project, CancellationToken ct = default)
     {
         context.Projects.Update(project);

@@ -83,6 +83,7 @@ public class ProjectsController(
     )
     {
         var userId = User.GetRequiredUserId();
+        var isAdmin = User.IsInRole(HydraForge.Domain.Constants.Roles.Admin);
 
         var result = await projectService.GetAllAsync(
             userId,
@@ -92,7 +93,8 @@ public class ProjectsController(
             sortDescending,
             role,
             skip,
-            take
+            take,
+            isAdmin
         );
 
         if (result.IsFailure)

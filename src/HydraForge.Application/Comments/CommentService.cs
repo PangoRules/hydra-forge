@@ -59,11 +59,12 @@ public class CommentService(
         Guid projectId, Guid userId, Guid cardId, CancellationToken ct
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, userId, ct))
             return Result<(ProjectMember, Card)>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
+
+        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId, ct);
 
         var card = await _cardRepo.GetByIdAsync(cardId, ct);
         if (card == null || card.ProjectId != projectId)

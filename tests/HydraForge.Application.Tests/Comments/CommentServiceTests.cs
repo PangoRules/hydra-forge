@@ -15,6 +15,19 @@ public class CommentServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
 
+    private sealed class FakeUserRepoForAdmin : IUserRepository
+    {
+        public List<User> Users { get; } = [];
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
+        public Task<User?> FindByUsernameAsync(string username) => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+        public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+    }
+
     [Fact]
     public async Task CreateAsync_CreatesComment_AuthorAutoAddedAsWatcher()
     {
@@ -336,6 +349,26 @@ public class CommentServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
+    // ─── Admin bypass tests ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService) = CreateAdminMocks();
+        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, notifService);
+        var projectId = NewId();
+        var cardId = NewId();
+        var adminId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
+
+        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, adminId, "Hello from admin"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Hello from admin", result.Value.Content);
+        Assert.Equal(adminId, result.Value.AuthorId);
+    }
+
     private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher, FakeNotificationService) CreateMocks()
     {
         var commentRepo = new InMemoryCommentRepository();
@@ -343,6 +376,17 @@ public class CommentServiceTests
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
         var userRepo = new InMemoryUserRepository();
+        var auditWriter = new InMemoryAuditLogWriter();
+        return (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), new FakeNotificationService());
+    }
+
+    private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, FakeUserRepoForAdmin, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher, FakeNotificationService) CreateAdminMocks()
+    {
+        var commentRepo = new InMemoryCommentRepository();
+        var watcherRepo = new InMemoryCardWatcherRepository();
+        var cardRepo = new InMemoryCardRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepoForAdmin();
         var auditWriter = new InMemoryAuditLogWriter();
         return (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), new FakeNotificationService());
     }
@@ -493,6 +537,7 @@ internal class InMemoryUserRepository : IUserRepository
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
 }
 

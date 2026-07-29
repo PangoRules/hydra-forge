@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
@@ -13,6 +14,7 @@ public class ColumnService(
     IColumnRepository columnRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher,
     IAuditLogWriter auditLogWriter
@@ -20,13 +22,13 @@ public class ColumnService(
 {
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+    private readonly IUserRepository _userRepo = userRepo;
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default
     )
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<ColumnDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -74,8 +76,7 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, projectId, actorId, ct))
             return Result<ColumnDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -95,8 +96,7 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<ColumnDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -110,8 +110,7 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<ColumnDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -147,8 +146,7 @@ public class ColumnService(
 
     public async Task<Result> DeleteAsync(DeleteColumnCommand cmd, CancellationToken ct = default)
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -202,8 +200,7 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );

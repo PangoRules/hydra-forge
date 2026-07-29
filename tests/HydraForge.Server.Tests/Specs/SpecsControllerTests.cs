@@ -3,6 +3,7 @@ namespace HydraForge.Server.Tests.Specs;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
@@ -291,6 +292,7 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
             services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+            services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
         });
@@ -356,6 +358,34 @@ internal class SpecsTestProjectRepository : IProjectRepository
         if (!includeArchived)
             filtered = filtered.Where(p => p.ArchivedAt == null);
         var all = filtered.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
+    public Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var filtered = _projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+        var all = sorted.ToList();
         var page = all.Skip(skip).Take(take).ToList();
         return Task.FromResult(new ProjectListPage(page, all.Count));
     }

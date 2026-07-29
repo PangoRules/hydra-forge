@@ -2,6 +2,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Domain.Enums;
 using Xunit;
 
 namespace HydraForge.Application.Tests.Auth;

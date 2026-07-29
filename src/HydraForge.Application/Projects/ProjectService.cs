@@ -128,11 +128,12 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, projectId, requestUserId, ct))
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
+
+        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
 
         var columns = await columnRepo.GetByProjectIdAsync(projectId, ct);
         var members = await memberRepo.ListMembersAsync(projectId, ct);
@@ -149,39 +150,60 @@ public class ProjectService(
         MemberRole? role,
         int skip,
         int take,
+        bool isAdmin = false,
         CancellationToken ct = default
     )
     {
         var clampedSkip = Math.Max(skip, 0);
         var clampedTake = Math.Clamp(take, 1, 100);
 
-        var page = await projectRepo.ListByUserIdAsync(
-            requestUserId,
-            includeArchived,
-            search,
-            sortBy,
-            sortDescending,
-            role,
-            clampedSkip,
-            clampedTake,
-            ct
-        );
+        var page = isAdmin
+            ? await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct)
+            : await projectRepo.ListByUserIdAsync(
+                requestUserId,
+                includeArchived,
+                search,
+                sortBy,
+                sortDescending,
+                role,
+                clampedSkip,
+                clampedTake,
+                ct
+            );
 
         var projectIds = page.Items.Select(p => p.Id).ToList();
         var memberCounts = await memberRepo.GetMemberCountsAsync(projectIds, ct);
-        var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
 
-        var result = page
-            .Items.Select(project => new ProjectListDto(
-                project.Id,
-                project.Name,
-                project.Description,
-                project.CreatedAt,
-                project.ArchivedAt,
-                memberCounts.GetValueOrDefault(project.Id, 0),
-                myRoles.GetValueOrDefault(project.Id, MemberRole.Member)
-            ))
-            .ToList();
+        List<ProjectListDto> result;
+        if (isAdmin)
+        {
+            result = page
+                .Items.Select(project => new ProjectListDto(
+                    project.Id,
+                    project.Name,
+                    project.Description,
+                    project.CreatedAt,
+                    project.ArchivedAt,
+                    memberCounts.GetValueOrDefault(project.Id, 0),
+                    null
+                ))
+                .ToList();
+        }
+        else
+        {
+            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
+            result = page
+                .Items.Select(project => new ProjectListDto(
+                    project.Id,
+                    project.Name,
+                    project.Description,
+                    project.CreatedAt,
+                    project.ArchivedAt,
+                    memberCounts.GetValueOrDefault(project.Id, 0),
+                    myRoles.GetValueOrDefault(project.Id, MemberRole.Member)
+                ))
+                .ToList();
+        }
 
         return Result<ProjectListPageDto>.Success(new ProjectListPageDto(result, page.TotalCount));
     }
@@ -202,13 +224,14 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.Archived, "Cannot update archived project.")
             );
 
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
-        if (membership.Role != MemberRole.Owner && membership.Role != MemberRole.Member)
+        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+
+        if (membership != null && membership.Role != MemberRole.Owner && membership.Role != MemberRole.Member)
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner or Member role required.")
             );
@@ -284,13 +307,14 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
-        if (membership.Role != MemberRole.Owner)
+        var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
+
+        if (membership != null && membership.Role != MemberRole.Owner)
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
             );

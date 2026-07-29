@@ -1,12 +1,38 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Tests.Columns;
+
+internal sealed class FakeUserRepositoryForAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
+internal sealed class FakeUserRepositoryAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
 
 public class ColumnServiceTests
 {
@@ -15,8 +41,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_AppendsAtMaxPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -33,8 +59,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -45,10 +71,24 @@ public class ColumnServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var (repo, cardRepo, memberRepo, _, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var adminUserRepo = new FakeUserRepositoryAdmin();
+        var service = new ColumnService(repo, cardRepo, memberRepo, adminUserRepo, snapshotRefresher, publisher, auditWriter);
+        var projectId = NewId();
+        var actorId = NewId();
+
+        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "New Column", null, null, actorId));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ExistingColumn_ReturnsColumn()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -65,8 +105,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistent_ReturnsNotFound()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -81,8 +121,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_ChangesNameColorWip()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -101,8 +141,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_EmptyColumn_CompactsPositions()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId1 = NewId();
@@ -126,8 +166,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_NonEmptyColumn_ReturnsDeleteNonEmpty()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -145,8 +185,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_ArchivedCard_DoesNotBlockDelete()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -163,8 +203,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_ValidColumnIds_RewritesDensePositions()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -190,8 +230,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_InvalidColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -207,8 +247,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WrongProjectColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var otherProjectId = NewId();
@@ -228,8 +268,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_MissingColumn_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -245,8 +285,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var nonMemberId = NewId();
 
@@ -261,8 +301,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -283,8 +323,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -307,8 +347,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
@@ -331,8 +371,8 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, snapshotRefresher, new FakeProjectBoardEventPublisher(), auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
         var projectId = NewId();
         var actorId = NewId();
         var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
@@ -357,6 +397,7 @@ public class ColumnServiceTests
         InMemoryColumnRepository repo,
         InMemoryCardRepository cardRepo,
         InMemoryProjectMemberRepository memberRepo,
+        FakeUserRepositoryForAdmin userRepo,
         NullSnapshotRefresher snapshotRefresher,
         FakeProjectBoardEventPublisher publisher,
         InMemoryAuditLogWriter auditWriter
@@ -366,6 +407,7 @@ public class ColumnServiceTests
             new InMemoryColumnRepository(),
             new InMemoryCardRepository(),
             new InMemoryProjectMemberRepository(),
+            new FakeUserRepositoryForAdmin(),
             new NullSnapshotRefresher(),
             new FakeProjectBoardEventPublisher(),
             new InMemoryAuditLogWriter()

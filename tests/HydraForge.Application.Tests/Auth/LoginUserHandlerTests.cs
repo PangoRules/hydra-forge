@@ -109,6 +109,9 @@ internal class InMemoryUserRepository : IUserRepository
     public Task<bool> AnyAdminExistsAsync()
         => Task.FromResult(_user?.IsAdmin ?? false);
 
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
+        => Task.FromResult(_user?.IsAdmin ?? false);
+
     public Task CreateAsync(User user)
         => Task.CompletedTask;
 }
