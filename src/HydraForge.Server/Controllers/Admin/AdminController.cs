@@ -16,8 +16,8 @@ public class AdminController(
     IAdminService adminService,
     ProjectService projectService,
     ISettingsRepository settingsRepo,
-    ISettingsProvider settingsProvider)
-    : ControllerBase
+    ISettingsProvider settingsProvider
+) : ControllerBase
 {
     [HttpGet("users")]
     [ProducesResponseType(typeof(UserListPageDto), StatusCodes.Status200OK)]
@@ -144,22 +144,27 @@ public class AdminController(
     public async Task<IActionResult> GetSettings(CancellationToken ct)
     {
         var settings = await settingsProvider.GetAsync(ct);
-        return Ok(new
-        {
-            settings.ArchivedItemRetentionDays,
-            settings.AuditLogRetentionDays,
-            settings.NotificationRetentionDays,
-            settings.NtfyServerUrl,
-            settings.SearXngUrl,
-            settings.BrandName,
-            settings.BrandLogoUrl,
-        });
+        return Ok(
+            new
+            {
+                settings.ArchivedItemRetentionDays,
+                settings.AuditLogRetentionDays,
+                settings.NotificationRetentionDays,
+                settings.NtfyServerUrl,
+                settings.SearXngUrl,
+                settings.BrandName,
+                settings.BrandLogoUrl,
+            }
+        );
     }
 
     [HttpPut("settings")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UpdateSettings([FromBody] UpdateSystemSettingsRequest request, CancellationToken ct)
+    public async Task<IActionResult> UpdateSettings(
+        [FromBody] UpdateSystemSettingsRequest request,
+        CancellationToken ct
+    )
     {
         var settings = await settingsRepo.GetSingletonAsync(ct);
         settings.UpdateSettings(
