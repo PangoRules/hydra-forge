@@ -9,7 +9,7 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_ValidCredentials_ReturnsSuccessWithToken()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = false };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(true);
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
@@ -31,7 +31,7 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_WrongPassword_ReturnsInvalidCredentialsError()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = false };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(false);
         var issuer = new FixedTokenIssuer("jwt-token");
@@ -48,7 +48,8 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_DisabledUser_ReturnsUserDisabledError()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = true };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
+        user.Disable();
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(true);
         var issuer = new FixedTokenIssuer("jwt-token");
@@ -77,10 +78,6 @@ public class LoginUserHandlerTests
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Auth.InvalidCredentials, result.Error.Code);
     }
-}
-
-internal class TestUser : User
-{
 }
 
 internal class InMemoryUserRepository : IUserRepository
@@ -112,7 +109,13 @@ internal class InMemoryUserRepository : IUserRepository
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
         => Task.FromResult(_user?.IsAdmin ?? false);
 
-    public Task CreateAsync(User user)
+    public Task CreateAsync(User user, CancellationToken ct = default)
+        => Task.CompletedTask;
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default)
+        => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default)
         => Task.CompletedTask;
 }
 

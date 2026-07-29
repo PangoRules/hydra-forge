@@ -34,18 +34,13 @@ public class TestUserSeeder(
                 continue;
             }
 
-            var user = new User
-            {
-                Name = $"Test{username}",
-                LastName = "User",
-                Username = username,
-                UsernameNormalized = normalized,
-                Email = $"{username}@localhost",
-                EmailNormalized = $"{username}@localhost",
-                PasswordHash = passwordHasher.HashPassword(password),
-                IsAdmin = isAdmin,
-                IsDisabled = false,
-            };
+            var user = User.Create(
+                username,
+                $"Test{username}",
+                "User",
+                $"{username}@localhost",
+                passwordHasher.HashPassword(password),
+                isAdmin);
 
             await userRepository.CreateAsync(user);
             logger.LogInformation(

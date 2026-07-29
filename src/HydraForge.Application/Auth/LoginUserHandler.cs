@@ -14,7 +14,10 @@ public interface IUserRepository
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();
     Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default);
-    Task CreateAsync(User user);
+    Task CreateAsync(User user, CancellationToken ct = default);
+    Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default);
+    Task<int> CountAsync(string? search, CancellationToken ct = default);
+    Task UpdateAsync(User user, CancellationToken ct = default);
 }
 
 public interface IPasswordHasher

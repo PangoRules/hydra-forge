@@ -19,7 +19,10 @@ public class ProjectMemberServiceTests
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task CreateAsync(User user) => Task.CompletedTask;
+        public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
     [Fact]
     public async Task AddMemberAsync_OwnerAddsMember_Success()

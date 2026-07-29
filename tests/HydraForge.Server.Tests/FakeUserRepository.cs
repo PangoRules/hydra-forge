@@ -6,16 +6,7 @@ namespace HydraForge.Server.Tests;
 internal class FakeUserRepository : IUserRepository
 {
     private static User MakeUser(string username, string email)
-    {
-        var u = new User
-        {
-            Username = username,
-            Email = email,
-            Name = "Test",
-            LastName = "User"
-        };
-        return u;
-    }
+        => User.Create(username, "Test", "User", email, "hash");
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult<User?>(MakeUser("TestUser", "test@test.com"));
@@ -37,6 +28,15 @@ internal class FakeUserRepository : IUserRepository
 
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
 
-    public Task CreateAsync(User user)
+    public Task CreateAsync(User user, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default)
+        => Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default)
         => Task.CompletedTask;
 }

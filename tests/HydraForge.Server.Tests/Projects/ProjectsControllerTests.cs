@@ -307,12 +307,8 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             30
         );
 
-        return issuer.IssueToken(new User
-        {
-            Id = userId,
-            Username = username,
-            IsAdmin = isAdmin,
-        }).Value;
+        var user = User.Create(username, "Test", "User", $"{username}@test.com", "hash", isAdmin, id: userId);
+        return issuer.IssueToken(user).Value;
     }
 
     public string IssueRawSubToken(Guid userId, string username, bool isAdmin)

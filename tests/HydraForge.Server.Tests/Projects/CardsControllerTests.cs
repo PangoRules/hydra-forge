@@ -184,7 +184,7 @@ public class CardsControllerTests
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
-        factory.AddUser(new User { Id = assigneeId, Username = "assignee" });
+        factory.AddUser(factory.MakeUser(assigneeId, "assignee", "assignee@test.com"));
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/assignees")
         {
@@ -389,6 +389,8 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
     public void AddColumn(Column column) => _columns.Add(column);
     public void AddCard(Card card) => _cards.Add(card);
     public void AddUser(User user) => _users.Add(user);
+    public User MakeUser(Guid id, string username, string email)
+        => User.Create(username, username, username, email, "hash", id: id);
     public void AddCardAssignee(CardAssignee assignee) => _cardAssignees.Add(assignee);
 
     public string IssueToken(Guid userId, string username, bool isAdmin)
@@ -696,7 +698,10 @@ internal class CardsTestUserRepository : HydraForge.Application.Auth.IUserReposi
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { _users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { _users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class CardsTestSnapshotRepository : HydraForge.Application.Projects.IProjectContextSnapshotRepository

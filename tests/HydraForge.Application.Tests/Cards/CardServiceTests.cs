@@ -19,7 +19,10 @@ internal sealed class FakeUserRepositoryForAdmin : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+    public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public class CardServiceTests
@@ -395,7 +398,7 @@ public class CardServiceTests
         var assigneeUserId = NewId();
 
         cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
-        userRepo.Add(new User { Id = assigneeUserId, Username = "assignee" });
+        userRepo.Add(User.Create("assignee", "Test", "User", "test@localhost", "x", id: assigneeUserId));
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
         var result = await service.AssignAsync(new AssignCardCommand(projectId, cardId, assigneeUserId, actorId));
@@ -416,7 +419,7 @@ public class CardServiceTests
         var assigneeUserId = NewId();
 
         cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
-        userRepo.Add(new User { Id = assigneeUserId, Username = "assignee" });
+        userRepo.Add(User.Create("assignee", "Test", "User", "test@localhost", "x", id: assigneeUserId));
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         assigneeRepo.Add(new CardAssignee { CardId = cardId, UserId = assigneeUserId, AssignedByUserId = actorId });
 
@@ -839,7 +842,7 @@ public class CardServiceTests
         var assigneeUserId = NewId();
 
         cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Test" });
-        userRepo.Add(new User { Id = assigneeUserId, Username = "assignee" });
+        userRepo.Add(User.Create("assignee", "Test", "User", "test@localhost", "x", id: assigneeUserId));
         memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
 
         var result = await service.AssignAsync(new AssignCardCommand(projectId, cardId, assigneeUserId, actorId));
@@ -1195,7 +1198,10 @@ internal class InMemoryUserRepository : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { Users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     public void Add(User user) => CreateAsync(user).GetAwaiter().GetResult();
 }
 

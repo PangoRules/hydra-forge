@@ -83,16 +83,15 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid) 
     }
 }
 
-internal class AuthTestUserRepository(bool userDisabled) : IUserRepository
+internal class AuthTestUserRepository : IUserRepository
 {
-    private readonly User _user = new()
+    private readonly User _user;
+
+    public AuthTestUserRepository(bool userDisabled)
     {
-        Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-        Username = "admin",
-        PasswordHash = "hashed",
-        IsAdmin = true,
-        IsDisabled = userDisabled,
-    };
+        _user = User.Create("admin", "Admin", "User", "admin@test.com", "hashed", isAdmin: true);
+        if (userDisabled) _user.Disable();
+    }
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(_user);
 
@@ -110,7 +109,10 @@ internal class AuthTestUserRepository(bool userDisabled) : IUserRepository
 
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
 
-    public Task CreateAsync(User user) => Task.CompletedTask;
+    public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class AuthTestPasswordHasher(bool passwordValid) : IPasswordHasher

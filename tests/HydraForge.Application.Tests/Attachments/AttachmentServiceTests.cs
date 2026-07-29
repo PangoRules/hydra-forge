@@ -524,7 +524,10 @@ public class AttachmentServiceTests
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => throw new NotImplementedException();
         public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-        public Task CreateAsync(User user) => throw new NotImplementedException();
+        public Task CreateAsync(User user, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeUserRepoAdmin : IUserRepository
@@ -536,6 +539,9 @@ public class AttachmentServiceTests
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => throw new NotImplementedException();
         public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task CreateAsync(User user) => throw new NotImplementedException();
+        public Task CreateAsync(User user, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

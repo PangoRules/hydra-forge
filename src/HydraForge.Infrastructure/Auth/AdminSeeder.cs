@@ -57,18 +57,13 @@ public class AdminSeeder(
             return Result.Success();
         }
 
-        var user = new User
-        {
-            Name = _options.Name ?? "Admin",
-            LastName = _options.LastName ?? "Admin",
-            Username = username,
-            UsernameNormalized = normalizedUsername,
-            Email = _options.Email ?? "admin@localhost",
-            EmailNormalized = _options.Email != null ? _options.Email.ToLower() : "admin@localhost",
-            PasswordHash = passwordHasher.HashPassword(password),
-            IsAdmin = true,
-            IsDisabled = false,
-        };
+        var user = User.Create(
+            username,
+            _options.Name ?? "Admin",
+            _options.LastName ?? "Admin",
+            _options.Email ?? "admin@localhost",
+            passwordHasher.HashPassword(password),
+            isAdmin: true);
 
         await userRepository.CreateAsync(user);
         logger.LogInformation("Admin user created successfully");

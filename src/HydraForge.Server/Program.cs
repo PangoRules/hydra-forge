@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
 using HydraForge.Domain.Constants;
@@ -144,6 +145,7 @@ builder.Services.AddSignalR()
     });
 
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
     jwtIssuer,

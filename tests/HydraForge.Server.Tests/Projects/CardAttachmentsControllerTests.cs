@@ -604,7 +604,10 @@ internal class AttachmentsTestUserRepository : HydraForge.Application.Auth.IUser
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { _users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { _users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class AttachmentsTestSnapshotRepository : HydraForge.Application.Projects.IProjectContextSnapshotRepository

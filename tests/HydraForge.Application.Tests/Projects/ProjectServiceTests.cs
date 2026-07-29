@@ -656,10 +656,13 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
         => Task.FromResult(false);
 
-    public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user)
+    public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user, CancellationToken ct = default)
     {
         return Task.CompletedTask;
     }
+    public Task<IReadOnlyList<HydraForge.Domain.Entities.Auth.User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<HydraForge.Domain.Entities.Auth.User>>(new List<HydraForge.Domain.Entities.Auth.User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(HydraForge.Domain.Entities.Auth.User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeAdminUserRepo : HydraForge.Application.Auth.IUserRepository
@@ -679,7 +682,10 @@ internal sealed class FakeAdminUserRepo : HydraForge.Application.Auth.IUserRepos
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user) => Task.CompletedTask;
+    public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<HydraForge.Domain.Entities.Auth.User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<HydraForge.Domain.Entities.Auth.User>>(new List<HydraForge.Domain.Entities.Auth.User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(HydraForge.Domain.Entities.Auth.User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter

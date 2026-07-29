@@ -19,7 +19,10 @@ internal sealed class CardRelationshipFakeUserRepo : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+    public Task CreateAsync(User user, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class CardRelationshipFakeUserRepoForAdmin : IUserRepository
@@ -31,7 +34,10 @@ internal sealed class CardRelationshipFakeUserRepoForAdmin : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+    public Task CreateAsync(User user, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public class CardRelationshipServiceTests

@@ -25,7 +25,10 @@ public class CommentServiceTests
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+        public Task CreateAsync(User user, CancellationToken ct = default) { Users.Add(user); return Task.CompletedTask; }
+        public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     [Fact]
@@ -39,7 +42,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
 
@@ -68,8 +71,8 @@ public class CommentServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "alice", Email = "b@b.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("alice", "Test", "User", "b@b.com", "x", id: mentionedId));
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @alice check this"));
 
@@ -90,8 +93,10 @@ public class CommentServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = disabledId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = disabledId, Username = "ghost", Email = "g@g.com", PasswordHash = "x", IsDisabled = true });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        var ghostUser = User.Create("ghost", "Test", "User", "g@g.com", "x", id: disabledId);
+        ghostUser.Disable();
+        userRepo.Users.Add(ghostUser);
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @ghost are you there?"));
 
@@ -111,8 +116,8 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = nonMemberId, Username = "outsider", Email = "o@o.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("outsider", "Test", "User", "o@o.com", "x", id: nonMemberId));
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @outsider"));
 
@@ -131,7 +136,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         watcherRepo.Watchers.Add(new CardWatcher { CardId = cardId, UserId = actorId });
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Second comment"));
@@ -170,8 +175,8 @@ public class CommentServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "bob", Email = "b@b.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("bob", "Test", "User", "b@b.com", "x", id: mentionedId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old" });
 
         var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated @bob"));
@@ -193,7 +198,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old", ArchivedAt = DateTime.UtcNow });
 
         var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "New"));
@@ -214,7 +219,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "To archive" });
 
         var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
@@ -235,7 +240,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Already gone", ArchivedAt = DateTime.UtcNow });
 
         var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
@@ -257,8 +262,8 @@ public class CommentServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "alice", Email = "b@b.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("alice", "Test", "User", "b@b.com", "x", id: mentionedId));
         commentRepo.Comments.Add(new Comment { Id = NewId(), CardId = cardId, AuthorId = actorId, Content = "Hi @alice" });
 
         var result = await service.ListAsync(projectId, cardId, actorId);
@@ -281,7 +286,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
 
         var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
 
@@ -307,7 +312,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old" });
 
         var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated"));
@@ -334,7 +339,7 @@ public class CommentServiceTests
 
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "To archive" });
 
         var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
@@ -538,7 +543,10 @@ internal class InMemoryUserRepository : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { Users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter

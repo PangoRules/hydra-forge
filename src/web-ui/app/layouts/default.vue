@@ -59,6 +59,15 @@ function handleSessionLogout() {
         >
           <span class="text-lg font-bold">HydraForge</span>
         </NuxtLink>
+        <ClientOnly>
+          <UButton
+            v-if="authStore.user?.isAdmin"
+            label="Admin"
+            color="neutral"
+            variant="ghost"
+            to="/admin"
+          />
+        </ClientOnly>
       </template>
 
       <template #right>

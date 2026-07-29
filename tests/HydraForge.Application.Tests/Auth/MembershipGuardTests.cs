@@ -25,7 +25,13 @@ public class MembershipGuardTests
             => throw new NotImplementedException();
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
             => Task.FromResult(isAdmin);
-        public Task CreateAsync(User user)
+        public Task CreateAsync(User user, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task<int> CountAsync(string? search, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task UpdateAsync(User user, CancellationToken ct = default)
             => throw new NotImplementedException();
     }
 

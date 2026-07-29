@@ -19,7 +19,10 @@ internal sealed class FakeUserRepositoryAdmin : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+    public Task CreateAsync(User user, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeUserRepositoryNonAdmin : IUserRepository
@@ -41,7 +44,10 @@ internal sealed class FakeUserRepositoryNonAdmin : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { Users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public class ChecklistServiceTests
@@ -150,7 +156,9 @@ public class ChecklistServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = assigneeId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = assigneeId, Username = "disableduser", Email = "a@a.com", PasswordHash = "x", IsDisabled = true });
+        var disabledUser = User.Create("disableduser", "Test", "User", "a@a.com", "x", id: assigneeId);
+        disabledUser.Disable();
+        userRepo.Users.Add(disabledUser);
 
         var result = await service.CreateAsync(new CreateChecklistItemCommand(projectId, cardId, actorId, "WithAssignee", assigneeId, null));
 
@@ -171,7 +179,7 @@ public class ChecklistServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = assigneeId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = assigneeId, Username = "alice", Email = "a@a.com", PasswordHash = "x", IsDisabled = false });
+        userRepo.Users.Add(User.Create("alice", "Test", "User", "a@a.com", "x", id: assigneeId));
 
         var result = await service.CreateAsync(new CreateChecklistItemCommand(projectId, cardId, actorId, "Task", assigneeId, null));
 
@@ -230,7 +238,7 @@ public class ChecklistServiceTests
         cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
         memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = assigneeId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = assigneeId, Username = "bob", Email = "b@b.com", PasswordHash = "x", IsDisabled = false });
+        userRepo.Users.Add(User.Create("bob", "Test", "User", "b@b.com", "x", id: assigneeId));
         repo.Items.Add(new ChecklistItem { Id = itemId, CardId = cardId, Text = "Old", Position = 0 });
 
         var result = await service.UpdateAsync(new UpdateChecklistItemCommand(projectId, cardId, itemId, actorId, "NewText", assigneeId));
@@ -686,7 +694,10 @@ internal class InMemoryUserRepository : IUserRepository
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+    public Task CreateAsync(User user, CancellationToken ct = default) { Users.Add(user); return Task.CompletedTask; }
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
