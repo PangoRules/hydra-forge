@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
-import NotificationPanel from '~/components/notifications/NotificationPanel.vue'
+import AppSidebar from '~/components/layout/AppSidebar.vue'
+import AppTopbar from '~/components/layout/AppTopbar.vue'
 
 const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
-const authStore = useAuthStore()
 const { fetchUnreadCount } = useNotifications()
 const notificationHub = useNotificationHub()
 const {
@@ -51,49 +51,19 @@ function handleSessionLogout() {
     :toaster="{ position: 'bottom-right', duration: 5000 }"
     class="h-full flex flex-col overflow-hidden"
   >
-    <UHeader>
-      <template #left>
-        <NuxtLink
-          to="/projects"
-          class="flex items-center gap-2"
-        >
-          <span class="text-lg font-bold">HydraForge</span>
-        </NuxtLink>
-        <ClientOnly>
-          <UButton
-            v-if="authStore.user?.isAdmin"
-            label="Admin"
-            color="neutral"
-            variant="ghost"
-            to="/admin"
-          />
-        </ClientOnly>
-      </template>
+    <UDashboardGroup class="flex-1 overflow-hidden">
+      <AppSidebar />
 
-      <template #right>
-        <ClientOnly>
-          <NotificationPanel v-if="isAuthenticated" />
-        </ClientOnly>
-        <UColorModeButton />
-        <ClientOnly>
-          <span
-            v-if="isAuthenticated && authStore.user"
-            class="text-sm text-muted mr-2"
-          >{{ authStore.user.username }}</span>
-          <UButton
-            v-if="isAuthenticated"
-            label="Logout"
-            color="neutral"
-            variant="ghost"
-            @click="logout"
-          />
-        </ClientOnly>
-      </template>
-    </UHeader>
+      <UDashboardPanel class="flex-1 flex flex-col overflow-hidden">
+        <template #header>
+          <AppTopbar />
+        </template>
 
-    <UMain class="flex-1 flex flex-col overflow-hidden">
-      <slot />
-    </UMain>
+        <template #body>
+          <slot />
+        </template>
+      </UDashboardPanel>
+    </UDashboardGroup>
 
     <ClientOnly>
       <SessionExpiryModal

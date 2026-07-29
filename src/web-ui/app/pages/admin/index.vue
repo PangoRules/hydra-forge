@@ -3,7 +3,7 @@ import { UiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 const user = useAuthStore().user
-if (!user?.isAdmin) navigateTo('/projects')
+if (!user?.isAdmin) navigateTo(UiRoutes.Chats)
 else navigateTo(UiRoutes.Admin.Users)
 </script>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiRoutes } from '~/lib/routes'
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -16,7 +16,7 @@ interface UserRow {
 
 const user = useAuthStore().user
 if (!user?.isAdmin) {
-  navigateTo('/projects')
+  navigateTo(UiRoutes.Chats)
 }
 
 const api = useApi()

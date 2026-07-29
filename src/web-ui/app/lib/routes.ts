@@ -15,6 +15,7 @@
 export const UiRoutes = {
   Login: '/login',
   Setup: '/setup',
+  Chats: '/chats',
   Projects: {
     List: '/projects',
     Board: (projectId: string) => `/projects/${projectId}/board`
@@ -22,7 +23,6 @@ export const UiRoutes = {
   Admin: {
     Home: '/admin',
     Users: '/admin/users',
-    Projects: '/admin/projects',
     Settings: '/admin/settings',
     AuditLog: '/admin/audit-log'
   }
@@ -146,8 +146,6 @@ export const ApiRoutes = {
     userEnable: (userId: string) => `/api/admin/users/${userId}/enable`,
     userResetPassword: (userId: string) => `/api/admin/users/${userId}/reset-password`,
     userRole: (userId: string) => `/api/admin/users/${userId}/role`,
-    projectsList: (skip = 0, take = 20, search?: string) =>
-      `/api/admin/projects?skip=${skip}&take=${take}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
     projectGet: (projectId: string) => `/api/admin/projects/${projectId}`,
     settingsGet: () => '/api/admin/settings',
     settingsUpdate: () => '/api/admin/settings',
