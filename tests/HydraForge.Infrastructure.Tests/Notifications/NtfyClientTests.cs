@@ -1,7 +1,6 @@
 using System.Net;
 using HydraForge.Infrastructure.Notifications;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace HydraForge.Infrastructure.Tests.Notifications;
 
@@ -47,10 +46,15 @@ public class NtfyClientTests
     public async Task PublishAsync_WithUnreachableServer_SwallowsException()
     {
         var http = new HttpClient(new ThrowingHandler());
-        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), "http://unreachable.invalid");
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            "http://unreachable.invalid"
+        );
 
         var exception = await Record.ExceptionAsync(() =>
-            client.PublishAsync(Guid.NewGuid(), "Title", "Body"));
+            client.PublishAsync(Guid.NewGuid(), "Title", "Body")
+        );
 
         Assert.Null(exception);
     }
@@ -66,6 +70,9 @@ public class NtfyClientTests
         await client.PublishAsync(userId, "Title", "Body");
 
         Assert.Equal(1, handler.CallCount);
-        Assert.Equal($"http://ntfy.local/hydraforge-{userId}", handler.LastRequest!.RequestUri!.ToString());
+        Assert.Equal(
+            $"http://ntfy.local/hydraforge-{userId}",
+            handler.LastRequest!.RequestUri!.ToString()
+        );
     }
 }

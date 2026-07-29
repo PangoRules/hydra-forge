@@ -1,10 +1,8 @@
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
-using HydraForge.Application.Auth;
+using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Domain.Common;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
-using HydraForge.Domain.Common;
-using HydraForge.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,23 +21,29 @@ public class ProjectSnapshotController(
     {
         if (!await User.IsProjectMemberOrAdmin(memberRepo, projectId, ct))
         {
-            return this.ToProblemResult(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+            return this.ToProblemResult(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
         }
 
         var snapshot = await snapshotRefresher.GetSnapshotAsync(projectId, ct);
         if (snapshot == null)
         {
-            return this.ToProblemResult(new Error(DomainErrorCodes.Projects.NotFound, "Snapshot not found."));
+            return this.ToProblemResult(
+                new Error(DomainErrorCodes.Projects.NotFound, "Snapshot not found.")
+            );
         }
 
-        return Ok(new ProjectSnapshotResponse(
-            snapshot.Id,
-            snapshot.ProjectId,
-            snapshot.TemplateContent,
-            snapshot.TemplateGeneratedAt,
-            snapshot.AiNarrative,
-            snapshot.AiNarrativeGeneratedAt
-        ));
+        return Ok(
+            new ProjectSnapshotResponse(
+                snapshot.Id,
+                snapshot.ProjectId,
+                snapshot.TemplateContent,
+                snapshot.TemplateGeneratedAt,
+                snapshot.AiNarrative,
+                snapshot.AiNarrativeGeneratedAt
+            )
+        );
     }
 }
 

@@ -133,7 +133,7 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
                 equals new { m.ProjectId, m.UserId }
                 into gj
             from m in gj.DefaultIfEmpty()
-            where m.ProjectId == null // null membership row = not a member
+            where (Guid?)m.ProjectId == null // null membership row = not a member
             select p;
 
         if (!includeArchived)

@@ -30,7 +30,11 @@ public class TestUserSeeder(
             var existing = await userRepository.FindByUsernameAsync(normalized);
             if (existing != null)
             {
-                logger.LogInformation("Test user '{Username}' already exists, skipping", username);
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "Test user '{Username}' already exists, skipping",
+                        username
+                    );
                 continue;
             }
 
@@ -43,11 +47,12 @@ public class TestUserSeeder(
                 isAdmin);
 
             await userRepository.CreateAsync(user);
-            logger.LogInformation(
-                "Test user '{Username}' created (admin={IsAdmin})",
-                username,
-                isAdmin
-            );
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation(
+                    "Test user '{Username}' created (admin={IsAdmin})",
+                    username,
+                    isAdmin
+                );
         }
     }
 }

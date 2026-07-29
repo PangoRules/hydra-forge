@@ -23,7 +23,6 @@ public class BoardScreen(
     private readonly SignalRConnectionManager _signalRConnectionManager = signalRConnectionManager;
     private readonly NotificationCenter _notificationCenter = notificationCenter;
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
-    private readonly BoardRenderer _renderer = new();
     private readonly SemaphoreSlim _renderLock = new(1, 1);
     private bool _signalRSubscribed;
 
@@ -119,7 +118,7 @@ public class BoardScreen(
             AnsiConsole.Clear();
 
             var totalCards = _columns.Sum(c => c.Cards.Count);
-            var layout = _renderer.BuildLayout(
+            var layout = BoardRenderer.BuildLayout(
                 _columns,
                 _selectedColumn,
                 _selectedCard,

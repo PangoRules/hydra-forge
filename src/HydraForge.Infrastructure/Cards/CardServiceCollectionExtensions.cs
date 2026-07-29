@@ -1,6 +1,4 @@
 using HydraForge.Application.Cards;
-using HydraForge.Application.Projects;
-using HydraForge.Infrastructure.Cards;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HydraForge.Infrastructure.Cards;

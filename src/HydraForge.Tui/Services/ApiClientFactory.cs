@@ -3,25 +3,15 @@ using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Services;
 
-public class ApiClientFactory
+public class ApiClientFactory(
+    ConfigStore configStore,
+    ErrorCollector errorCollector,
+    HttpMessageHandler? testHandler = null
+)
 {
-    private readonly ConfigStore _configStore;
-    private readonly AppState _appState;
-    private readonly ErrorCollector _errorCollector;
-    private readonly HttpMessageHandler? _testHandler;
-
     private HydraForgeApiClient? _client;
     private AuthDelegatingHandler? _authHandler;
     private TuiConfig? _cachedConfig;
-    private DateTime _lastConfigLoad = DateTime.MinValue;
-
-    public ApiClientFactory(ConfigStore configStore, AppState appState, ErrorCollector errorCollector, HttpMessageHandler? testHandler = null)
-    {
-        _configStore = configStore;
-        _appState = appState;
-        _errorCollector = errorCollector;
-        _testHandler = testHandler;
-    }
 
     /// <summary>
     /// Invalidates the cached config to force a reload on next access.
@@ -29,7 +19,6 @@ public class ApiClientFactory
     public void InvalidateConfig()
     {
         _cachedConfig = null;
-        _lastConfigLoad = DateTime.MinValue;
     }
 
     /// <summary>
@@ -38,17 +27,18 @@ public class ApiClientFactory
     /// </summary>
     public virtual HydraForgeApiClient CreateClient()
     {
-        var config = _configStore.Load();
+        var config = configStore.Load();
         _cachedConfig = config;
 
-        _authHandler = _testHandler != null 
-            ? new AuthDelegatingHandler(_testHandler) 
-            : new AuthDelegatingHandler();
+        _authHandler =
+            testHandler != null
+                ? new AuthDelegatingHandler(testHandler)
+                : new AuthDelegatingHandler();
         _authHandler.SetToken(config.JwtToken);
 
         var httpClient = new HttpClient(_authHandler)
         {
-            BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/")
+            BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/"),
         };
 
         _client = new HydraForgeApiClient(httpClient);
@@ -71,10 +61,8 @@ public class ApiClientFactory
     /// </summary>
     public virtual HydraForgeApiClient CreateUnauthenticatedClient()
     {
-        var config = _cachedConfig ?? _configStore.Load();
-        var httpClient = _testHandler != null
-            ? new HttpClient(_testHandler)
-            : new HttpClient();
+        var config = _cachedConfig ?? configStore.Load();
+        var httpClient = testHandler != null ? new HttpClient(testHandler) : new HttpClient();
         httpClient.BaseAddress = new Uri(config.ServerUrl.TrimEnd('/') + "/");
         return new HydraForgeApiClient(httpClient);
     }
@@ -85,7 +73,7 @@ public class ApiClientFactory
     /// </summary>
     public async Task<bool> RefreshTokenAsync()
     {
-        var config = _cachedConfig ?? _configStore.Load();
+        var config = _cachedConfig ?? configStore.Load();
         if (string.IsNullOrEmpty(config.JwtToken))
             return false;
 
@@ -105,7 +93,7 @@ public class ApiClientFactory
 
             config.JwtToken = refreshResponse.AccessToken;
             config.ExpiresAt = refreshResponse.ExpiresAt;
-            _configStore.Save(config);
+            configStore.Save(config);
             _cachedConfig = config;
 
             // Update the auth handler so subsequent requests use the new token
@@ -113,15 +101,16 @@ public class ApiClientFactory
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            errorCollector.Add("N/A", $"Token refresh failed: {ex.Message}");
             return false;
         }
     }
 
     public bool IsTokenExpiringSoon()
     {
-        var config = _cachedConfig ?? _configStore.Load();
+        var config = _cachedConfig ?? configStore.Load();
         if (config.ExpiresAt == null)
             return false;
         return config.ExpiresAt.Value.UtcDateTime - DateTime.UtcNow < TimeSpan.FromSeconds(60);

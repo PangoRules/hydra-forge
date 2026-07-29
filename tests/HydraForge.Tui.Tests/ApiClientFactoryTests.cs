@@ -36,7 +36,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
         var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateClient();
         await client.RefreshAsync();
@@ -49,7 +49,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
         var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateClient();
         await client.RefreshAsync();
@@ -63,7 +63,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var first = factory.GetClient();
         var second = factory.GetClient();
@@ -76,7 +76,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
         var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateUnauthenticatedClient();
         await client.RefreshAsync();
@@ -95,7 +95,7 @@ public class ApiClientFactoryTests : IDisposable
         });
         var newExpiry = DateTimeOffset.UtcNow.AddHours(1);
         var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("new-token", newExpiry));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
         var client = factory.CreateClient();
 
         var result = await factory.RefreshTokenAsync();
@@ -115,7 +115,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "" });
         var fake = new FakeHttpMessageHandler(_ => throw new InvalidOperationException("API must not be called"));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();
 
@@ -128,7 +128,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" });
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();
 
@@ -141,7 +141,7 @@ public class ApiClientFactoryTests : IDisposable
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" });
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();
 
@@ -153,7 +153,7 @@ public class ApiClientFactoryTests : IDisposable
     public void IsTokenExpiringSoon_WhenExpiryMoreThan60SecondsAway_ReturnsFalse()
     {
         _configStore.Save(new TuiConfig { ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5) });
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), null);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), null);
 
         Assert.False(factory.IsTokenExpiringSoon());
     }
@@ -162,7 +162,7 @@ public class ApiClientFactoryTests : IDisposable
     public void IsTokenExpiringSoon_WhenExpiryWithin60Seconds_ReturnsTrue()
     {
         _configStore.Save(new TuiConfig { ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(30) });
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), null);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), null);
 
         Assert.True(factory.IsTokenExpiringSoon());
     }
@@ -171,7 +171,7 @@ public class ApiClientFactoryTests : IDisposable
     public void IsTokenExpiringSoon_WhenExpiryIsNull_ReturnsFalse()
     {
         _configStore.Save(new TuiConfig { ExpiresAt = null });
-        var factory = new ApiClientFactory(_configStore, new AppState(), new ErrorCollector(), null);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), null);
 
         Assert.False(factory.IsTokenExpiringSoon());
     }

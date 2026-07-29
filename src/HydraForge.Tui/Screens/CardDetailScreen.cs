@@ -103,7 +103,9 @@ public class CardDetailScreen(
 
             var otherViewers = GetOtherViewers();
             if (otherViewers.Count > 0)
-                AnsiConsole.MarkupLine($"[grey italic]{Markup.Escape(string.Join(", ", otherViewers))} {(otherViewers.Count == 1 ? "is" : "are")} viewing[/]");
+                AnsiConsole.MarkupLine(
+                    $"[grey italic]{Markup.Escape(string.Join(", ", otherViewers))} {(otherViewers.Count == 1 ? "is" : "are")} viewing[/]"
+                );
 
             // Sections — build content first, then wrap in panels
             var content = new List<IRenderable>
@@ -171,10 +173,12 @@ public class CardDetailScreen(
     // Task has Plans only, Goal/Issue have both.
     private string SpecsPlansHintLabel()
     {
-        if (_card == null) return "Specs/Plans";
+        if (_card == null)
+            return "Specs/Plans";
         var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
         var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
-        if (allowsSpec && allowsPlan) return "Specs/Plans";
+        if (allowsSpec && allowsPlan)
+            return "Specs/Plans";
         return allowsSpec ? "Specs" : "Plans";
     }
 
@@ -244,9 +248,7 @@ public class CardDetailScreen(
                 ? string.Join(", ", _card.Assignees.Select(a => Markup.Escape(a.Username)))
                 : "[grey]Unassigned[/]";
 
-        var watchingText = IsCurrentUserWatching()
-            ? "[green]Yes[/]"
-            : "[grey]No[/]";
+        var watchingText = IsCurrentUserWatching() ? "[green]Yes[/]" : "[grey]No[/]";
 
         return new Rows(
             new Markup(
@@ -519,7 +521,8 @@ public class CardDetailScreen(
     // is Specs-only, Task is Plans-only, Goal/Issue get both and pick via the prompt.
     private async Task OpenSpecsPlansAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
         var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
@@ -546,8 +549,15 @@ public class CardDetailScreen(
         }
 
         var specScreen = new SpecViewerScreen(
-            _apiClientFactory, _appState, _errorCollector, _signalRConnectionManager,
-            _projectId, _cardId, _card.Type, mode);
+            _apiClientFactory,
+            _appState,
+            _errorCollector,
+            _signalRConnectionManager,
+            _projectId,
+            _cardId,
+            _card.Type,
+            mode
+        );
         _appState.PreviousScreen = this;
         _appState.CurrentScreen = specScreen;
         await specScreen.OnEnterAsync();
@@ -872,8 +882,10 @@ public class CardDetailScreen(
     // way — LoadCardAsync always runs — this only guards the visual redraw).
     private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
     {
-        if (evt.ProjectId != _projectId) return;
-        if (evt.CardId != _cardId && !(evt.EntityType == "Card" && evt.EntityId == _cardId)) return;
+        if (evt.ProjectId != _projectId)
+            return;
+        if (evt.CardId != _cardId && !(evt.EntityType == "Card" && evt.EntityId == _cardId))
+            return;
 
         await LoadCardAsync();
         if (_appState.CurrentScreen == this)
@@ -897,10 +909,12 @@ public class CardDetailScreen(
     private List<string> GetOtherViewers()
     {
         var currentUserId = CurrentUser.GetId();
-        return _appState.FocusedCards
-            .Where(f => f.Value == _cardId && f.Key != currentUserId)
-            .Select(f => _appState.OnlineUsers.GetValueOrDefault(f.Key, "Someone"))
-            .ToList();
+        return
+        [
+            .. _appState
+                .FocusedCards.Where(f => f.Value == _cardId && f.Key != currentUserId)
+                .Select(f => _appState.OnlineUsers.GetValueOrDefault(f.Key, "Someone")),
+        ];
     }
 
     private async Task LoadChecklistAsync()

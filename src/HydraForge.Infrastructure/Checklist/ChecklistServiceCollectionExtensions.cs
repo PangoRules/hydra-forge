@@ -1,5 +1,4 @@
 using HydraForge.Application.Checklist;
-using HydraForge.Infrastructure.Checklist;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HydraForge.Infrastructure.Checklist;

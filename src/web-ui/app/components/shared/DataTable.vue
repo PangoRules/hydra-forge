@@ -31,7 +31,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
   <div>
     <div
       v-if="loading && data.length === 0"
-      class="flex justify-center items-center p-8 min-h-[200px]"
+      class="flex justify-center items-center p-8 min-h-50"
     >
       <UIcon
         name="i-lucide-loader"
@@ -41,7 +41,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
 
     <div
       v-else-if="isEmpty"
-      class="text-center p-8 text-muted min-h-[200px] flex items-center justify-center"
+      class="text-center p-8 text-muted min-h-50 flex items-center justify-center"
     >
       <p>No results found.</p>
     </div>

@@ -4,18 +4,10 @@ using Spectre.Console;
 
 namespace HydraForge.Tui.Screens;
 
-public class LockScreen : IScreen
+public class LockScreen(AppState appState, Func<Task<bool>> healthCheck) : IScreen
 {
-    private readonly AppState _appState;
-    private readonly Func<Task<bool>> _healthCheck;
     private CancellationTokenSource? _retryCts;
     private int _retryAttempt;
-
-    public LockScreen(AppState appState, Func<Task<bool>> healthCheck)
-    {
-        _appState = appState;
-        _healthCheck = healthCheck;
-    }
 
     public Task OnEnterAsync()
     {
@@ -78,13 +70,7 @@ public class LockScreen : IScreen
     }
 
     private static void ShowHelp() =>
-        HelpOverlay.Show(
-            "Server Unreachable",
-            [
-                ("q", "Quit"),
-                ("?", "This help"),
-            ]
-        );
+        HelpOverlay.Show("Server Unreachable", [("q", "Quit"), ("?", "This help")]);
 
     private async Task RetryLoopAsync(CancellationToken ct)
     {
@@ -96,10 +82,10 @@ public class LockScreen : IScreen
 
             try
             {
-                var healthy = await _healthCheck();
+                var healthy = await healthCheck();
                 if (healthy)
                 {
-                    _appState.Connection = ConnectionStatus.Connected;
+                    appState.Connection = ConnectionStatus.Connected;
                     return; // Lock screen dismissed by caller
                 }
             }
@@ -108,11 +94,9 @@ public class LockScreen : IScreen
                 // Still unreachable
             }
 
-            _appState.Connection = ConnectionStatus.Reconnecting;
+            appState.Connection = ConnectionStatus.Reconnecting;
 
-            var delay = _retryAttempt <= delays.Length
-                ? delays[_retryAttempt - 1]
-                : 60000;
+            var delay = _retryAttempt <= delays.Length ? delays[_retryAttempt - 1] : 60000;
 
             await Task.Delay(delay, ct);
         }

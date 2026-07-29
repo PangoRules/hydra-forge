@@ -1,10 +1,8 @@
 namespace HydraForge.Server.Tests.Realtime;
 
+using HydraForge.Application.Projects;
 using HydraForge.Server.Hubs;
 using Moq;
-using Microsoft.AspNetCore.SignalR;
-using System.Security.Claims;
-using HydraForge.Application.Projects;
 
 public class PresenceHubTests
 {

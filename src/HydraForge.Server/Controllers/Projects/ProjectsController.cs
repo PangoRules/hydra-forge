@@ -1,5 +1,5 @@
-using HydraForge.Application.Projects;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Projects;
 using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
@@ -84,7 +84,7 @@ public class ProjectsController(
     )
     {
         var userId = User.GetRequiredUserId();
-        var isAdmin = User.IsInRole(HydraForge.Domain.Constants.Roles.Admin);
+        var isAdmin = User.IsInRole(Domain.Constants.Roles.Admin);
 
         var result = await projectService.GetAllAsync(
             userId,
@@ -253,7 +253,13 @@ public class ProjectsController(
         }
 
         var response = projectResult
-            .Value.Members.Select(m => new MemberResponse(m.Id, m.UserId, m.Username, m.Role, m.JoinedAt))
+            .Value.Members.Select(m => new MemberResponse(
+                m.Id,
+                m.UserId,
+                m.Username,
+                m.Role,
+                m.JoinedAt
+            ))
             .ToList();
         return Ok(response);
     }

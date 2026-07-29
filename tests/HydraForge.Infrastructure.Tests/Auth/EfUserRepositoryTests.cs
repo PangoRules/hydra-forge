@@ -1,16 +1,18 @@
 namespace HydraForge.Infrastructure.Tests.Auth;
 
-using HydraForge.Application.Auth;
 using HydraForge.Domain.Entities.Auth;
-using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Auth;
+using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 public class EfUserRepositoryTests
 {
-    private static DbContextOptions<HydraForgeDbContext> CreateOptions(string? connectionString = null)
+    private static DbContextOptions<HydraForgeDbContext> CreateOptions(
+        string? connectionString = null
+    )
     {
-        var connString = connectionString
+        var connString =
+            connectionString
             ?? "Host=localhost;Database=hydraforge_test;Username=postgres;Password=password";
 
         return new DbContextOptionsBuilder<HydraForgeDbContext>()
@@ -21,8 +23,11 @@ public class EfUserRepositoryTests
     [Fact]
     public async Task CreateAsync_PersistsUserAsIs()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
-        if (string.IsNullOrWhiteSpace(connectionString)) return;
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
 
         var options = CreateOptions(connectionString);
         using var context = new HydraForgeDbContext(options);
@@ -34,7 +39,8 @@ public class EfUserRepositoryTests
             "User",
             "createuser@localhost",
             "hashplaceholder",
-            isAdmin: false);
+            isAdmin: false
+        );
 
         await repo.CreateAsync(user);
 
@@ -51,8 +57,11 @@ public class EfUserRepositoryTests
     [Fact]
     public async Task ListAsync_FiltersBySearch()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
-        if (string.IsNullOrWhiteSpace(connectionString)) return;
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
 
         var options = CreateOptions(connectionString);
         using var context = new HydraForgeDbContext(options);
@@ -74,8 +83,11 @@ public class EfUserRepositoryTests
     [Fact]
     public async Task CountAsync_MatchesListAsyncFilter()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
-        if (string.IsNullOrWhiteSpace(connectionString)) return;
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
 
         var options = CreateOptions(connectionString);
         using var context = new HydraForgeDbContext(options);
@@ -98,8 +110,11 @@ public class EfUserRepositoryTests
     [Fact]
     public async Task UpdateAsync_PersistsInstanceMethodChanges()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
-        if (string.IsNullOrWhiteSpace(connectionString)) return;
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
 
         var options = CreateOptions(connectionString);
         using var context = new HydraForgeDbContext(options);
@@ -111,7 +126,8 @@ public class EfUserRepositoryTests
             "User",
             "updateme@localhost",
             "oldhash",
-            isAdmin: false);
+            isAdmin: false
+        );
 
         await repo.CreateAsync(user);
 

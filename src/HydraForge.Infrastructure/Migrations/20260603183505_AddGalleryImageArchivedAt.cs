@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -15,15 +14,14 @@ namespace HydraForge.Infrastructure.Migrations
                 name: "ArchivedAt",
                 table: "gallery_images",
                 type: "timestamp with time zone",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "ArchivedAt",
-                table: "gallery_images");
+            migrationBuilder.DropColumn(name: "ArchivedAt", table: "gallery_images");
         }
     }
 }

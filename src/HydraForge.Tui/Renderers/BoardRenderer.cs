@@ -1,8 +1,7 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-using System.Collections.Generic;
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace HydraForge.Tui.Renderers;
 
@@ -32,7 +31,7 @@ public class BoardRenderer
         bool IsWatching = false
     );
 
-    public Layout BuildLayout(
+    public static Layout BuildLayout(
         List<ColumnData> columns,
         int selectedColumn,
         int selectedCard,
@@ -42,104 +41,141 @@ public class BoardRenderer
         int onlineCount = 0,
         int errorCount = 0,
         Guid? reorderCardId = null,
-        int unreadCount = 0)
+        int unreadCount = 0
+    )
     {
-        var layout = new Layout("Root")
-            .SplitRows(
-                new Layout("Title").Size(3),
-                new Layout("Board"),
-                new Layout("Status").Size(3)
-            );
+        var layout = new Layout("Root").SplitRows(
+            new Layout("Title").Size(3),
+            new Layout("Board"),
+            new Layout("Status").Size(3)
+        );
 
         // Title bar
-        layout["Title"].Update(
-            new Panel(
-                new Markup($"[blue bold]{Markup.Escape(projectName)}[/]  " +
-                           $"[grey]{columns.Count} columns  {totalCards} cards[/]")
-            ).Expand()
-        );
+        layout["Title"]
+            .Update(
+                new Panel(
+                    new Markup(
+                        $"[blue bold]{Markup.Escape(projectName)}[/]  "
+                            + $"[grey]{columns.Count} columns  {totalCards} cards[/]"
+                    )
+                ).Expand()
+            );
 
         // Board area is whatever's left after the 3-row title bar and 3-row status bar;
         // each column eats 2 more for its own border — what remains is the card viewport.
         var innerHeight = Math.Max(0, AnsiConsole.Profile.Height - 3 - 3 - 2);
 
         // Board area — split into columns
-        var columnLayouts = columns.Select((col, i) =>
-        {
-            var isSelected = i == selectedColumn;
-            var color = ParseColor(col.Color) ?? Color.Grey;
-
-            var cardHeights = col.Cards
-                .Select(c => ColumnScrollCalculator.CardBoxHeight(c.Badges.Count, ExtraLineCount(c)))
-                .ToList();
-            var window = ColumnScrollCalculator.ComputeVisibleRange(
-                cardHeights,
-                isSelected ? selectedCard : null,
-                innerHeight
-            );
-
-            var cardPanels = new List<IRenderable>();
-
-            if (window.HasMoreAbove)
-                cardPanels.Add(CardMargin(ScrollIndicator($"▲ {window.Start} more above")));
-
-            for (var j = window.Start; j < window.End; j++)
-            {
-                var card = col.Cards[j];
-                var isCardSelected = isSelected && j == selectedCard;
-                var isBeingReordered = reorderCardId.HasValue && card.Id == reorderCardId.Value;
-                var typeBadge = TypeBadge(card.Type);
-
-                var assignees = card.AssigneeInitials.Count > 0
-                    ? " " + string.Join("", card.AssigneeInitials.Select(a => $"[grey]{a}[/]"))
-                    : "";
-
-                var watching = card.IsWatching ? " 👀" : "";
-
-                var title = card.Title.Length > 25
-                    ? card.Title[..22] + "..."
-                    : card.Title;
-
-                var titleLine = $"{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}{watching}";
-                var shownBadges = card.Badges.Take(ColumnScrollCalculator.MaxBadgesPerCard).Select(FormatBadgeLine);
-                var overflowCount = card.Badges.Count - ColumnScrollCalculator.MaxBadgesPerCard;
-                var overflowLine = overflowCount > 0
-                    ? new[] { $"[grey]+{overflowCount} more (open card)[/]" }
-                    : [];
-                var extraLines = FormatExtraLines(card);
-                var cardMarkup = string.Join("\n", new[] { titleLine }.Concat(shownBadges).Concat(overflowLine).Concat(extraLines));
-
-                var panel = new Panel(new Markup(cardMarkup))
+        var columnLayouts = columns
+            .Select(
+                (col, i) =>
                 {
-                    Border = isCardSelected || isBeingReordered ? BoxBorder.Double : BoxBorder.Rounded,
-                    BorderStyle = isBeingReordered
-                        ? new Style(foreground: Color.Yellow)
-                        : isCardSelected ? new Style(foreground: Color.Blue) : new Style(foreground: Color.Grey35),
-                    // Expand fills the column's width; without pinning Height back to its natural
-                    // content size, Expand also stretches the panel to fill leftover column height.
-                    Expand = true,
-                    Height = ColumnScrollCalculator.CardBoxHeight(card.Badges.Count, ExtraLineCount(card)),
-                };
+                    var isSelected = i == selectedColumn;
+                    var color = ParseColor(col.Color) ?? Color.Grey;
 
-                cardPanels.Add(CardMargin(panel));
-            }
+                    var cardHeights = col
+                        .Cards.Select(c =>
+                            ColumnScrollCalculator.CardBoxHeight(c.Badges.Count, ExtraLineCount(c))
+                        )
+                        .ToList();
+                    var window = ColumnScrollCalculator.ComputeVisibleRange(
+                        cardHeights,
+                        isSelected ? selectedCard : null,
+                        innerHeight
+                    );
 
-            if (window.HasMoreBelow)
-                cardPanels.Add(CardMargin(ScrollIndicator($"▼ {col.Cards.Count - window.End} more below")));
+                    var cardPanels = new List<IRenderable>();
 
-            var content = new Rows(cardPanels);
-            var wipText = col.WipLimit.HasValue
-                ? $" ({col.Cards.Count}/{col.WipLimit})"
-                : $" ({col.Cards.Count})";
+                    if (window.HasMoreAbove)
+                        cardPanels.Add(CardMargin(ScrollIndicator($"▲ {window.Start} more above")));
 
-            return new Panel(content)
-            {
-                Header = new PanelHeader($" {Markup.Escape(col.Name)}{wipText} "),
-                Border = BoxBorder.Rounded,
-                BorderStyle = isSelected ? new Style(foreground: Color.Blue) : new Style(foreground: color),
-                Expand = true,
-            };
-        }).ToList();
+                    for (var j = window.Start; j < window.End; j++)
+                    {
+                        var card = col.Cards[j];
+                        var isCardSelected = isSelected && j == selectedCard;
+                        var isBeingReordered =
+                            reorderCardId.HasValue && card.Id == reorderCardId.Value;
+                        var typeBadge = TypeBadge(card.Type);
+
+                        var assignees =
+                            card.AssigneeInitials.Count > 0
+                                ? " "
+                                    + string.Join(
+                                        "",
+                                        card.AssigneeInitials.Select(a => $"[grey]{a}[/]")
+                                    )
+                                : "";
+
+                        var watching = card.IsWatching ? " 👀" : "";
+
+                        var title = card.Title.Length > 25 ? card.Title[..22] + "..." : card.Title;
+
+                        var titleLine =
+                            $"{typeBadge} #{card.CardNumber} {Markup.Escape(title)}{assignees}{watching}";
+                        var shownBadges = card
+                            .Badges.Take(ColumnScrollCalculator.MaxBadgesPerCard)
+                            .Select(FormatBadgeLine);
+                        var overflowCount =
+                            card.Badges.Count - ColumnScrollCalculator.MaxBadgesPerCard;
+                        var overflowLine =
+                            overflowCount > 0
+                                ? new[] { $"[grey]+{overflowCount} more (open card)[/]" }
+                                : [];
+                        var extraLines = FormatExtraLines(card);
+                        var cardMarkup = string.Join(
+                            "\n",
+                            new[] { titleLine }
+                                .Concat(shownBadges)
+                                .Concat(overflowLine)
+                                .Concat(extraLines)
+                        );
+
+                        var panel = new Panel(new Markup(cardMarkup))
+                        {
+                            Border =
+                                isCardSelected || isBeingReordered
+                                    ? BoxBorder.Double
+                                    : BoxBorder.Rounded,
+                            BorderStyle =
+                                isBeingReordered ? new Style(foreground: Color.Yellow)
+                                : isCardSelected ? new Style(foreground: Color.Blue)
+                                : new Style(foreground: Color.Grey35),
+                            // Expand fills the column's width; without pinning Height back to its natural
+                            // content size, Expand also stretches the panel to fill leftover column height.
+                            Expand = true,
+                            Height = ColumnScrollCalculator.CardBoxHeight(
+                                card.Badges.Count,
+                                ExtraLineCount(card)
+                            ),
+                        };
+
+                        cardPanels.Add(CardMargin(panel));
+                    }
+
+                    if (window.HasMoreBelow)
+                        cardPanels.Add(
+                            CardMargin(
+                                ScrollIndicator($"▼ {col.Cards.Count - window.End} more below")
+                            )
+                        );
+
+                    var content = new Rows(cardPanels);
+                    var wipText = col.WipLimit.HasValue
+                        ? $" ({col.Cards.Count}/{col.WipLimit})"
+                        : $" ({col.Cards.Count})";
+
+                    return new Panel(content)
+                    {
+                        Header = new PanelHeader($" {Markup.Escape(col.Name)}{wipText} "),
+                        Border = BoxBorder.Rounded,
+                        BorderStyle = isSelected
+                            ? new Style(foreground: Color.Blue)
+                            : new Style(foreground: color),
+                        Expand = true,
+                    };
+                }
+            )
+            .ToList();
 
         var columnsRow = new Columns(columnLayouts);
         layout["Board"].Update(columnsRow);
@@ -149,14 +185,17 @@ public class BoardRenderer
         {
             ConnectionStatus.Connected => ("green", "Connected"),
             ConnectionStatus.Reconnecting => ("yellow", "Reconnecting"),
-            _ => ("red", "Disconnected")
+            _ => ("red", "Disconnected"),
         };
 
-        layout["Status"].Update(
-            new Panel(
-                new Markup($"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {unreadCount} unread    |    {errorCount} errors[/]")
-            ).Expand()
-        );
+        layout["Status"]
+            .Update(
+                new Panel(
+                    new Markup(
+                        $"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {unreadCount} unread    |    {errorCount} errors[/]"
+                    )
+                ).Expand()
+            );
 
         return layout;
     }
@@ -166,27 +205,26 @@ public class BoardRenderer
     // smallest unit available, so a blank-row gap is the next size up, not "half a row").
     // Padder's own default padding is (1,1,1,1), so every side must be given explicitly
     // or top/bottom pick up an unwanted extra row.
-    private static IRenderable CardMargin(IRenderable content) =>
-        new Padder(content, new Padding(1, 0, 1, 0));
+    private static Padder CardMargin(IRenderable content) => new(content, new(1, 0, 1, 0));
 
-    private static IRenderable ScrollIndicator(string text) =>
-        new Markup($"[grey italic]{text}[/]");
+    private static Markup ScrollIndicator(string text) => new($"[grey italic]{text}[/]");
 
-    private static string TypeBadge(string type) => type switch
-    {
-        "Task" => "[cyan1]T[/]",
-        "Issue" => "[red]I[/]",
-        "Goal" => "[yellow]G[/]",
-        "Idea" => "[green]D[/]",
-        _ => "[grey]?[/]"
-    };
+    private static string TypeBadge(string type) =>
+        type switch
+        {
+            "Task" => "[cyan1]T[/]",
+            "Issue" => "[red]I[/]",
+            "Goal" => "[yellow]G[/]",
+            "Idea" => "[green]D[/]",
+            _ => "[grey]?[/]",
+        };
 
     // Parent/children/due-date lines are conditional — most cards show 0 or 1 of them,
     // keeping the common case cheap. CardBoxHeight must stay in sync with this count.
     private static int ExtraLineCount(CardData card) =>
-        (card.ParentCardNumber.HasValue ? 1 : 0) +
-        (card.ChildCount > 0 ? 1 : 0) +
-        (card.DueAt.HasValue ? 1 : 0);
+        (card.ParentCardNumber.HasValue ? 1 : 0)
+        + (card.ChildCount > 0 ? 1 : 0)
+        + (card.DueAt.HasValue ? 1 : 0);
 
     private static IEnumerable<string> FormatExtraLines(CardData card)
     {
@@ -210,23 +248,32 @@ public class BoardRenderer
         var (glyph, color, verb) = badge.Type switch
         {
             RelationshipType.BlockedBy => ("🔴", "red", badge.IsSource ? "blocks" : "blocked by"),
-            RelationshipType.Precedes => ("⏩", "yellow", badge.IsSource ? "precedes" : "preceded by"),
-            RelationshipType.SpawnedFrom => ("🌱", "cyan1", badge.IsSource ? "spawned from" : "spawned"),
+            RelationshipType.Precedes => (
+                "⏩",
+                "yellow",
+                badge.IsSource ? "precedes" : "preceded by"
+            ),
+            RelationshipType.SpawnedFrom => (
+                "🌱",
+                "cyan1",
+                badge.IsSource ? "spawned from" : "spawned"
+            ),
             _ => ("🔗", "grey", "relates"),
         };
 
         return $"{glyph} [{color}]{verb} #{badge.OtherCardNumber}[/]";
     }
 
-    private static Color? ParseColor(string? colorName) => colorName?.ToLower() switch
-    {
-        "red" => Color.Red,
-        "green" => Color.Green,
-        "blue" => Color.Blue,
-        "yellow" => Color.Yellow,
-        "purple" => Color.Purple,
-        "orange" => Color.Orange1,
-        "cyan" => Color.Cyan1,
-        _ => null
-    };
+    private static Color? ParseColor(string? colorName) =>
+        colorName?.ToLower() switch
+        {
+            "red" => Color.Red,
+            "green" => Color.Green,
+            "blue" => Color.Blue,
+            "yellow" => Color.Yellow,
+            "purple" => Color.Purple,
+            "orange" => Color.Orange1,
+            "cyan" => Color.Cyan1,
+            _ => null,
+        };
 }

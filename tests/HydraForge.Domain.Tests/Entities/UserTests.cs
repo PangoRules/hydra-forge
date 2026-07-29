@@ -1,5 +1,4 @@
 using HydraForge.Domain.Entities.Auth;
-using Xunit;
 
 namespace HydraForge.Domain.Tests.Entities;
 
@@ -8,7 +7,14 @@ public class UserTests
     [Fact]
     public void Create_SetsNormalizedFieldsAndDefaults()
     {
-        var user = User.Create("Alice", "Alice", "Smith", "Alice@Example.com", "hash", isAdmin: true);
+        var user = User.Create(
+            "Alice",
+            "Alice",
+            "Smith",
+            "Alice@Example.com",
+            "hash",
+            isAdmin: true
+        );
 
         Assert.NotEqual(Guid.Empty, user.Id);
         Assert.Equal("alice", user.UsernameNormalized);

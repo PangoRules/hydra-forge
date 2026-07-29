@@ -1,9 +1,7 @@
-namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
-using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -14,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
+namespace HydraForge.Server.Tests.Projects;
 public class CardsControllerTests
 {
     [Fact]
@@ -21,7 +20,7 @@ public class CardsControllerTests
     {
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = factory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
         var projectId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -42,7 +41,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
 
@@ -67,7 +66,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -91,7 +90,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -114,7 +113,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
 
@@ -145,7 +144,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -176,7 +175,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var assigneeId = Guid.NewGuid();
@@ -184,7 +183,9 @@ public class CardsControllerTests
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
         factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
         factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
-        factory.AddUser(factory.MakeUser(assigneeId, "assignee", "assignee@test.com"));
+        factory.AddUser(
+            CardsTestWebApplicationFactory.MakeUser(assigneeId, "assignee", "assignee@test.com")
+        );
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardId}/assignees")
         {
@@ -209,7 +210,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var assigneeId = Guid.NewGuid();
@@ -233,7 +234,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var col1 = Guid.NewGuid();
         var col2 = Guid.NewGuid();
@@ -262,7 +263,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
 
@@ -288,7 +289,7 @@ public class CardsControllerTests
     {
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = factory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -309,7 +310,7 @@ public class CardsControllerTests
         var factory = new CardsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -344,43 +345,43 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             foreach (var descriptor in services.Where(d =>
-                d.ServiceType == typeof(HydraForge.Application.Projects.ProjectService)
-                || d.ServiceType == typeof(HydraForge.Application.Columns.ColumnService)
-                || d.ServiceType == typeof(HydraForge.Application.Cards.CardService)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IColumnRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Cards.ICardRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Cards.ICardAssigneeRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Cards.ICardWatcherRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Cards.ICardRelationshipRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectMemberRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Auth.IUserRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(HydraForge.Application.Projects.IChatArchiveService)
-                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)).ToList())
+                d.ServiceType == typeof(ProjectService)
+                || d.ServiceType == typeof(Application.Columns.ColumnService)
+                || d.ServiceType == typeof(Application.Cards.CardService)
+                || d.ServiceType == typeof(IProjectRepository)
+                || d.ServiceType == typeof(IColumnRepository)
+                || d.ServiceType == typeof(Application.Cards.ICardRepository)
+                || d.ServiceType == typeof(Application.Cards.ICardAssigneeRepository)
+                || d.ServiceType == typeof(Application.Cards.ICardWatcherRepository)
+                || d.ServiceType == typeof(Application.Cards.ICardRelationshipRepository)
+                || d.ServiceType == typeof(IProjectMemberRepository)
+                || d.ServiceType == typeof(Application.Auth.IUserRepository)
+                || d.ServiceType == typeof(IProjectContextSnapshotRepository)
+                || d.ServiceType == typeof(IChatArchiveService)
+                || d.ServiceType == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)).ToList())
             {
                 services.Remove(descriptor);
             }
 
-            services.AddScoped<HydraForge.Application.Projects.IProjectRepository>(_ => new CardsTestProjectRepository(_projects));
-            services.AddScoped<HydraForge.Application.Projects.IColumnRepository>(_ => new CardsTestColumnRepository(_columns));
-            services.AddScoped<HydraForge.Application.Cards.ICardRepository>(_ => new CardsTestCardRepository(_cards));
-            services.AddScoped<HydraForge.Application.Cards.ICardAssigneeRepository>(_ => new CardsTestCardAssigneeRepository(_cardAssignees));
-            services.AddScoped<HydraForge.Application.Cards.ICardWatcherRepository>(_ => new CardsTestCardWatcherRepository());
-            services.AddScoped<HydraForge.Application.Cards.ICardRelationshipRepository>(_ => new CardsTestCardRelationshipRepository());
-            services.AddScoped<HydraForge.Application.Projects.IProjectMemberRepository>(_ => new CardsTestProjectMemberRepository(_members));
-            services.AddScoped<HydraForge.Application.Auth.IUserRepository>(_ => new CardsTestUserRepository(_users));
-            services.AddScoped<HydraForge.Application.Projects.IProjectContextSnapshotRepository>(_ => new CardsTestSnapshotRepository());
-            services.AddScoped<HydraForge.Application.Projects.IChatArchiveService>(_ => new CardsTestChatArchiveService());
+            services.AddScoped<IProjectRepository>(_ => new CardsTestProjectRepository(_projects));
+            services.AddScoped<IColumnRepository>(_ => new CardsTestColumnRepository(_columns));
+            services.AddScoped<Application.Cards.ICardRepository>(_ => new CardsTestCardRepository(_cards));
+            services.AddScoped<Application.Cards.ICardAssigneeRepository>(_ => new CardsTestCardAssigneeRepository(_cardAssignees));
+            services.AddScoped<Application.Cards.ICardWatcherRepository>(_ => new CardsTestCardWatcherRepository());
+            services.AddScoped<Application.Cards.ICardRelationshipRepository>(_ => new CardsTestCardRelationshipRepository());
+            services.AddScoped<IProjectMemberRepository>(_ => new CardsTestProjectMemberRepository(_members));
+            services.AddScoped<Application.Auth.IUserRepository>(_ => new CardsTestUserRepository(_users));
+            services.AddScoped<IProjectContextSnapshotRepository>(_ => new CardsTestSnapshotRepository());
+            services.AddScoped<IChatArchiveService>(_ => new CardsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new CardsTestAuditLogWriter());
-            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
-            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
+            services.AddScoped<Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
-            services.AddScoped<HydraForge.Application.Projects.ProjectService>();
-            services.AddScoped<HydraForge.Application.Columns.ColumnService>();
-            services.AddScoped<HydraForge.Application.Cards.CardService>();
-            services.AddScoped<HydraForge.Application.Projects.ProjectMemberService>();
-            services.AddScoped<HydraForge.Application.Cards.CardRelationshipService>();
+            services.AddScoped<ProjectService>();
+            services.AddScoped<Application.Columns.ColumnService>();
+            services.AddScoped<Application.Cards.CardService>();
+            services.AddScoped<ProjectMemberService>();
+            services.AddScoped<Application.Cards.CardRelationshipService>();
         });
     }
 
@@ -389,11 +390,11 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
     public void AddColumn(Column column) => _columns.Add(column);
     public void AddCard(Card card) => _cards.Add(card);
     public void AddUser(User user) => _users.Add(user);
-    public User MakeUser(Guid id, string username, string email)
+    public static User MakeUser(Guid id, string username, string email)
         => User.Create(username, username, username, email, "hash", id: id);
     public void AddCardAssignee(CardAssignee assignee) => _cardAssignees.Add(assignee);
 
-    public string IssueToken(Guid userId, string username, bool isAdmin)
+    public static string IssueToken(Guid userId, string username, bool isAdmin)
     {
         var claims = new[]
         {
@@ -402,11 +403,11 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
             new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, isAdmin ? "Admin" : "User")
         };
         var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
-        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+        _ = new System.Security.Claims.ClaimsPrincipal(identity);
 
         var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
         var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-            System.Text.Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256"));
+            Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256"));
         var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
 
         var token = handler.CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
@@ -422,15 +423,13 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
     }
 }
 
-internal class CardsTestProjectRepository : HydraForge.Application.Projects.IProjectRepository
+internal class CardsTestProjectRepository(List<Project> projects) : IProjectRepository
 {
-    private readonly List<Project> _projects;
-
-    public CardsTestProjectRepository(List<Project> projects) => _projects = projects;
+    private readonly List<Project> _projects = projects;
 
     public Task AddAsync(Project project, CancellationToken ct = default) { _projects.Add(project); return Task.CompletedTask; }
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult<Project?>(_projects.FirstOrDefault(p => p.Id == id));
+        => Task.FromResult(_projects.FirstOrDefault(p => p.Id == id));
     public Task<ProjectListPage> ListByUserIdAsync(
         Guid userId,
         bool includeArchived,
@@ -496,17 +495,15 @@ internal class CardsTestProjectRepository : HydraForge.Application.Projects.IPro
         => throw new NotImplementedException();
 }
 
-internal class CardsTestColumnRepository : HydraForge.Application.Projects.IColumnRepository
+internal class CardsTestColumnRepository(List<Column> columns) : IColumnRepository
 {
-    private readonly List<Column> _columns;
-
-    public CardsTestColumnRepository(List<Column> columns) => _columns = columns;
+    private readonly List<Column> _columns = columns;
 
     public Task AddAsync(Column column, CancellationToken ct = default) { _columns.Add(column); return Task.CompletedTask; }
     public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_columns.FirstOrDefault(c => c.Id == id));
     public Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Column>>(_columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position).ToList());
+        => Task.FromResult<IReadOnlyList<Column>>([.. _columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position)]);
     public Task UpdateAsync(Column column, CancellationToken ct = default)
     {
         var idx = _columns.FindIndex(c => c.Id == column.Id);
@@ -519,18 +516,16 @@ internal class CardsTestColumnRepository : HydraForge.Application.Projects.IColu
         for (var i = 0; i < orderedColumnIds.Count; i++)
         {
             var col = _columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
-            if (col != null) col.Position = i;
+            col?.Position = i;
         }
         return Task.CompletedTask;
     }
     public Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default) { _columns.AddRange(columns); return Task.CompletedTask; }
 }
 
-internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepository
+internal class CardsTestCardRepository(List<Card> cards) : Application.Cards.ICardRepository
 {
-    private readonly List<Card> _cards;
-
-    public CardsTestCardRepository(List<Card> cards) => _cards = cards;
+    private readonly List<Card> _cards = cards;
 
     public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
@@ -538,7 +533,7 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
         => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(_cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
     public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
         => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null));
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, HydraForge.Application.Cards.CardListFilter filter, CancellationToken ct = default)
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, Application.Cards.CardListFilter filter, CancellationToken ct = default)
     {
         var query = _cards.Where(c => c.ProjectId == projectId);
         if (filter.ColumnId.HasValue)
@@ -548,8 +543,8 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
         if (filter.Type.HasValue)
             query = query.Where(c => c.Type == filter.Type.Value);
         if (!string.IsNullOrWhiteSpace(filter.Search))
-            query = query.Where(c => c.Title.ToLower().Contains(filter.Search.ToLower()));
-        return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
+            query = query.Where(c => c.Title.Contains(filter.Search, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult<IReadOnlyList<Card>>([.. query.OrderBy(c => c.Position)]);
     }
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
         => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
@@ -572,61 +567,59 @@ internal class CardsTestCardRepository : HydraForge.Application.Cards.ICardRepos
         => Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
-internal class CardsTestCardAssigneeRepository : HydraForge.Application.Cards.ICardAssigneeRepository
+internal class CardsTestCardAssigneeRepository(List<CardAssignee> assignees) : Application.Cards.ICardAssigneeRepository
 {
-    private readonly List<CardAssignee> _assignees;
-
-    public CardsTestCardAssigneeRepository(List<CardAssignee> assignees) => _assignees = assignees;
+    private readonly List<CardAssignee> _assignees = assignees;
 
     public Task<CardAssignee?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(_assignees.FirstOrDefault(a => a.CardId == cardId && a.UserId == userId));
     public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<ILookup<Guid, CardAssignee>>(_assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
+        => Task.FromResult(_assignees.Where(a => cardIds.Contains(a.CardId)).ToLookup(a => a.CardId));
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardAssignee>>(_assignees.Where(a => a.CardId == cardId).ToList());
+        => Task.FromResult<IReadOnlyList<CardAssignee>>([.. _assignees.Where(a => a.CardId == cardId)]);
     public Task AddAsync(CardAssignee assignee, CancellationToken ct = default) { _assignees.Add(assignee); return Task.CompletedTask; }
     public Task AddRangeAsync(IReadOnlyList<CardAssignee> assignees, CancellationToken ct = default) { _assignees.AddRange(assignees); return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { _assignees.RemoveAll(a => a.CardId == cardId && a.UserId == userId); return Task.CompletedTask; }
 }
 
-internal class CardsTestCardWatcherRepository : HydraForge.Application.Cards.ICardWatcherRepository
+internal class CardsTestCardWatcherRepository : Application.Cards.ICardWatcherRepository
 {
     private readonly List<CardWatcher> _watchers = [];
 
     public Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
         => Task.FromResult(_watchers.FirstOrDefault(w => w.CardId == cardId && w.UserId == userId));
     public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<ILookup<Guid, CardWatcher>>(_watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
+        => Task.FromResult(_watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardWatcher>>(_watchers.Where(w => w.CardId == cardId).ToList());
+        => Task.FromResult<IReadOnlyList<CardWatcher>>([.. _watchers.Where(w => w.CardId == cardId)]);
     public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { _watchers.Add(watcher); return Task.CompletedTask; }
     public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { _watchers.AddRange(watchers); return Task.CompletedTask; }
     public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { _watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
 }
 
-internal class CardsTestCardRelationshipRepository : HydraForge.Application.Cards.ICardRelationshipRepository
+internal class CardsTestCardRelationshipRepository : Application.Cards.ICardRelationshipRepository
 {
     private readonly List<CardRelationship> _relationships = [];
 
     public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([.. _relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null)]);
     public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([.. _relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null)]);
     public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([.. _relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null)]);
     public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([.. _relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null)]);
     public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
+        => Task.FromResult(_relationships.FirstOrDefault(r => r.Id == id));
     public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+        => Task.FromResult<IReadOnlyList<CardRelationship>>([.. _relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null)]);
     public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
+        => Task.FromResult(_relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
     public Task AddAsync(CardRelationship relationship, CancellationToken ct = default) { _relationships.Add(relationship); return Task.CompletedTask; }
     public Task ArchiveAsync(Guid id, CancellationToken ct = default)
     {
         var rel = _relationships.FirstOrDefault(r => r.Id == id);
-        if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+        rel?.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 
@@ -644,19 +637,17 @@ internal class CardsTestCardRelationshipRepository : HydraForge.Application.Card
         => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 }
 
-internal class CardsTestProjectMemberRepository : HydraForge.Application.Projects.IProjectMemberRepository
+internal class CardsTestProjectMemberRepository(List<ProjectMember> members) : IProjectMemberRepository
 {
-    private readonly List<ProjectMember> _members;
-
-    public CardsTestProjectMemberRepository(List<ProjectMember> members) => _members = members;
+    private readonly List<ProjectMember> _members = members;
 
     public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { _members.Add(member); return Task.CompletedTask; }
     public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_members.FirstOrDefault(m => m.Id == id));
     public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-        => Task.FromResult<ProjectMember?>(_members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
+        => Task.FromResult(_members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
     public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<ProjectMember>>(_members.Where(m => m.ProjectId == projectId).ToList());
+        => Task.FromResult<IReadOnlyList<ProjectMember>>([.. _members.Where(m => m.ProjectId == projectId)]);
     public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
     {
         var idList = projectIds.ToList();
@@ -681,11 +672,9 @@ internal class CardsTestProjectMemberRepository : HydraForge.Application.Project
     }
 }
 
-internal class CardsTestUserRepository : HydraForge.Application.Auth.IUserRepository
+internal class CardsTestUserRepository(List<User> users) : Application.Auth.IUserRepository
 {
-    private readonly List<User> _users;
-
-    public CardsTestUserRepository(List<User> users) => _users = users;
+    private readonly List<User> _users = users;
 
     public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
@@ -699,22 +688,22 @@ internal class CardsTestUserRepository : HydraForge.Application.Auth.IUserReposi
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
     public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
     public Task CreateAsync(User user, CancellationToken ct = default) { _users.Add(user); return Task.CompletedTask; }
-    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
+    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>([]);
     public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
     public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-internal class CardsTestSnapshotRepository : HydraForge.Application.Projects.IProjectContextSnapshotRepository
+internal class CardsTestSnapshotRepository : IProjectContextSnapshotRepository
 {
     private readonly List<ProjectContextSnapshot> _snapshots = [];
 
     public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) { _snapshots.Add(snapshot); return Task.CompletedTask; }
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+        => Task.FromResult(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-internal class CardsTestChatArchiveService : HydraForge.Application.Projects.IChatArchiveService
+internal class CardsTestChatArchiveService : IChatArchiveService
 {
     public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
     public Task UnarchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;

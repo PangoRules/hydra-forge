@@ -5,34 +5,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HydraForge.Infrastructure.Attachments;
 
-public class EfAttachmentRepository : IAttachmentRepository
+public class EfAttachmentRepository(HydraForgeDbContext db) : IAttachmentRepository
 {
-    private readonly HydraForgeDbContext _db;
+    public async Task<Attachment?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        await db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct);
 
-    public EfAttachmentRepository(HydraForgeDbContext db)
-    {
-        _db = db;
-    }
-
-    public async Task<Attachment?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await _db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct);
-
-    public async Task<IReadOnlyList<Attachment>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => await _db.Attachments
-            .Where(a => a.CardId == cardId)
+    public async Task<IReadOnlyList<Attachment>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        await db
+            .Attachments.Where(a => a.CardId == cardId)
             .OrderBy(a => a.CreatedAt)
             .ToListAsync(ct);
 
     public Task AddAsync(Attachment attachment, CancellationToken ct = default)
     {
-        _db.Attachments.Add(attachment);
+        db.Attachments.Add(attachment);
         return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var attachment = await _db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var attachment = await db.Attachments.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (attachment != null)
-            _db.Attachments.Remove(attachment);
+            db.Attachments.Remove(attachment);
     }
 }

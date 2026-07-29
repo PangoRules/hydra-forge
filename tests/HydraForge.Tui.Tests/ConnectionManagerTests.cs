@@ -28,7 +28,7 @@ public class ConnectionManagerTests : IDisposable
     private ConnectionManager CreateManager(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         var fake = new FakeHttpMessageHandler(responder);
-        var factory = new ApiClientFactory(_configStore, _appState, new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
         return new ConnectionManager(_appState, factory, new ErrorCollector());
     }
 

@@ -60,7 +60,8 @@ public class AuthEndpointTests
     }
 }
 
-internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid) : WebApplicationFactory<Program>
+internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
+    : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -68,10 +69,15 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid) 
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
         builder.ConfigureServices(services =>
         {
-            foreach (var descriptor in services.Where(d =>
-                d.ServiceType == typeof(IUserRepository)
-                || d.ServiceType == typeof(IPasswordHasher)
-                || d.ServiceType == typeof(IAccessTokenIssuer)).ToList())
+            foreach (
+                var descriptor in services
+                    .Where(d =>
+                        d.ServiceType == typeof(IUserRepository)
+                        || d.ServiceType == typeof(IPasswordHasher)
+                        || d.ServiceType == typeof(IAccessTokenIssuer)
+                    )
+                    .ToList()
+            )
             {
                 services.Remove(descriptor);
             }
@@ -90,28 +96,55 @@ internal class AuthTestUserRepository : IUserRepository
     public AuthTestUserRepository(bool userDisabled)
     {
         _user = User.Create("admin", "Admin", "User", "admin@test.com", "hashed", isAdmin: true);
-        if (userDisabled) _user.Disable();
+        if (userDisabled)
+            _user.Disable();
     }
 
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(_user);
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<User?>(_user);
 
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(ids.Contains(_user.Id) ? new Dictionary<Guid, User> { [_user.Id] = _user } : new Dictionary<Guid, User>());
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, User>>(
+            ids.Contains(_user.Id) ? new Dictionary<Guid, User> { [_user.Id] = _user } : []
+        );
 
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(_user);
 
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
-=> Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase) { [_user.Username] = _user });
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<string, User>>(
+            new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
+            {
+                [_user.Username] = _user,
+            }
+        );
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
 
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(true);
 
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(false);
 
     public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<IReadOnlyList<User>> ListAsync(int skip, int take, string? search, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>(new List<User>());
-    public Task<int> CountAsync(string? search, CancellationToken ct = default) => Task.FromResult(0);
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
     public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
@@ -124,5 +157,6 @@ internal class AuthTestPasswordHasher(bool passwordValid) : IPasswordHasher
 
 internal class AuthTestTokenIssuer : IAccessTokenIssuer
 {
-    public AccessToken IssueToken(User user) => new("jwt-token", DateTimeOffset.UtcNow.AddMinutes(30));
+    public AccessToken IssueToken(User user) =>
+        new("jwt-token", DateTimeOffset.UtcNow.AddMinutes(30));
 }

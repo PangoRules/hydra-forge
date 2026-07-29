@@ -33,7 +33,7 @@ public static class Program
         var configStore = new ConfigStore();
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
-        var apiClientFactory = new ApiClientFactory(configStore, appState, errorCollector);
+        var apiClientFactory = new ApiClientFactory(configStore, errorCollector);
         var connectionManager = new ConnectionManager(appState, apiClientFactory, errorCollector);
         var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
         var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);

@@ -30,7 +30,6 @@ public class ProjectService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly INotificationService _notifService = notifService;
     private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
-    
 
     public async Task<Result<ProjectDto>> CreateAsync(
         CreateProjectCommand cmd,
@@ -60,7 +59,8 @@ public class ProjectService(
         };
         await memberRepo.AddMemberAsync(ownerMember, ct);
 
-        var columns = ColumnTemplates.Get(cmd.Template)
+        var columns = ColumnTemplates
+            .Get(cmd.Template)
             .Select(
                 (name, index) =>
                     new Column
@@ -128,7 +128,15 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, projectId, requestUserId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                projectId,
+                requestUserId,
+                ct
+            )
+        )
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -172,7 +180,15 @@ public class ProjectService(
         }
         else if (isAdmin && !role.HasValue)
         {
-            page = await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct);
+            page = await projectRepo.ListAllAsync(
+                includeArchived,
+                search,
+                sortBy,
+                sortDescending,
+                clampedSkip,
+                clampedTake,
+                ct
+            );
         }
         else
         {
@@ -195,9 +211,14 @@ public class ProjectService(
         List<ProjectListDto> result;
         if (isAdmin && !excludeMembership)
         {
-            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
-            result = page
-                .Items.Select(project => new ProjectListDto(
+            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(
+                projectIds,
+                requestUserId,
+                ct
+            );
+            result =
+            [
+                .. page.Items.Select(project => new ProjectListDto(
                     project.Id,
                     project.Name,
                     project.Description,
@@ -205,14 +226,15 @@ public class ProjectService(
                     project.ArchivedAt,
                     memberCounts.GetValueOrDefault(project.Id, 0),
                     myRoles.TryGetValue(project.Id, out var r) ? r : null
-                ))
-                .ToList();
+                )),
+            ];
         }
         else if (isAdmin && excludeMembership)
         {
             // Admin looking at "not a member" — they have no membership in any of these projects
-            result = page
-                .Items.Select(project => new ProjectListDto(
+            result =
+            [
+                .. page.Items.Select(project => new ProjectListDto(
                     project.Id,
                     project.Name,
                     project.Description,
@@ -220,14 +242,19 @@ public class ProjectService(
                     project.ArchivedAt,
                     memberCounts.GetValueOrDefault(project.Id, 0),
                     null
-                ))
-                .ToList();
+                )),
+            ];
         }
         else
         {
-            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
-            result = page
-                .Items.Select(project => new ProjectListDto(
+            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(
+                projectIds,
+                requestUserId,
+                ct
+            );
+            result =
+            [
+                .. page.Items.Select(project => new ProjectListDto(
                     project.Id,
                     project.Name,
                     project.Description,
@@ -235,8 +262,8 @@ public class ProjectService(
                     project.ArchivedAt,
                     memberCounts.GetValueOrDefault(project.Id, 0),
                     myRoles.GetValueOrDefault(project.Id, MemberRole.Member)
-                ))
-                .ToList();
+                )),
+            ];
         }
 
         return Result<ProjectListPageDto>.Success(new ProjectListPageDto(result, page.TotalCount));
@@ -258,14 +285,26 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.Archived, "Cannot update archived project.")
             );
 
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var membership = await memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
 
-        if (membership != null && membership.Role != MemberRole.Owner && membership.Role != MemberRole.Member)
+        if (
+            membership != null
+            && membership.Role != MemberRole.Owner
+            && membership.Role != MemberRole.Member
+        )
             return Result<ProjectDto>.Failure(
                 new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner or Member role required.")
             );
@@ -323,8 +362,16 @@ public class ProjectService(
 
         if (updateRequests.Count > 0)
         {
-            try { await _notifService.NotifyBatchAsync(updateRequests, ct); }
-            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send project-update notifications: {ex.Message}"); }
+            try
+            {
+                await _notifService.NotifyBatchAsync(updateRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning(
+                    $"Failed to send project-update notifications: {ex.Message}"
+                );
+            }
         }
 
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
@@ -341,7 +388,15 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -415,8 +470,14 @@ public class ProjectService(
 
         if (archiveRequests.Count > 0)
         {
-            try { await _notifService.NotifyBatchAsync(archiveRequests, ct); }
-            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send archive-notifications: {ex.Message}"); }
+            try
+            {
+                await _notifService.NotifyBatchAsync(archiveRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send archive-notifications: {ex.Message}");
+            }
         }
 
         return Result.Success();
@@ -437,18 +498,16 @@ public class ProjectService(
             project.CreatedAt,
             project.UpdatedAt,
             project.ArchivedAt,
-            columns
-                .Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color))
-                .ToList(),
-            members
-                .Select(m => new ProjectMemberDto(
+            [.. columns.Select(c => new ColumnDto(c.Id, c.Name, c.Position, c.WipLimit, c.Color))],
+            [
+                .. members.Select(m => new ProjectMemberDto(
                     m.Id,
                     m.UserId,
                     m.User?.Username ?? string.Empty,
                     m.Role,
                     m.JoinedAt
-                ))
-                .ToList()
+                )),
+            ]
         );
     }
 }

@@ -3,8 +3,8 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Logging;
 using HydraForge.Application.Notifications;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -37,7 +37,13 @@ public class CommentService(
     private readonly INotificationService _notifService = notifService;
     private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, Guid cardId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid entityId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -56,7 +62,10 @@ public class CommentService(
     // ── Shared helpers ──────────────────────────────────────
 
     private async Task<Result<Card>> ValidateMembershipAndCardAsync(
-        Guid projectId, Guid userId, Guid cardId, CancellationToken ct
+        Guid projectId,
+        Guid userId,
+        Guid cardId,
+        CancellationToken ct
     )
     {
         if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, userId, ct))
@@ -78,15 +87,17 @@ public class CommentService(
     ///   2. ListMembersAsync — all project members in 1 query
     ///   Cross-references in memory to filter disabled/non-member.
     private async Task<List<Guid>> ResolveMentionsAsync(
-        Guid projectId, IReadOnlyList<string> usernames, CancellationToken ct
+        Guid projectId,
+        IReadOnlyList<string> usernames,
+        CancellationToken ct
     )
     {
         if (usernames.Count == 0)
             return [];
 
         var usersByUsername = await _userRepo.FindByUsernamesAsync(usernames, ct: ct);
-        var candidateIds = usersByUsername.Values
-            .Where(u => !u.IsDisabled)
+        var candidateIds = usersByUsername
+            .Values.Where(u => !u.IsDisabled)
             .Select(u => u.Id)
             .ToList();
 
@@ -96,25 +107,30 @@ public class CommentService(
         var members = await _memberRepo.ListMembersAsync(projectId, ct);
         var memberUserIds = members.Select(m => m.UserId).ToHashSet();
 
-        return candidateIds.Where(id => memberUserIds.Contains(id)).ToList();
+        return [.. candidateIds.Where(memberUserIds.Contains)];
     }
 
     private async Task<Result<CommentDto>> BuildCommentDtoResultAsync(
-        Comment comment, Guid authorId, List<Guid> mentionedUserIds, CancellationToken ct
+        Comment comment,
+        Guid authorId,
+        List<Guid> mentionedUserIds,
+        CancellationToken ct
     )
     {
         var authorUser = await _userRepo.FindByIdAsync(authorId, ct);
-        return Result<CommentDto>.Success(new CommentDto(
-            comment.Id,
-            comment.CardId,
-            comment.AuthorId,
-            authorUser?.Username ?? string.Empty,
-            comment.Content,
-            comment.CreatedAt,
-            comment.UpdatedAt,
-            comment.ArchivedAt,
-            mentionedUserIds
-        ));
+        return Result<CommentDto>.Success(
+            new CommentDto(
+                comment.Id,
+                comment.CardId,
+                comment.AuthorId,
+                authorUser?.Username ?? string.Empty,
+                comment.Content,
+                comment.CreatedAt,
+                comment.UpdatedAt,
+                comment.ArchivedAt,
+                mentionedUserIds
+            )
+        );
     }
 
     private async Task EnsureWatcherAsync(Guid cardId, Guid userId, CancellationToken ct)
@@ -122,19 +138,37 @@ public class CommentService(
         var existing = await _watcherRepo.GetByCardAndUserAsync(cardId, userId, ct);
         if (existing == null)
         {
-            await _watcherRepo.AddAsync(new CardWatcher
-            {
-                CardId = cardId,
-                UserId = userId,
-                AddedAt = DateTime.UtcNow,
-            }, ct);
+            await _watcherRepo.AddAsync(
+                new CardWatcher
+                {
+                    CardId = cardId,
+                    UserId = userId,
+                    AddedAt = DateTime.UtcNow,
+                },
+                ct
+            );
         }
     }
 
-    private async Task WriteAuditAsync(Guid actorId, Guid commentId, Guid projectId, string action, CancellationToken ct)
+    private async Task WriteAuditAsync(
+        Guid actorId,
+        Guid commentId,
+        Guid projectId,
+        string action,
+        CancellationToken ct
+    )
     {
         await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(actorId, AuditLogScope.Project, "Comment", commentId, action, projectId, null, null),
+            new AuditLogRequest(
+                actorId,
+                AuditLogScope.Project,
+                "Comment",
+                commentId,
+                action,
+                projectId,
+                null,
+                null
+            ),
             ct
         );
     }
@@ -146,7 +180,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -190,8 +229,14 @@ public class CommentService(
 
         if (watcherRequests.Count > 0)
         {
-            try { await _notifService.NotifyBatchAsync(watcherRequests, ct); }
-            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send comment notifications: {ex.Message}"); }
+            try
+            {
+                await _notifService.NotifyBatchAsync(watcherRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send comment notifications: {ex.Message}");
+            }
         }
 
         // Notify @mentioned users
@@ -211,8 +256,14 @@ public class CommentService(
 
         if (mentionRequests.Count > 0)
         {
-            try { await _notifService.NotifyBatchAsync(mentionRequests, ct); }
-            catch (Exception ex) { _warnLogger.LogWarning($"Failed to send mention notifications: {ex.Message}"); }
+            try
+            {
+                await _notifService.NotifyBatchAsync(mentionRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send mention notifications: {ex.Message}");
+            }
         }
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
@@ -223,7 +274,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -256,7 +312,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -307,9 +368,10 @@ public class CommentService(
             .Distinct()
             .ToList();
 
-        var usersByUsername = allMentioned.Count > 0
-            ? await _userRepo.FindByUsernamesAsync(allMentioned, ct: ct)
-            : (IReadOnlyDictionary<string, User>)new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase);
+        var usersByUsername =
+            allMentioned.Count > 0
+                ? await _userRepo.FindByUsernamesAsync(allMentioned, ct: ct)
+                : new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase);
 
         var dtos = new List<CommentDto>(comments.Count);
         foreach (var comment in comments)
@@ -318,26 +380,30 @@ public class CommentService(
             var mentionedIds = new List<Guid>(mentioned.Count);
             foreach (var username in mentioned)
             {
-                if (usersByUsername.TryGetValue(username, out var user)
+                if (
+                    usersByUsername.TryGetValue(username, out var user)
                     && !user.IsDisabled
-                    && memberUserIds.Contains(user.Id))
+                    && memberUserIds.Contains(user.Id)
+                )
                 {
                     mentionedIds.Add(user.Id);
                 }
             }
 
             authorsById.TryGetValue(comment.AuthorId, out var author);
-            dtos.Add(new CommentDto(
-                comment.Id,
-                comment.CardId,
-                comment.AuthorId,
-                author?.Username ?? string.Empty,
-                comment.Content,
-                comment.CreatedAt,
-                comment.UpdatedAt,
-                comment.ArchivedAt,
-                mentionedIds
-            ));
+            dtos.Add(
+                new CommentDto(
+                    comment.Id,
+                    comment.CardId,
+                    comment.AuthorId,
+                    author?.Username ?? string.Empty,
+                    comment.Content,
+                    comment.CreatedAt,
+                    comment.UpdatedAt,
+                    comment.ArchivedAt,
+                    mentionedIds
+                )
+            );
         }
 
         return Result<IReadOnlyList<CommentDto>>.Success(dtos);
