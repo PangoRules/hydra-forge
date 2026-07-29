@@ -133,8 +133,6 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
-        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, requestUserId, ct);
-
         var columns = await columnRepo.GetByProjectIdAsync(projectId, ct);
         var members = await memberRepo.ListMembersAsync(projectId, ct);
 

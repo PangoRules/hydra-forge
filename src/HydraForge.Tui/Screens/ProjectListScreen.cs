@@ -453,11 +453,11 @@ public class ProjectListScreen : IScreen
         return "just now";
     }
 
-    private static string GetRoleString(MemberRole role) => role.ToString();
+    private static string GetRoleString(MemberRole? role) => role?.ToString() ?? "—";
 
     // Local view model — maps from NSwag-generated DTOs
     private record ProjectItem(
         Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? ArchivedAt,
-        int MemberCount, MemberRole MyRole
+        int MemberCount, MemberRole? MyRole
     );
 }

@@ -3342,7 +3342,7 @@ export interface components {
             archivedAt: null | string;
             /** Format: int32 */
             memberCount: number | string;
-            myRole: components["schemas"]["MemberRole"];
+            myRole: null | components["schemas"]["MemberRole"];
         };
         ProjectResponse: {
             /** Format: uuid */

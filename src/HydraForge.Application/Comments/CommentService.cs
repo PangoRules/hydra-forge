@@ -55,24 +55,22 @@ public class CommentService(
 
     // ── Shared helpers ──────────────────────────────────────
 
-    private async Task<Result<(ProjectMember?, Card)>> ValidateMembershipAndCardAsync(
+    private async Task<Result<Card>> ValidateMembershipAndCardAsync(
         Guid projectId, Guid userId, Guid cardId, CancellationToken ct
     )
     {
         if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, userId, ct))
-            return Result<(ProjectMember?, Card)>.Failure(
+            return Result<Card>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId, ct);
-
         var card = await _cardRepo.GetByIdAsync(cardId, ct);
         if (card == null || card.ProjectId != projectId)
-            return Result<(ProjectMember?, Card)>.Failure(
+            return Result<Card>.Failure(
                 new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
             );
 
-        return Result<(ProjectMember?, Card)>.Success((membership, card));
+        return Result<Card>.Success(card);
     }
 
     /// Batches mention resolution into 2 queries total:
@@ -172,7 +170,7 @@ public class CommentService(
         await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Created, ct);
 
         // Notify card watchers about new comment
-        var card = validation.Value.Item2;
+        var card = validation.Value;
         var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
         var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
 

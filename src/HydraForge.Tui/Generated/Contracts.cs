@@ -1575,9 +1575,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("memberCount", Required = Newtonsoft.Json.Required.Always)]
         public int MemberCount { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("myRole", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonProperty("myRole", Required = Newtonsoft.Json.Required.AllowNull)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public MemberRole MyRole { get; set; } = default!;
+        public MemberRole? MyRole { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

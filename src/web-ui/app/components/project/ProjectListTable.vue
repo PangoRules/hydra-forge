@@ -27,7 +27,8 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
-function displayRole(role: number | string): string {
+function displayRole(role: number | string | null): string {
+  if (role === null) return '—'
   if (typeof role === 'string') return role
   // MemberRole enum: Owner=0, Member=1 — but check the actual enum values
   const roles: Record<number, string> = { 0: 'Owner', 1: 'Member' }
