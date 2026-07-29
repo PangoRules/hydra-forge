@@ -32,13 +32,13 @@ public class SystemSettings
         if (notificationRetentionDays.HasValue)
             NotificationRetentionDays = notificationRetentionDays.Value;
         if (ntfyServerUrl is not null)
-            NtfyServerUrl = ntfyServerUrl;
+            NtfyServerUrl = string.IsNullOrWhiteSpace(ntfyServerUrl) ? null : ntfyServerUrl;
         if (searXngUrl is not null)
-            SearXngUrl = searXngUrl;
+            SearXngUrl = string.IsNullOrWhiteSpace(searXngUrl) ? null : searXngUrl;
         if (brandName is not null)
-            BrandName = brandName;
+            BrandName = string.IsNullOrWhiteSpace(brandName) ? null : brandName;
         if (brandLogoUrl is not null)
-            BrandLogoUrl = brandLogoUrl;
+            BrandLogoUrl = string.IsNullOrWhiteSpace(brandLogoUrl) ? null : brandLogoUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 }

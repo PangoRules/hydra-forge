@@ -669,7 +669,7 @@ public string? BrandLogoUrl { get; set; }         // Optional logo URL
 
 Default seeded values remain: `null` for all new fields (opt-in configuration).
 
-**Domain entity pattern (non-negotiable, CLAUDE.md)**: `SystemSettings.cs` as read today is a plain property bag, no instance methods. Add `UpdateSettings(int? archivedItemRetentionDays, int? auditLogRetentionDays, int? notificationRetentionDays, string? ntfyServerUrl, string? searXngUrl, string? brandName, string? brandLogoUrl)` — applies only the non-null args, sets `UpdatedAt`. The settings controller (§9.2) calls this on the loaded singleton; it never assigns `SystemSettings` properties itself.
+**Domain entity pattern (non-negotiable, CLAUDE.md)**: `SystemSettings.cs` as read today is a plain property bag, no instance methods. Add `UpdateSettings(int? archivedItemRetentionDays, int? auditLogRetentionDays, int? notificationRetentionDays, string? ntfyServerUrl, string? searXngUrl, string? brandName, string? brandLogoUrl)` — applies only the non-null args (blank/whitespace strings are treated as null, clearing the field), sets `UpdatedAt`. The settings controller (§9.2) calls this on the loaded singleton; it never assigns `SystemSettings` properties itself.
 
 ### 9.2 Settings Controller
 
@@ -687,7 +687,9 @@ public record UpdateSystemSettingsRequest(
 );
 ```
 
-Only non-null fields are updated — the controller loads the singleton and calls `settings.UpdateSettings(request.ArchivedItemRetentionDays, ...)` (see domain entity pattern note above), not a property-by-property set. This allows the admin to change one setting at a time without reading the current state.
+Only non-null fields are updated (blank/whitespace strings are treated as null, clearing the field) — the controller loads the singleton and calls `settings.UpdateSettings(request.ArchivedItemRetentionDays, ...)` (see domain entity pattern note above), not a property-by-property set. This allows the admin to change one setting at a time without reading the current state.
+
+The controller injects `ISettingsProvider` (not the concrete `CachedSettingsProvider`) to stay decoupled from the caching implementation — the cache layer is transparent to the controller.
 
 `GET /api/admin/settings` returns the full `SystemSettings` object (minus `Id` and timestamps).
 
@@ -699,14 +701,20 @@ Only non-null fields are updated — the controller loads the singleton and call
 public class CachedSettingsProvider(ISettingsRepository repo, IMemoryCache cache) : ISettingsProvider
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    private const string CacheKey = "system_settings";
 
     public async Task<SystemSettings> GetAsync(CancellationToken ct = default)
     {
-        return await cache.GetOrCreateAsync("system_settings", async entry =>
+        return await cache.GetOrCreateAsync(CacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheTtl;
             return await repo.GetSingletonAsync(ct);
         }) ?? new SystemSettings();  // fallback default
+    }
+
+    public void Invalidate()
+    {
+        cache.Remove(CacheKey);
     }
 }
 ```
@@ -719,8 +727,9 @@ public class CachedSettingsProvider(ISettingsRepository repo, IMemoryCache cache
 
 **`ISettingsProvider`** (port in Application) — used by other services that need settings:
 - `Task<SystemSettings> GetAsync(CancellationToken ct = default)`
+- `void Invalidate()` — evicts the cached entry so the next read fetches fresh data
 
-The `CachedSettingsProvider` implements `ISettingsProvider` and is registered as singleton-scoped (the underlying `IMemoryCache` is thread-safe).
+The `CachedSettingsProvider` implements `ISettingsProvider` and is registered as scoped (not singleton — it depends on the scoped `ISettingsRepository`/`EfSettingsRepository` which holds the scoped `HydraForgeDbContext`; the underlying `IMemoryCache` is a singleton and holds the cached value across requests regardless of the provider's own lifetime).
 
 ### 9.4 Settings Page (Web UI)
 
@@ -1014,7 +1023,7 @@ Per CLAUDE.md, Application/Domain layers need >90% test coverage — each task b
 - [x] Task 7: Notification trigger points — add `_notifService.NotifyAsync()` calls in `CardService`, `CommentService`, `CardRelationshipService`, `ProjectService` (7 service methods); tests: one per trigger, including a same-actor case asserting no self-notification
 - [x] Task 8: Admin all-projects bypass — `IsProjectMemberOrAdmin` extension method (using `Roles.Admin` from Task 1), update all controllers in §10.3; confirm `BoardHub`/`PresenceHub` need no code change beyond Task 1 (already gated on `IsInRole`); tests: bypass true for admin, false for non-member
 - [x] Task 9: Admin controller + user management — `User.Disable()`/`Enable()`/`SetAdminRole()`/`SetPasswordHash()` instance methods (replacing direct property sets), `AdminController` (users CRUD), `AdminService`, Web UI admin user page; tests: self-demotion rejection, each instance method, service methods call instance methods not property setters
-- [ ] Task 10: System settings API + cache — `SystemSettings.UpdateSettings(...)` instance method (partial-update, replacing direct property sets), schema migration (NtfyServerUrl, SearXngUrl, BrandName, BrandLogoUrl), `CachedSettingsProvider`, settings controller, `ApiRoutes.Admin.*` in `routes.ts`, Web UI settings page; tests: `UpdateSettings` only touches non-null args, cache invalidation on write
+- [x] Task 10: System settings API + cache — `SystemSettings.UpdateSettings(...)` instance method (partial-update, replacing direct property sets), schema migration (NtfyServerUrl, SearXngUrl, BrandName, BrandLogoUrl), `CachedSettingsProvider`, settings controller, `ApiRoutes.Admin.*` in `routes.ts`, Web UI settings page; tests: `UpdateSettings` only touches non-null args, cache invalidation on write
 - [ ] Task 11: Audit log reader — `IAuditLogReader`, `EfAuditLogReader`, `AuditLogQuery`, `AuditLogController`; tests: each filter dimension (project/actor/entityType/date range)
 - [ ] Task 12: Audit log Web UI page — filter bar, results table, pagination
 - [ ] Task 13: Admin dashboard home page — summary cards, health status, recent audit entries, quick-action buttons

@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Entities.PersonalSpace;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,11 +52,115 @@ public class AdminControllerTests
         var response = await client.GetAsync("/api/admin/users");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetSettings_NonAdmin_Returns403()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/settings");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSettings_Admin_Returns200WithValidShape()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/settings");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<SettingsResponse>();
+        Assert.NotNull(json);
+        Assert.Equal(730, json.ArchivedItemRetentionDays);
+        Assert.Equal(90, json.AuditLogRetentionDays);
+        Assert.Equal(30, json.NotificationRetentionDays);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_Admin_PartialUpdate_Returns200()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var request = new { archivedItemRetentionDays = 500 };
+        using var putReq = new HttpRequestMessage(HttpMethod.Put, "/api/admin/settings")
+        {
+            Content = JsonContent.Create(request),
+        };
+        var putResp = await client.SendAsync(putReq);
+        Assert.Equal(HttpStatusCode.OK, putResp.StatusCode);
+
+        var json = await putResp.Content.ReadFromJsonAsync<MessageResponse>();
+        Assert.NotNull(json);
+        Assert.Contains("5 minutes", json.Message);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_Admin_FullUpdate_Returns200()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var request = new
+        {
+            archivedItemRetentionDays = 365,
+            auditLogRetentionDays = 60,
+            notificationRetentionDays = 14,
+            ntfyServerUrl = "http://ntfy.example.com",
+            searXngUrl = "http://search.example.com",
+            brandName = "HydraForge",
+            brandLogoUrl = "https://example.com/logo.png",
+        };
+        using var putReq = new HttpRequestMessage(HttpMethod.Put, "/api/admin/settings")
+        {
+            Content = JsonContent.Create(request),
+        };
+        var response = await client.SendAsync(putReq);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private record SettingsResponse(
+        int ArchivedItemRetentionDays,
+        int AuditLogRetentionDays,
+        int NotificationRetentionDays,
+        string? NtfyServerUrl,
+        string? SearXngUrl,
+        string? BrandName,
+        string? BrandLogoUrl
+    );
+
+    private record MessageResponse(string Message);
 }
 
 internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly List<User> _users = [];
+    private readonly TestSettingsRepository _settingsRepo = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -70,6 +177,8 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
                     .Where(d =>
                         d.ServiceType == typeof(IAdminService)
                         || d.ServiceType == typeof(IUserRepository)
+                        || d.ServiceType == typeof(ISettingsRepository)
+                        || d.ServiceType == typeof(ISettingsProvider)
                     )
                     .ToList()
             )
@@ -80,6 +189,10 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IUserRepository>(_ => new TestAdminUserRepository(_users));
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<ISettingsRepository>(_ => _settingsRepo);
+            services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(
+                _settingsRepo
+            ));
         });
     }
 
@@ -208,4 +321,21 @@ internal class TestPasswordHasher : IPasswordHasher
     public string HashPassword(string password) => "hashed:" + password;
 
     public bool VerifyPassword(string password, string hash) => hash == "hashed:" + password;
+}
+
+internal class TestSettingsRepository : ISettingsRepository
+{
+    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default) =>
+        Task.FromResult(new SystemSettings());
+
+    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default) =>
+        Task.CompletedTask;
+}
+
+internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsProvider
+{
+    public Task<SystemSettings> GetAsync(CancellationToken ct = default) =>
+        repo.GetSingletonAsync(ct);
+
+    public void Invalidate() { }
 }
