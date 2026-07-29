@@ -176,6 +176,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - > 90% coverage on Application and Domain layers
 - Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, ...)` — they inspect `context.Model` and do not need a database
 - Never mock the database — use a real test PostgreSQL instance once that infrastructure exists (not in place yet)
+- **`ISettingsProvider` in endpoint tests:** When a controller injects `ISettingsProvider` but the test registers a fake `ISettingsRepository`, the real `CachedSettingsProvider` wraps `IMemoryCache` — the cache TTL means writes via the fake repo are invisible on subsequent reads. Register a `TestCachedSettingsProvider` that delegates directly to the fake repo without caching (same pattern as `TestCachedSettingsProvider` in `AdminControllerTests`).
 
 **Database:**
 - PostgreSQL only — no SQLite fallback
