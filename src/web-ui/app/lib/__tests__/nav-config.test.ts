@@ -42,7 +42,8 @@ describe('nav-config', () => {
     const reports = admin.find(i => i.label === 'Reports')!
     expect(users.to).toBe('/admin/users')
     expect(users.disabled).toBeUndefined()
-    expect(settings.disabled).toBe(true)
+    expect(settings.to).toBe('/admin/settings')
+    expect(settings.disabled).toBeUndefined()
     expect(auditLog.disabled).toBe(true)
     expect(reports.disabled).toBe(true)
   })
