@@ -4,7 +4,6 @@ using HydraForge.Application.Projects;
 using HydraForge.Application.Settings;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
-using HydraForge.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +16,7 @@ public class AdminController(
     IAdminService adminService,
     ProjectService projectService,
     ISettingsRepository settingsRepo,
-    CachedSettingsProvider settingsProvider)
+    ISettingsProvider settingsProvider)
     : ControllerBase
 {
     [HttpGet("users")]

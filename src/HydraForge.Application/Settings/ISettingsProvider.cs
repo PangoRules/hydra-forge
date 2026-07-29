@@ -5,4 +5,5 @@ namespace HydraForge.Application.Settings;
 public interface ISettingsProvider
 {
     Task<SystemSettings> GetAsync(CancellationToken ct = default);
+    void Invalidate();
 }

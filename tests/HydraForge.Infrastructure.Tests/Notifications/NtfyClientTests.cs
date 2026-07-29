@@ -16,6 +16,8 @@ public class NtfyClientTests
             settings.UpdateSettings(ntfyServerUrl: ntfyUrl);
             return Task.FromResult(settings);
         }
+
+        public void Invalidate() { }
     }
 
     private class CountingFakeSettingsProvider : ISettingsProvider
@@ -34,6 +36,8 @@ public class NtfyClientTests
             settings.UpdateSettings(ntfyServerUrl: _ntfyUrl);
             return Task.FromResult(settings);
         }
+
+        public void Invalidate() { }
     }
 
     private class RecordingHandler : HttpMessageHandler

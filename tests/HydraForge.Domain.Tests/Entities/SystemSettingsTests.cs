@@ -38,4 +38,14 @@ public class SystemSettingsTests
 
         Assert.Equal("http://ntfy:80", settings.NtfyServerUrl);
     }
+
+    [Fact]
+    public void UpdateSettings_BlankStringArg_ClearsToNull()
+    {
+        var settings = new SystemSettings();
+        settings.UpdateSettings(ntfyServerUrl: "http://ntfy:80");
+        settings.UpdateSettings(ntfyServerUrl: "");
+
+        Assert.Null(settings.NtfyServerUrl);
+    }
 }

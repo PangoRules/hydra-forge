@@ -6,7 +6,6 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.PersonalSpace;
-using HydraForge.Infrastructure.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,7 +190,6 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ISettingsRepository>(_ => _settingsRepo);
-            services.AddScoped<CachedSettingsProvider>();
             services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(_settingsRepo));
         });
     }
