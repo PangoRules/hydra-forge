@@ -1,5 +1,4 @@
 using HydraForge.Domain.Entities.PersonalSpace;
-using Xunit;
 
 namespace HydraForge.Domain.Tests.Entities;
 
@@ -23,7 +22,7 @@ public class SystemSettingsTests
         var settings = new SystemSettings();
         var before = settings.UpdatedAt;
 
-        System.Threading.Thread.Sleep(10);
+        Thread.Sleep(10);
         settings.UpdateSettings(brandName: "Test");
 
         Assert.True(settings.UpdatedAt > before);

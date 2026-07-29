@@ -5,18 +5,15 @@ using Microsoft.Extensions.Options;
 
 namespace HydraForge.Infrastructure.Notifications;
 
-public class NtfyClient : INtfyClient
+public class NtfyClient(
+    HttpClient http,
+    IOptions<NtfyOptions> options,
+    ISettingsProvider settingsProvider
+) : INtfyClient
 {
-    private readonly HttpClient _http;
-    private readonly NtfyOptions _options;
-    private readonly ISettingsProvider _settingsProvider;
-
-    public NtfyClient(HttpClient http, IOptions<NtfyOptions> options, ISettingsProvider settingsProvider)
-    {
-        _http = http;
-        _options = options.Value;
-        _settingsProvider = settingsProvider;
-    }
+    private readonly HttpClient _http = http;
+    private readonly NtfyOptions _options = options.Value;
+    private readonly ISettingsProvider _settingsProvider = settingsProvider;
 
     public async Task PublishAsync(
         Guid userId,

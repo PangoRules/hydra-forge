@@ -84,7 +84,7 @@ public class AdminControllerTests
 
         var json = await response.Content.ReadFromJsonAsync<SettingsResponse>();
         Assert.NotNull(json);
-        Assert.Equal(730, json!.ArchivedItemRetentionDays);
+        Assert.Equal(730, json.ArchivedItemRetentionDays);
         Assert.Equal(90, json.AuditLogRetentionDays);
         Assert.Equal(30, json.NotificationRetentionDays);
     }
@@ -104,14 +104,14 @@ public class AdminControllerTests
         var request = new { archivedItemRetentionDays = 500 };
         using var putReq = new HttpRequestMessage(HttpMethod.Put, "/api/admin/settings")
         {
-            Content = JsonContent.Create(request)
+            Content = JsonContent.Create(request),
         };
         var putResp = await client.SendAsync(putReq);
         Assert.Equal(HttpStatusCode.OK, putResp.StatusCode);
 
         var json = await putResp.Content.ReadFromJsonAsync<MessageResponse>();
         Assert.NotNull(json);
-        Assert.Contains("5 minutes", json!.message);
+        Assert.Contains("5 minutes", json.Message);
     }
 
     [Fact]
@@ -134,11 +134,11 @@ public class AdminControllerTests
             ntfyServerUrl = "http://ntfy.example.com",
             searXngUrl = "http://search.example.com",
             brandName = "HydraForge",
-            brandLogoUrl = "https://example.com/logo.png"
+            brandLogoUrl = "https://example.com/logo.png",
         };
         using var putReq = new HttpRequestMessage(HttpMethod.Put, "/api/admin/settings")
         {
-            Content = JsonContent.Create(request)
+            Content = JsonContent.Create(request),
         };
         var response = await client.SendAsync(putReq);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -154,7 +154,7 @@ public class AdminControllerTests
         string? BrandLogoUrl
     );
 
-    private record MessageResponse(string message);
+    private record MessageResponse(string Message);
 }
 
 internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
@@ -190,7 +190,9 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ISettingsRepository>(_ => _settingsRepo);
-            services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(_settingsRepo));
+            services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(
+                _settingsRepo
+            ));
         });
     }
 
@@ -323,17 +325,17 @@ internal class TestPasswordHasher : IPasswordHasher
 
 internal class TestSettingsRepository : ISettingsRepository
 {
-    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default)
-        => Task.FromResult(new SystemSettings());
+    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default) =>
+        Task.FromResult(new SystemSettings());
 
-    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default)
-        => Task.CompletedTask;
+    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default) =>
+        Task.CompletedTask;
 }
 
 internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsProvider
 {
-    public Task<SystemSettings> GetAsync(CancellationToken ct = default)
-        => repo.GetSingletonAsync(ct);
+    public Task<SystemSettings> GetAsync(CancellationToken ct = default) =>
+        repo.GetSingletonAsync(ct);
 
     public void Invalidate() { }
 }

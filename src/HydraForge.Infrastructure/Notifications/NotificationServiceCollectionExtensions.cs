@@ -1,5 +1,4 @@
 using HydraForge.Application.Notifications;
-using HydraForge.Application.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HydraForge.Infrastructure.Notifications;

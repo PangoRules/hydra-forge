@@ -20,12 +20,10 @@ public class NtfyClientTests
         public void Invalidate() { }
     }
 
-    private class CountingFakeSettingsProvider : ISettingsProvider
+    private class CountingFakeSettingsProvider(string? initialUrl) : ISettingsProvider
     {
         public int CallCount { get; private set; }
-        private string? _ntfyUrl;
-
-        public CountingFakeSettingsProvider(string? initialUrl) => _ntfyUrl = initialUrl;
+        private string? _ntfyUrl = initialUrl;
 
         public void SetUrl(string? url) => _ntfyUrl = url;
 
@@ -69,7 +67,11 @@ public class NtfyClientTests
     {
         var handler = new RecordingHandler();
         var http = new HttpClient(handler);
-        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), new FakeSettingsProvider(null));
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider(null)
+        );
 
         await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
 
@@ -99,7 +101,11 @@ public class NtfyClientTests
         var handler = new RecordingHandler();
         var http = new HttpClient(handler);
         var userId = Guid.NewGuid();
-        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), new FakeSettingsProvider("http://ntfy.local"));
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("http://ntfy.local")
+        );
 
         await client.PublishAsync(userId, "Title", "Body");
 
