@@ -8,8 +8,11 @@ public class ScreenStackTests
     private sealed class TestScreen : IScreen
     {
         public Task RenderAsync() => Task.CompletedTask;
+
         public Task HandleKeyAsync(ConsoleKeyInfo key) => Task.CompletedTask;
+
         public Task OnEnterAsync() => Task.CompletedTask;
+
         public Task OnExitAsync() => Task.CompletedTask;
     }
 

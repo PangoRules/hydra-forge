@@ -21,7 +21,10 @@ public class LockScreenTests
     public async Task OnEnterAsync_WhenHealthCheckThrows_SwallowsExceptionAndSetsReconnecting()
     {
         var appState = new AppState();
-        var lockScreen = new LockScreen(appState, () => throw new HttpRequestException("connection refused"));
+        var lockScreen = new LockScreen(
+            appState,
+            () => throw new HttpRequestException("connection refused")
+        );
 
         await lockScreen.OnEnterAsync();
         await WaitUntilAsync(() => appState.Connection == ConnectionStatus.Reconnecting);

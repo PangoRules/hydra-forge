@@ -13,4 +13,3 @@ public class LlmProviderHealthProbe(HydraForgeDbContext db) : IHealthProbe
         return hasEnabled ? HealthStatus.Healthy : HealthStatus.NotConfigured;
     }
 }
-

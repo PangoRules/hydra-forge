@@ -4,26 +4,23 @@ using Microsoft.Extensions.Options;
 
 namespace HydraForge.Infrastructure.Notifications;
 
-public class NtfyClient : INtfyClient
+public class NtfyClient(HttpClient http, IOptions<NtfyOptions> options, string? serverUrl = null)
+    : INtfyClient
 {
-    private readonly HttpClient _http;
-    private readonly NtfyOptions _options;
-    private readonly string? _serverUrl;
+    private readonly NtfyOptions _options = options.Value;
 
-    public NtfyClient(HttpClient http, IOptions<NtfyOptions> options, string? serverUrl = null)
+    public async Task PublishAsync(
+        Guid userId,
+        string title,
+        string? body,
+        CancellationToken ct = default
+    )
     {
-        _http = http;
-        _options = options.Value;
-        _serverUrl = serverUrl;
-    }
-
-    public async Task PublishAsync(Guid userId, string title, string? body, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(_serverUrl))
+        if (string.IsNullOrWhiteSpace(serverUrl))
             return;
 
         var topic = $"hydraforge-{userId}";
-        var url = $"{_serverUrl.TrimEnd('/')}/{topic}";
+        var url = $"{serverUrl.TrimEnd('/')}/{topic}";
 
         var payload = new
         {
@@ -31,12 +28,12 @@ public class NtfyClient : INtfyClient
             title,
             message = body ?? title,
             priority = _options.DefaultPriority,
-            tags = new[] { "hydraforge" }
+            tags = new[] { "hydraforge" },
         };
 
         try
         {
-            await _http.PostAsJsonAsync(url, payload, ct);
+            await http.PostAsJsonAsync(url, payload, ct);
         }
         catch
         {

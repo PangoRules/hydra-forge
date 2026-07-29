@@ -13,14 +13,22 @@ public class EfNotificationRepository(HydraForgeDbContext db) : INotificationRep
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task AddRangeAsync(IReadOnlyList<Notification> notifications, CancellationToken ct = default)
+    public async Task AddRangeAsync(
+        IReadOnlyList<Notification> notifications,
+        CancellationToken ct = default
+    )
     {
         db.Notifications.AddRange(notifications);
         await db.SaveChangesAsync(ct);
     }
 
     public async Task<IReadOnlyList<Notification>> ListByUserAsync(
-        Guid userId, int skip, int take, bool? unreadOnly = null, CancellationToken ct = default)
+        Guid userId,
+        int skip,
+        int take,
+        bool? unreadOnly = null,
+        CancellationToken ct = default
+    )
     {
         var query = db.Notifications.Where(n => n.UserId == userId);
 
@@ -36,14 +44,19 @@ public class EfNotificationRepository(HydraForgeDbContext db) : INotificationRep
 
     public async Task<int> CountUnreadAsync(Guid userId, CancellationToken ct = default)
     {
-        return await db.Notifications
-            .CountAsync(n => n.UserId == userId && !n.IsRead, ct);
+        return await db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, ct);
     }
 
-    public async Task MarkAsReadAsync(Guid notificationId, Guid userId, CancellationToken ct = default)
+    public async Task MarkAsReadAsync(
+        Guid notificationId,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        var notif = await db.Notifications
-            .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId, ct);
+        var notif = await db.Notifications.FirstOrDefaultAsync(
+            n => n.Id == notificationId && n.UserId == userId,
+            ct
+        );
 
         if (notif != null)
         {
@@ -54,8 +67,8 @@ public class EfNotificationRepository(HydraForgeDbContext db) : INotificationRep
 
     public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
     {
-        var unread = await db.Notifications
-            .Where(n => n.UserId == userId && !n.IsRead)
+        var unread = await db
+            .Notifications.Where(n => n.UserId == userId && !n.IsRead)
             .ToListAsync(ct);
 
         foreach (var n in unread)

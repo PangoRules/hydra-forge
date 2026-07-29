@@ -1,5 +1,5 @@
-using HydraForge.Application.Specs;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -66,7 +66,12 @@ public class SpecsController(SpecService specService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var result = await specService.ListByCardAsync(projectId, cardId, new SpecListFilter(), userId);
+        var result = await specService.ListByCardAsync(
+            projectId,
+            cardId,
+            new SpecListFilter(),
+            userId
+        );
 
         if (result.IsFailure)
         {

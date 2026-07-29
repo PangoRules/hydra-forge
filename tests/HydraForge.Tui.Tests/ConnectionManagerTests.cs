@@ -13,7 +13,10 @@ public class ConnectionManagerTests : IDisposable
 
     public ConnectionManagerTests()
     {
-        _configDir = Path.Combine(Path.GetTempPath(), "hydraforge-connectionmanager-tests-" + Guid.NewGuid());
+        _configDir = Path.Combine(
+            Path.GetTempPath(),
+            "hydraforge-connectionmanager-tests-" + Guid.NewGuid()
+        );
         _configStore = new ConfigStore(_configDir);
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/" });
         _appState = new AppState();
@@ -28,7 +31,7 @@ public class ConnectionManagerTests : IDisposable
     private ConnectionManager CreateManager(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         var fake = new FakeHttpMessageHandler(responder);
-        var factory = new ApiClientFactory(_configStore, _appState, new ErrorCollector(), fake);
+        var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
         return new ConnectionManager(_appState, factory, new ErrorCollector());
     }
 
@@ -45,7 +48,9 @@ public class ConnectionManagerTests : IDisposable
     [Fact]
     public async Task CheckHealthAsync_WhenServerReturnsNon200_ReturnsFalse()
     {
-        var manager = CreateManager(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        var manager = CreateManager(_ => new HttpResponseMessage(
+            HttpStatusCode.ServiceUnavailable
+        ));
 
         var healthy = await manager.CheckHealthAsync();
 
@@ -97,7 +102,9 @@ public class ConnectionManagerTests : IDisposable
     [Fact]
     public async Task WaitForConnectionAsync_WhenServerUnreachable_ReturnsFalseAfterTimeoutAndSetsDisconnected()
     {
-        var manager = CreateManager(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        var manager = CreateManager(_ => new HttpResponseMessage(
+            HttpStatusCode.ServiceUnavailable
+        ));
 
         var connected = await manager.WaitForConnectionAsync(timeoutMs: 500);
 

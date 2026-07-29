@@ -15,7 +15,10 @@ public static class CardRelationshipIndicatorHelper
         [RelationshipType.Relates] = 3,
     };
 
-    public static List<RelationBadge> GetRelationBadges(Guid cardId, IEnumerable<CardRelationshipDto> relationships)
+    public static List<RelationBadge> GetRelationBadges(
+        Guid cardId,
+        IEnumerable<CardRelationshipDto> relationships
+    )
     {
         var badges = new List<RelationBadge>();
         foreach (var rel in relationships)

@@ -8,37 +8,105 @@ using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
-using Result = HydraForge.Domain.Common.Result;
 
 internal sealed class CardRelationshipFakeUserRepo : IUserRepository
 {
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<User?>(null);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(false);
+
+    public Task CreateAsync(User user, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class CardRelationshipFakeUserRepoForAdmin : IUserRepository
 {
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<User?>(null);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(true);
+
+    public Task CreateAsync(User user, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public class CardRelationshipServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
 
-    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, CardRelationshipFakeUserRepo userRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, FakeProjectBoardEventPublisher publisher, CardRelationshipService service) CreateService()
+    private static (
+        InMemoryCardRelationshipRepository2 relationshipRepo,
+        InMemoryCardRepository2 cardRepo,
+        InMemoryProjectMemberRepository memberRepo,
+        CardRelationshipFakeUserRepo userRepo,
+        InMemoryAuditLogWriter auditWriter,
+        NullSnapshotRefresher snapshotRefresher,
+        FakeProjectBoardEventPublisher publisher,
+        CardRelationshipService service
+    ) CreateService()
     {
         var relationshipRepo = new InMemoryCardRelationshipRepository2();
         var cardRepo = new InMemoryCardRepository2();
@@ -47,11 +115,37 @@ public class CardRelationshipServiceTests
         var auditWriter = new InMemoryAuditLogWriter();
         var snapshotRefresher = new NullSnapshotRefresher();
         var publisher = new FakeProjectBoardEventPublisher();
-        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
-        return (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service);
+        var service = new CardRelationshipService(
+            relationshipRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        return (
+            relationshipRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            service
+        );
     }
 
-    private static (InMemoryCardRelationshipRepository2 relationshipRepo, InMemoryCardRepository2 cardRepo, InMemoryProjectMemberRepository memberRepo, CardRelationshipFakeUserRepoForAdmin userRepo, InMemoryAuditLogWriter auditWriter, NullSnapshotRefresher snapshotRefresher, FakeProjectBoardEventPublisher publisher, CardRelationshipService service) CreateAdminService()
+    private static (
+        InMemoryCardRelationshipRepository2 relationshipRepo,
+        InMemoryCardRepository2 cardRepo,
+        InMemoryProjectMemberRepository memberRepo,
+        CardRelationshipFakeUserRepoForAdmin userRepo,
+        InMemoryAuditLogWriter auditWriter,
+        NullSnapshotRefresher snapshotRefresher,
+        FakeProjectBoardEventPublisher publisher,
+        CardRelationshipService service
+    ) CreateAdminService()
     {
         var relationshipRepo = new InMemoryCardRelationshipRepository2();
         var cardRepo = new InMemoryCardRepository2();
@@ -60,22 +154,62 @@ public class CardRelationshipServiceTests
         var auditWriter = new InMemoryAuditLogWriter();
         var snapshotRefresher = new NullSnapshotRefresher();
         var publisher = new FakeProjectBoardEventPublisher();
-        var service = new CardRelationshipService(relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
-        return (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service);
+        var service = new CardRelationshipService(
+            relationshipRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        return (
+            relationshipRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            service
+        );
     }
 
     [Fact]
     public async Task CreateAsync_self_link_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardId = NewId();
 
-        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, Title = "Card", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardId, cardId, RelationshipType.BlockedBy, actorId));
+        var result = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardId,
+                cardId,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Relationships.SelfDenied, result.Error.Code);
@@ -84,18 +218,49 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_cross_project_denied()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var otherProjectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = otherProjectId, Title = "Card B", CardNumber = 1 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = otherProjectId,
+                Title = "Card B",
+                CardNumber = 1,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var result = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Relationships.CrossProjectDenied, result.Error.Code);
@@ -104,20 +269,59 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_duplicate_active_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result1 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var result1 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(result1.IsSuccess);
 
-        var result2 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var result2 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(result2.IsFailure);
         Assert.Equal(DomainErrorCodes.Relationships.Duplicate, result2.Error.Code);
     }
@@ -125,22 +329,61 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_blockedby_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         // A blocked by B
-        var r1 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardB, cardA, RelationshipType.BlockedBy, actorId));
+        var r1 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardB,
+                cardA,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(r1.IsSuccess);
 
         // Now A blocked by B already exists; trying B blocked by A creates cycle
-        var r2 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var r2 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(r2.IsFailure);
         Assert.Equal(DomainErrorCodes.Relationships.Cycle, r2.Error.Code);
     }
@@ -148,22 +391,61 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_precedes_cycle_rejected()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         // A precedes B
-        var r1 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.Precedes, actorId));
+        var r1 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.Precedes,
+                actorId
+            )
+        );
         Assert.True(r1.IsSuccess);
 
         // Now B precedes A creates cycle
-        var r2 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardB, cardA, RelationshipType.Precedes, actorId));
+        var r2 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardB,
+                cardA,
+                RelationshipType.Precedes,
+                actorId
+            )
+        );
         Assert.True(r2.IsFailure);
         Assert.Equal(DomainErrorCodes.Relationships.Cycle, r2.Error.Code);
     }
@@ -171,39 +453,109 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_relates_does_not_participate_in_cycle()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         // A blocked by B
-        var r1 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardB, cardA, RelationshipType.BlockedBy, actorId));
+        var r1 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardB,
+                cardA,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(r1.IsSuccess);
 
         // A relates B — no cycle (Relates does not participate)
-        var r2 = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.Relates, actorId));
+        var r2 = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.Relates,
+                actorId
+            )
+        );
         Assert.True(r2.IsSuccess);
     }
 
     [Fact]
     public async Task ListAsync_returns_active_only()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         var result = await service.ListAsync(projectId, cardA, actorId);
 
         Assert.True(result.IsSuccess);
@@ -214,21 +566,54 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task DeleteAsync_archives_relationship()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var createResult = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var createResult = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(createResult.IsSuccess);
         var relId = createResult.Value.Id;
 
-        var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, cardA, relId, actorId));
+        var deleteResult = await service.DeleteAsync(
+            new DeleteRelationshipCommand(projectId, cardA, relId, actorId)
+        );
         Assert.True(deleteResult.IsSuccess);
 
         // List should now return empty
@@ -239,20 +624,53 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task GetArchiveImpactAsync_returns_dependent_cards()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         // Card A blocks Card B — preflight always returns dependent list, regardless of confirm
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
-        var result = await service.GetArchiveImpactAsync(new ArchiveImpactCommand(projectId, cardA, false, actorId));
+        var result = await service.GetArchiveImpactAsync(
+            new ArchiveImpactCommand(projectId, cardA, false, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value.DependentCards);
@@ -262,23 +680,64 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_archives_card_and_relationships()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
         var colId = NewId();
 
-        var cardARecord = new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, Title = "Card A", CardNumber = 1, Position = 0 };
-        var cardBRecord = new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, Title = "Card B", CardNumber = 2, Position = 1 };
+        var cardARecord = new Card
+        {
+            Id = cardA,
+            ProjectId = projectId,
+            ColumnId = colId,
+            Title = "Card A",
+            CardNumber = 1,
+            Position = 0,
+        };
+        var cardBRecord = new Card
+        {
+            Id = cardB,
+            ProjectId = projectId,
+            ColumnId = colId,
+            Title = "Card B",
+            CardNumber = 2,
+            Position = 1,
+        };
         cardRepo.Add(cardARecord);
         cardRepo.Add(cardBRecord);
-        cardRepo.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
-        var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, true, actorId));
+        var result = await service.ArchiveCardWithRelationshipsAsync(
+            new ArchiveImpactCommand(projectId, cardA, true, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value.DependentCards);
@@ -291,26 +750,70 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_confirm_required_when_dependents_exist()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
         var colId = NewId();
 
-        var cardARecord = new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, Title = "Card A", CardNumber = 1, Position = 0 };
-        var cardBRecord = new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, Title = "Card B", CardNumber = 2, Position = 1 };
+        var cardARecord = new Card
+        {
+            Id = cardA,
+            ProjectId = projectId,
+            ColumnId = colId,
+            Title = "Card A",
+            CardNumber = 1,
+            Position = 0,
+        };
+        var cardBRecord = new Card
+        {
+            Id = cardB,
+            ProjectId = projectId,
+            ColumnId = colId,
+            Title = "Card B",
+            CardNumber = 2,
+            Position = 1,
+        };
         cardRepo.Add(cardARecord);
         cardRepo.Add(cardBRecord);
-        cardRepo.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
-        var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, false, actorId));
+        var result = await service.ArchiveCardWithRelationshipsAsync(
+            new ArchiveImpactCommand(projectId, cardA, false, actorId)
+        );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired, result.Error.Code);
+        Assert.Equal(
+            DomainErrorCodes.Relationships.ArchiveImpactConfirmRequired,
+            result.Error.Code
+        );
 
         // Card A should NOT be archived
         var notArchived = cardRepo.GetById(cardA);
@@ -320,17 +823,48 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_success()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.Precedes, actorId));
+        var result = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.Precedes,
+                actorId
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(cardA, result.Value.SourceCardId);
@@ -343,17 +877,48 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, auditWriter, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var result = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -368,22 +933,55 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (_, cardRepo, memberRepo, _, auditWriter, _, _, service) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var createResult = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var createResult = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
         Assert.True(createResult.IsSuccess);
         var relId = createResult.Value.Id;
         auditWriter.Clear();
 
-        var deleteResult = await service.DeleteAsync(new DeleteRelationshipCommand(projectId, cardA, relId, actorId));
+        var deleteResult = await service.DeleteAsync(
+            new DeleteRelationshipCommand(projectId, cardA, relId, actorId)
+        );
         Assert.True(deleteResult.IsSuccess);
 
         var req = Assert.Single(auditWriter.Writes);
@@ -398,21 +996,75 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task ArchiveCardWithRelationshipsAsync_WritesAuditLog()
     {
-        var (relationshipRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher, service) = CreateService();
+        var (
+            relationshipRepo,
+            cardRepo,
+            memberRepo,
+            _,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            service
+        ) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
         var colId = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, Title = "Card A", CardNumber = 1, Position = 0 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, Title = "Card B", CardNumber = 2, Position = 1 });
-        cardRepo.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                Title = "Card A",
+                CardNumber = 1,
+                Position = 0,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                Title = "Card B",
+                CardNumber = 2,
+                Position = 1,
+            }
+        );
+        cardRepo.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
-        var result = await service.ArchiveCardWithRelationshipsAsync(new ArchiveImpactCommand(projectId, cardA, true, actorId));
+        var result = await service.ArchiveCardWithRelationshipsAsync(
+            new ArchiveImpactCommand(projectId, cardA, true, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = auditWriter.Writes.Single(r => r.Action == "ArchivedWithRelationships");
@@ -429,16 +1081,40 @@ public class CardRelationshipServiceTests
     [Fact]
     public async Task CreateAsync_AdminNonMember_Succeeds()
     {
-        var (relationshipRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher, service) = CreateAdminService();
+        var (_, cardRepo, _, _, _, _, _, service) = CreateAdminService();
         var projectId = NewId();
         var actorId = NewId();
         var cardA = NewId();
         var cardB = NewId();
 
-        cardRepo.Add(new Card { Id = cardA, ProjectId = projectId, Title = "Card A", CardNumber = 1 });
-        cardRepo.Add(new Card { Id = cardB, ProjectId = projectId, Title = "Card B", CardNumber = 2 });
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                Title = "Card A",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                Title = "Card B",
+                CardNumber = 2,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateRelationshipCommand(projectId, cardA, cardB, RelationshipType.BlockedBy, actorId));
+        var result = await service.CreateAsync(
+            new CreateRelationshipCommand(
+                projectId,
+                cardA,
+                cardB,
+                RelationshipType.BlockedBy,
+                actorId
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(cardA, result.Value.SourceCardId);
@@ -451,34 +1127,92 @@ public class CardRelationshipServiceTests
     {
         public List<CardRelationship> Relationships { get; } = [];
 
-        public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+        public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<CardRelationship>>([
+                .. Relationships.Where(r =>
+                    (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null
+                ),
+            ]);
 
-        public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+        public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<CardRelationship>>([
+                .. Relationships.Where(r =>
+                    r.TargetCardId == cardId
+                    && r.Type == RelationshipType.BlockedBy
+                    && r.ArchivedAt == null
+                ),
+            ]);
 
-        public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+        public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<CardRelationship>>([
+                .. Relationships.Where(r =>
+                    r.SourceCardId == cardId
+                    && r.Type == RelationshipType.Precedes
+                    && r.ArchivedAt == null
+                ),
+            ]);
 
-        public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+        public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(
+            IReadOnlyList<Guid> cardIds,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<CardRelationship>>([
+                .. Relationships.Where(r =>
+                    cardIds.Contains(r.TargetCardId)
+                    && r.Type == RelationshipType.BlockedBy
+                    && r.ArchivedAt == null
+                ),
+            ]);
 
-        public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult<CardRelationship?>(Relationships.FirstOrDefault(r => r.Id == id));
+        public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Relationships.FirstOrDefault(r => r.Id == id));
 
-        public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>(Relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+        public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<CardRelationship>>([
+                .. Relationships.Where(r =>
+                    (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null
+                ),
+            ]);
 
-        public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
-            => Task.FromResult<CardRelationship?>(Relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
+        public Task<CardRelationship?> FindActiveAsync(
+            Guid sourceCardId,
+            Guid targetCardId,
+            RelationshipType type,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Relationships.FirstOrDefault(r =>
+                    r.SourceCardId == sourceCardId
+                    && r.TargetCardId == targetCardId
+                    && r.Type == type
+                    && r.ArchivedAt == null
+                )
+            );
 
-        public Task AddAsync(CardRelationship relationship, CancellationToken ct = default) { Relationships.Add(relationship); return Task.CompletedTask; }
+        public Task AddAsync(CardRelationship relationship, CancellationToken ct = default)
+        {
+            Relationships.Add(relationship);
+            return Task.CompletedTask;
+        }
+
         public void Add(CardRelationship relationship) => Relationships.Add(relationship);
 
         public Task ArchiveAsync(Guid id, CancellationToken ct = default)
         {
             var rel = Relationships.FirstOrDefault(r => r.Id == id);
-            if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+            rel?.ArchivedAt = DateTime.UtcNow;
             return Task.CompletedTask;
         }
 
@@ -489,11 +1223,15 @@ public class CardRelationshipServiceTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+        public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
 
-        public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
+        public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<CardRelationship>>([]);
     }
 
     private class InMemoryCardRepository2 : ICardRepository
@@ -501,43 +1239,92 @@ public class CardRelationshipServiceTests
         public List<Card> Cards { get; } = [];
         public List<Column> Columns { get; } = [];
 
-        public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<Card?>(Cards.FirstOrDefault(c => c.Id == cardId));
+        public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+            Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
+
         public Card? GetById(Guid cardId) => Cards.FirstOrDefault(c => c.Id == cardId);
 
-        public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+        public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+            IReadOnlyList<Guid> cardIds,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+                Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+            );
 
-        public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-            => Task.FromResult<Card?>(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+        public Task<Card?> GetByProjectAndNumberAsync(
+            Guid projectId,
+            int cardNumber,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+            );
 
-        public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.ProjectId == projectId && (filter.IncludeArchived || c.ArchivedAt == null) && (filter.ColumnId == null || c.ColumnId == filter.ColumnId.Value)).ToList());
+        public Task<IReadOnlyList<Card>> ListByProjectAsync(
+            Guid projectId,
+            CardListFilter filter,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<Card>>([
+                .. Cards.Where(c =>
+                    c.ProjectId == projectId
+                    && (filter.IncludeArchived || c.ArchivedAt == null)
+                    && (filter.ColumnId == null || c.ColumnId == filter.ColumnId.Value)
+                ),
+            ]);
 
-        public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+        public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
+            Task.FromResult(
+                Cards
+                    .Where(c => c.ProjectId == projectId)
+                    .Select(c => c.CardNumber)
+                    .DefaultIfEmpty(0)
+                    .Max()
+            );
 
-        public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
+        public Task AddAsync(Card card, CancellationToken ct = default)
+        {
+            Cards.Add(card);
+            return Task.CompletedTask;
+        }
+
         public void Add(Card card) => Cards.Add(card);
+
         public Task UpdateAsync(Card card, CancellationToken ct = default)
         {
             var idx = Cards.FindIndex(c => c.Id == card.Id);
-            if (idx >= 0) Cards[idx] = card;
+            if (idx >= 0)
+                Cards[idx] = card;
             return Task.CompletedTask;
         }
+
         public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
         {
             foreach (var card in cards)
             {
                 var idx = Cards.FindIndex(c => c.Id == card.Id);
-                if (idx >= 0) Cards[idx] = card;
+                if (idx >= 0)
+                    Cards[idx] = card;
             }
             return Task.CompletedTask;
         }
-        public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-        public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-            => Task.FromResult(Cards.Count(c => c.ColumnId == columnId));
+
+        public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+        {
+            Cards.RemoveAll(c => c.Id == cardId);
+            return Task.CompletedTask;
+        }
+
+        public Task CompactColumnPositionsAsync(
+            Guid columnId,
+            int exceptPosition,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
+
+        public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+            Task.FromResult(Cards.Count(c => c.ColumnId == columnId));
+
         public void AddColumn(Column column) => Columns.Add(column);
     }
 
@@ -545,36 +1332,73 @@ public class CardRelationshipServiceTests
     {
         public List<ProjectMember> Members { get; } = [];
 
-        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
-        public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-            => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
-        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(m => m.ProjectId == projectId).ToList());
-        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
+
+        public Task<ProjectMember?> GetByProjectAndUserAsync(
+            Guid projectId,
+            Guid userId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+            );
+
+        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<ProjectMember>>([
+                .. Members.Where(m => m.ProjectId == projectId),
+            ]);
+
+        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken ct = default
+        )
         {
             var idList = projectIds.ToList();
-            var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+            var counts = Members
+                .Where(m => idList.Contains(m.ProjectId))
+                .GroupBy(m => m.ProjectId)
+                .ToDictionary(g => g.Key, g => g.Count());
             return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
         }
+
         public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
             IEnumerable<Guid> projectIds,
             Guid userId,
-            CancellationToken ct = default)
+            CancellationToken ct = default
+        )
         {
             var idList = projectIds.ToList();
-            var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+            var roles = Members
+                .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+                .ToDictionary(m => m.ProjectId, m => m.Role);
             return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
         }
-        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
+
+        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
+        {
+            Members.Add(member);
+            return Task.CompletedTask;
+        }
+
         public void Add(ProjectMember member) => Members.Add(member);
+
         public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
         {
             var idx = Members.FindIndex(m => m.Id == member.Id);
-            if (idx >= 0) Members[idx] = member;
+            if (idx >= 0)
+                Members[idx] = member;
             return Task.CompletedTask;
         }
-        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) { Members.RemoveAll(m => m.Id == id); return Task.CompletedTask; }
+
+        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
+        {
+            Members.RemoveAll(m => m.Id == id);
+            return Task.CompletedTask;
+        }
     }
 
     private class InMemoryAuditLogWriter : IAuditLogWriter

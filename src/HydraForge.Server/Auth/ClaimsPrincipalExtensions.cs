@@ -11,7 +11,8 @@ public static class ClaimsPrincipalExtensions
         this ClaimsPrincipal user,
         IProjectMemberRepository memberRepo,
         Guid projectId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (user.IsInRole(Roles.Admin))
             return true;

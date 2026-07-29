@@ -11,7 +11,10 @@ public class AuthDelegatingHandlerTests
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         var handler = new AuthDelegatingHandler(fake);
         handler.SetToken("jwt-abc");
-        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://example.test/"),
+        };
 
         await client.GetAsync("ping");
 
@@ -25,7 +28,10 @@ public class AuthDelegatingHandlerTests
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         var handler = new AuthDelegatingHandler(fake);
         handler.SetToken("jwt-abc");
-        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://example.test/"),
+        };
 
         handler.SetToken(null);
         await client.GetAsync("ping");

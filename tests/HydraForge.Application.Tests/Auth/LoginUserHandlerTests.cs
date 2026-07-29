@@ -9,7 +9,7 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_ValidCredentials_ReturnsSuccessWithToken()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = false };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(true);
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
@@ -31,7 +31,7 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_WrongPassword_ReturnsInvalidCredentialsError()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = false };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(false);
         var issuer = new FixedTokenIssuer("jwt-token");
@@ -48,7 +48,8 @@ public class LoginUserHandlerTests
     [Fact]
     public async Task Handle_DisabledUser_ReturnsUserDisabledError()
     {
-        var user = new TestUser { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hashed", IsAdmin = true, IsDisabled = true };
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
+        user.Disable();
         var repo = new InMemoryUserRepository(user);
         var hasher = new StrictPasswordHasher(true);
         var issuer = new FixedTokenIssuer("jwt-token");
@@ -79,48 +80,67 @@ public class LoginUserHandlerTests
     }
 }
 
-internal class TestUser : User
+internal class InMemoryUserRepository(User? user) : IUserRepository
 {
+    private readonly User? _user = user;
+
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(_user);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, User>>(
+            _user != null && ids.Contains(_user.Id)
+                ? new Dictionary<Guid, User> { [_user.Id] = _user }
+                : []
+        );
+
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult(_user);
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<string, User>>(
+            _user != null && usernames.Contains(_user.Username, StringComparer.OrdinalIgnoreCase)
+                ? new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [_user.Username] = _user,
+                }
+                : new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
+        );
+
+    public static Task<List<User>> SearchByUsernameAsync() => Task.FromResult(new List<User>());
+
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(_user?.IsAdmin ?? false);
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(_user?.IsAdmin ?? false);
+
+    public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-internal class InMemoryUserRepository : IUserRepository
+internal class StrictPasswordHasher(bool verifyResult) : IPasswordHasher
 {
-    private readonly User? _user;
-
-    public InMemoryUserRepository(User? user) => _user = user;
-
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(_user);
-
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(_user != null && ids.Contains(_user.Id) ? new Dictionary<Guid, User> { [_user.Id] = _user } : new Dictionary<Guid, User>());
-
-    public Task<User?> FindByUsernameAsync(string username)
-        => Task.FromResult(_user);
-
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
-=> Task.FromResult<IReadOnlyDictionary<string, User>>(_user != null && usernames.Contains(_user.Username, StringComparer.OrdinalIgnoreCase) ? new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase) { [_user.Username] = _user } : new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase));
-    public Task<List<HydraForge.Domain.Entities.Auth.User>> SearchByUsernameAsync(string query, int maxResults = 10, CancellationToken ct = default)
-        => Task.FromResult(new List<HydraForge.Domain.Entities.Auth.User>());
-
-    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt)
-        => Task.CompletedTask;
-
-    public Task<bool> AnyAdminExistsAsync()
-        => Task.FromResult(_user?.IsAdmin ?? false);
-
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
-        => Task.FromResult(_user?.IsAdmin ?? false);
-
-    public Task CreateAsync(User user)
-        => Task.CompletedTask;
-}
-
-internal class StrictPasswordHasher : IPasswordHasher
-{
-    private readonly bool _verifyResult;
-
-    public StrictPasswordHasher(bool verifyResult) => _verifyResult = verifyResult;
+    private readonly bool _verifyResult = verifyResult;
 
     public string HashPassword(string password) => "hashed";
 

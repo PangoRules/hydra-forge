@@ -1,4 +1,3 @@
-using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -12,15 +11,45 @@ public class ProjectMemberServiceTests
 {
     private sealed class FakeUserRepoForAdmin : IUserRepository
     {
-        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult<User?>(null);
+
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+
         public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
-        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+            IReadOnlyList<string> usernames,
+            string? searchTerm = null,
+            int maxResults = 10,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-        public Task CreateAsync(User user) => Task.CompletedTask;
+
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(true);
+
+        public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<User>> ListAsync(
+            int skip,
+            int take,
+            string? search,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
+
     [Fact]
     public async Task AddMemberAsync_OwnerAddsMember_Success()
     {
@@ -30,9 +59,18 @@ public class ProjectMemberServiceTests
         var ownerId = Guid.NewGuid();
         var newMemberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = ownerId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, ownerId));
+        var result = await handler.AddMemberAsync(
+            new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, ownerId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(newMemberId, result.Value.UserId);
@@ -49,10 +87,26 @@ public class ProjectMemberServiceTests
         var memberId = Guid.NewGuid();
         var newMemberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = memberId, Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = ownerId,
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = memberId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, memberId));
+        var result = await handler.AddMemberAsync(
+            new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, memberId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.OwnerRequired, result.Error.Code);
@@ -67,10 +121,26 @@ public class ProjectMemberServiceTests
         var ownerId = Guid.NewGuid();
         var existingMemberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = existingMemberId, Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = ownerId,
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = existingMemberId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, existingMemberId, MemberRole.Member, ownerId));
+        var result = await handler.AddMemberAsync(
+            new AddProjectMemberCommand(projectId, existingMemberId, MemberRole.Member, ownerId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MemberDuplicate, result.Error.Code);
@@ -85,9 +155,19 @@ public class ProjectMemberServiceTests
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = memberId, ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                Id = memberId,
+                ProjectId = projectId,
+                UserId = ownerId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberId, ownerId));
+        var result = await handler.RemoveMemberAsync(
+            new RemoveProjectMemberCommand(projectId, memberId, ownerId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.LastOwnerRemovalDenied, result.Error.Code);
@@ -103,7 +183,9 @@ public class ProjectMemberServiceTests
         var newMemberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
 
-        var result = await handler.AddMemberAsync(new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, adminId));
+        var result = await handler.AddMemberAsync(
+            new AddProjectMemberCommand(projectId, newMemberId, MemberRole.Member, adminId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(newMemberId, result.Value.UserId);
@@ -119,9 +201,19 @@ public class ProjectMemberServiceTests
         var adminId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = memberId, ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                Id = memberId,
+                ProjectId = projectId,
+                UserId = Guid.NewGuid(),
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await handler.UpdateMemberAsync(new UpdateProjectMemberCommand(projectId, memberId, MemberRole.Owner, adminId));
+        var result = await handler.UpdateMemberAsync(
+            new UpdateProjectMemberCommand(projectId, memberId, MemberRole.Owner, adminId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(MemberRole.Owner, result.Value.Role);
@@ -137,11 +229,35 @@ public class ProjectMemberServiceTests
         var ownerId = Guid.NewGuid();
         var memberToRemoveId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = memberToRemoveId, ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                Id = memberToRemoveId,
+                ProjectId = projectId,
+                UserId = ownerId,
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = Guid.NewGuid(),
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = Guid.NewGuid(),
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberToRemoveId, adminId));
+        var result = await handler.RemoveMemberAsync(
+            new RemoveProjectMemberCommand(projectId, memberToRemoveId, adminId)
+        );
 
         Assert.True(result.IsSuccess);
     }
@@ -155,10 +271,27 @@ public class ProjectMemberServiceTests
         var nonMemberId = Guid.NewGuid();
         var memberToRemoveId = Guid.NewGuid();
         repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
-        memberRepo.Members.Add(new ProjectMember { Id = memberToRemoveId, ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                Id = memberToRemoveId,
+                ProjectId = projectId,
+                UserId = Guid.NewGuid(),
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = Guid.NewGuid(),
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberToRemoveId, nonMemberId));
+        var result = await handler.RemoveMemberAsync(
+            new RemoveProjectMemberCommand(projectId, memberToRemoveId, nonMemberId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);

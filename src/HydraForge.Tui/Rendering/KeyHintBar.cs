@@ -20,12 +20,13 @@ public static class KeyHintBar
 
         foreach (var hint in hints)
         {
-            var candidateLength = length == 0 ? hint.Length : length + Separator.Length + hint.Length;
+            var candidateLength =
+                length == 0 ? hint.Length : length + Separator.Length + hint.Length;
 
             if (line.Count > 0 && candidateLength > width)
             {
                 Flush(line);
-                line = new List<string>();
+                line = [];
                 candidateLength = hint.Length;
             }
 

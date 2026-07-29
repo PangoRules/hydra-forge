@@ -12,26 +12,86 @@ namespace HydraForge.Application.Tests.Columns;
 
 internal sealed class FakeUserRepositoryForAdmin : IUserRepository
 {
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<User?>(null);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(false);
+
+    public Task CreateAsync(User user, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeUserRepositoryAdmin : IUserRepository
 {
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult<User?>(null);
+
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+
     public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
-    public Task CreateAsync(User user) => throw new NotImplementedException();
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(true);
+
+    public Task CreateAsync(User user, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public class ColumnServiceTests
@@ -41,16 +101,51 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_AppendsAtMaxPosition()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        repo.Columns.Add(new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 });
-        repo.Columns.Add(new Column { Id = NewId(), ProjectId = projectId, Name = "Done", Position = 1 });
-        memberRepo.Members.Add(new ProjectMember { Id = NewId(), ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        repo.Columns.Add(
+            new Column
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                Name = "Done",
+                Position = 1,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "In Progress", null, null, actorId));
+        var result = await service.CreateAsync(
+            new CreateColumnCommand(projectId, "In Progress", null, null, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.Position);
@@ -59,12 +154,23 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var nonMemberId = NewId();
 
-        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "New", null, null, nonMemberId));
+        var result = await service.CreateAsync(
+            new CreateColumnCommand(projectId, "New", null, null, nonMemberId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
@@ -73,13 +179,24 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_AdminNonMember_Succeeds()
     {
-        var (repo, cardRepo, memberRepo, _, snapshotRefresher, publisher, auditWriter) = CreateMocks();
+        var (repo, cardRepo, memberRepo, _, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
         var adminUserRepo = new FakeUserRepositoryAdmin();
-        var service = new ColumnService(repo, cardRepo, memberRepo, adminUserRepo, snapshotRefresher, publisher, auditWriter);
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            adminUserRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "New Column", null, null, actorId));
+        var result = await service.CreateAsync(
+            new CreateColumnCommand(projectId, "New Column", null, null, actorId)
+        );
 
         Assert.True(result.IsSuccess);
     }
@@ -87,14 +204,38 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_ExistingColumn_ReturnsColumn()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var result = await service.GetByIdAsync(projectId, columnId, actorId);
 
@@ -105,12 +246,28 @@ public class ColumnServiceTests
     [Fact]
     public async Task GetByIdAsync_NonExistent_ReturnsNotFound()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var result = await service.GetByIdAsync(projectId, NewId(), actorId);
 
@@ -121,16 +278,42 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_ChangesNameColorWip()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.UpdateAsync(new UpdateColumnCommand(projectId, columnId, "In Progress", "#FF0000", 5, actorId));
+        var result = await service.UpdateAsync(
+            new UpdateColumnCommand(projectId, columnId, "In Progress", "#FF0000", 5, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("In Progress", result.Value.Name);
@@ -141,23 +324,68 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_EmptyColumn_CompactsPositions()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId1 = NewId();
         var columnId2 = NewId();
         var columnId3 = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId1, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        repo.Columns.Add(new Column { Id = columnId2, ProjectId = projectId, Name = "In Dev", Position = 1 });
-        repo.Columns.Add(new Column { Id = columnId3, ProjectId = projectId, Name = "Done", Position = 2 });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId1,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId2,
+                ProjectId = projectId,
+                Name = "In Dev",
+                Position = 1,
+            }
+        );
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId3,
+                ProjectId = projectId,
+                Name = "Done",
+                Position = 2,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.DeleteAsync(new DeleteColumnCommand(projectId, columnId2, actorId));
+        var result = await service.DeleteAsync(
+            new DeleteColumnCommand(projectId, columnId2, actorId)
+        );
 
         Assert.True(result.IsSuccess);
-        var remaining = repo.Columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position).ToList();
+        var remaining = repo
+            .Columns.Where(c => c.ProjectId == projectId)
+            .OrderBy(c => c.Position)
+            .ToList();
         Assert.Equal(2, remaining.Count);
         Assert.Equal(0, remaining[0].Position);
         Assert.Equal(1, remaining[1].Position);
@@ -166,17 +394,51 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_NonEmptyColumn_ReturnsDeleteNonEmpty()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        cardRepo.Cards.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, Title = "Task 1" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                ColumnId = columnId,
+                Title = "Task 1",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.DeleteAsync(new DeleteColumnCommand(projectId, columnId, actorId));
+        var result = await service.DeleteAsync(
+            new DeleteColumnCommand(projectId, columnId, actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Columns.DeleteNonEmpty, result.Error.Code);
@@ -185,17 +447,52 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_ArchivedCard_DoesNotBlockDelete()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        cardRepo.Cards.Add(new Card { Id = NewId(), ProjectId = projectId, ColumnId = columnId, Title = "Archived Task", ArchivedAt = DateTime.UtcNow });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                ColumnId = columnId,
+                Title = "Archived Task",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.DeleteAsync(new DeleteColumnCommand(projectId, columnId, actorId));
+        var result = await service.DeleteAsync(
+            new DeleteColumnCommand(projectId, columnId, actorId)
+        );
 
         Assert.True(result.IsSuccess);
     }
@@ -203,22 +500,61 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_ValidColumnIds_RewritesDensePositions()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
-        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
-        var col2 = new Column { Id = NewId(), ProjectId = projectId, Name = "In Dev", Position = 1 };
-        var col3 = new Column { Id = NewId(), ProjectId = projectId, Name = "Done", Position = 2 };
+        var col1 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Backlog",
+            Position = 0,
+        };
+        var col2 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "In Dev",
+            Position = 1,
+        };
+        var col3 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Done",
+            Position = 2,
+        };
         repo.Columns.Add(col1);
         repo.Columns.Add(col2);
         repo.Columns.Add(col3);
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col3.Id, col1.Id, col2.Id], actorId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [col3.Id, col1.Id, col2.Id], actorId)
+        );
 
         Assert.True(result.IsSuccess);
-        var reordered = repo.Columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position).ToList();
+        var reordered = repo
+            .Columns.Where(c => c.ProjectId == projectId)
+            .OrderBy(c => c.Position)
+            .ToList();
         Assert.Equal(col3.Id, reordered[0].Id);
         Assert.Equal(0, reordered[0].Position);
         Assert.Equal(col1.Id, reordered[1].Id);
@@ -230,15 +566,39 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_InvalidColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
-        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
+        var col1 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Backlog",
+            Position = 0,
+        };
         repo.Columns.Add(col1);
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col1.Id, NewId()], actorId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [col1.Id, NewId()], actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Columns.InvalidPosition, result.Error.Code);
@@ -247,19 +607,56 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WrongProjectColumnId_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var otherProjectId = NewId();
-        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
-        var colOther = new Column { Id = NewId(), ProjectId = otherProjectId, Name = "Other", Position = 0 };
+        var col1 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Backlog",
+            Position = 0,
+        };
+        var colOther = new Column
+        {
+            Id = NewId(),
+            ProjectId = otherProjectId,
+            Name = "Other",
+            Position = 0,
+        };
         repo.Columns.Add(col1);
         repo.Columns.Add(colOther);
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = otherProjectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = otherProjectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col1.Id, colOther.Id], actorId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [col1.Id, colOther.Id], actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Columns.InvalidPosition, result.Error.Code);
@@ -268,15 +665,39 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_MissingColumn_ReturnsInvalidPosition()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
-        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
+        var col1 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Backlog",
+            Position = 0,
+        };
         repo.Columns.Add(col1);
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col1.Id, NewId()], actorId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [col1.Id, NewId()], actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Columns.InvalidPosition, result.Error.Code);
@@ -285,12 +706,23 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var nonMemberId = NewId();
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [], nonMemberId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [], nonMemberId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
@@ -301,14 +733,32 @@ public class ColumnServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateColumnCommand(projectId, "New Column", null, null, actorId));
+        var result = await service.CreateAsync(
+            new CreateColumnCommand(projectId, "New Column", null, null, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -323,16 +773,42 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.UpdateAsync(new UpdateColumnCommand(projectId, columnId, "Updated", "#FF0000", 5, actorId));
+        var result = await service.UpdateAsync(
+            new UpdateColumnCommand(projectId, columnId, "Updated", "#FF0000", 5, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -347,16 +823,42 @@ public class ColumnServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
         var columnId = NewId();
 
-        repo.Columns.Add(new Column { Id = columnId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        repo.Columns.Add(
+            new Column
+            {
+                Id = columnId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.DeleteAsync(new DeleteColumnCommand(projectId, columnId, actorId));
+        var result = await service.DeleteAsync(
+            new DeleteColumnCommand(projectId, columnId, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -371,17 +873,47 @@ public class ColumnServiceTests
     [Fact]
     public async Task ReorderAsync_WritesAuditLog()
     {
-        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) = CreateMocks();
-        var service = new ColumnService(repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter);
+        var (repo, cardRepo, memberRepo, userRepo, snapshotRefresher, publisher, auditWriter) =
+            CreateMocks();
+        var service = new ColumnService(
+            repo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            snapshotRefresher,
+            publisher,
+            auditWriter
+        );
         var projectId = NewId();
         var actorId = NewId();
-        var col1 = new Column { Id = NewId(), ProjectId = projectId, Name = "Backlog", Position = 0 };
-        var col2 = new Column { Id = NewId(), ProjectId = projectId, Name = "Done", Position = 1 };
+        var col1 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Backlog",
+            Position = 0,
+        };
+        var col2 = new Column
+        {
+            Id = NewId(),
+            ProjectId = projectId,
+            Name = "Done",
+            Position = 1,
+        };
         repo.Columns.Add(col1);
         repo.Columns.Add(col2);
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Owner,
+            }
+        );
 
-        var result = await service.ReorderAsync(new ReorderColumnsCommand(projectId, [col2.Id, col1.Id], actorId));
+        var result = await service.ReorderAsync(
+            new ReorderColumnsCommand(projectId, [col2.Id, col1.Id], actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -425,16 +957,22 @@ internal class InMemoryColumnRepository : IColumnRepository
         return Task.CompletedTask;
     }
 
-    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(Columns.FirstOrDefault(c => c.Id == id));
+    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Columns.FirstOrDefault(c => c.Id == id));
 
-    public Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Column>>(Columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position).ToList());
+    public Task<IReadOnlyList<Column>> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<Column>>([
+            .. Columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position),
+        ]);
 
     public Task UpdateAsync(Column column, CancellationToken ct = default)
     {
         var idx = Columns.FindIndex(c => c.Id == column.Id);
-        if (idx >= 0) Columns[idx] = column;
+        if (idx >= 0)
+            Columns[idx] = column;
         return Task.CompletedTask;
     }
 
@@ -444,12 +982,16 @@ internal class InMemoryColumnRepository : IColumnRepository
         return Task.CompletedTask;
     }
 
-    public Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
+    public Task ReorderAsync(
+        Guid projectId,
+        IReadOnlyList<Guid> orderedColumnIds,
+        CancellationToken ct = default
+    )
     {
         for (var i = 0; i < orderedColumnIds.Count; i++)
         {
             var col = Columns.FirstOrDefault(c => c.Id == orderedColumnIds[i]);
-            if (col != null) col.Position = i;
+            col?.Position = i;
         }
         return Task.CompletedTask;
     }
@@ -465,16 +1007,31 @@ internal class InMemoryCardRepository : ICardRepository
 {
     public List<Card> Cards { get; } = [];
 
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+        Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
 
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+            Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+        );
 
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+    public Task<Card?> GetByProjectAndNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+        );
 
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(
+        Guid projectId,
+        CardListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = Cards.Where(c => c.ProjectId == projectId);
         if (filter.ColumnId.HasValue)
@@ -483,35 +1040,87 @@ internal class InMemoryCardRepository : ICardRepository
             query = query.Where(c => c.ArchivedAt == null);
         if (filter.Type.HasValue)
             query = query.Where(c => c.Type == filter.Type.Value);
-        return Task.FromResult<IReadOnlyList<Card>>(query.ToList());
+        return Task.FromResult<IReadOnlyList<Card>>([.. query]);
     }
 
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
+        Task.FromResult(
+            Cards
+                .Where(c => c.ProjectId == projectId)
+                .Select(c => c.CardNumber)
+                .DefaultIfEmpty(0)
+                .Max()
+        );
 
-    public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
-    public Task UpdateAsync(Card card, CancellationToken ct = default) { var idx = Cards.FindIndex(c => c.Id == card.Id); if (idx >= 0) Cards[idx] = card; return Task.CompletedTask; }
-    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = Cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) Cards[idx] = c; } return Task.CompletedTask; }
-    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+    public Task AddAsync(Card card, CancellationToken ct = default)
+    {
+        Cards.Add(card);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Card card, CancellationToken ct = default)
+    {
+        var idx = Cards.FindIndex(c => c.Id == card.Id);
+        if (idx >= 0)
+            Cards[idx] = card;
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
+    {
+        foreach (var c in cards)
+        {
+            var idx = Cards.FindIndex(x => x.Id == c.Id);
+            if (idx >= 0)
+                Cards[idx] = c;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+    {
+        Cards.RemoveAll(c => c.Id == cardId);
+        return Task.CompletedTask;
+    }
+
+    public Task CompactColumnPositionsAsync(
+        Guid columnId,
+        int exceptPosition,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
+
+    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+        Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository
 {
     public List<ProjectMember> Members { get; } = [];
 
-    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
+    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
 
-    public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-        => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
+    public Task<ProjectMember?> GetByProjectAndUserAsync(
+        Guid projectId,
+        Guid userId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+        );
 
-    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(m => m.ProjectId == projectId).ToList());
+    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. Members.Where(m => m.ProjectId == projectId),
+        ]);
 
-    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+        IEnumerable<Guid> projectIds,
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
         var counts = Members
@@ -524,7 +1133,8 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
     public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
         IEnumerable<Guid> projectIds,
         Guid userId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
         var roles = Members
@@ -542,7 +1152,8 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
         var idx = Members.FindIndex(m => m.Id == member.Id);
-        if (idx >= 0) Members[idx] = member;
+        if (idx >= 0)
+            Members[idx] = member;
         return Task.CompletedTask;
     }
 

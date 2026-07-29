@@ -146,7 +146,7 @@ public partial class AttachmentService(
             );
 
         var attachments = await _attachmentRepo.ListByCardAsync(cardId, ct);
-        return Result<IReadOnlyList<AttachmentDto>>.Success(attachments.Select(MapToDto).ToList());
+        return Result<IReadOnlyList<AttachmentDto>>.Success([.. attachments.Select(MapToDto)]);
     }
 
     public async Task<Result<(Stream Stream, string ContentType, string FileName)>> DownloadAsync(

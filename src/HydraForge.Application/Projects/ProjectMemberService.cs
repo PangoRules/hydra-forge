@@ -1,4 +1,3 @@
-using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -16,7 +15,13 @@ public class ProjectMemberService(
 {
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
-    private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        BoardEntityType entityType,
+        Guid entityId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -30,6 +35,7 @@ public class ProjectMemberService(
         );
         await _publisher.PublishAsync(envelope, ct);
     }
+
     public async Task<Result<ProjectMemberDto>> AddMemberAsync(
         AddProjectMemberCommand cmd,
         CancellationToken ct = default
@@ -49,12 +55,17 @@ public class ProjectMemberService(
                 )
             );
 
-        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.AddedByUserId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.AddedByUserId,
+                ct
+            )
+        )
             return Result<ProjectMemberDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
@@ -64,10 +75,7 @@ public class ProjectMemberService(
         );
         if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result<ProjectMemberDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner role required."
-                )
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
             );
 
         var existingMember = await memberRepo.GetByProjectAndUserAsync(
@@ -77,10 +85,7 @@ public class ProjectMemberService(
         );
         if (existingMember != null)
             return Result<ProjectMemberDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MemberDuplicate,
-                    "User is already a member."
-                )
+                new Error(DomainErrorCodes.Projects.MemberDuplicate, "User is already a member.")
             );
 
         var newMember = new ProjectMember
@@ -93,12 +98,24 @@ public class ProjectMemberService(
         };
 
         await memberRepo.AddMemberAsync(newMember, ct);
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Card, newMember.Id, BoardAction.Created, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Card,
+            newMember.Id,
+            BoardAction.Created,
+            ct
+        );
 
         var user = await userRepo.FindByIdAsync(newMember.UserId, ct);
 
         return Result<ProjectMemberDto>.Success(
-            new ProjectMemberDto(newMember.Id, newMember.UserId, user?.Username ?? string.Empty, newMember.Role, newMember.JoinedAt)
+            new ProjectMemberDto(
+                newMember.Id,
+                newMember.UserId,
+                user?.Username ?? string.Empty,
+                newMember.Role,
+                newMember.JoinedAt
+            )
         );
     }
 
@@ -113,12 +130,17 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.ChangedByUserId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ChangedByUserId,
+                ct
+            )
+        )
             return Result<ProjectMemberDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
@@ -128,10 +150,7 @@ public class ProjectMemberService(
         );
         if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result<ProjectMemberDto>.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner role required."
-                )
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
             );
 
         var member = await memberRepo.GetByIdAsync(cmd.MemberId, ct);
@@ -144,7 +163,13 @@ public class ProjectMemberService(
         await memberRepo.UpdateMemberAsync(member, ct);
 
         return Result<ProjectMemberDto>.Success(
-            new ProjectMemberDto(member.Id, member.UserId, member.User?.Username ?? string.Empty, member.Role, member.JoinedAt)
+            new ProjectMemberDto(
+                member.Id,
+                member.UserId,
+                member.User?.Username ?? string.Empty,
+                member.Role,
+                member.JoinedAt
+            )
         );
     }
 
@@ -159,12 +184,17 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
-        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.RemovedByUserId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.RemovedByUserId,
+                ct
+            )
+        )
             return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.MembershipDenied,
-                    "Access denied."
-                )
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
@@ -174,10 +204,7 @@ public class ProjectMemberService(
         );
         if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result.Failure(
-                new Error(
-                    DomainErrorCodes.Projects.OwnerRequired,
-                    "Owner role required."
-                )
+                new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner role required.")
             );
 
         var member = await memberRepo.GetByIdAsync(cmd.MemberId, ct);
@@ -200,7 +227,13 @@ public class ProjectMemberService(
         }
 
         await memberRepo.RemoveMemberAsync(member.Id, ct);
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Project, member.Id, BoardAction.Deleted, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Project,
+            member.Id,
+            BoardAction.Deleted,
+            ct
+        );
 
         return Result.Success();
     }

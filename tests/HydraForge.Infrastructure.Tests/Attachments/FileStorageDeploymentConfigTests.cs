@@ -27,7 +27,9 @@ public class FileStorageDeploymentConfigTests
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "HydraForge.slnx")))
+        while (
+            directory != null && !File.Exists(Path.Combine(directory.FullName, "HydraForge.slnx"))
+        )
             directory = directory.Parent;
 
         if (directory == null)

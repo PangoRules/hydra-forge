@@ -19,10 +19,9 @@ public class BoardRendererTests
     [Fact]
     public void BuildLayout_StatusBar_ShowsUnreadCount()
     {
-        var renderer = new BoardRenderer();
         var columns = new List<BoardRenderer.ColumnData>();
 
-        var layout = renderer.BuildLayout(
+        var layout = BoardRenderer.BuildLayout(
             columns,
             selectedColumn: 0,
             selectedCard: 0,
@@ -42,10 +41,9 @@ public class BoardRendererTests
     [Fact]
     public void BuildLayout_StatusBar_ShowsZeroUnreadCount()
     {
-        var renderer = new BoardRenderer();
         var columns = new List<BoardRenderer.ColumnData>();
 
-        var layout = renderer.BuildLayout(
+        var layout = BoardRenderer.BuildLayout(
             columns,
             selectedColumn: 0,
             selectedCard: 0,
@@ -65,10 +63,9 @@ public class BoardRendererTests
     [Fact]
     public void BuildLayout_StatusBar_IncludesOnlineAndErrorCounts()
     {
-        var renderer = new BoardRenderer();
         var columns = new List<BoardRenderer.ColumnData>();
 
-        var layout = renderer.BuildLayout(
+        var layout = BoardRenderer.BuildLayout(
             columns,
             selectedColumn: 0,
             selectedCard: 0,

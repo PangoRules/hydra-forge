@@ -22,7 +22,8 @@ public class Notification
         string message,
         Guid? cardId,
         Guid? projectId,
-        string? actionUrl)
+        string? actionUrl
+    )
     {
         return new Notification
         {

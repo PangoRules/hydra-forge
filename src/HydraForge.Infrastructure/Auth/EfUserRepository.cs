@@ -12,7 +12,10 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
-    public async Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    )
     {
         return await context.Users.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
     }
@@ -23,7 +26,12 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.FirstOrDefaultAsync(u => u.UsernameNormalized == normalized);
     }
 
-    public async Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    )
     {
         IQueryable<User> query = context.Users;
 
@@ -47,8 +55,7 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         var user = await context.Users.FindAsync(userId);
         if (user == null)
             return;
-        user.LastLoginAt = loginAt;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.RecordLogin(loginAt);
         await context.SaveChangesAsync();
     }
 
@@ -62,14 +69,56 @@ public class EfUserRepository(HydraForgeDbContext context) : IUserRepository
         return await context.Users.AnyAsync(u => u.Id == userId && u.IsAdmin, ct);
     }
 
-    public async Task CreateAsync(User user)
+    public async Task CreateAsync(User user, CancellationToken ct = default)
     {
-        user.UsernameNormalized = user.Username.ToLowerInvariant();
-        user.EmailNormalized = user.Email.ToLowerInvariant();
-        user.CreatedAt = DateTime.UtcNow;
-        user.UpdatedAt = DateTime.UtcNow;
-
         context.Users.Add(user);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    )
+    {
+        IQueryable<User> query = context.Users;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalized = search.ToLowerInvariant();
+            query = query.Where(u =>
+                EF.Functions.ILike(u.Username, $"%{normalized}%")
+                || EF.Functions.ILike(u.Name, $"%{normalized}%")
+                || EF.Functions.ILike(u.LastName, $"%{normalized}%")
+                || EF.Functions.ILike(u.Email, $"%{normalized}%")
+            );
+        }
+
+        return await query.OrderBy(u => u.Username).Skip(skip).Take(take).ToListAsync(ct);
+    }
+
+    public async Task<int> CountAsync(string? search, CancellationToken ct = default)
+    {
+        IQueryable<User> query = context.Users;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalized = search.ToLowerInvariant();
+            query = query.Where(u =>
+                EF.Functions.ILike(u.Username, $"%{normalized}%")
+                || EF.Functions.ILike(u.Name, $"%{normalized}%")
+                || EF.Functions.ILike(u.LastName, $"%{normalized}%")
+                || EF.Functions.ILike(u.Email, $"%{normalized}%")
+            );
+        }
+
+        return await query.CountAsync(ct);
+    }
+
+    public async Task UpdateAsync(User user, CancellationToken ct = default)
+    {
+        context.Users.Update(user);
+        await context.SaveChangesAsync(ct);
     }
 }

@@ -19,14 +19,9 @@ public record UpdateProjectRequest(
     string? GitProvider
 );
 
-public record AddMemberRequest(
-    Guid UserId,
-    MemberRole Role
-);
+public record AddMemberRequest(Guid UserId, MemberRole Role);
 
-public record UpdateMemberRequest(
-    MemberRole Role
-);
+public record UpdateMemberRequest(MemberRole Role);
 
 // ── Responses ───────────────────────────────────────────────
 
@@ -43,13 +38,7 @@ public record ProjectResponse(
     IReadOnlyList<MemberResponse> Members
 );
 
-public record ColumnResponse(
-    Guid Id,
-    string Name,
-    int Position,
-    int? WipLimit,
-    string? Color
-);
+public record ColumnResponse(Guid Id, string Name, int Position, int? WipLimit, string? Color);
 
 public record MemberResponse(
     Guid Id,

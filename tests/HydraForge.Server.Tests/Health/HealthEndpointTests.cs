@@ -1,10 +1,8 @@
 using System.Net;
-using HydraForge.Server.Middleware;
-using Microsoft.AspNetCore.Builder;
+using HydraForge.Application.Health;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace HydraForge.Server.Tests.Health;
 
@@ -46,33 +44,34 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             // Remove existing IHealthProbe registrations (singleton GetHealthHandler already constructed with them)
-            var removeDescriptors = services.Where(d =>
-                d.ServiceType == typeof(HydraForge.Application.Health.IHealthProbe)).ToList();
+            var removeDescriptors = services
+                .Where(d => d.ServiceType == typeof(IHealthProbe))
+                .ToList();
             foreach (var d in removeDescriptors)
                 services.Remove(d);
 
             // Add test fakes
-            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeServerHealthProbe>();
-            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeDbHealthProbe>();
-            services.AddScoped<HydraForge.Application.Health.IHealthProbe, FakeLlmHealthProbe>();
+            services.AddScoped<IHealthProbe, FakeServerHealthProbe>();
+            services.AddScoped<IHealthProbe, FakeDbHealthProbe>();
+            services.AddScoped<IHealthProbe, FakeLlmHealthProbe>();
         });
     }
 }
 
-internal class FakeServerHealthProbe : HydraForge.Application.Health.IHealthProbe
+internal class FakeServerHealthProbe : IHealthProbe
 {
-    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
-        => Task.FromResult(HydraForge.Application.Health.HealthStatus.Healthy);
+    public Task<HealthStatus> CheckAsync(CancellationToken ct = default) =>
+        Task.FromResult(HealthStatus.Healthy);
 }
 
-internal class FakeDbHealthProbe : HydraForge.Application.Health.IHealthProbe
+internal class FakeDbHealthProbe : IHealthProbe
 {
-    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
-        => Task.FromResult(HydraForge.Application.Health.HealthStatus.Healthy);
+    public Task<HealthStatus> CheckAsync(CancellationToken ct = default) =>
+        Task.FromResult(HealthStatus.Healthy);
 }
 
-internal class FakeLlmHealthProbe : HydraForge.Application.Health.IHealthProbe
+internal class FakeLlmHealthProbe : IHealthProbe
 {
-    public Task<HydraForge.Application.Health.HealthStatus> CheckAsync(CancellationToken ct = default)
-        => Task.FromResult(HydraForge.Application.Health.HealthStatus.NotConfigured);
+    public Task<HealthStatus> CheckAsync(CancellationToken ct = default) =>
+        Task.FromResult(HealthStatus.NotConfigured);
 }

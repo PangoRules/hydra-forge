@@ -7,18 +7,18 @@ using Spectre.Console.Rendering;
 
 namespace HydraForge.Tui.Screens;
 
-public class SpecViewerScreen : IScreen
+public class SpecViewerScreen(
+    ApiClientFactory apiClientFactory,
+    AppState appState,
+    ErrorCollector errorCollector,
+    SignalRConnectionManager signalRConnectionManager,
+    Guid projectId,
+    Guid cardId,
+    CardType cardType,
+    string mode = "spec"
+) : IScreen
 {
-    private readonly ApiClientFactory _apiClientFactory;
-    private readonly AppState _appState;
-    private readonly ErrorCollector _errorCollector;
-    private readonly SignalRConnectionManager _signalRConnectionManager;
     private readonly EditorLauncher _editorLauncher = new();
-
-    private readonly Guid _projectId;
-    private readonly Guid _cardId;
-    private readonly CardType _cardType;
-    private readonly string _mode;
     private bool _signalRSubscribed;
 
     // A key-triggered render (create/edit/etc.) and the SignalR echo of that same action
@@ -27,29 +27,9 @@ public class SpecViewerScreen : IScreen
     // frames. Same pattern BoardScreen already uses for the identical reason.
     private readonly SemaphoreSlim _renderLock = new(1, 1);
 
-    private List<DocumentItem> _documents = new();
-    private List<VersionItem> _versions = new();
+    private List<DocumentItem> _documents = [];
+    private List<VersionItem> _versions = [];
     private int _selectedIndex;
-
-    public SpecViewerScreen(
-        ApiClientFactory apiClientFactory,
-        AppState appState,
-        ErrorCollector errorCollector,
-        SignalRConnectionManager signalRConnectionManager,
-        Guid projectId,
-        Guid cardId,
-        CardType cardType,
-        string mode = "spec")
-    {
-        _apiClientFactory = apiClientFactory;
-        _appState = appState;
-        _errorCollector = errorCollector;
-        _signalRConnectionManager = signalRConnectionManager;
-        _projectId = projectId;
-        _cardId = cardId;
-        _cardType = cardType;
-        _mode = mode;
-    }
 
     public async Task OnEnterAsync()
     {
@@ -58,7 +38,7 @@ public class SpecViewerScreen : IScreen
 
         if (!_signalRSubscribed)
         {
-            _signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
+            signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
             _signalRSubscribed = true;
         }
     }
@@ -67,7 +47,7 @@ public class SpecViewerScreen : IScreen
     {
         if (_signalRSubscribed)
         {
-            _signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
+            signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
             _signalRSubscribed = false;
         }
         return Task.CompletedTask;
@@ -78,14 +58,16 @@ public class SpecViewerScreen : IScreen
     // already alive — no need to Connect/Disconnect here, only (un)subscribe the handler.
     private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
     {
-        if (evt.ProjectId != _projectId || evt.CardId != _cardId) return;
+        if (evt.ProjectId != projectId || evt.CardId != cardId)
+            return;
 
-        var expectedEntityType = _mode == "spec" ? "Spec" : "Plan";
-        if (evt.EntityType != expectedEntityType) return;
+        var expectedEntityType = mode == "spec" ? "Spec" : "Plan";
+        if (evt.EntityType != expectedEntityType)
+            return;
 
         await LoadDocumentsAsync();
         await LoadVersionsForSelectedAsync();
-        if (_appState.CurrentScreen == this)
+        if (appState.CurrentScreen == this)
             await RenderAsync();
     }
 
@@ -96,12 +78,12 @@ public class SpecViewerScreen : IScreen
         {
             AnsiConsole.Clear();
 
-            var title = _mode == "spec" ? "Specifications" : "Plans";
+            var title = mode == "spec" ? "Specifications" : "Plans";
             AnsiConsole.Write(new Rule($"[blue]{title}[/]"));
 
             if (_documents.Count == 0)
             {
-                var empty = new Panel(new Markup($"[grey]No {_mode}s for this card.[/]"))
+                var empty = new Panel(new Markup($"[grey]No {mode}s for this card.[/]"))
                 {
                     Header = new PanelHeader(" Documents "),
                     Border = BoxBorder.Rounded,
@@ -144,22 +126,23 @@ public class SpecViewerScreen : IScreen
             var prefix = isSelected ? "[blue]>[/]" : " ";
 
             var statusBadge = "";
-            if (_mode == "plan" && doc.Status != null)
+            if (mode == "plan" && doc.Status != null)
             {
                 statusBadge = doc.Status switch
                 {
                     "Pending" => " [grey](pending)[/]",
                     "Active" => " [green](active)[/]",
                     "Done" => " [green](done)[/]",
-                    _ => ""
+                    _ => "",
                 };
             }
 
-            var typeBadge = doc.DocType != null
-                ? $" [{GetTypeColor(doc.DocType)}]{doc.DocType}[/]"
-                : "";
+            var typeBadge =
+                doc.DocType != null ? $" [{GetTypeColor(doc.DocType)}]{doc.DocType}[/]" : "";
 
-            rows.Add(new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}{statusBadge}"));
+            rows.Add(
+                new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}{statusBadge}")
+            );
             rows.Add(new Markup($"   [grey]v{doc.Version} — {doc.UpdatedAt:yyyy-MM-dd HH:mm}[/]"));
         }
 
@@ -225,14 +208,19 @@ public class SpecViewerScreen : IScreen
         var visible = _versions.Take(maxEntries).ToList();
 
         var rows = visible
-            .Select(v => (IRenderable)new Markup(
-                $"v{v.Version} [grey]{v.CreatedAt:yyyy-MM-dd HH:mm}[/]\n" +
-                $"[grey]{Markup.Escape(v.CreatedByUserId.ToString()[..8])}[/]"
-            ))
+            .Select(v =>
+                (IRenderable)
+                    new Markup(
+                        $"v{v.Version} [grey]{v.CreatedAt:yyyy-MM-dd HH:mm}[/]\n"
+                            + $"[grey]{Markup.Escape(v.CreatedByUserId.ToString()[..8])}[/]"
+                    )
+            )
             .ToList();
 
         if (visible.Count < _versions.Count)
-            rows.Add(new Markup($"[grey]+{_versions.Count - visible.Count} more — [[r]] Restore[/]"));
+            rows.Add(
+                new Markup($"[grey]+{_versions.Count - visible.Count} more — [[r]] Restore[/]")
+            );
 
         return new Rows(rows);
     }
@@ -243,11 +231,11 @@ public class SpecViewerScreen : IScreen
     {
         if (_documents.Count > 0)
         {
-            if (_mode == "plan")
+            if (mode == "plan")
                 yield return "[j/k] Move";
             yield return "[Enter] View";
             yield return "[e] Edit";
-            if (_mode == "plan")
+            if (mode == "plan")
                 yield return "[s] Status";
             if (_versions.Count > 1)
                 yield return "[r] Restore version";
@@ -260,14 +248,14 @@ public class SpecViewerScreen : IScreen
 
     // Spec.CardId owns max 1 Spec per Card (see D-44) — Plans are legitimately
     // multi, so this only restricts creation once a card already has its Spec.
-    private bool CanCreateMore => _mode != "spec" || _documents.Count == 0;
+    private bool CanCreateMore => mode != "spec" || _documents.Count == 0;
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
     {
         switch (key.Key)
         {
             case ConsoleKey.J or ConsoleKey.DownArrow:
-                if (_mode == "plan" && _selectedIndex < _documents.Count - 1)
+                if (mode == "plan" && _selectedIndex < _documents.Count - 1)
                 {
                     _selectedIndex++;
                     await LoadVersionsForSelectedAsync();
@@ -275,8 +263,9 @@ public class SpecViewerScreen : IScreen
                 }
                 break;
 
-            case ConsoleKey.K or ConsoleKey.UpArrow:
-                if (_mode == "plan" && _selectedIndex > 0)
+            case ConsoleKey.K
+            or ConsoleKey.UpArrow:
+                if (mode == "plan" && _selectedIndex > 0)
                 {
                     _selectedIndex--;
                     await LoadVersionsForSelectedAsync();
@@ -298,7 +287,7 @@ public class SpecViewerScreen : IScreen
                 break;
 
             case ConsoleKey.S:
-                if (_mode == "plan")
+                if (mode == "plan")
                     await ChangeStatusAsync();
                 break;
 
@@ -312,14 +301,15 @@ public class SpecViewerScreen : IScreen
                 break;
 
             case ConsoleKey.Escape:
-                _appState.CurrentScreen = null;
+                appState.CurrentScreen = null;
                 break;
         }
     }
 
     private async Task ViewDocumentAsync()
     {
-        if (_selectedIndex >= _documents.Count) return;
+        if (_selectedIndex >= _documents.Count)
+            return;
         var doc = _documents[_selectedIndex];
         var lines = doc.Content.Replace("\r\n", "\n").Split('\n');
 
@@ -336,7 +326,7 @@ public class SpecViewerScreen : IScreen
             var panel = new Panel(new Markup(Markup.Escape(visible)))
             {
                 Border = BoxBorder.Rounded,
-                Header = new PanelHeader($" {_mode} v{doc.Version} "),
+                Header = new PanelHeader($" {mode} v{doc.Version} "),
                 Expand = true,
             };
             AnsiConsole.Write(panel);
@@ -346,10 +336,12 @@ public class SpecViewerScreen : IScreen
             switch (key.Key)
             {
                 case ConsoleKey.J or ConsoleKey.DownArrow:
-                    if (scroll + pageSize < lines.Length) scroll++;
+                    if (scroll + pageSize < lines.Length)
+                        scroll++;
                     break;
                 case ConsoleKey.K or ConsoleKey.UpArrow:
-                    if (scroll > 0) scroll--;
+                    if (scroll > 0)
+                        scroll--;
                     break;
                 case ConsoleKey.Escape or ConsoleKey.Q or ConsoleKey.Enter:
                     await RenderAsync();
@@ -360,10 +352,11 @@ public class SpecViewerScreen : IScreen
 
     private async Task EditDocumentAsync()
     {
-        if (_selectedIndex >= _documents.Count) return;
+        if (_selectedIndex >= _documents.Count)
+            return;
         var doc = _documents[_selectedIndex];
 
-        if (_mode == "plan" && doc.Status == "Done")
+        if (mode == "plan" && doc.Status == "Done")
         {
             AnsiConsole.MarkupLine("[yellow]Cannot edit a completed plan.[/]");
             return;
@@ -372,17 +365,20 @@ public class SpecViewerScreen : IScreen
         var newTitle = AnsiConsole.Prompt(
             new TextPrompt<string>("Title:")
                 .DefaultValue(doc.Title)
-                .Validate(t => string.IsNullOrWhiteSpace(t)
-                    ? ValidationResult.Error("Title required")
-                    : ValidationResult.Success()));
+                .Validate(t =>
+                    string.IsNullOrWhiteSpace(t)
+                        ? ValidationResult.Error("Title required")
+                        : ValidationResult.Success()
+                )
+        );
 
         var newContent = await _editorLauncher.EditAsync(doc.Content);
         if (newContent == null)
         {
             AnsiConsole.MarkupLine("[yellow]Editor failed. Using inline prompt.[/]");
             newContent = AnsiConsole.Prompt(
-                new TextPrompt<string>("Content:")
-                    .DefaultValue(doc.Content));
+                new TextPrompt<string>("Content:").DefaultValue(doc.Content)
+            );
         }
 
         if (newTitle == doc.Title && newContent == doc.Content)
@@ -393,25 +389,33 @@ public class SpecViewerScreen : IScreen
 
         try
         {
-            var client = _apiClientFactory.GetClient();
+            var client = apiClientFactory.GetClient();
 
-            if (_mode == "spec")
+            if (mode == "spec")
             {
-                await client.SpecsPUTAsync(_projectId, doc.Id, new UpdateSpecRequest
-                {
-                    Title = newTitle,
-                    Description = doc.Description,
-                    Content = newContent
-                });
+                await client.SpecsPUTAsync(
+                    projectId,
+                    doc.Id,
+                    new UpdateSpecRequest
+                    {
+                        Title = newTitle,
+                        Description = doc.Description,
+                        Content = newContent,
+                    }
+                );
             }
             else
             {
-                await client.PlansPUTAsync(_projectId, doc.Id, new UpdatePlanRequest
-                {
-                    Title = newTitle,
-                    Description = doc.Description,
-                    Content = newContent
-                });
+                await client.PlansPUTAsync(
+                    projectId,
+                    doc.Id,
+                    new UpdatePlanRequest
+                    {
+                        Title = newTitle,
+                        Description = doc.Description,
+                        Content = newContent,
+                    }
+                );
             }
 
             AnsiConsole.MarkupLine("[green]Document updated.[/]");
@@ -421,92 +425,109 @@ public class SpecViewerScreen : IScreen
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Update failed: {ex.Message}");
+            errorCollector.Add("N/A", $"Update failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
     }
 
     private async Task CreateDocumentAsync()
     {
         var title = AnsiConsole.Prompt(
-            new TextPrompt<string>("Title:")
-                .Validate(t => string.IsNullOrWhiteSpace(t)
+            new TextPrompt<string>("Title:").Validate(t =>
+                string.IsNullOrWhiteSpace(t)
                     ? ValidationResult.Error("Title required")
-                    : ValidationResult.Success()));
+                    : ValidationResult.Success()
+            )
+        );
 
         var content = await _editorLauncher.EditAsync("");
         if (content == null)
         {
             AnsiConsole.MarkupLine("[yellow]Editor failed. Using inline prompt.[/]");
             content = AnsiConsole.Prompt(
-                new TextPrompt<string>("Content (markdown):")
-                    .DefaultValue(""));
+                new TextPrompt<string>("Content (markdown):").DefaultValue("")
+            );
         }
 
         try
         {
-            var client = _apiClientFactory.GetClient();
+            var client = apiClientFactory.GetClient();
 
-            if (_mode == "spec")
+            if (mode == "spec")
             {
-                await client.CardsPOST2Async(_projectId, _cardId, new CreateSpecRequest
-                {
-                    DocType = CardTypeMapper.ToDocType(_cardType),
-                    Title = title,
-                    Description = null,
-                    Content = content
-                });
+                await client.CardsPOST2Async(
+                    projectId,
+                    cardId,
+                    new CreateSpecRequest
+                    {
+                        DocType = CardTypeMapper.ToDocType(cardType),
+                        Title = title,
+                        Description = null,
+                        Content = content,
+                    }
+                );
             }
             else
             {
-                await client.CardsPOSTAsync(_projectId, _cardId, new CreatePlanRequest
-                {
-                    Title = title,
-                    Description = null,
-                    Content = content,
-                    SpecId = null,
-                    Position = _documents.Count
-                });
+                await client.CardsPOSTAsync(
+                    projectId,
+                    cardId,
+                    new CreatePlanRequest
+                    {
+                        Title = title,
+                        Description = null,
+                        Content = content,
+                        SpecId = null,
+                        Position = _documents.Count,
+                    }
+                );
             }
 
-            AnsiConsole.MarkupLine($"[green]{_mode} created![/]");
+            AnsiConsole.MarkupLine($"[green]{mode} created![/]");
             await LoadDocumentsAsync();
             await LoadVersionsForSelectedAsync();
             await RenderAsync();
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Create failed: {ex.Message}");
+            errorCollector.Add("N/A", $"Create failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
     }
 
     private async Task ChangeStatusAsync()
     {
-        if (_selectedIndex >= _documents.Count) return;
+        if (_selectedIndex >= _documents.Count)
+            return;
         var doc = _documents[_selectedIndex];
-        if (doc.Status == null) return;
+        if (doc.Status == null)
+            return;
 
         var current = Enum.Parse<PlanStatus>(doc.Status);
-        var choices = Enum.GetValues<PlanStatus>().Where(s => s != current).Select(s => s.ToString()).ToList();
+        var choices = Enum.GetValues<PlanStatus>()
+            .Where(s => s != current)
+            .Select(s => s.ToString())
+            .ToList();
 
         var idx = await ListPrompt.Show("New status:", choices, renderBackdrop: RenderAsync);
-        if (!idx.HasValue) return;
+        if (!idx.HasValue)
+            return;
 
         var newStatus = choices[idx.Value];
         try
         {
-            var client = _apiClientFactory.GetClient();
-            await client.StatusAsync(_projectId, doc.Id, new SetPlanStatusRequest
-            {
-                Status = Enum.Parse<PlanStatus>(newStatus)
-            });
+            var client = apiClientFactory.GetClient();
+            await client.StatusAsync(
+                projectId,
+                doc.Id,
+                new SetPlanStatusRequest { Status = Enum.Parse<PlanStatus>(newStatus) }
+            );
 
             AnsiConsole.MarkupLine($"[green]Status set to {newStatus}.[/]");
             await LoadDocumentsAsync();
@@ -514,39 +535,51 @@ public class SpecViewerScreen : IScreen
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Status change failed: {ex.Message}");
+            errorCollector.Add("N/A", $"Status change failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
     }
 
     private async Task RestoreVersionAsync()
     {
-        if (_selectedIndex >= _documents.Count || _versions.Count <= 1) return;
+        if (_selectedIndex >= _documents.Count || _versions.Count <= 1)
+            return;
         var doc = _documents[_selectedIndex];
 
-        if (_mode == "plan" && doc.Status == "Done")
+        if (mode == "plan" && doc.Status == "Done")
         {
             AnsiConsole.MarkupLine("[yellow]Cannot restore a completed plan.[/]");
             return;
         }
 
-        var choices = _versions.Select(v => $"v{v.Version} — {v.CreatedAt:yyyy-MM-dd HH:mm}").ToList();
+        var choices = _versions
+            .Select(v => $"v{v.Version} — {v.CreatedAt:yyyy-MM-dd HH:mm}")
+            .ToList();
         var idx = await ListPrompt.Show("Restore version:", choices, renderBackdrop: RenderAsync);
-        if (!idx.HasValue) return;
+        if (!idx.HasValue)
+            return;
 
         var version = _versions[idx.Value].Version;
 
         try
         {
-            var client = _apiClientFactory.GetClient();
+            var client = apiClientFactory.GetClient();
 
-            if (_mode == "spec")
-                await client.Restore3Async(_projectId, doc.Id, new RestoreSpecVersionRequest { Version = version });
+            if (mode == "spec")
+                await client.Restore3Async(
+                    projectId,
+                    doc.Id,
+                    new RestoreSpecVersionRequest { Version = version }
+                );
             else
-                await client.Restore2Async(_projectId, doc.Id, new RestorePlanVersionRequest { Version = version });
+                await client.Restore2Async(
+                    projectId,
+                    doc.Id,
+                    new RestorePlanVersionRequest { Version = version }
+                );
 
             AnsiConsole.MarkupLine($"[green]Restored v{version}.[/]");
             await LoadDocumentsAsync();
@@ -555,11 +588,11 @@ public class SpecViewerScreen : IScreen
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Restore failed: {ex.Message}");
+            errorCollector.Add("N/A", $"Restore failed: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
     }
 
@@ -567,21 +600,41 @@ public class SpecViewerScreen : IScreen
     {
         try
         {
-            var client = _apiClientFactory.GetClient();
+            var client = apiClientFactory.GetClient();
 
-            if (_mode == "spec")
+            if (mode == "spec")
             {
-                var list = await client.CardsGET2Async(_projectId, _cardId);
-                _documents = list.Specs.Select(s => new DocumentItem(
-                    s.Id, s.Title, s.Content, s.Version, s.UpdatedAt.DateTime, s.DocType.ToString(), null, s.Description
-                )).ToList();
+                var list = await client.CardsGET2Async(projectId, cardId);
+                _documents =
+                [
+                    .. list.Specs.Select(s => new DocumentItem(
+                        s.Id,
+                        s.Title,
+                        s.Content,
+                        s.Version,
+                        s.UpdatedAt.DateTime,
+                        s.DocType.ToString(),
+                        null,
+                        s.Description
+                    )),
+                ];
             }
             else
             {
-                var list = await client.CardsGETAsync(_projectId, _cardId);
-                _documents = list.Plans.Select(p => new DocumentItem(
-                    p.Id, p.Title, p.Content, p.Version, p.UpdatedAt.DateTime, null, p.Status.ToString(), p.Description
-                )).ToList();
+                var list = await client.CardsGETAsync(projectId, cardId);
+                _documents =
+                [
+                    .. list.Plans.Select(p => new DocumentItem(
+                        p.Id,
+                        p.Title,
+                        p.Content,
+                        p.Version,
+                        p.UpdatedAt.DateTime,
+                        null,
+                        p.Status.ToString(),
+                        p.Description
+                    )),
+                ];
             }
 
             if (_selectedIndex >= _documents.Count)
@@ -589,62 +642,82 @@ public class SpecViewerScreen : IScreen
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Load error: {ex.Message}");
+            errorCollector.Add("N/A", $"Load error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Load error: {ex.Message}");
+            errorCollector.Add("N/A", $"Load error: {ex.Message}");
         }
     }
 
     private async Task LoadVersionsForSelectedAsync()
     {
         _versions = [];
-        if (_selectedIndex >= _documents.Count) return;
+        if (_selectedIndex >= _documents.Count)
+            return;
         var doc = _documents[_selectedIndex];
 
         try
         {
-            var client = _apiClientFactory.GetClient();
+            var client = apiClientFactory.GetClient();
 
-            if (_mode == "spec")
+            if (mode == "spec")
             {
-                var list = await client.Versions2Async(_projectId, doc.Id);
-                _versions = list.Versions
-                    .Select(v => new VersionItem(v.Version, v.CreatedAt.DateTime, v.CreatedByUserId))
-                    .OrderByDescending(v => v.Version)
-                    .ToList();
+                var list = await client.Versions2Async(projectId, doc.Id);
+                _versions =
+                [
+                    .. list
+                        .Versions.Select(v => new VersionItem(
+                            v.Version,
+                            v.CreatedAt.DateTime,
+                            v.CreatedByUserId
+                        ))
+                        .OrderByDescending(v => v.Version),
+                ];
             }
             else
             {
-                var list = await client.VersionsAsync(_projectId, doc.Id);
-                _versions = list.Versions
-                    .Select(v => new VersionItem(v.Version, v.CreatedAt.DateTime, v.CreatedByUserId))
-                    .OrderByDescending(v => v.Version)
-                    .ToList();
+                var list = await client.VersionsAsync(projectId, doc.Id);
+                _versions =
+                [
+                    .. list
+                        .Versions.Select(v => new VersionItem(
+                            v.Version,
+                            v.CreatedAt.DateTime,
+                            v.CreatedByUserId
+                        ))
+                        .OrderByDescending(v => v.Version),
+                ];
             }
         }
         catch (ApiException ex)
         {
-            _errorCollector.Add("N/A", $"Version load error: {ex.Message}");
+            errorCollector.Add("N/A", $"Version load error: {ex.Message}");
         }
         catch (HttpRequestException ex)
         {
-            _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
     }
 
-    private static string GetTypeColor(string type) => type switch
-    {
-        "Specification" => "blue",
-        "Concept" => "yellow",
-        "Report" => "green",
-        _ => "grey"
-    };
+    private static string GetTypeColor(string type) =>
+        type switch
+        {
+            "Specification" => "blue",
+            "Concept" => "yellow",
+            "Report" => "green",
+            _ => "grey",
+        };
 
     private record DocumentItem(
-        Guid Id, string Title, string Content, int Version,
-        DateTime UpdatedAt, string? DocType, string? Status, string? Description
+        Guid Id,
+        string Title,
+        string Content,
+        int Version,
+        DateTime UpdatedAt,
+        string? DocType,
+        string? Status,
+        string? Description
     );
 
     private record VersionItem(int Version, DateTime CreatedAt, Guid CreatedByUserId);

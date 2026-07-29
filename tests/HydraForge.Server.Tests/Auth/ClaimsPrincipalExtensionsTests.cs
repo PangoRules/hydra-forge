@@ -11,42 +11,79 @@ public class ClaimsPrincipalExtensionsTests
 {
     private sealed class StubMemberRepo : IProjectMemberRepository
     {
-        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-            => Task.FromResult<ProjectMember?>(null);
-        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(IEnumerable<Guid> projectIds, Guid userId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
-            => throw new NotImplementedException();
+        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<ProjectMember?> GetByProjectAndUserAsync(
+            Guid projectId,
+            Guid userId,
+            CancellationToken ct = default
+        ) => Task.FromResult<ProjectMember?>(null);
+
+        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+            IEnumerable<Guid> projectIds,
+            Guid userId,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
     }
 
     private sealed class StubMemberRepoWithMembership : IProjectMemberRepository
     {
-        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-            => Task.FromResult<ProjectMember?>(new ProjectMember { ProjectId = projectId, UserId = userId });
-        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(IEnumerable<Guid> projectIds, Guid userId, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
-            => throw new NotImplementedException();
-        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
-            => throw new NotImplementedException();
+        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<ProjectMember?> GetByProjectAndUserAsync(
+            Guid projectId,
+            Guid userId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<ProjectMember?>(
+                new ProjectMember { ProjectId = projectId, UserId = userId }
+            );
+
+        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+            IEnumerable<Guid> projectIds,
+            Guid userId,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
     }
 
     private static ClaimsPrincipal CreatePrincipal(Guid userId, bool isAdmin)

@@ -9,14 +9,12 @@ using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
-using HydraForge.Domain.Common;
-using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Result = HydraForge.Domain.Common.Result;
+using Result = Domain.Common.Result;
 
 public class SpecsControllerTests
 {
@@ -26,15 +24,35 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Test Card", CardNumber = 1, Type = CardType.Goal });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Test Card",
+                CardNumber = 1,
+                Type = CardType.Goal,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs/cards/{cardId}")
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/specs/cards/{cardId}"
+        )
         {
             Content = new StringContent(
                 "{\"docType\":\"Specification\",\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"# Spec\"}",
@@ -57,13 +75,20 @@ public class SpecsControllerTests
     {
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = factory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
 
         var cardId = Guid.NewGuid();
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs/cards/{cardId}")
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/specs/cards/{cardId}"
+        )
         {
             Content = new StringContent(
                 "{\"title\":\"S\",\"description\":null,\"content\":\"# S\"}",
@@ -84,16 +109,46 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = Guid.NewGuid(), CardId = cardId, ProjectId = projectId, Title = "Spec 1", Content = "#1", Version = 1, CreatedByUserId = userId });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = Guid.NewGuid(),
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "Spec 1",
+                Content = "#1",
+                Version = 1,
+                CreatedByUserId = userId,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs/cards/{cardId}");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/cards/{cardId}"
+        );
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -109,17 +164,47 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "Test Spec", Content = "# Content", Version = 1, CreatedByUserId = userId });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = specId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "Test Spec",
+                Content = "# Content",
+                Version = 1,
+                CreatedByUserId = userId,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs/{specId}");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/{specId}"
+        );
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -136,13 +221,23 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs/{Guid.NewGuid()}");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/{Guid.NewGuid()}"
+        );
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -158,17 +253,47 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "Original", Content = "V1", Version = 1, CreatedByUserId = userId });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = specId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "Original",
+                Content = "V1",
+                Version = 1,
+                CreatedByUserId = userId,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/projects/{projectId}/specs/{specId}")
+        var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/api/projects/{projectId}/specs/{specId}"
+        )
         {
             Content = new StringContent(
                 "{\"title\":\"Updated\",\"description\":null,\"content\":\"V2\"}",
@@ -192,19 +317,67 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
-        factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = userId });
-        factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 2, Content = "V2", CreatedByUserId = userId });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = specId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "S",
+                Content = "V2",
+                Version = 2,
+                CreatedByUserId = userId,
+            }
+        );
+        factory.AddSpecVersion(
+            new SpecVersion
+            {
+                Id = Guid.NewGuid(),
+                SpecId = specId,
+                Version = 1,
+                Content = "V1",
+                CreatedByUserId = userId,
+            }
+        );
+        factory.AddSpecVersion(
+            new SpecVersion
+            {
+                Id = Guid.NewGuid(),
+                SpecId = specId,
+                Version = 2,
+                Content = "V2",
+                CreatedByUserId = userId,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/specs/{specId}/versions");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/{specId}/versions"
+        );
         request.Headers.Add("Authorization", $"Bearer {token}");
 
         var response = await client.SendAsync(request);
@@ -221,19 +394,67 @@ public class SpecsControllerTests
         var factory = new SpecsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
 
         var projectId = Guid.NewGuid();
         var specId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), Title = "Card", CardNumber = 1 });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddSpec(new Spec { Id = specId, CardId = cardId, ProjectId = projectId, Title = "S", Content = "V2", Version = 2, CreatedByUserId = userId });
-        factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 1, Content = "V1", CreatedByUserId = userId });
-        factory.AddSpecVersion(new SpecVersion { Id = Guid.NewGuid(), SpecId = specId, Version = 2, Content = "V2", CreatedByUserId = userId });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = specId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "S",
+                Content = "V2",
+                Version = 2,
+                CreatedByUserId = userId,
+            }
+        );
+        factory.AddSpecVersion(
+            new SpecVersion
+            {
+                Id = Guid.NewGuid(),
+                SpecId = specId,
+                Version = 1,
+                Content = "V1",
+                CreatedByUserId = userId,
+            }
+        );
+        factory.AddSpecVersion(
+            new SpecVersion
+            {
+                Id = Guid.NewGuid(),
+                SpecId = specId,
+                Version = 2,
+                Content = "V2",
+                CreatedByUserId = userId,
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/specs/{specId}/restore")
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/specs/{specId}/restore"
+        )
         {
             Content = new StringContent("{\"version\":1}", Encoding.UTF8, "application/json"),
         };
@@ -259,38 +480,58 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("Environment", "Test");
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
-        builder.UseSetting("Jwt:SigningKey", "test-secret-key-that-is-at-least-32-chars-long-for-hs256");
+        builder.UseSetting(
+            "Jwt:SigningKey",
+            "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
+        );
         builder.ConfigureServices(services =>
         {
-            foreach (var descriptor in services.Where(d =>
-                d.ServiceType == typeof(ProjectService)
-                || d.ServiceType == typeof(SpecService)
-                || d.ServiceType == typeof(PlanService)
-                || d.ServiceType == typeof(IProjectRepository)
-                || d.ServiceType == typeof(ISpecRepository)
-                || d.ServiceType == typeof(IPlanRepository)
-                || d.ServiceType == typeof(ICardRepository)
-                || d.ServiceType == typeof(IProjectMemberRepository)
-                || d.ServiceType == typeof(IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(IChatArchiveService)
-                || d.ServiceType == typeof(HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher)
-                || d.ServiceType == typeof(IColumnRepository)
-                || d.ServiceType == typeof(ICardAssigneeRepository)
-                || d.ServiceType == typeof(ICardWatcherRepository)
-                || d.ServiceType == typeof(ICardRelationshipRepository)).ToList())
+            foreach (
+                var descriptor in services
+                    .Where(d =>
+                        d.ServiceType == typeof(ProjectService)
+                        || d.ServiceType == typeof(SpecService)
+                        || d.ServiceType == typeof(PlanService)
+                        || d.ServiceType == typeof(IProjectRepository)
+                        || d.ServiceType == typeof(ISpecRepository)
+                        || d.ServiceType == typeof(IPlanRepository)
+                        || d.ServiceType == typeof(ICardRepository)
+                        || d.ServiceType == typeof(IProjectMemberRepository)
+                        || d.ServiceType == typeof(IProjectContextSnapshotRepository)
+                        || d.ServiceType == typeof(IChatArchiveService)
+                        || d.ServiceType
+                            == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
+                        || d.ServiceType == typeof(IColumnRepository)
+                        || d.ServiceType == typeof(ICardAssigneeRepository)
+                        || d.ServiceType == typeof(ICardWatcherRepository)
+                        || d.ServiceType == typeof(ICardRelationshipRepository)
+                    )
+                    .ToList()
+            )
             {
                 services.Remove(descriptor);
             }
 
             services.AddScoped<IProjectRepository>(_ => new SpecsTestProjectRepository(_projects));
-            services.AddScoped<ISpecRepository>(_ => new SpecsTestSpecRepository(_specs, _specVersions, _cards));
+            services.AddScoped<ISpecRepository>(_ => new SpecsTestSpecRepository(
+                _specs,
+                _specVersions
+            ));
             services.AddScoped<ICardRepository>(_ => new SpecsTestCardRepository(_cards));
-            services.AddScoped<IProjectMemberRepository>(_ => new SpecsTestMemberRepository(_members));
-            services.AddScoped<IProjectContextSnapshotRepository>(_ => new SpecsTestSnapshotRepository());
+            services.AddScoped<IProjectMemberRepository>(_ => new SpecsTestMemberRepository(
+                _members
+            ));
+            services.AddScoped<IProjectContextSnapshotRepository>(
+                _ => new SpecsTestSnapshotRepository()
+            );
             services.AddScoped<IChatArchiveService>(_ => new SpecsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new SpecsTestAuditLogWriter());
-            services.AddScoped<HydraForge.Application.ProjectSnapshots.IProjectSnapshotRefresher>(_ => new TestSnapshotRefresher());
-            services.AddScoped<HydraForge.Application.Realtime.IProjectBoardEventPublisher>(_ => new FakeProjectBoardEventPublisher());
+            services.AddScoped<Application.ProjectSnapshots.IProjectSnapshotRefresher>(
+                _ => new TestSnapshotRefresher()
+            );
+            services.AddScoped<Application.Realtime.IProjectBoardEventPublisher>(
+                _ => new FakeProjectBoardEventPublisher()
+            );
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
@@ -299,49 +540,67 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
     }
 
     public void AddProject(Project project) => _projects.Add(project);
+
     public void AddMember(ProjectMember member) => _members.Add(member);
+
     public void AddSpec(Spec spec) => _specs.Add(spec);
+
     public void AddSpecVersion(SpecVersion sv) => _specVersions.Add(sv);
+
     public void AddCard(Card card) => _cards.Add(card);
 
-    public string IssueToken(Guid userId, string username, bool isAdmin)
+    public static string IssueToken(Guid userId, string username, bool isAdmin)
     {
         var claims = new[]
         {
-            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId.ToString()),
+            new System.Security.Claims.Claim(
+                System.Security.Claims.ClaimTypes.NameIdentifier,
+                userId.ToString()
+            ),
             new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username),
-            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, isAdmin ? "Admin" : "User")
+            new System.Security.Claims.Claim(
+                System.Security.Claims.ClaimTypes.Role,
+                isAdmin ? "Admin" : "User"
+            ),
         };
         var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
-        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+        _ = new System.Security.Claims.ClaimsPrincipal(identity);
 
         var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
         var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-            System.Text.Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256"));
-        var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+            Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256")
+        );
+        var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+            key,
+            Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256
+        );
 
-        var token = handler.CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
-        {
-            Subject = identity,
-            Issuer = "HydraForge",
-            Audience = "HydraForge",
-            SigningCredentials = credentials,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime
-        });
+        var token = handler.CreateToken(
+            new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
+            {
+                Subject = identity,
+                Issuer = "HydraForge",
+                Audience = "HydraForge",
+                SigningCredentials = credentials,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(30).UtcDateTime,
+            }
+        );
 
         return token;
     }
 }
 
-internal class SpecsTestProjectRepository : IProjectRepository
+internal class SpecsTestProjectRepository(List<Project> projects) : IProjectRepository
 {
-    private readonly List<Project> _projects;
+    public Task AddAsync(Project project, CancellationToken ct = default)
+    {
+        projects.Add(project);
+        return Task.CompletedTask;
+    }
 
-    public SpecsTestProjectRepository(List<Project> projects) => _projects = projects;
+    public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(projects.FirstOrDefault(p => p.Id == id));
 
-    public Task AddAsync(Project project, CancellationToken ct = default) { _projects.Add(project); return Task.CompletedTask; }
-    public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(_projects.FirstOrDefault(p => p.Id == id));
     public Task<ProjectListPage> ListByUserIdAsync(
         Guid userId,
         bool includeArchived,
@@ -354,13 +613,14 @@ internal class SpecsTestProjectRepository : IProjectRepository
         CancellationToken ct = default
     )
     {
-        var filtered = _projects.AsEnumerable();
+        var filtered = projects.AsEnumerable();
         if (!includeArchived)
             filtered = filtered.Where(p => p.ArchivedAt == null);
         var all = filtered.ToList();
         var page = all.Skip(skip).Take(take).ToList();
         return Task.FromResult(new ProjectListPage(page, all.Count));
     }
+
     public Task<ProjectListPage> ListAllAsync(
         bool includeArchived,
         string? search,
@@ -371,7 +631,7 @@ internal class SpecsTestProjectRepository : IProjectRepository
         CancellationToken ct = default
     )
     {
-        var filtered = _projects.AsEnumerable();
+        var filtered = projects.AsEnumerable();
         if (!includeArchived)
             filtered = filtered.Where(p => p.ArchivedAt == null);
         if (!string.IsNullOrWhiteSpace(search))
@@ -381,20 +641,29 @@ internal class SpecsTestProjectRepository : IProjectRepository
             );
         IEnumerable<Project> sorted = sortBy switch
         {
-            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
-            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
-            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+            ProjectSortField.Name => sortDescending
+                ? filtered.OrderByDescending(p => p.Name)
+                : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending
+                ? filtered.OrderByDescending(p => p.UpdatedAt)
+                : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending
+                ? filtered.OrderByDescending(p => p.CreatedAt)
+                : filtered.OrderBy(p => p.CreatedAt),
         };
         var all = sorted.ToList();
         var page = all.Skip(skip).Take(take).ToList();
         return Task.FromResult(new ProjectListPage(page, all.Count));
     }
+
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
-        var idx = _projects.FindIndex(p => p.Id == project.Id);
-        if (idx >= 0) _projects[idx] = project;
+        var idx = projects.FindIndex(p => p.Id == project.Id);
+        if (idx >= 0)
+            projects[idx] = project;
         return Task.CompletedTask;
     }
+
     public Task<ProjectListPage> ListNonMemberProjectsAsync(
         Guid userId,
         bool includeArchived,
@@ -403,133 +672,254 @@ internal class SpecsTestProjectRepository : IProjectRepository
         bool sortDescending,
         int skip,
         int take,
-        CancellationToken ct = default)
-        => throw new NotImplementedException();
+        CancellationToken ct = default
+    ) => throw new NotImplementedException();
 }
 
-internal class SpecsTestSpecRepository : ISpecRepository
+internal class SpecsTestSpecRepository(List<Spec> specs, List<SpecVersion> versions)
+    : ISpecRepository
 {
-    private readonly List<Spec> _specs;
-    private readonly List<SpecVersion> _versions;
-    private readonly List<Card> _cards;
+    public Task<Spec?> GetByIdAsync(Guid specId, CancellationToken ct = default) =>
+        Task.FromResult(specs.FirstOrDefault(s => s.Id == specId));
 
-    public SpecsTestSpecRepository(List<Spec> specs, List<SpecVersion> versions, List<Card> cards)
-    {
-        _specs = specs;
-        _versions = versions;
-        _cards = cards;
-    }
+    public Task<IReadOnlyList<Spec>> ListByProjectAsync(
+        Guid projectId,
+        SpecListFilter filter,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<Spec>>([.. specs.Where(s => s.ProjectId == projectId)]);
 
-    public Task<Spec?> GetByIdAsync(Guid specId, CancellationToken ct = default)
-        => Task.FromResult(_specs.FirstOrDefault(s => s.Id == specId));
-    public Task<IReadOnlyList<Spec>> ListByProjectAsync(Guid projectId, SpecListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Spec>>(_specs.Where(s => s.ProjectId == projectId).ToList());
-    public Task<IReadOnlyList<Spec>> ListByCardAsync(Guid cardId, SpecListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Spec>>(_specs.Where(s => s.CardId == cardId).ToList());
-    public Task<SpecVersion?> GetVersionAsync(Guid specId, int version, CancellationToken ct = default)
-        => Task.FromResult(_versions.FirstOrDefault(v => v.SpecId == specId && v.Version == version));
-    public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<SpecVersion>>(_versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version).ToList());
-    public Task AddAsync(Spec spec, CancellationToken ct = default) { _specs.Add(spec); return Task.CompletedTask; }
-    public Task AddVersionAsync(SpecVersion version, CancellationToken ct = default) { _versions.Add(version); return Task.CompletedTask; }
-    public Task UpdateAsync(Spec spec, CancellationToken ct = default)
+    public Task<IReadOnlyList<Spec>> ListByCardAsync(
+        Guid cardId,
+        SpecListFilter filter,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<Spec>>([.. specs.Where(s => s.CardId == cardId)]);
+
+    public Task<SpecVersion?> GetVersionAsync(
+        Guid specId,
+        int version,
+        CancellationToken ct = default
+    ) => Task.FromResult(versions.FirstOrDefault(v => v.SpecId == specId && v.Version == version));
+
+    public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(
+        Guid specId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<SpecVersion>>([
+            .. versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version),
+        ]);
+
+    public Task AddAsync(Spec spec, CancellationToken ct = default)
     {
-        var idx = _specs.FindIndex(s => s.Id == spec.Id);
-        if (idx >= 0) _specs[idx] = spec;
+        specs.Add(spec);
         return Task.CompletedTask;
     }
+
+    public Task AddVersionAsync(SpecVersion version, CancellationToken ct = default)
+    {
+        versions.Add(version);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(Spec spec, CancellationToken ct = default)
+    {
+        var idx = specs.FindIndex(s => s.Id == spec.Id);
+        if (idx >= 0)
+            specs[idx] = spec;
+        return Task.CompletedTask;
+    }
+
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => Task.FromResult(1);
 }
 
-internal class SpecsTestCardRepository : ICardRepository
+internal class SpecsTestCardRepository(List<Card> cards) : ICardRepository
 {
-    private readonly List<Card> _cards;
+    private readonly List<Card> _cards = cards;
 
-    public SpecsTestCardRepository(List<Card> cards) => _cards = cards;
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
 
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(_cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Card>>(_cards.Where(c => c.ProjectId == projectId).ToList());
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(_cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
-    public Task AddAsync(Card card, CancellationToken ct = default) { _cards.Add(card); return Task.CompletedTask; }
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+            _cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+        );
+
+    public Task<Card?> GetByProjectAndNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            _cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+        );
+
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(
+        Guid projectId,
+        CardListFilter filter,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<Card>>([.. _cards.Where(c => c.ProjectId == projectId)]);
+
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
+        Task.FromResult(
+            _cards
+                .Where(c => c.ProjectId == projectId)
+                .Select(c => c.CardNumber)
+                .DefaultIfEmpty(0)
+                .Max()
+        );
+
+    public Task AddAsync(Card card, CancellationToken ct = default)
+    {
+        _cards.Add(card);
+        return Task.CompletedTask;
+    }
+
     public Task UpdateAsync(Card card, CancellationToken ct = default)
     {
         var idx = _cards.FindIndex(c => c.Id == card.Id);
-        if (idx >= 0) _cards[idx] = card;
+        if (idx >= 0)
+            _cards[idx] = card;
         return Task.CompletedTask;
     }
-    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) { foreach (var c in cards) { var idx = _cards.FindIndex(x => x.Id == c.Id); if (idx >= 0) _cards[idx] = c; } return Task.CompletedTask; }
-    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { _cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
+
+    public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
     {
-        var toCompact = _cards.Where(c => c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null).ToList();
-        foreach (var c in toCompact) c.Position -= 1;
+        foreach (var c in cards)
+        {
+            var idx = _cards.FindIndex(x => x.Id == c.Id);
+            if (idx >= 0)
+                _cards[idx] = c;
+        }
         return Task.CompletedTask;
     }
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+    {
+        _cards.RemoveAll(c => c.Id == cardId);
+        return Task.CompletedTask;
+    }
+
+    public Task CompactColumnPositionsAsync(
+        Guid columnId,
+        int exceptPosition,
+        CancellationToken ct = default
+    )
+    {
+        var toCompact = _cards
+            .Where(c =>
+                c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null
+            )
+            .ToList();
+        foreach (var c in toCompact)
+            c.Position -= 1;
+        return Task.CompletedTask;
+    }
+
+    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
-internal class SpecsTestMemberRepository : IProjectMemberRepository
+internal class SpecsTestMemberRepository(List<ProjectMember> members) : IProjectMemberRepository
 {
-    private readonly List<ProjectMember> _members;
+    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(members.FirstOrDefault(m => m.Id == id));
 
-    public SpecsTestMemberRepository(List<ProjectMember> members) => _members = members;
+    public Task<ProjectMember?> GetByProjectAndUserAsync(
+        Guid projectId,
+        Guid userId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+        );
 
-    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(_members.FirstOrDefault(m => m.Id == id));
-    public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-        => Task.FromResult(_members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
-    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<ProjectMember>>(_members.Where(m => m.ProjectId == projectId).ToList());
-    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. members.Where(m => m.ProjectId == projectId),
+        ]);
+
+    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+        IEnumerable<Guid> projectIds,
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var counts = _members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+        var counts = members
+            .Where(m => idList.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
+
     public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
         IEnumerable<Guid> projectIds,
         Guid userId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var roles = _members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        var roles = members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
         return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
-    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { _members.Add(member); return Task.CompletedTask; }
-    public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
+
+    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
-        var idx = _members.FindIndex(m => m.Id == member.Id);
-        if (idx >= 0) _members[idx] = member;
+        members.Add(member);
         return Task.CompletedTask;
     }
-    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) { _members.RemoveAll(m => m.Id == id); return Task.CompletedTask; }
+
+    public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
+    {
+        var idx = members.FindIndex(m => m.Id == member.Id);
+        if (idx >= 0)
+            members[idx] = member;
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
+    {
+        members.RemoveAll(m => m.Id == id);
+        return Task.CompletedTask;
+    }
 }
 
 internal class SpecsTestSnapshotRepository : IProjectContextSnapshotRepository
 {
     private readonly List<ProjectContextSnapshot> _snapshots = [];
-    public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) { _snapshots.Add(snapshot); return Task.CompletedTask; }
-    public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
-    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
+    {
+        _snapshots.Add(snapshot);
+        return Task.CompletedTask;
+    }
+
+    public Task<ProjectContextSnapshot?> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) => Task.FromResult(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
+        Task.CompletedTask;
 }
 
 internal class SpecsTestChatArchiveService : IChatArchiveService
 {
-    public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task UnarchiveProjectAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    public Task UnarchiveProjectAsync(Guid projectId, CancellationToken ct = default) =>
+        Task.CompletedTask;
 }
 
 internal class SpecsTestAuditLogWriter : IAuditLogWriter
 {
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
-        => Task.FromResult(Result.Success());
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default) =>
+        Task.FromResult(Result.Success());
 }

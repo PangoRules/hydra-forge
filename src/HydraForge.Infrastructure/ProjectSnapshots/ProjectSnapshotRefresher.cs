@@ -1,6 +1,4 @@
-using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
-using HydraForge.Application.Projects;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -11,26 +9,35 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
 {
     public async Task RefreshAsync(Guid projectId, CancellationToken ct = default)
     {
-        var columns = await context.Columns
-            .Where(c => c.ProjectId == projectId)
+        var columns = await context
+            .Columns.Where(c => c.ProjectId == projectId)
             .OrderBy(c => c.Position)
             .ToListAsync(ct);
 
-        var activeCards = await context.Cards
-            .Where(c => c.ProjectId == projectId && c.ArchivedAt == null)
+        var activeCards = await context
+            .Cards.Where(c => c.ProjectId == projectId && c.ArchivedAt == null)
             .OrderBy(c => c.Position)
             .ThenBy(c => c.CardNumber)
             .ToListAsync(ct);
 
         var cardIds = activeCards.Select(c => c.Id).ToList();
-        var activeRelationships = await context.CardRelationships
-            .Where(r => r.ArchivedAt == null && (cardIds.Contains(r.SourceCardId) || cardIds.Contains(r.TargetCardId)))
+        var activeRelationships = await context
+            .CardRelationships.Where(r =>
+                r.ArchivedAt == null
+                && (cardIds.Contains(r.SourceCardId) || cardIds.Contains(r.TargetCardId))
+            )
             .ToListAsync(ct);
 
-        var templateContent = ProjectContextSnapshotRenderer.Render(columns, activeCards, activeRelationships);
+        var templateContent = ProjectContextSnapshotRenderer.Render(
+            columns,
+            activeCards,
+            activeRelationships
+        );
 
-        var existing = await context.ProjectContextSnapshots
-            .FirstOrDefaultAsync(s => s.ProjectId == projectId, ct);
+        var existing = await context.ProjectContextSnapshots.FirstOrDefaultAsync(
+            s => s.ProjectId == projectId,
+            ct
+        );
 
         if (existing != null)
         {
@@ -40,7 +47,7 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
         }
         else
         {
-            var snapshot = new Domain.Entities.ProjectSpace.ProjectContextSnapshot
+            var snapshot = new ProjectContextSnapshot
             {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
@@ -53,8 +60,14 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task<ProjectContextSnapshot?> GetSnapshotAsync(Guid projectId, CancellationToken ct = default)
+    public async Task<ProjectContextSnapshot?> GetSnapshotAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ProjectContextSnapshots.FirstOrDefaultAsync(s => s.ProjectId == projectId, ct);
+        return await context.ProjectContextSnapshots.FirstOrDefaultAsync(
+            s => s.ProjectId == projectId,
+            ct
+        );
     }
 }

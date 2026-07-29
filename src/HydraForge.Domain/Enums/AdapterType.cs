@@ -6,5 +6,5 @@ public enum AdapterType
     Anthropic = 2,
     Ollama = 3,
     Diffusers = 4,
-    ComfyUi = 5
+    ComfyUi = 5,
 }

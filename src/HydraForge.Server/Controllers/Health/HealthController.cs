@@ -22,20 +22,44 @@ public class HealthController(GetHealthHandler handler) : ControllerBase
         }
 
         var response = result.Value;
-        var httpStatus = response.OverallStatus == HealthStatus.Unhealthy
-            ? StatusCodes.Status503ServiceUnavailable
-            : StatusCodes.Status200OK;
+        var httpStatus =
+            response.OverallStatus == HealthStatus.Unhealthy
+                ? StatusCodes.Status503ServiceUnavailable
+                : StatusCodes.Status200OK;
 
-        return new ObjectResult(new
-        {
-            status = response.OverallStatus.ToString().ToLowerInvariant(),
-            components = new[]
+        return new ObjectResult(
+            new
             {
-                new { name = "server", status = response.ServerStatus.ToString().ToLowerInvariant(), detail = "Server is running." },
-                new { name = "database", status = response.DatabaseStatus.ToString().ToLowerInvariant(), detail = response.DatabaseStatus == HealthStatus.Healthy ? "Database is connected." : "Database issue detected." },
-                new { name = "llmProviders", status = response.LlmStatus.ToString().ToLowerInvariant(), detail = response.LlmStatus == HealthStatus.NotConfigured ? "No LLM providers configured." : "LLM providers available." }
+                status = response.OverallStatus.ToString().ToLowerInvariant(),
+                components = new[]
+                {
+                    new
+                    {
+                        name = "server",
+                        status = response.ServerStatus.ToString().ToLowerInvariant(),
+                        detail = "Server is running.",
+                    },
+                    new
+                    {
+                        name = "database",
+                        status = response.DatabaseStatus.ToString().ToLowerInvariant(),
+                        detail = response.DatabaseStatus == HealthStatus.Healthy
+                            ? "Database is connected."
+                            : "Database issue detected.",
+                    },
+                    new
+                    {
+                        name = "llmProviders",
+                        status = response.LlmStatus.ToString().ToLowerInvariant(),
+                        detail = response.LlmStatus == HealthStatus.NotConfigured
+                            ? "No LLM providers configured."
+                            : "LLM providers available.",
+                    },
+                },
             }
-        })
-        { StatusCode = httpStatus };
+        )
+        {
+            StatusCode = httpStatus,
+        };
     }
 }

@@ -1,12 +1,11 @@
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Enums;
-using HydraForge.Application.Auth;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AppCards = HydraForge.Application.Cards;
 
 namespace HydraForge.Server.Controllers.Projects;
 
@@ -16,7 +15,7 @@ namespace HydraForge.Server.Controllers.Projects;
 public class CardsController(CardService cardService) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(typeof(AppCards.CardListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardListResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(
         Guid projectId,
@@ -30,7 +29,14 @@ public class CardsController(CardService cardService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var filter = new AppCards.CardListFilter(columnId, includeArchived, assigneeUserId, type, search, archivedLimit);
+        var filter = new CardListFilter(
+            columnId,
+            includeArchived,
+            assigneeUserId,
+            type,
+            search,
+            archivedLimit
+        );
         var result = await cardService.ListAsync(projectId, filter, userId);
 
         if (result.IsFailure)
@@ -38,12 +44,12 @@ public class CardsController(CardService cardService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppCards.CardListResponse([.. result.Value.Select(MapToResponse)]);
+        var response = new CardListResponse([.. result.Value.Select(MapToResponse)]);
         return Ok(response);
     }
 
     [HttpGet("{cardIdOrNumber}")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdOrNumber(Guid projectId, string cardIdOrNumber)
     {
@@ -73,16 +79,13 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create(
-        Guid projectId,
-        [FromBody] AppCards.CreateCardRequest request
-    )
+    public async Task<IActionResult> Create(Guid projectId, [FromBody] CreateCardRequest request)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.CreateCardCommand(
+        var cmd = new CreateCardCommand(
             projectId,
             request.ColumnId,
             userId,
@@ -109,17 +112,17 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPut("{cardId:guid}")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppCards.UpdateCardRequest request
+        [FromBody] UpdateCardRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.UpdateCardCommand(
+        var cmd = new UpdateCardCommand(
             projectId,
             cardId,
             userId,
@@ -141,18 +144,18 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/move")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(AppCards.BlockedMoveWarningResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BlockedMoveWarningResponse), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Move(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppCards.MoveCardRequest request
+        [FromBody] MoveCardRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.MoveCardCommand(
+        var cmd = new MoveCardCommand(
             projectId,
             cardId,
             request.TargetColumnId,
@@ -177,16 +180,16 @@ public class CardsController(CardService cardService) : ControllerBase
                     return this.ToProblemResult(warningResult.Error);
                 }
 
-                var warningResponse = new AppCards.BlockedMoveWarningResponse(
+                var warningResponse = new BlockedMoveWarningResponse(
                     warningResult.Value.CardId,
-                    warningResult
-                        .Value.Blockers.Select(b => new AppCards.BlockerResponse(
+                    [
+                        .. warningResult.Value.Blockers.Select(b => new BlockerResponse(
                             b.CardId,
                             b.CardNumber,
                             b.Title,
                             b.BlockerType.ToString()
-                        ))
-                        .ToList()
+                        )),
+                    ]
                 );
                 return StatusCode(409, warningResponse);
             }
@@ -197,17 +200,17 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/assignees")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Assign(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppCards.AssignCardRequest request
+        [FromBody] AssignCardRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.AssignCardCommand(projectId, cardId, request.AssigneeUserId, userId);
+        var cmd = new AssignCardCommand(projectId, cardId, request.AssigneeUserId, userId);
         var result = await cardService.AssignAsync(cmd);
 
         if (result.IsFailure)
@@ -219,13 +222,13 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpDelete("{cardId:guid}/assignees/{assigneeUserId:guid}")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Unassign(Guid projectId, Guid cardId, Guid assigneeUserId)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.UnassignCardCommand(projectId, cardId, assigneeUserId, userId);
+        var cmd = new UnassignCardCommand(projectId, cardId, assigneeUserId, userId);
         var result = await cardService.UnassignAsync(cmd);
 
         if (result.IsFailure)
@@ -237,17 +240,17 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/archive")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Archive(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppCards.ArchiveCardRequest request
+        [FromBody] ArchiveCardRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.ArchiveCardCommand(projectId, cardId, userId, request.Version);
+        var cmd = new ArchiveCardCommand(projectId, cardId, userId, request.Version);
         var result = await cardService.ArchiveAsync(cmd);
 
         if (result.IsFailure)
@@ -259,17 +262,17 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/restore")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Restore(
         Guid projectId,
         Guid cardId,
-        [FromBody] AppCards.RestoreCardRequest request
+        [FromBody] RestoreCardRequest request
     )
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.RestoreCardCommand(projectId, cardId, userId, request.Version);
+        var cmd = new RestoreCardCommand(projectId, cardId, userId, request.Version);
         var result = await cardService.RestoreAsync(cmd);
 
         if (result.IsFailure)
@@ -287,7 +290,7 @@ public class CardsController(CardService cardService) : ControllerBase
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.DeleteCardCommand(projectId, cardId, userId);
+        var cmd = new DeleteCardCommand(projectId, cardId, userId);
         var result = await cardService.DeleteAsync(cmd);
 
         if (result.IsFailure)
@@ -299,13 +302,13 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpPost("{cardId:guid}/watch")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Watch(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.WatchCardCommand(projectId, cardId, userId);
+        var cmd = new WatchCardCommand(projectId, cardId, userId);
         var result = await cardService.WatchAsync(cmd);
 
         if (result.IsFailure)
@@ -317,13 +320,13 @@ public class CardsController(CardService cardService) : ControllerBase
     }
 
     [HttpDelete("{cardId:guid}/watch")]
-    [ProducesResponseType(typeof(AppCards.CardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Unwatch(Guid projectId, Guid cardId)
     {
         var userId = User.GetRequiredUserId();
 
-        var cmd = new AppCards.UnwatchCardCommand(projectId, cardId, userId);
+        var cmd = new UnwatchCardCommand(projectId, cardId, userId);
         var result = await cardService.UnwatchAsync(cmd);
 
         if (result.IsFailure)
@@ -334,7 +337,7 @@ public class CardsController(CardService cardService) : ControllerBase
         return Ok(MapToResponse(result.Value));
     }
 
-    private static AppCards.CardResponse MapToResponse(AppCards.CardDto dto) =>
+    private static CardResponse MapToResponse(CardDto dto) =>
         new(
             dto.Id,
             dto.ProjectId,
@@ -352,7 +355,7 @@ public class CardsController(CardService cardService) : ControllerBase
             dto.ArchivedAt,
             dto.ParentCardId,
             [
-                .. dto.Assignees.Select(a => new AppCards.CardAssigneeResponse(
+                .. dto.Assignees.Select(a => new CardAssigneeResponse(
                     a.Id,
                     a.UserId,
                     a.Username,
@@ -360,14 +363,14 @@ public class CardsController(CardService cardService) : ControllerBase
                 )),
             ],
             [
-                .. dto.Watchers.Select(w => new AppCards.CardWatcherResponse(
+                .. dto.Watchers.Select(w => new CardWatcherResponse(
                     w.UserId,
                     w.Username,
                     AddedAt: w.AddedAt
                 )),
             ],
             [
-                .. dto.RelationshipBadges.Select(b => new AppCards.CardRelationshipBadgeResponse(
+                .. dto.RelationshipBadges.Select(b => new CardRelationshipBadgeResponse(
                     b.RelatedCardId,
                     b.RelatedCardNumber,
                     b.RelatedCardTitle,

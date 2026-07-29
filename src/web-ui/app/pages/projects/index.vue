@@ -24,7 +24,6 @@ const sortDescending = ref(true)
 const page = ref(1)
 const isMobile = useMediaQuery('(max-width: 767px)')
 const pageSize = ref(isMobile.value ? 5 : 10)
-const pageSizeOptions = [5, 10, 15]
 
 const api = useApi()
 const toast = useAppToast()
@@ -142,9 +141,6 @@ function onProjectCreated() {
 }
 
 onMounted(() => fetchProjects())
-
-const rangeStart = computed(() => totalCount.value === 0 ? 0 : (page.value - 1) * pageSize.value + 1)
-const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount.value))
 </script>
 
 <template>
@@ -170,47 +166,17 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
 
       <div class="flex-1">
         <ProjectListTable
-          class="hidden md:block"
           :projects="projects"
           :loading="loading"
+          :page="page"
+          :page-size="pageSize"
+          :total-count="totalCount"
+          @update:page="page = $event"
+          @update:page-size="pageSize = $event"
           @select="onProjectSelect"
           @toggle-archive="handleToggleArchive"
           @edit="handleEditProject"
         />
-        <ProjectList
-          class="md:hidden"
-          :projects="projects"
-          :loading="loading"
-          @select="onProjectSelect"
-          @toggle-archive="handleToggleArchive"
-          @edit="handleEditProject"
-        />
-
-        <div
-          v-if="totalCount > 0"
-          class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
-        >
-          <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Rows per page:</span>
-              <USelect
-                :model-value="pageSize"
-                :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
-                class="w-16 sm:w-20"
-                @update:model-value="pageSize = Number($event)"
-              />
-              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
-              </span>
-            </div>
-            <UPagination
-              v-model:page="page"
-              :total="totalCount"
-              :items-per-page="pageSize"
-              size="sm"
-            />
-          </div>
-        </div>
       </div>
     </div>
 

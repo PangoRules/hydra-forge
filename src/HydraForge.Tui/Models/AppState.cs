@@ -1,5 +1,4 @@
 using HydraForge.Tui.Screens;
-using System.Threading;
 
 namespace HydraForge.Tui.Models;
 

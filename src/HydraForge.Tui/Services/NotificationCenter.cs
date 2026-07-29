@@ -8,7 +8,11 @@ namespace HydraForge.Tui.Services;
 // Unread count + notification list, shared between every screen that shows the status bar
 // (ProjectListScreen, BoardScreen) so both stay in sync off the same AppState.UnreadNotifications
 // instead of each screen keeping its own local mirror.
-public class NotificationCenter(ApiClientFactory apiClientFactory, AppState appState, ErrorCollector errorCollector)
+public class NotificationCenter(
+    ApiClientFactory apiClientFactory,
+    AppState appState,
+    ErrorCollector errorCollector
+)
 {
     private HydraForgeApiClient Client => apiClientFactory.GetClient();
 
@@ -39,14 +43,20 @@ public class NotificationCenter(ApiClientFactory apiClientFactory, AppState appS
                 return;
             }
 
-            var choices = notifications.Select(n =>
-            {
-                var prefix = n.IsRead ? "  " : "● ";
-                var time = n.CreatedAt.ToString("MMM dd HH:mm");
-                return $"{prefix}[bold]{Markup.Escape(n.Title)}[/] [grey]{time}[/]";
-            }).ToList();
+            var choices = notifications
+                .Select(n =>
+                {
+                    var prefix = n.IsRead ? "  " : "● ";
+                    var time = n.CreatedAt.ToString("MMM dd HH:mm");
+                    return $"{prefix}[bold]{Markup.Escape(n.Title)}[/] [grey]{time}[/]";
+                })
+                .ToList();
 
-            var idx = await ListPrompt.ShowMarkup("Notifications", choices, renderBackdrop: renderBackdrop);
+            var idx = await ListPrompt.ShowMarkup(
+                "Notifications",
+                choices,
+                renderBackdrop: renderBackdrop
+            );
             if (idx.HasValue && idx.Value >= 0 && idx.Value < notifications.Count)
             {
                 var notif = notifications[idx.Value];

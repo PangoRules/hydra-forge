@@ -1,6 +1,6 @@
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 
@@ -16,11 +16,22 @@ public class ProjectContextSnapshotServiceTests
 
         var columns = new List<Column>
         {
-            new() { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
         columnRepo.AddRange(columns);
 
-        var service = new ProjectContextSnapshotService(columnRepo, cardRepo, relationshipRepo, snapshotRepo);
+        var service = new ProjectContextSnapshotService(
+            columnRepo,
+            cardRepo,
+            relationshipRepo,
+            snapshotRepo
+        );
 
         await service.RefreshAsync(projectId);
 
@@ -46,11 +57,22 @@ public class ProjectContextSnapshotServiceTests
 
         var columns = new List<Column>
         {
-            new() { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Done", Position = 0 },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                Name = "Done",
+                Position = 0,
+            },
         };
         columnRepo.AddRange(columns);
 
-        var service = new ProjectContextSnapshotService(columnRepo, cardRepo, relationshipRepo, snapshotRepo);
+        var service = new ProjectContextSnapshotService(
+            columnRepo,
+            cardRepo,
+            relationshipRepo,
+            snapshotRepo
+        );
 
         await service.RefreshAsync(projectId);
 
@@ -68,18 +90,37 @@ public class ProjectContextSnapshotServiceTests
         var colId = Guid.NewGuid();
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "In Dev", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "In Dev",
+                Position = 0,
+            },
         };
         columnRepo.AddRange(columns);
 
         var cardId = Guid.NewGuid();
         var cards = new List<Card>
         {
-            new() { Id = cardId, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Test Card", Position = 0 },
+            new()
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Test Card",
+                Position = 0,
+            },
         };
         cardRepo.AddRange(cards);
 
-        var service = new ProjectContextSnapshotService(columnRepo, cardRepo, relationshipRepo, snapshotRepo);
+        var service = new ProjectContextSnapshotService(
+            columnRepo,
+            cardRepo,
+            relationshipRepo,
+            snapshotRepo
+        );
 
         await service.RefreshAsync(projectId);
 
@@ -111,11 +152,16 @@ internal class InMemoryColumnRepository : IColumnRepository
 
     public void AddRange(List<Column> columns) => _columns.AddRange(columns);
 
-    public Task<IReadOnlyList<Column>> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Column>>(_columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position).ToList());
+    public Task<IReadOnlyList<Column>> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<Column>>([
+            .. _columns.Where(c => c.ProjectId == projectId).OrderBy(c => c.Position),
+        ]);
 
-    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult<Column?>(_columns.FirstOrDefault(c => c.Id == id));
+    public Task<Column?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(_columns.FirstOrDefault(c => c.Id == id));
 
     public Task AddAsync(Column column, CancellationToken ct = default)
     {
@@ -126,7 +172,8 @@ internal class InMemoryColumnRepository : IColumnRepository
     public Task UpdateAsync(Column column, CancellationToken ct = default)
     {
         var idx = _columns.FindIndex(c => c.Id == column.Id);
-        if (idx >= 0) _columns[idx] = column;
+        if (idx >= 0)
+            _columns[idx] = column;
         return Task.CompletedTask;
     }
 
@@ -136,8 +183,11 @@ internal class InMemoryColumnRepository : IColumnRepository
         return Task.CompletedTask;
     }
 
-    public Task ReorderAsync(Guid projectId, IReadOnlyList<Guid> orderedColumnIds, CancellationToken ct = default)
-        => Task.CompletedTask;
+    public Task ReorderAsync(
+        Guid projectId,
+        IReadOnlyList<Guid> orderedColumnIds,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 
     public Task AddRangeAsync(IEnumerable<Column> columns, CancellationToken ct = default)
     {
@@ -152,23 +202,38 @@ internal class InMemoryCardRepository : ICardRepository
 
     public void AddRange(List<Card> cards) => _cards.AddRange(cards);
 
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<Card?>(_cards.FirstOrDefault(c => c.Id == cardId));
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.FirstOrDefault(c => c.Id == cardId));
 
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(_cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+            _cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+        );
 
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult<Card?>(_cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+    public Task<Card?> GetByProjectAndNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            _cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+        );
 
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(
+        Guid projectId,
+        CardListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = _cards.Where(c => c.ProjectId == projectId);
         if (!filter.IncludeArchived)
             query = query.Where(c => c.ArchivedAt == null);
         if (filter.ColumnId.HasValue)
             query = query.Where(c => c.ColumnId == filter.ColumnId.Value);
-        return Task.FromResult<IReadOnlyList<Card>>(query.OrderBy(c => c.Position).ToList());
+        return Task.FromResult<IReadOnlyList<Card>>([.. query.OrderBy(c => c.Position)]);
     }
 
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
@@ -186,7 +251,8 @@ internal class InMemoryCardRepository : ICardRepository
     public Task UpdateAsync(Card card, CancellationToken ct = default)
     {
         var idx = _cards.FindIndex(c => c.Id == card.Id);
-        if (idx >= 0) _cards[idx] = card;
+        if (idx >= 0)
+            _cards[idx] = card;
         return Task.CompletedTask;
     }
 
@@ -195,7 +261,8 @@ internal class InMemoryCardRepository : ICardRepository
         foreach (var card in cards)
         {
             var idx = _cards.FindIndex(c => c.Id == card.Id);
-            if (idx >= 0) _cards[idx] = card;
+            if (idx >= 0)
+                _cards[idx] = card;
         }
         return Task.CompletedTask;
     }
@@ -206,43 +273,104 @@ internal class InMemoryCardRepository : ICardRepository
         return Task.CompletedTask;
     }
 
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
-        => Task.CompletedTask;
+    public Task CompactColumnPositionsAsync(
+        Guid columnId,
+        int exceptPosition,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
 internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
 {
     private readonly List<CardRelationship> _relationships = [];
 
-    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships);
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships);
 
-    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r => r.ArchivedAt == null),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId || r.TargetCardId == cardId).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r => r.SourceCardId == cardId || r.TargetCardId == cardId),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r =>
+                r.TargetCardId == cardId
+                && r.Type == RelationshipType.BlockedBy
+                && r.ArchivedAt == null
+            ),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r =>
+                r.SourceCardId == cardId
+                && r.Type == RelationshipType.Precedes
+                && r.ArchivedAt == null
+            ),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => cardIds.Contains(r.TargetCardId) && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r =>
+                cardIds.Contains(r.TargetCardId)
+                && r.Type == RelationshipType.BlockedBy
+                && r.ArchivedAt == null
+            ),
+        ]);
 
-    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
+    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(_relationships.FirstOrDefault(r => r.Id == id));
 
-    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. _relationships.Where(r =>
+                (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null
+            ),
+        ]);
 
-    public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
+    public Task<CardRelationship?> FindActiveAsync(
+        Guid sourceCardId,
+        Guid targetCardId,
+        RelationshipType type,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            _relationships.FirstOrDefault(r =>
+                r.SourceCardId == sourceCardId
+                && r.TargetCardId == targetCardId
+                && r.Type == type
+                && r.ArchivedAt == null
+            )
+        );
 
     public Task AddAsync(CardRelationship relationship, CancellationToken ct = default)
     {
@@ -253,7 +381,7 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
     public Task ArchiveAsync(Guid id, CancellationToken ct = default)
     {
         var rel = _relationships.FirstOrDefault(r => r.Id == id);
-        if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+        rel?.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 
@@ -262,7 +390,7 @@ internal class InMemoryCardRelationshipRepository : ICardRelationshipRepository
         foreach (var id in ids)
         {
             var rel = _relationships.FirstOrDefault(r => r.Id == id);
-            if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+            rel?.ArchivedAt = DateTime.UtcNow;
         }
         return Task.CompletedTask;
     }
@@ -277,8 +405,10 @@ internal class InMemorySnapshotRepository : IProjectContextSnapshotRepository
 
     public void AddSnapshot(ProjectContextSnapshot snapshot) => _snapshots.Add(snapshot);
 
-    public Task<ProjectContextSnapshot?> GetByProjectIdAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<ProjectContextSnapshot?>(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
+    public Task<ProjectContextSnapshot?> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) => Task.FromResult(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
 
     public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {

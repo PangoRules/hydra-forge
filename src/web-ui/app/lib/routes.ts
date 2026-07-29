@@ -15,9 +15,16 @@
 export const UiRoutes = {
   Login: '/login',
   Setup: '/setup',
+  Chats: '/chats',
   Projects: {
     List: '/projects',
     Board: (projectId: string) => `/projects/${projectId}/board`
+  },
+  Admin: {
+    Home: '/admin',
+    Users: '/admin/users',
+    Settings: '/admin/settings',
+    AuditLog: '/admin/audit-log'
   }
 } as const
 
@@ -128,5 +135,20 @@ export const ApiRoutes = {
     unreadCount: () => '/api/Notifications/unread-count',
     markRead: (id: string) => `/api/Notifications/${id}/read`,
     markAllRead: () => '/api/Notifications/read-all'
+  },
+
+  Admin: {
+    usersList: (skip = 0, take = 20, search?: string) =>
+      `/api/admin/users?skip=${skip}&take=${take}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+    userGet: (userId: string) => `/api/admin/users/${userId}`,
+    userCreate: () => '/api/admin/users',
+    userDisable: (userId: string) => `/api/admin/users/${userId}/disable`,
+    userEnable: (userId: string) => `/api/admin/users/${userId}/enable`,
+    userResetPassword: (userId: string) => `/api/admin/users/${userId}/reset-password`,
+    userRole: (userId: string) => `/api/admin/users/${userId}/role`,
+    projectGet: (projectId: string) => `/api/admin/projects/${projectId}`,
+    settingsGet: () => '/api/admin/settings',
+    settingsUpdate: () => '/api/admin/settings',
+    auditLog: () => '/api/admin/audit-log'
   }
 } as const

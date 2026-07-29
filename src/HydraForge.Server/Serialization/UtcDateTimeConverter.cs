@@ -18,7 +18,11 @@ public class UtcDateTimeConverter : JsonConverter<DateTime>
     // parses it, since Npgsql's "timestamp with time zone" mapping treats
     // Unspecified as already-UTC. Widening this to touch Unspecified too would
     // silently shift naive date-time payloads by the server's local offset.
-    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override DateTime Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
     {
         var value = reader.GetDateTime();
         return value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value;
@@ -27,6 +31,9 @@ public class UtcDateTimeConverter : JsonConverter<DateTime>
     // No Kind coercion here — Utf8JsonWriter.WriteStringValue(DateTime) already
     // produces the same ISO-8601 output System.Text.Json's default converter
     // would, so this is a passthrough that changes nothing for existing callers.
-    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
-        => writer.WriteStringValue(value);
+    public override void Write(
+        Utf8JsonWriter writer,
+        DateTime value,
+        JsonSerializerOptions options
+    ) => writer.WriteStringValue(value);
 }

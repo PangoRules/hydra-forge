@@ -1,10 +1,9 @@
-using HydraForge.Application.Columns;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Columns;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using AppColumns = HydraForge.Application.Columns;
 
 namespace HydraForge.Server.Controllers.Projects;
 
@@ -14,7 +13,7 @@ namespace HydraForge.Server.Controllers.Projects;
 public class ColumnsController(ColumnService columnService) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(typeof(List<AppColumns.ColumnResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<ColumnResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(Guid projectId)
     {
@@ -28,20 +27,14 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
         }
 
         var response = result
-            .Value.Select(c => new AppColumns.ColumnResponse(
-                c.Id,
-                c.Name,
-                c.Position,
-                c.WipLimit,
-                c.Color
-            ))
+            .Value.Select(c => new ColumnResponse(c.Id, c.Name, c.Position, c.WipLimit, c.Color))
             .ToList();
 
         return Ok(response);
     }
 
     [HttpGet("{columnId:guid}")]
-    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ColumnResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid projectId, Guid columnId)
     {
@@ -54,7 +47,7 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppColumns.ColumnResponse(
+        var response = new ColumnResponse(
             result.Value.Id,
             result.Value.Name,
             result.Value.Position,
@@ -66,7 +59,7 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ColumnResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(Guid projectId, [FromBody] CreateColumnRequest request)
     {
@@ -86,7 +79,7 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppColumns.ColumnResponse(
+        var response = new ColumnResponse(
             result.Value.Id,
             result.Value.Name,
             result.Value.Position,
@@ -102,7 +95,7 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
     }
 
     [HttpPut("{columnId:guid}")]
-    [ProducesResponseType(typeof(AppColumns.ColumnResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ColumnResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid projectId,
@@ -127,7 +120,7 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
             return this.ToProblemResult(result.Error);
         }
 
-        var response = new AppColumns.ColumnResponse(
+        var response = new ColumnResponse(
             result.Value.Id,
             result.Value.Name,
             result.Value.Position,
@@ -177,4 +170,3 @@ public class ColumnsController(ColumnService columnService) : ControllerBase
         return NoContent();
     }
 }
-

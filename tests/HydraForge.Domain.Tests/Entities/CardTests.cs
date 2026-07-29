@@ -91,8 +91,18 @@ public class CardTests
     public void Card_ValidateParent_SameProject_Succeeds()
     {
         var projectId = Guid.NewGuid();
-        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal };
-        var childCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
+        var parentCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Goal,
+        };
+        var childCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+        };
 
         var result = Card.ValidateParent(childCard, parentCard);
 
@@ -102,8 +112,18 @@ public class CardTests
     [Fact]
     public void Card_ValidateParent_DifferentProject_ReturnsInvalidParent()
     {
-        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Type = CardType.Goal };
-        var childCard = new Card { Id = Guid.NewGuid(), ProjectId = Guid.NewGuid(), Type = CardType.Task };
+        var parentCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = Guid.NewGuid(),
+            Type = CardType.Goal,
+        };
+        var childCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = Guid.NewGuid(),
+            Type = CardType.Task,
+        };
 
         var result = Card.ValidateParent(childCard, parentCard);
 
@@ -115,8 +135,18 @@ public class CardTests
     public void Card_ValidateParent_AnyCardType_CanBeParent()
     {
         var projectId = Guid.NewGuid();
-        var parentCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
-        var childCard = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
+        var parentCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+        };
+        var childCard = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+        };
 
         var result = Card.ValidateParent(childCard, parentCard);
 
@@ -127,7 +157,12 @@ public class CardTests
     public void Card_ValidateParent_SelfReference_ReturnsParentCycle()
     {
         var projectId = Guid.NewGuid();
-        var card = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
+        var card = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+        };
 
         var result = Card.ValidateParent(card, card);
 
@@ -139,14 +174,31 @@ public class CardTests
     public void Card_ValidateParent_AncestorCycle_ReturnsParentCycle()
     {
         var projectId = Guid.NewGuid();
-        var grandchild = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task };
-        var child = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = grandchild.Id };
-        var parent = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal, ParentCardId = child.Id };
+        var grandchild = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+        };
+        var child = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+            ParentCardId = grandchild.Id,
+        };
+        var parent = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Goal,
+            ParentCardId = child.Id,
+        };
         var cardMap = new Dictionary<Guid, Card>
         {
             { grandchild.Id, grandchild },
             { child.Id, child },
-            { parent.Id, parent }
+            { parent.Id, parent },
         };
 
         var result = Card.ValidateParent(grandchild, parent, cardMap);
@@ -159,9 +211,26 @@ public class CardTests
     public void Card_ValidateParent_ValidAncestorChain_Succeeds()
     {
         var projectId = Guid.NewGuid();
-        var goal = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Goal };
-        var child = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = goal.Id };
-        var grandchild = new Card { Id = Guid.NewGuid(), ProjectId = projectId, Type = CardType.Task, ParentCardId = child.Id };
+        var goal = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Goal,
+        };
+        var child = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+            ParentCardId = goal.Id,
+        };
+        var grandchild = new Card
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Type = CardType.Task,
+            ParentCardId = child.Id,
+        };
 
         var result = Card.ValidateParent(grandchild, goal);
 
@@ -173,7 +242,13 @@ public class CardTests
     {
         var card = new Card { Version = 1 };
 
-        card.UpdateDetails("Updated Title", "Updated Desc", CardType.Issue, Guid.NewGuid(), DateTime.UtcNow.AddDays(1));
+        card.UpdateDetails(
+            "Updated Title",
+            "Updated Desc",
+            CardType.Issue,
+            Guid.NewGuid(),
+            DateTime.UtcNow.AddDays(1)
+        );
 
         Assert.Equal("Updated Title", card.Title);
         Assert.Equal("Updated Desc", card.Description);
@@ -187,7 +262,12 @@ public class CardTests
     [Fact]
     public void Card_MoveTo_UpdatesPositionAndTimestamp()
     {
-        var card = new Card { Version = 1, ColumnId = Guid.NewGuid(), Position = 0 };
+        var card = new Card
+        {
+            Version = 1,
+            ColumnId = Guid.NewGuid(),
+            Position = 0,
+        };
         var newColumnId = Guid.NewGuid();
         var beforeMove = DateTime.UtcNow;
 

@@ -1,5 +1,5 @@
-using HydraForge.Application.Cards;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Cards;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -44,11 +44,7 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
         var result = await service.CreateAsync(cmd);
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
-        return CreatedAtAction(
-            nameof(List),
-            new { projectId, cardId },
-            result.Value
-        );
+        return CreatedAtAction(nameof(List), new { projectId, cardId }, result.Value);
     }
 
     [HttpDelete("{relationshipId:guid}")]
@@ -67,7 +63,11 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     [HttpGet("archive-impact")]
     [ProducesResponseType(typeof(ArchiveImpactResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ArchiveImpact(Guid projectId, Guid cardId, [FromQuery] bool confirm = false)
+    public async Task<IActionResult> ArchiveImpact(
+        Guid projectId,
+        Guid cardId,
+        [FromQuery] bool confirm = false
+    )
     {
         var userId = User.GetRequiredUserId();
         var cmd = new ArchiveImpactCommand(projectId, cardId, confirm, userId);

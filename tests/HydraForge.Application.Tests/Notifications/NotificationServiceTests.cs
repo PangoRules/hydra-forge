@@ -47,7 +47,11 @@ public class NotificationServiceTests
     {
         public List<(Guid UserId, Notification Notification)> Sent { get; } = [];
 
-        public Task SendNotificationAsync(Guid userId, Notification notification, CancellationToken ct = default)
+        public Task SendNotificationAsync(
+            Guid userId,
+            Notification notification,
+            CancellationToken ct = default
+        )
         {
             Sent.Add((userId, notification));
             return Task.CompletedTask;

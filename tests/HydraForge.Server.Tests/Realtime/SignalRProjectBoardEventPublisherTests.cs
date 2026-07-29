@@ -10,9 +10,9 @@ public class SignalRProjectBoardEventPublisherTests
     [Fact]
     public async Task PublishAsync_SendsToProjectGroup()
     {
-        var hubContext = new Mock<IHubContext<BoardHub, HydraForge.Infrastructure.Realtime.IBoardHub>>();
-        var clients = new Mock<IHubClients<HydraForge.Infrastructure.Realtime.IBoardHub>>();
-        var group = new Mock<HydraForge.Infrastructure.Realtime.IBoardHub>();
+        var hubContext = new Mock<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
+        var clients = new Mock<IHubClients<Infrastructure.Realtime.IBoardHub>>();
+        var group = new Mock<Infrastructure.Realtime.IBoardHub>();
         clients.Setup(c => c.Group(It.IsAny<string>())).Returns(group.Object);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
 
@@ -38,9 +38,9 @@ public class SignalRProjectBoardEventPublisherTests
     public async Task PublishAsync_UsesCorrectProjectGroup()
     {
         var projectId = Guid.NewGuid();
-        var hubContext = new Mock<IHubContext<BoardHub, HydraForge.Infrastructure.Realtime.IBoardHub>>();
-        var clients = new Mock<IHubClients<HydraForge.Infrastructure.Realtime.IBoardHub>>();
-        var group = new Mock<HydraForge.Infrastructure.Realtime.IBoardHub>();
+        var hubContext = new Mock<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
+        var clients = new Mock<IHubClients<Infrastructure.Realtime.IBoardHub>>();
+        var group = new Mock<Infrastructure.Realtime.IBoardHub>();
         clients.Setup(c => c.Group($"project-{projectId}")).Returns(group.Object);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
 

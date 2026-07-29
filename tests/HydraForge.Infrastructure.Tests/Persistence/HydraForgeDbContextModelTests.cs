@@ -1,31 +1,38 @@
 namespace HydraForge.Infrastructure.Tests.Persistence;
 
-using HydraForge.Infrastructure.Persistence;
+using System.Linq;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.Chat;
-using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
+using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 public class HydraForgeDbContextModelTests
 {
-    private static void AssertProperties(Microsoft.EntityFrameworkCore.Metadata.IEntityType entity, params string[] propertyNames)
+    private static void AssertProperties(
+        Microsoft.EntityFrameworkCore.Metadata.IEntityType entity,
+        params string[] propertyNames
+    )
     {
         foreach (var propName in propertyNames)
         {
             Assert.True(
                 entity.GetProperties().Any(p => p.Name == propName),
-                $"{entity.ClrType.Name} missing property: {propName}");
+                $"{entity.ClrType.Name} missing property: {propName}"
+            );
         }
     }
 
     private static DbContextOptions<HydraForgeDbContext> CreateOptions()
     {
         return new DbContextOptionsBuilder<HydraForgeDbContext>()
-            .UseNpgsql("Host=localhost;Database=hydraforge_test;Username=postgres;Password=password", o => o.UseVector())
+            .UseNpgsql(
+                "Host=localhost;Database=hydraforge_test;Username=postgres;Password=password",
+                o => o.UseVector()
+            )
             .Options;
     }
 
@@ -72,7 +79,10 @@ public class HydraForgeDbContextModelTests
         var model = context.Model;
 
         Assert.NotNull(model.FindEntityType(typeof(ProviderModelConfig)));
-        Assert.Contains(model.GetEntityTypes(), entity => entity.GetTableName() == "provider_model_configs");
+        Assert.Contains(
+            model.GetEntityTypes(),
+            entity => entity.GetTableName() == "provider_model_configs"
+        );
     }
 
     [Fact]
@@ -84,7 +94,18 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(ImageUsageRecord));
         Assert.NotNull(entity);
 
-        AssertProperties(entity, "UserId", "Feature", "ProviderModelConfigId", "ProviderId", "ModelId", "ModelName", "ImageCount", "Resolution", "Cost");
+        AssertProperties(
+            entity,
+            "UserId",
+            "Feature",
+            "ProviderModelConfigId",
+            "ProviderId",
+            "ModelId",
+            "ModelName",
+            "ImageCount",
+            "Resolution",
+            "Cost"
+        );
     }
 
     [Fact]
@@ -110,16 +131,30 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(LlmProvider));
         Assert.NotNull(entity);
 
-        var requiredProps = new[] { "ApiKeyEncrypted", "AdapterType", "ProviderType", "Tier", "FallbackProviderId" };
+        var requiredProps = new[]
+        {
+            "ApiKeyEncrypted",
+            "AdapterType",
+            "ProviderType",
+            "Tier",
+            "FallbackProviderId",
+        };
         foreach (var propName in requiredProps)
         {
             Assert.True(
                 entity.GetProperties().Any(p => p.Name == propName),
-                $"LlmProvider missing property: {propName}");
+                $"LlmProvider missing property: {propName}"
+            );
         }
 
-        Assert.Equal(typeof(AdapterType), entity.FindProperty(nameof(LlmProvider.AdapterType))?.ClrType);
-        Assert.Equal(typeof(ProviderType), entity.FindProperty(nameof(LlmProvider.ProviderType))?.ClrType);
+        Assert.Equal(
+            typeof(AdapterType),
+            entity.FindProperty(nameof(LlmProvider.AdapterType))?.ClrType
+        );
+        Assert.Equal(
+            typeof(ProviderType),
+            entity.FindProperty(nameof(LlmProvider.ProviderType))?.ClrType
+        );
         Assert.Equal(typeof(ModelTier), entity.FindProperty(nameof(LlmProvider.Tier))?.ClrType);
         Assert.Null(entity.FindProperty("Models"));
     }
@@ -133,9 +168,25 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(TokenUsageRecord));
         Assert.NotNull(entity);
 
-        AssertProperties(entity, "Feature", "ProviderModelConfigId", "ProviderId", "ModelId", "ModelName", "InputTokens", "OutputTokens", "CachedTokens", "PipelineRunId", "Cost", "CreatedAt");
+        AssertProperties(
+            entity,
+            "Feature",
+            "ProviderModelConfigId",
+            "ProviderId",
+            "ModelId",
+            "ModelName",
+            "InputTokens",
+            "OutputTokens",
+            "CachedTokens",
+            "PipelineRunId",
+            "Cost",
+            "CreatedAt"
+        );
 
-        Assert.Equal(typeof(AiFeature), entity.FindProperty(nameof(TokenUsageRecord.Feature))?.ClrType);
+        Assert.Equal(
+            typeof(AiFeature),
+            entity.FindProperty(nameof(TokenUsageRecord.Feature))?.ClrType
+        );
     }
 
     [Fact]
@@ -169,7 +220,15 @@ public class HydraForgeDbContextModelTests
 
         var card = model.FindEntityType(typeof(Card));
         Assert.NotNull(card);
-        AssertProperties(card, "ParentCardId", "Type", "Position", "DueAt", "MovedAt", "ArchivedAt");
+        AssertProperties(
+            card,
+            "ParentCardId",
+            "Type",
+            "Position",
+            "DueAt",
+            "MovedAt",
+            "ArchivedAt"
+        );
         Assert.Equal(typeof(int), card.FindProperty("CardNumber")?.ClrType);
         Assert.Equal(typeof(CardType), card.FindProperty("Type")?.ClrType);
 
@@ -204,7 +263,15 @@ public class HydraForgeDbContextModelTests
 
         var plan = model.FindEntityType(typeof(Plan));
         Assert.NotNull(plan);
-        AssertProperties(plan, "Title", "Content", "Version", "CreatedByUserId", "Status", "Position");
+        AssertProperties(
+            plan,
+            "Title",
+            "Content",
+            "Version",
+            "CreatedByUserId",
+            "Status",
+            "Position"
+        );
 
         var specVersion = model.FindEntityType(typeof(SpecVersion));
         Assert.NotNull(specVersion);
@@ -250,7 +317,15 @@ public class HydraForgeDbContextModelTests
 
         var agentPersonality = model.FindEntityType(typeof(AgentPersonality));
         Assert.NotNull(agentPersonality);
-        AssertProperties(agentPersonality, "Description", "SystemPrompt", "IsDefault", "CreatedAt", "UpdatedAt", "ArchivedAt");
+        AssertProperties(
+            agentPersonality,
+            "Description",
+            "SystemPrompt",
+            "IsDefault",
+            "CreatedAt",
+            "UpdatedAt",
+            "ArchivedAt"
+        );
 
         var notification = model.FindEntityType(typeof(Notification));
         Assert.NotNull(notification);
@@ -289,7 +364,15 @@ public class HydraForgeDbContextModelTests
 
         var document = model.FindEntityType(typeof(Document));
         Assert.NotNull(document);
-        AssertProperties(document, "Content", "ContentType", "FilePath", "Language", "Version", "ArchivedAt");
+        AssertProperties(
+            document,
+            "Content",
+            "ContentType",
+            "FilePath",
+            "Language",
+            "Version",
+            "ArchivedAt"
+        );
 
         var version = model.FindEntityType(typeof(DocumentVersion));
         Assert.NotNull(version);
@@ -301,7 +384,23 @@ public class HydraForgeDbContextModelTests
 
         var image = model.FindEntityType(typeof(GalleryImage));
         Assert.NotNull(image);
-        AssertProperties(image, "FilePath", "OriginalFilename", "ContentType", "Size", "Width", "Height", "Hash", "TakenAt", "CameraModel", "Latitude", "Longitude", "IsFavorite", "UpdatedAt", "ArchivedAt");
+        AssertProperties(
+            image,
+            "FilePath",
+            "OriginalFilename",
+            "ContentType",
+            "Size",
+            "Width",
+            "Height",
+            "Hash",
+            "TakenAt",
+            "CameraModel",
+            "Latitude",
+            "Longitude",
+            "IsFavorite",
+            "UpdatedAt",
+            "ArchivedAt"
+        );
 
         var album = model.FindEntityType(typeof(Album));
         Assert.NotNull(album);
@@ -358,7 +457,12 @@ public class HydraForgeDbContextModelTests
 
         var systemSettings = model.FindEntityType(typeof(SystemSettings));
         Assert.NotNull(systemSettings);
-        AssertProperties(systemSettings, "ArchivedItemRetentionDays", "AuditLogRetentionDays", "NotificationRetentionDays");
+        AssertProperties(
+            systemSettings,
+            "ArchivedItemRetentionDays",
+            "AuditLogRetentionDays",
+            "NotificationRetentionDays"
+        );
     }
 
     [Fact]
@@ -370,7 +474,8 @@ public class HydraForgeDbContextModelTests
         var userEntity = model.FindEntityType(typeof(User));
         Assert.NotNull(userEntity);
 
-        var usernameNormalizedIndex = userEntity.GetIndexes()
+        var usernameNormalizedIndex = userEntity
+            .GetIndexes()
             .FirstOrDefault(i => i.Properties.Any(p => p.Name == "UsernameNormalized"));
 
         Assert.NotNull(usernameNormalizedIndex);
@@ -386,9 +491,12 @@ public class HydraForgeDbContextModelTests
         var cardEntity = model.FindEntityType(typeof(Card));
         Assert.NotNull(cardEntity);
 
-        var compositeIndex = cardEntity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
-                                  i.Properties.Any(p => p.Name == "CardNumber"));
+        var compositeIndex = cardEntity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ProjectId")
+                && i.Properties.Any(p => p.Name == "CardNumber")
+            );
 
         Assert.NotNull(compositeIndex);
         Assert.True(compositeIndex.IsUnique);
@@ -403,7 +511,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(ProjectContextSnapshot));
         Assert.NotNull(entity);
 
-        var projectIdIndex = entity.GetIndexes()
+        var projectIdIndex = entity
+            .GetIndexes()
             .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId"));
 
         Assert.NotNull(projectIdIndex);
@@ -419,9 +528,12 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(CardAssignee));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "CardId") &&
-                                  i.Properties.Any(p => p.Name == "UserId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "CardId")
+                && i.Properties.Any(p => p.Name == "UserId")
+            );
 
         Assert.NotNull(index);
         Assert.True(index.IsUnique);
@@ -452,9 +564,12 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(Card));
         Assert.NotNull(entity);
 
-        var columnPositionIndex = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ColumnId") &&
-                                  i.Properties.Any(p => p.Name == "Position"));
+        var columnPositionIndex = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ColumnId")
+                && i.Properties.Any(p => p.Name == "Position")
+            );
 
         Assert.Null(columnPositionIndex);
     }
@@ -481,9 +596,12 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(ProjectMember));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
-                                  i.Properties.Any(p => p.Name == "UserId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ProjectId")
+                && i.Properties.Any(p => p.Name == "UserId")
+            );
 
         Assert.NotNull(index);
         Assert.True(index.IsUnique);
@@ -498,9 +616,12 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(Column));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
-                                  i.Properties.Any(p => p.Name == "Position"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ProjectId")
+                && i.Properties.Any(p => p.Name == "Position")
+            );
 
         Assert.NotNull(index);
         Assert.False(index.IsUnique);
@@ -515,9 +636,12 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(CardRelationship));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "SourceCardId") &&
-                                  i.Properties.Any(p => p.Name == "TargetCardId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "SourceCardId")
+                && i.Properties.Any(p => p.Name == "TargetCardId")
+            );
 
         Assert.NotNull(index);
         Assert.True(index.IsUnique);
@@ -532,7 +656,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(Spec));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "CardId"));
 
         Assert.NotNull(fk);
@@ -548,7 +673,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(Plan));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "CardId"));
 
         Assert.NotNull(fk);
@@ -564,7 +690,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(Plan));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "SpecId"));
 
         Assert.NotNull(fk);
@@ -580,7 +707,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(DocumentVersion));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "DocumentId"));
 
         Assert.NotNull(fk);
@@ -596,7 +724,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(ChatMessage));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "SessionId"));
 
         Assert.NotNull(fk);
@@ -612,7 +741,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(NoteReminder));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "NoteId"));
 
         Assert.NotNull(fk);
@@ -628,7 +758,8 @@ public class HydraForgeDbContextModelTests
         var entity = model.FindEntityType(typeof(NoteImageAttachment));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys()
+        var fk = entity
+            .GetForeignKeys()
             .FirstOrDefault(f => f.Properties.Any(p => p.Name == "NoteId"));
 
         Assert.NotNull(fk);
@@ -671,7 +802,9 @@ public class HydraForgeDbContextModelTests
 
         var memoryEntry = model.FindEntityType(typeof(MemoryEntry));
         Assert.NotNull(memoryEntry);
-        var memoryEmbedding = memoryEntry.GetProperties().FirstOrDefault(p => p.Name == "Embedding");
+        var memoryEmbedding = memoryEntry
+            .GetProperties()
+            .FirstOrDefault(p => p.Name == "Embedding");
         Assert.NotNull(memoryEmbedding);
         Assert.Contains("vector", memoryEmbedding.GetColumnType());
 

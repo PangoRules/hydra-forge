@@ -1,0 +1,5 @@
+# EF Core migrations — auto-generated, follows EF's own template rather than CSharpier's style.
+src/HydraForge.Infrastructure/Migrations/
+
+# NSwag-generated API client — regenerated on every build, never hand-edited.
+src/HydraForge.Tui/Generated/

@@ -104,18 +104,22 @@ public class AuditServiceTests
     }
 }
 
-internal class MockAuditLogWriter : IAuditLogWriter
+internal class MockAuditLogWriter(bool success) : IAuditLogWriter
 {
-    private readonly bool _success;
-
-    public MockAuditLogWriter(bool success) => _success = success;
-
-    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken cancellationToken = default)
+    public Task<Result> WriteAsync(
+        AuditLogRequest request,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (_success)
+        if (success)
             return Task.FromResult(Result.Success());
-        return Task.FromResult(Result.Failure(new Error(
-            DomainErrorCodes.Infrastructure.AuditWriteFailed,
-            "Audit log write failed.")));
+        return Task.FromResult(
+            Result.Failure(
+                new Error(
+                    DomainErrorCodes.Infrastructure.AuditWriteFailed,
+                    "Audit log write failed."
+                )
+            )
+        );
     }
 }

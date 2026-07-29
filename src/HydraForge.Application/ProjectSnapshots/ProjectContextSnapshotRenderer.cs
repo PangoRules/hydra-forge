@@ -12,9 +12,7 @@ public static class ProjectContextSnapshotRenderer
         IReadOnlyList<CardRelationship> relationships
     )
     {
-        var activeRelationships = relationships
-            .Where(r => r.ArchivedAt == null)
-            .ToList();
+        var activeRelationships = relationships.Where(r => r.ArchivedAt == null).ToList();
 
         var blockerRelationships = activeRelationships
             .Where(r => r.Type == RelationshipType.BlockedBy)
@@ -27,57 +25,70 @@ public static class ProjectContextSnapshotRenderer
             .Where(c => c.ArchivedAt == null && c.MovedAt != default)
             .OrderByDescending(c => c.MovedAt)
             .Take(5)
-            .Select(c => new { c.Id, c.CardNumber, c.Title, c.MovedAt })
+            .Select(c => new
+            {
+                c.Id,
+                c.CardNumber,
+                c.Title,
+                c.MovedAt,
+            })
             .ToList();
 
         var board = new
         {
-            columns = orderedColumns.Select(col =>
-            {
-                var colCards = cards
-                    .Where(c => c.ColumnId == col.Id && c.ArchivedAt == null)
-                    .OrderBy(c => c.Position)
-                    .ThenBy(c => c.CardNumber)
-                    .Select(card =>
-                    {
-                        var blockers = blockerRelationships[card.Id]
-                            .Select(r =>
-                            {
-                                var blockerCard = cards.FirstOrDefault(c => c.Id == r.SourceCardId);
-                                return blockerCard != null && blockerCard.ArchivedAt == null
-                                    ? $"#{blockerCard.CardNumber}"
-                                    : null;
-                            })
-                            .Where(x => x != null)
-                            .Cast<string>()
-                            .ToList();
-
-                        return new
-                        {
-                            id = card.Id,
-                            cardNumber = $"#{card.CardNumber}",
-                            title = card.Title,
-                            column = col.Name,
-                            type = card.Type.ToString(),
-                            blockers
-                        };
-                    })
-                    .ToList();
-
-                return new
+            columns = orderedColumns
+                .Select(col =>
                 {
-                    name = col.Name,
-                    position = col.Position,
-                    cards = colCards
-                };
-            }).ToList(),
-            recentMoved
+                    var colCards = cards
+                        .Where(c => c.ColumnId == col.Id && c.ArchivedAt == null)
+                        .OrderBy(c => c.Position)
+                        .ThenBy(c => c.CardNumber)
+                        .Select(card =>
+                        {
+                            var blockers = blockerRelationships[card.Id]
+                                .Select(r =>
+                                {
+                                    var blockerCard = cards.FirstOrDefault(c =>
+                                        c.Id == r.SourceCardId
+                                    );
+                                    return blockerCard != null && blockerCard.ArchivedAt == null
+                                        ? $"#{blockerCard.CardNumber}"
+                                        : null;
+                                })
+                                .Where(x => x != null)
+                                .Cast<string>()
+                                .ToList();
+
+                            return new
+                            {
+                                id = card.Id,
+                                cardNumber = $"#{card.CardNumber}",
+                                title = card.Title,
+                                column = col.Name,
+                                type = card.Type.ToString(),
+                                blockers,
+                            };
+                        })
+                        .ToList();
+
+                    return new
+                    {
+                        name = col.Name,
+                        position = col.Position,
+                        cards = colCards,
+                    };
+                })
+                .ToList(),
+            recentMoved,
         };
 
-        return JsonSerializer.Serialize(board, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        });
+        return JsonSerializer.Serialize(
+            board,
+            new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true,
+            }
+        );
     }
 }

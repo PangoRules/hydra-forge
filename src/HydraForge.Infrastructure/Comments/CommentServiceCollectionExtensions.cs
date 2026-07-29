@@ -1,5 +1,4 @@
 using HydraForge.Application.Comments;
-using HydraForge.Infrastructure.Comments;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HydraForge.Infrastructure.Comments;

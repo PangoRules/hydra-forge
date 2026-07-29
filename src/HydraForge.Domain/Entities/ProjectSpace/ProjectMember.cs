@@ -1,5 +1,5 @@
-using HydraForge.Domain.Enums;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Domain.Entities.ProjectSpace;
 

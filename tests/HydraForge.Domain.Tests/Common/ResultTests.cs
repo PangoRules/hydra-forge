@@ -7,7 +7,10 @@ public class ResultTests
     [Fact]
     public void Error_Construction_WithCodeAndMessage_SetsProperties()
     {
-        var error = new Error(DomainErrorCodes.Auth.InvalidCredentials, "Invalid username or password.");
+        var error = new Error(
+            DomainErrorCodes.Auth.InvalidCredentials,
+            "Invalid username or password."
+        );
 
         Assert.Equal(DomainErrorCodes.Auth.InvalidCredentials, error.Code);
         Assert.Equal("Invalid username or password.", error.Message);
@@ -30,7 +33,10 @@ public class ResultTests
     [Fact]
     public void Result_Failure_HasErrorAndNoValue()
     {
-        var error = new Error(DomainErrorCodes.Auth.InvalidCredentials, "Invalid username or password.");
+        var error = new Error(
+            DomainErrorCodes.Auth.InvalidCredentials,
+            "Invalid username or password."
+        );
         Result<string> failure = Result<string>.Failure(error);
 
         Assert.False(failure.IsSuccess);
@@ -42,7 +48,10 @@ public class ResultTests
     [Fact]
     public void Result_Failure_Value_ThrowsInvalidOperationException()
     {
-        var error = new Error(DomainErrorCodes.Auth.InvalidCredentials, "Invalid username or password.");
+        var error = new Error(
+            DomainErrorCodes.Auth.InvalidCredentials,
+            "Invalid username or password."
+        );
         Result<string> failure = Result<string>.Failure(error);
 
         Assert.Throws<InvalidOperationException>(() => failure.Value);
@@ -69,7 +78,10 @@ public class ResultTests
     [Fact]
     public void Result_NonGeneric_Failure_HasErrorAndNoValue()
     {
-        var error = new Error(DomainErrorCodes.Infrastructure.DatabaseUnavailable, "Database unavailable.");
+        var error = new Error(
+            DomainErrorCodes.Infrastructure.DatabaseUnavailable,
+            "Database unavailable."
+        );
         Result failure = Result.Failure(error);
 
         Assert.False(failure.IsSuccess);

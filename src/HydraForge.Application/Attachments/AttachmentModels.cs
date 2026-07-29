@@ -1,5 +1,3 @@
-using HydraForge.Domain.Enums;
-
 namespace HydraForge.Application.Attachments;
 
 public record CreateAttachmentCommand(
@@ -26,7 +24,7 @@ public record AttachmentListFilter();
 public enum AttachmentStorageProvider
 {
     Local,
-    S3
+    S3,
 }
 
 public static class AttachmentContentTypes

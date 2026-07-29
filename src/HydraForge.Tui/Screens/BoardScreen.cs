@@ -23,7 +23,6 @@ public class BoardScreen(
     private readonly SignalRConnectionManager _signalRConnectionManager = signalRConnectionManager;
     private readonly NotificationCenter _notificationCenter = notificationCenter;
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
-    private readonly BoardRenderer _renderer = new();
     private readonly SemaphoreSlim _renderLock = new(1, 1);
     private bool _signalRSubscribed;
 
@@ -119,7 +118,7 @@ public class BoardScreen(
             AnsiConsole.Clear();
 
             var totalCards = _columns.Sum(c => c.Cards.Count);
-            var layout = _renderer.BuildLayout(
+            var layout = BoardRenderer.BuildLayout(
                 _columns,
                 _selectedColumn,
                 _selectedCard,
@@ -360,8 +359,8 @@ public class BoardScreen(
         var currentUserId = CurrentUser.GetId();
         var allCards = _columns.SelectMany(c => c.Cards).ToList();
 
-        var users = _appState.OnlineUsers
-            .Where(u => u.Key != currentUserId)
+        var users = _appState
+            .OnlineUsers.Where(u => u.Key != currentUserId)
             .Select(u =>
             {
                 int? cardNumber = _appState.FocusedCards.TryGetValue(u.Key, out var cardId)
@@ -378,7 +377,6 @@ public class BoardScreen(
     {
         try
         {
-
             // Load project
             var project = await Client.ProjectsGET2Async(_projectId);
             _projectName = project.Name;
@@ -445,10 +443,17 @@ public class BoardScreen(
                                             ?? [],
                                         c.Version,
                                         parent?.CardNumber,
-                                        parent != null ? CardTypeMapper.ToDisplayString(parent.Type) : null,
+                                        parent != null
+                                            ? CardTypeMapper.ToDisplayString(parent.Type)
+                                            : null,
                                         childCounts.GetValueOrDefault(c.Id, 0),
                                         c.DueAt,
-                                        currentUserId.HasValue && (c.Watchers?.Any(w => w.UserId == currentUserId.Value) ?? false)
+                                        currentUserId.HasValue
+                                            && (
+                                                c.Watchers?.Any(w =>
+                                                    w.UserId == currentUserId.Value
+                                                ) ?? false
+                                            )
                                     );
                                 }),
                         ]
@@ -512,7 +517,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.CardsPOSTAsync(
                 _projectId,
                 new CreateCardRequest
@@ -566,7 +570,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.MoveAsync(
                 _projectId,
                 card.Id,
@@ -613,7 +616,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.ArchiveAsync(
                 _projectId,
                 card.Id,
@@ -644,7 +646,6 @@ public class BoardScreen(
 
         try
         {
-
             var newTitle = AnsiConsole.Prompt(
                 new TextPrompt<string>($"New title (current: {card.Title}):")
                     .DefaultValue(card.Title)
@@ -717,7 +718,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.MoveAsync(
                 _projectId,
                 card.Id,

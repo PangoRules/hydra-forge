@@ -2,18 +2,12 @@ using System.Security.Cryptography;
 
 namespace HydraForge.Server.Middleware;
 
-public class CorrelationIdMiddleware
+public class CorrelationIdMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
     private const string CorrelationIdHeader = "X-Correlation-Id";
     private const string CorrelationIdItemKey = "CorrelationId";
     private const string GeneratedPrefix = "req_";
     private const int GeneratedLength = 16;
-
-    public CorrelationIdMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -25,14 +19,16 @@ public class CorrelationIdMiddleware
             return Task.CompletedTask;
         });
 
-        await _next(context);
+        await next(context);
     }
 
     private static string GetOrCreateCorrelationId(HttpContext context)
     {
-        if (context.Request.Headers.TryGetValue(CorrelationIdHeader, out var headerValue)
+        if (
+            context.Request.Headers.TryGetValue(CorrelationIdHeader, out var headerValue)
             && !string.IsNullOrWhiteSpace(headerValue)
-            && headerValue.ToString().Length <= 128)
+            && headerValue.ToString().Length <= 128
+        )
         {
             return headerValue.ToString();
         }
@@ -44,9 +40,7 @@ public class CorrelationIdMiddleware
     {
         var bytes = new byte[GeneratedLength];
         RandomNumberGenerator.Fill(bytes);
-        return GeneratedPrefix + Convert.ToBase64String(bytes)
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
+        return GeneratedPrefix
+            + Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
     }
 }

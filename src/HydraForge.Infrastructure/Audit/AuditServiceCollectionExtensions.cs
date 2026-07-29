@@ -1,7 +1,6 @@
 namespace HydraForge.Infrastructure.Audit;
 
 using HydraForge.Application.Audit;
-using HydraForge.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class AuditServiceCollectionExtensions

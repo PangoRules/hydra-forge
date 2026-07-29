@@ -16,8 +16,20 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = col1Id, ProjectId = projectId, Name = "Backlog", Position = 0 },
-            new() { Id = col2Id, ProjectId = projectId, Name = "Done", Position = 1 },
+            new()
+            {
+                Id = col1Id,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
+            new()
+            {
+                Id = col2Id,
+                ProjectId = projectId,
+                Name = "Done",
+                Position = 1,
+            },
         };
 
         var card1Id = Guid.NewGuid();
@@ -26,9 +38,33 @@ public class ProjectContextSnapshotRendererTests
 
         var cards = new List<Card>
         {
-            new() { Id = card1Id, ProjectId = projectId, ColumnId = col1Id, CardNumber = 1, Title = "Card 1", Position = 0 },
-            new() { Id = card2Id, ProjectId = projectId, ColumnId = col2Id, CardNumber = 2, Title = "Card 2", Position = 0 },
-            new() { Id = card3Id, ProjectId = projectId, ColumnId = col1Id, CardNumber = 3, Title = "Card 3", Position = 1 },
+            new()
+            {
+                Id = card1Id,
+                ProjectId = projectId,
+                ColumnId = col1Id,
+                CardNumber = 1,
+                Title = "Card 1",
+                Position = 0,
+            },
+            new()
+            {
+                Id = card2Id,
+                ProjectId = projectId,
+                ColumnId = col2Id,
+                CardNumber = 2,
+                Title = "Card 2",
+                Position = 0,
+            },
+            new()
+            {
+                Id = card3Id,
+                ProjectId = projectId,
+                ColumnId = col1Id,
+                CardNumber = 3,
+                Title = "Card 3",
+                Position = 1,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
@@ -48,7 +84,13 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
 
         var card1Id = Guid.NewGuid();
@@ -56,8 +98,25 @@ public class ProjectContextSnapshotRendererTests
 
         var cards = new List<Card>
         {
-            new() { Id = card1Id, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Active Card", Position = 0 },
-            new() { Id = card2Id, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Archived Card", Position = 1, ArchivedAt = DateTime.UtcNow },
+            new()
+            {
+                Id = card1Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Active Card",
+                Position = 0,
+            },
+            new()
+            {
+                Id = card2Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Archived Card",
+                Position = 1,
+                ArchivedAt = DateTime.UtcNow,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
@@ -74,7 +133,13 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
 
         var card1Id = Guid.NewGuid();
@@ -82,21 +147,44 @@ public class ProjectContextSnapshotRendererTests
 
         var cards = new List<Card>
         {
-            new() { Id = card1Id, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card 1", Position = 0 },
-            new() { Id = card2Id, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card 2", Position = 1 },
+            new()
+            {
+                Id = card1Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card 1",
+                Position = 0,
+            },
+            new()
+            {
+                Id = card2Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card 2",
+                Position = 1,
+            },
         };
 
         var relationships = new List<CardRelationship>
         {
-            new() { Id = Guid.NewGuid(), SourceCardId = card1Id, TargetCardId = card2Id, Type = RelationshipType.BlockedBy, ArchivedAt = DateTime.UtcNow },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                SourceCardId = card1Id,
+                TargetCardId = card2Id,
+                Type = RelationshipType.BlockedBy,
+                ArchivedAt = DateTime.UtcNow,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, relationships);
 
         using var doc = JsonDocument.Parse(result);
         // Card1 is blocked by Card2. Card2 is archived, so blockers should be empty.
-        var card1Blockers = doc.RootElement
-            .GetProperty("columns")[0]
+        var card1Blockers = doc
+            .RootElement.GetProperty("columns")[0]
             .GetProperty("cards")[0]
             .GetProperty("blockers");
         Assert.Equal(0, card1Blockers.GetArrayLength());
@@ -110,7 +198,13 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
 
         var card1Id = Guid.NewGuid();
@@ -118,13 +212,35 @@ public class ProjectContextSnapshotRendererTests
 
         var cards = new List<Card>
         {
-            new() { Id = card1Id, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Blocker Card", Position = 0 },
-            new() { Id = card2Id, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Blocked Card", Position = 1 },
+            new()
+            {
+                Id = card1Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Blocker Card",
+                Position = 0,
+            },
+            new()
+            {
+                Id = card2Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Blocked Card",
+                Position = 1,
+            },
         };
 
         var relationships = new List<CardRelationship>
         {
-            new() { Id = Guid.NewGuid(), SourceCardId = card1Id, TargetCardId = card2Id, Type = RelationshipType.BlockedBy },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                SourceCardId = card1Id,
+                TargetCardId = card2Id,
+                Type = RelationshipType.BlockedBy,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, relationships);
@@ -140,7 +256,13 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
 
         var now = DateTime.UtcNow;
@@ -149,8 +271,26 @@ public class ProjectContextSnapshotRendererTests
 
         var cards = new List<Card>
         {
-            new() { Id = card1Id, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card 1", Position = 0, MovedAt = now.AddMinutes(-10) },
-            new() { Id = card2Id, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card 2", Position = 1, MovedAt = now.AddMinutes(-5) },
+            new()
+            {
+                Id = card1Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card 1",
+                Position = 0,
+                MovedAt = now.AddMinutes(-10),
+            },
+            new()
+            {
+                Id = card2Id,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card 2",
+                Position = 1,
+                MovedAt = now.AddMinutes(-5),
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
@@ -168,14 +308,44 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            },
         };
 
         var cards = new List<Card>
         {
-            new() { Id = Guid.NewGuid(), ProjectId = projectId, ColumnId = colId, CardNumber = 3, Title = "Third", Position = 2 },
-            new() { Id = Guid.NewGuid(), ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "First", Position = 0 },
-            new() { Id = Guid.NewGuid(), ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Second", Position = 1 },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 3,
+                Title = "Third",
+                Position = 2,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "First",
+                Position = 0,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Second",
+                Position = 1,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
@@ -197,12 +367,27 @@ public class ProjectContextSnapshotRendererTests
 
         var columns = new List<Column>
         {
-            new() { Id = colId, ProjectId = projectId, Name = "In Dev", Position = 0 },
+            new()
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "In Dev",
+                Position = 0,
+            },
         };
 
         var cards = new List<Card>
         {
-            new() { Id = cardId, ProjectId = projectId, ColumnId = colId, CardNumber = 5, Title = "My Task", Position = 0, Type = CardType.Task },
+            new()
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 5,
+                Title = "My Task",
+                Position = 0,
+                Type = CardType.Task,
+            },
         };
 
         var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);

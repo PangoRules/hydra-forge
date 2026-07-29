@@ -12,7 +12,12 @@ public class Project
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
 
-    public void UpdateDetails(string name, string description, string? gitRemoteUrl, string? gitProvider)
+    public void UpdateDetails(
+        string name,
+        string description,
+        string? gitRemoteUrl,
+        string? gitProvider
+    )
     {
         Name = name;
         Description = description;

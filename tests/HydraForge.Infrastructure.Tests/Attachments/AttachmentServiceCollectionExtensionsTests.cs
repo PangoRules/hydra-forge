@@ -19,16 +19,18 @@ public class AttachmentServiceCollectionExtensionsTests
             Environment.SetEnvironmentVariable("FILE_STORAGE_PROVIDER", "S3");
 
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["FileStorage:Provider"] = "Local",
-                    ["FileStorage:S3:BucketName"] = "hydraforge-attachments",
-                    ["FileStorage:S3:Region"] = "us-east-1",
-                    ["FileStorage:S3:AccessKey"] = "minioadmin",
-                    ["FileStorage:S3:SecretKey"] = "minioadmin",
-                    ["FileStorage:S3:Endpoint"] = "http://localhost:9000",
-                    ["FileStorage:S3:ForcePathStyle"] = "true",
-                })
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["FileStorage:Provider"] = "Local",
+                        ["FileStorage:S3:BucketName"] = "hydraforge-attachments",
+                        ["FileStorage:S3:Region"] = "us-east-1",
+                        ["FileStorage:S3:AccessKey"] = "minioadmin",
+                        ["FileStorage:S3:SecretKey"] = "minioadmin",
+                        ["FileStorage:S3:Endpoint"] = "http://localhost:9000",
+                        ["FileStorage:S3:ForcePathStyle"] = "true",
+                    }
+                )
                 .Build();
 
             var services = new ServiceCollection();
@@ -49,8 +51,16 @@ public class AttachmentServiceCollectionExtensionsTests
     public async Task AddAttachmentServices_FileStoragePathEnvironmentVariableOverridesConfiguration()
     {
         var previousPath = Environment.GetEnvironmentVariable("FILE_STORAGE_PATH");
-        var envPath = Path.Combine(Path.GetTempPath(), "hydraforge-tests", Guid.NewGuid().ToString());
-        var configPath = Path.Combine(Path.GetTempPath(), "hydraforge-tests", Guid.NewGuid().ToString());
+        var envPath = Path.Combine(
+            Path.GetTempPath(),
+            "hydraforge-tests",
+            Guid.NewGuid().ToString()
+        );
+        var configPath = Path.Combine(
+            Path.GetTempPath(),
+            "hydraforge-tests",
+            Guid.NewGuid().ToString()
+        );
         var storageKey = "user/cards/card/file";
 
         try
@@ -58,11 +68,13 @@ public class AttachmentServiceCollectionExtensionsTests
             Environment.SetEnvironmentVariable("FILE_STORAGE_PATH", envPath);
 
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["FileStorage:Provider"] = "Local",
-                    ["FileStorage:LocalPath"] = configPath,
-                })
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["FileStorage:Provider"] = "Local",
+                        ["FileStorage:LocalPath"] = configPath,
+                    }
+                )
                 .Build();
 
             var services = new ServiceCollection();

@@ -12,18 +12,33 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         return await context.Cards.FirstOrDefaultAsync(c => c.Id == cardId, ct);
     }
 
-    public async Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    )
     {
-        return await context.Cards.Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, ct);
+        return await context
+            .Cards.Where(c => cardIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, ct);
     }
 
-    public async Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
+    public async Task<Card?> GetByProjectAndNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        CancellationToken ct = default
+    )
     {
-        return await context.Cards
-            .FirstOrDefaultAsync(c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null, ct);
+        return await context.Cards.FirstOrDefaultAsync(
+            c => c.ProjectId == projectId && c.CardNumber == cardNumber && c.ArchivedAt == null,
+            ct
+        );
     }
 
-    public async Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Card>> ListByProjectAsync(
+        Guid projectId,
+        CardListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = context.Cards.Where(c => c.ProjectId == projectId);
 
@@ -40,15 +55,17 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
             query = query.Where(c => EF.Functions.ILike(c.Title, $"%{filter.Search}%"));
 
         if (filter.ArchivedLimit.HasValue)
-            query = query.OrderByDescending(c => c.ArchivedAt ?? c.CreatedAt).Take(filter.ArchivedLimit.Value);
+            query = query
+                .OrderByDescending(c => c.ArchivedAt ?? c.CreatedAt)
+                .Take(filter.ArchivedLimit.Value);
 
         return await query.OrderBy(c => c.Position).ToListAsync(ct);
     }
 
     public async Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
     {
-        var max = await context.Cards
-            .Where(c => c.ProjectId == projectId)
+        var max = await context
+            .Cards.Where(c => c.ProjectId == projectId)
             .MaxAsync(c => (int?)c.CardNumber, ct);
         return max ?? 0;
     }
@@ -79,10 +96,16 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default)
+    public async Task CompactColumnPositionsAsync(
+        Guid columnId,
+        int exceptPosition,
+        CancellationToken ct = default
+    )
     {
-        var cards = await context.Cards
-            .Where(c => c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null)
+        var cards = await context
+            .Cards.Where(c =>
+                c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null
+            )
             .ToListAsync(ct);
 
         foreach (var card in cards)
@@ -93,6 +116,9 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
 
     public async Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
     {
-        return await context.Cards.CountAsync(c => c.ColumnId == columnId && c.ArchivedAt == null, ct);
+        return await context.Cards.CountAsync(
+            c => c.ColumnId == columnId && c.ArchivedAt == null,
+            ct
+        );
     }
 }

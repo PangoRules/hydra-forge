@@ -53,7 +53,13 @@ public record ProjectDto(
 
 public record ColumnDto(Guid Id, string Name, int Position, int? WipLimit, string? Color);
 
-public record ProjectMemberDto(Guid Id, Guid UserId, string Username, MemberRole Role, DateTime JoinedAt);
+public record ProjectMemberDto(
+    Guid Id,
+    Guid UserId,
+    string Username,
+    MemberRole Role,
+    DateTime JoinedAt
+);
 
 public record ProjectListDto(
     Guid Id,

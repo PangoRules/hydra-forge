@@ -1,5 +1,4 @@
 using HydraForge.Application.Notifications;
-using Xunit;
 
 namespace HydraForge.Application.Tests.Notifications;
 
@@ -12,8 +11,18 @@ public class NtfyClientTests
         var hubBus = new NotificationServiceTests.FakeNotificationHubBus();
         var service = new NotificationService(repo, hubBus, ntfyClient: null);
 
-        await service.NotifyAsync(new NotifyRequest(
-            Guid.NewGuid(), Guid.NewGuid(), "Title", "Body", null, null, null, null));
+        await service.NotifyAsync(
+            new NotifyRequest(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Title",
+                "Body",
+                null,
+                null,
+                null,
+                null
+            )
+        );
 
         Assert.Single(repo.Added);
     }

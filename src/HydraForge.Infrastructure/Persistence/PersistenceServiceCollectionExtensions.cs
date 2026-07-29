@@ -1,6 +1,5 @@
 namespace HydraForge.Infrastructure.Persistence;
 
-using HydraForge.Application.Audit;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Audit;
 using HydraForge.Infrastructure.Health;

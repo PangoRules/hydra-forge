@@ -8,13 +8,29 @@ namespace HydraForge.Application.Auth;
 public interface IUserRepository
 {
     Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    );
     Task<User?> FindByUsernameAsync(string username);
-    Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    );
     Task UpdateLastLoginAsync(Guid userId, DateTime loginAt);
     Task<bool> AnyAdminExistsAsync();
     Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default);
-    Task CreateAsync(User user);
+    Task CreateAsync(User user, CancellationToken ct = default);
+    Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    );
+    Task<int> CountAsync(string? search, CancellationToken ct = default);
+    Task UpdateAsync(User user, CancellationToken ct = default);
 }
 
 public interface IPasswordHasher
@@ -80,13 +96,7 @@ public class LoginUserHandler(
         await userRepository.UpdateLastLoginAsync(user.Id, DateTime.UtcNow);
 
         return Result<LoginResponse>.Success(
-            new LoginResponse(
-                token.Value,
-                token.ExpiresAt,
-                user.Id,
-                user.Username,
-                user.IsAdmin
-            )
+            new LoginResponse(token.Value, token.ExpiresAt, user.Id, user.Username, user.IsAdmin)
         );
     }
 }

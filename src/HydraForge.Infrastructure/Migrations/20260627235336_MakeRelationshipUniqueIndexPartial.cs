@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -12,14 +12,16 @@ namespace HydraForge.Infrastructure.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_card_relationships_SourceCardId_TargetCardId",
-                table: "card_relationships");
+                table: "card_relationships"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_card_relationships_SourceCardId_TargetCardId",
                 table: "card_relationships",
-                columns: new[] { "SourceCardId", "TargetCardId" },
+                columns: ["SourceCardId", "TargetCardId"],
                 unique: true,
-                filter: "\"ArchivedAt\" IS NULL");
+                filter: "\"ArchivedAt\" IS NULL"
+            );
         }
 
         /// <inheritdoc />
@@ -27,13 +29,15 @@ namespace HydraForge.Infrastructure.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_card_relationships_SourceCardId_TargetCardId",
-                table: "card_relationships");
+                table: "card_relationships"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_card_relationships_SourceCardId_TargetCardId",
                 table: "card_relationships",
-                columns: new[] { "SourceCardId", "TargetCardId" },
-                unique: true);
+                columns: ["SourceCardId", "TargetCardId"],
+                unique: true
+            );
         }
     }
 }
