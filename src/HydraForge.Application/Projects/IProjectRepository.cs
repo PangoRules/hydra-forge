@@ -36,6 +36,16 @@ public interface IProjectRepository
         int take,
         CancellationToken ct = default
     );
+    Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    );
     Task UpdateAsync(Project project, CancellationToken ct = default);
 }
 

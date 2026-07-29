@@ -79,7 +79,8 @@ public class ProjectsController(
         [FromQuery] bool sortDescending = true,
         [FromQuery] MemberRole? role = null,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 20
+        [FromQuery] int take = 20,
+        [FromQuery] bool excludeMembership = false
     )
     {
         var userId = User.GetRequiredUserId();
@@ -94,7 +95,8 @@ public class ProjectsController(
             role,
             skip,
             take,
-            isAdmin
+            isAdmin,
+            excludeMembership
         );
 
         if (result.IsFailure)

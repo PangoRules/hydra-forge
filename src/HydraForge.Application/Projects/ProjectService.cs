@@ -149,32 +149,66 @@ public class ProjectService(
         int skip,
         int take,
         bool isAdmin = false,
+        bool excludeMembership = false,
         CancellationToken ct = default
     )
     {
         var clampedSkip = Math.Max(skip, 0);
         var clampedTake = Math.Clamp(take, 1, 100);
 
-        var page = isAdmin
-            ? await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct)
-            : await projectRepo.ListByUserIdAsync(
+        ProjectListPage page;
+        if (isAdmin && excludeMembership)
+        {
+            page = await projectRepo.ListNonMemberProjectsAsync(
                 requestUserId,
                 includeArchived,
                 search,
                 sortBy,
                 sortDescending,
-                role,
                 clampedSkip,
                 clampedTake,
                 ct
             );
+        }
+        else
+        {
+            page = isAdmin
+                ? await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct)
+                : await projectRepo.ListByUserIdAsync(
+                    requestUserId,
+                    includeArchived,
+                    search,
+                    sortBy,
+                    sortDescending,
+                    role,
+                    clampedSkip,
+                    clampedTake,
+                    ct
+                );
+        }
 
         var projectIds = page.Items.Select(p => p.Id).ToList();
         var memberCounts = await memberRepo.GetMemberCountsAsync(projectIds, ct);
 
         List<ProjectListDto> result;
-        if (isAdmin)
+        if (isAdmin && !excludeMembership)
         {
+            var myRoles = await memberRepo.GetRolesByProjectAndUserAsync(projectIds, requestUserId, ct);
+            result = page
+                .Items.Select(project => new ProjectListDto(
+                    project.Id,
+                    project.Name,
+                    project.Description,
+                    project.CreatedAt,
+                    project.ArchivedAt,
+                    memberCounts.GetValueOrDefault(project.Id, 0),
+                    myRoles.TryGetValue(project.Id, out var r) ? r : null
+                ))
+                .ToList();
+        }
+        else if (isAdmin && excludeMembership)
+        {
+            // Admin looking at "not a member" — they have no membership in any of these projects
             result = page
                 .Items.Select(project => new ProjectListDto(
                     project.Id,

@@ -30,6 +30,7 @@ public class ProjectListScreen : IScreen
     private ProjectSortField _sortField = ProjectSortField.CreatedAt;
     private bool _sortDescending = true;
     private MemberRole? _roleFilter;
+    private bool _notMemberFilter;
 
     public ProjectListScreen(
         ApiClientFactory apiClientFactory,
@@ -99,7 +100,7 @@ public class ProjectListScreen : IScreen
         if (_searchFilter.Length > 0)
             AnsiConsole.MarkupLine($"[grey]Filter: \"{Markup.Escape(_searchFilter)}\"[/]");
 
-        var roleLabel = _roleFilter.HasValue ? GetRoleString(_roleFilter.Value) : "All";
+        var roleLabel = _notMemberFilter ? "Not member" : _roleFilter.HasValue ? GetRoleString(_roleFilter.Value) : "All";
         var sortArrow = _sortDescending ? "↓" : "↑";
         AnsiConsole.MarkupLine($"[grey]Sort: {_sortField} {sortArrow}   Role: {roleLabel}[/]");
 
@@ -281,12 +282,20 @@ public class ProjectListScreen : IScreen
                 break;
 
             case ConsoleKey.R:
-                _roleFilter = _roleFilter switch
+                if (_notMemberFilter)
                 {
-                    null => MemberRole.Owner,
-                    MemberRole.Owner => MemberRole.Member,
-                    _ => null
-                };
+                    _notMemberFilter = false;
+                    _roleFilter = null;
+                }
+                else if (_roleFilter is null)
+                    _roleFilter = MemberRole.Owner;
+                else if (_roleFilter == MemberRole.Owner)
+                    _roleFilter = MemberRole.Member;
+                else
+                {
+                    _notMemberFilter = true;
+                    _roleFilter = null;
+                }
                 _skip = 0;
                 _selectedIndex = 0;
                 await LoadProjectsAsync();
@@ -367,7 +376,8 @@ public class ProjectListScreen : IScreen
                 sortDescending: _sortDescending,
                 role: _roleFilter,
                 skip: _skip,
-                take: PageSize);
+                take: PageSize,
+                excludeMembership: _notMemberFilter ? true : null);
 
             if (page != null)
             {

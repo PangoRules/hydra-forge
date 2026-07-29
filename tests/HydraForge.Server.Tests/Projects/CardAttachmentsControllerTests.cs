@@ -419,6 +419,16 @@ internal class AttachmentsTestProjectRepository : HydraForge.Application.Project
         if (idx >= 0) _projects[idx] = project;
         return Task.CompletedTask;
     }
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+        => throw new NotImplementedException();
 }
 
 internal class AttachmentsTestColumnRepository : HydraForge.Application.Projects.IColumnRepository

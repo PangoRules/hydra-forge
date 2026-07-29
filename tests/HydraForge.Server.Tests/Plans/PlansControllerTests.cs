@@ -421,6 +421,16 @@ internal class PlansTestProjectRepository : IProjectRepository
         if (idx >= 0) _projects[idx] = project;
         return Task.CompletedTask;
     }
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+        => throw new NotImplementedException();
 }
 
 internal class PlansTestPlanRepository : IPlanRepository

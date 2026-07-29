@@ -326,7 +326,18 @@ public class ProjectServiceTests
 internal class InMemoryProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = [];
+    public Dictionary<Guid, HashSet<Guid>> UserMemberships { get; } = [];
     public int LastTake { get; private set; }
+
+    public void AddMembership(Guid userId, Guid projectId)
+    {
+        if (!UserMemberships.TryGetValue(userId, out var set))
+        {
+            set = [];
+            UserMemberships[userId] = set;
+        }
+        set.Add(projectId);
+    }
 
     public Task AddAsync(Project project, CancellationToken ct = default)
     {
@@ -392,6 +403,42 @@ internal class InMemoryProjectRepository : IProjectRepository
         CancellationToken ct = default)
     {
         var filtered = Projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+
+        var all = sorted.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
+
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+    {
+        var memberProjectIds = UserMemberships.TryGetValue(userId, out var set) ? set : [];
+
+        var filtered = Projects
+            .Where(p => !memberProjectIds.Contains(p.Id))
+            .AsEnumerable();
+
         if (!includeArchived)
             filtered = filtered.Where(p => p.ArchivedAt == null);
         if (!string.IsNullOrWhiteSpace(search))

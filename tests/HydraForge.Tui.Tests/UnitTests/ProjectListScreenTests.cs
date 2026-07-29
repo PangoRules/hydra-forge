@@ -23,6 +23,7 @@ public class ProjectListTestApiClient : TestApiClient
     public MemberRole? LastRole { get; private set; }
     public int? LastSkip { get; private set; }
     public int? LastTake { get; private set; }
+    public bool? LastExcludeMembership { get; private set; }
 
     public override Task<ProjectListPageResponse> ProjectsGETAsync(
         bool? includeArchived = null,
@@ -32,6 +33,7 @@ public class ProjectListTestApiClient : TestApiClient
         MemberRole? role = null,
         int? skip = null,
         int? take = null,
+        bool? excludeMembership = null,
         CancellationToken cancellationToken = default)
     {
         CallCount++;
@@ -42,6 +44,7 @@ public class ProjectListTestApiClient : TestApiClient
         LastRole = role;
         LastSkip = skip;
         LastTake = take;
+        LastExcludeMembership = excludeMembership;
 
         if (ThrowApiExceptionOnProjects)
             throw new ApiException("deserialization failed", 200, null, new Dictionary<string, IEnumerable<string>>(), null);
@@ -296,14 +299,25 @@ public class ProjectListScreenTests
         await screen.OnEnterAsync();
         var rKey = new ConsoleKeyInfo('r', ConsoleKey.R, false, false, false);
 
+        // 1st press: All -> Owner
         await screen.HandleKeyAsync(rKey);
         Assert.Equal(MemberRole.Owner, mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
 
+        // 2nd press: Owner -> Member
         await screen.HandleKeyAsync(rKey);
         Assert.Equal(MemberRole.Member, mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
 
+        // 3rd press: Member -> Not member
         await screen.HandleKeyAsync(rKey);
         Assert.Null(mockApiClient.LastRole);
+        Assert.True(mockApiClient.LastExcludeMembership);
+
+        // 4th press: Not member -> All
+        await screen.HandleKeyAsync(rKey);
+        Assert.Null(mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
     }
 
     [Fact]
