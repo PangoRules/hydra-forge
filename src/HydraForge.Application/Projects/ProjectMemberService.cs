@@ -159,6 +159,14 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
+        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.RemovedByUserId, ct))
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
+
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
             cmd.ProjectId,
             cmd.RemovedByUserId,

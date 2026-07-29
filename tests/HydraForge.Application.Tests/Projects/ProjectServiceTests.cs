@@ -215,7 +215,6 @@ public class ProjectServiceTests
         Assert.True(result.IsSuccess);
         var log = Assert.Single(auditWriter.Writes);
         Assert.Equal(AuditLogScope.Project, log.Scope);
-        Assert.Equal(AuditLogScope.Project, log.Scope);
         Assert.Equal(ownerId, log.ActorId);
         Assert.Equal("Project", log.EntityType);
         Assert.Equal(projectId, log.EntityId);

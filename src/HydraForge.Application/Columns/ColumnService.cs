@@ -20,9 +20,9 @@ public class ColumnService(
     IAuditLogWriter auditLogWriter
 )
 {
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
-    private readonly IUserRepository _userRepo = userRepo;
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default

@@ -110,6 +110,60 @@ public class ProjectMemberServiceTests
         Assert.Equal(MemberRole.Member, result.Value.Role);
     }
 
+    [Fact]
+    public async Task UpdateMemberAsync_AdminNonMember_Succeeds()
+    {
+        var (repo, memberRepo, userRepo, publisher) = CreateAdminMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var projectId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
+        memberRepo.Members.Add(new ProjectMember { Id = memberId, ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+
+        var result = await handler.UpdateMemberAsync(new UpdateProjectMemberCommand(projectId, memberId, MemberRole.Owner, adminId));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(MemberRole.Owner, result.Value.Role);
+    }
+
+    [Fact]
+    public async Task RemoveMemberAsync_AdminNonMember_Succeeds()
+    {
+        var (repo, memberRepo, userRepo, publisher) = CreateAdminMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var projectId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var memberToRemoveId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
+        memberRepo.Members.Add(new ProjectMember { Id = memberToRemoveId, ProjectId = projectId, UserId = ownerId, Role = MemberRole.Owner });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Owner });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+
+        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberToRemoveId, adminId));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task RemoveMemberAsync_NonAdminNonMember_Denies()
+    {
+        var (repo, memberRepo, userRepo, publisher) = CreateMocks();
+        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var projectId = Guid.NewGuid();
+        var nonMemberId = Guid.NewGuid();
+        var memberToRemoveId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = projectId, Name = "Test Project" });
+        memberRepo.Members.Add(new ProjectMember { Id = memberToRemoveId, ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Owner });
+        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = Guid.NewGuid(), Role = MemberRole.Member });
+
+        var result = await handler.RemoveMemberAsync(new RemoveProjectMemberCommand(projectId, memberToRemoveId, nonMemberId));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
+    }
+
     private static (
         InMemoryProjectRepository repo,
         InMemoryProjectMemberRepository memberRepo,
