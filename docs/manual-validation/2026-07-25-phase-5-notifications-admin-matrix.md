@@ -5,6 +5,7 @@ Consolidated from:
 - `2026-07-25-phase-5-notifications-admin-plan-2-notification-system-matrix.md`
 - `2026-07-25-phase-5-notifications-admin-plan-3-notification-hub-matrix.md`
 - `2026-07-25-phase-5-notifications-admin-plan-6-ntfy-integration-matrix.md`
+- `2026-07-25-phase-5-notifications-admin-plan-8-admin-all-projects-bypass-matrix.md`
 
 ---
 
@@ -148,3 +149,47 @@ Consolidated from:
 ### Cleanup
 - [x] `docker compose --profile notifications down` (volumes preserved, no `-v`) — done 2026-07-27
 - [x] No test data created — used the seeded `system_settings` singleton row only
+
+---
+
+## Plan 8: Admin All-Projects Bypass
+
+### Setup
+- [x] `dotnet build` exits 0
+- [x] `dotnet test --filter "FullyQualifiedName~MembershipGuardTests"` passes 3/3
+- [x] `dotnet test --filter "FullyQualifiedName~ClaimsPrincipalExtensionsTests"` passes 3/3
+- [x] `dotnet test` — all tests pass (12 new per-service admin-bypass tests)
+
+### Happy Path — Admin non-member on project they're not a member of
+
+1. Login as admin, access **cards** (create, read, update, move, delete) on a project where admin is not a member → succeeds
+2. Login as admin, access **columns** (create, read, update, delete, reorder) → succeeds
+3. Login as admin, access **specs** (create, read, update, delete) → succeeds
+4. Login as admin, access **plans** (create, read, update, delete, set status) → succeeds
+5. Login as admin, access **checklist** (create, read, update, delete items) → succeeds
+6. Login as admin, access **attachments** (create, read, delete) → succeeds
+7. Login as admin, access **comments** (create, read, update, delete) → succeeds
+8. Login as admin, access **card relationships** (create, delete) → succeeds
+9. Login as admin, access **project members** (add, remove, change role) → succeeds (admin cannot self-remove from unowned project — guarded by `RemoveMemberAsync` NRE-guard)
+10. Login as admin → **project list** shows ALL projects (including non-member ones), `MyRole` is null for non-member projects
+11. Login as admin → access **ProjectSnapshot** endpoint for a non-member project → 200 OK
+
+### Denied — Non-admin non-member
+
+1. Login as non-admin, non-member of project → all 10 resource types above return 403 / `Result.Failure`
+2. Login as non-admin non-member → project list shows only member projects
+
+### Edge Cases
+
+1. Admin is also a member of a project → normal member role behavior preserved, `MyRole` shows actual role
+2. Admin removes another member from a project they're not a member of → succeeds (admin bypass)
+3. Admin removes self from a project they own → NRE-guard prevents crash, admin removal should still work if admin IS a member
+4. Nullable `MyRole` — TUI renders `"—"` for null role, Web UI renders appropriately
+5. `ClaimsPrincipalExtensions.IsProjectMemberOrAdmin` — admin returns true without DB membership check (no round-trip)
+
+### Regressions
+
+1. Non-admin member workflows unchanged — all existing `CardService`, `ChecklistService`, etc. tests pass
+2. `ProjectService.GetAllAsync` non-admin path unchanged (same `ListByUserIdAsync` call)
+3. `BoardHub`/`PresenceHub` need no code change — already gate on `IsInRole` (Task 1 JWT fix)
+4. `dotnet test` — all suites pass
