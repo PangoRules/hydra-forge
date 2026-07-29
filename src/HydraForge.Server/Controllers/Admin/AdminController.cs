@@ -1,7 +1,6 @@
 using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
-using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -12,23 +11,26 @@ namespace HydraForge.Server.Controllers.Admin;
 [Authorize(Policy = AuthPolicies.AdminRequired)]
 [ApiController]
 [Route("api/admin")]
-public class AdminController(
-    IAdminService adminService,
-    ProjectService projectService
-) : ControllerBase
+public class AdminController(IAdminService adminService, ProjectService projectService)
+    : ControllerBase
 {
     [HttpGet("users")]
+    [ProducesResponseType(typeof(UserListPageDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ListUsers(
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
         [FromQuery] string? search = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var result = await adminService.ListUsersAsync(skip, take, search, ct);
         return result.IsFailure ? this.ToProblemResult(result.Error) : Ok(result.Value);
     }
 
     [HttpGet("users/{userId:guid}")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUser(Guid userId, CancellationToken ct)
     {
         var result = await adminService.GetUserAsync(userId, ct);
@@ -36,13 +38,23 @@ public class AdminController(
     }
 
     [HttpPost("users")]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateUser(
+        [FromBody] CreateUserRequest request,
+        CancellationToken ct
+    )
     {
         var result = await adminService.CreateUserAsync(request, ct);
-        return result.IsFailure ? this.ToProblemResult(result.Error) : CreatedAtAction(nameof(GetUser), new { userId = result.Value.Id }, result.Value);
+        return result.IsFailure
+            ? this.ToProblemResult(result.Error)
+            : CreatedAtAction(nameof(GetUser), new { userId = result.Value.Id }, result.Value);
     }
 
     [HttpPatch("users/{userId:guid}/disable")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DisableUser(Guid userId, CancellationToken ct)
     {
         var actorId = User.GetRequiredUserId();
@@ -51,6 +63,8 @@ public class AdminController(
     }
 
     [HttpPatch("users/{userId:guid}/enable")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EnableUser(Guid userId, CancellationToken ct)
     {
         var result = await adminService.EnableUserAsync(userId, ct);
@@ -58,13 +72,23 @@ public class AdminController(
     }
 
     [HttpPost("users/{userId:guid}/reset-password")]
-    public async Task<IActionResult> ResetPassword(Guid userId, [FromBody] ResetPasswordRequest request, CancellationToken ct)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResetPassword(
+        Guid userId,
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken ct
+    )
     {
         var result = await adminService.ResetPasswordAsync(userId, request.NewPassword, ct);
         return result.IsFailure ? this.ToProblemResult(result.Error) : NoContent();
     }
 
     [HttpPatch("users/{userId:guid}/role")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ToggleRole(Guid userId, CancellationToken ct)
     {
         var actorId = User.GetRequiredUserId();
@@ -73,20 +97,36 @@ public class AdminController(
     }
 
     [HttpGet("projects")]
+    [ProducesResponseType(typeof(ProjectListPageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ListProjects(
         [FromQuery] bool includeArchived = true,
         [FromQuery] string? search = null,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var actorId = User.GetRequiredUserId();
         var result = await projectService.GetAllAsync(
-            actorId, includeArchived, search, ProjectSortField.Name, false, null, skip, take, isAdmin: true, excludeMembership: false, ct);
+            actorId,
+            includeArchived,
+            search,
+            ProjectSortField.Name,
+            false,
+            null,
+            skip,
+            take,
+            isAdmin: true,
+            excludeMembership: false,
+            ct
+        );
         return result.IsFailure ? this.ToProblemResult(result.Error) : Ok(result.Value);
     }
 
     [HttpGet("projects/{projectId:guid}")]
+    [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProject(Guid projectId, CancellationToken ct)
     {
         var actorId = User.GetRequiredUserId();
