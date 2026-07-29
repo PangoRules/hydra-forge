@@ -1,4 +1,5 @@
 using HydraForge.Application.Admin;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Settings;
@@ -16,7 +17,8 @@ public class AdminController(
     IAdminService adminService,
     ProjectService projectService,
     ISettingsRepository settingsRepo,
-    ISettingsProvider settingsProvider
+    ISettingsProvider settingsProvider,
+    IAuditLogReader auditLogReader
 ) : ControllerBase
 {
     [HttpGet("users")]
@@ -179,6 +181,25 @@ public class AdminController(
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
         return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
+    }
+
+    [HttpGet("audit-log")]
+    [ProducesResponseType(typeof(AuditLogQueryResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> QueryAuditLog(
+        [FromQuery] Guid? projectId,
+        [FromQuery] Guid? actorId,
+        [FromQuery] string? entityType,
+        [FromQuery] string? action,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 50,
+        CancellationToken ct = default
+    )
+    {
+        var query = new AuditLogQuery(projectId, actorId, entityType, action, from, to, skip, take);
+        var result = await auditLogReader.QueryAsync(query, ct);
+        return Ok(result);
     }
 }
 
