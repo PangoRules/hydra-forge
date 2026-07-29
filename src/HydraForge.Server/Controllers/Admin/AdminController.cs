@@ -1,8 +1,10 @@
 using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Settings;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +13,11 @@ namespace HydraForge.Server.Controllers.Admin;
 [Authorize(Policy = AuthPolicies.AdminRequired)]
 [ApiController]
 [Route("api/admin")]
-public class AdminController(IAdminService adminService, ProjectService projectService)
+public class AdminController(
+    IAdminService adminService,
+    ProjectService projectService,
+    ISettingsRepository settingsRepo,
+    CachedSettingsProvider settingsProvider)
     : ControllerBase
 {
     [HttpGet("users")]
@@ -133,6 +139,53 @@ public class AdminController(IAdminService adminService, ProjectService projectS
         var result = await projectService.GetByIdAsync(projectId, actorId, ct);
         return result.IsFailure ? this.ToProblemResult(result.Error) : Ok(result.Value);
     }
+
+    [HttpGet("settings")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSettings(CancellationToken ct)
+    {
+        var settings = await settingsProvider.GetAsync(ct);
+        return Ok(new
+        {
+            settings.ArchivedItemRetentionDays,
+            settings.AuditLogRetentionDays,
+            settings.NotificationRetentionDays,
+            settings.NtfyServerUrl,
+            settings.SearXngUrl,
+            settings.BrandName,
+            settings.BrandLogoUrl,
+        });
+    }
+
+    [HttpPut("settings")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateSettings([FromBody] UpdateSystemSettingsRequest request, CancellationToken ct)
+    {
+        var settings = await settingsRepo.GetSingletonAsync(ct);
+        settings.UpdateSettings(
+            request.ArchivedItemRetentionDays,
+            request.AuditLogRetentionDays,
+            request.NotificationRetentionDays,
+            request.NtfyServerUrl,
+            request.SearXngUrl,
+            request.BrandName,
+            request.BrandLogoUrl
+        );
+        await settingsRepo.UpdateAsync(settings, ct);
+        settingsProvider.Invalidate();
+        return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
+    }
 }
+
+public record UpdateSystemSettingsRequest(
+    int? ArchivedItemRetentionDays,
+    int? AuditLogRetentionDays,
+    int? NotificationRetentionDays,
+    string? NtfyServerUrl,
+    string? SearXngUrl,
+    string? BrandName,
+    string? BrandLogoUrl
+);
 
 public record ResetPasswordRequest(string NewPassword);

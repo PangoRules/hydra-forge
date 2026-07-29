@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Infrastructure.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,6 +73,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
                     .Where(d =>
                         d.ServiceType == typeof(IAdminService)
                         || d.ServiceType == typeof(IUserRepository)
+                        || d.ServiceType == typeof(ISettingsRepository)
                     )
                     .ToList()
             )
@@ -80,6 +84,8 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IUserRepository>(_ => new TestAdminUserRepository(_users));
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<ISettingsRepository>(_ => new TestSettingsRepository());
+            services.AddScoped<CachedSettingsProvider>();
         });
     }
 
@@ -208,4 +214,13 @@ internal class TestPasswordHasher : IPasswordHasher
     public string HashPassword(string password) => "hashed:" + password;
 
     public bool VerifyPassword(string password, string hash) => hash == "hashed:" + password;
+}
+
+internal class TestSettingsRepository : ISettingsRepository
+{
+    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default)
+        => Task.FromResult(new SystemSettings());
+
+    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default)
+        => Task.CompletedTask;
 }

@@ -1,4 +1,6 @@
 using System.Net;
+using HydraForge.Application.Settings;
+using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Infrastructure.Notifications;
 using Microsoft.Extensions.Options;
 
@@ -6,6 +8,16 @@ namespace HydraForge.Infrastructure.Tests.Notifications;
 
 public class NtfyClientTests
 {
+    private class FakeSettingsProvider(string? ntfyUrl) : ISettingsProvider
+    {
+        public Task<SystemSettings> GetAsync(CancellationToken ct = default)
+        {
+            var settings = new SystemSettings();
+            settings.UpdateSettings(ntfyServerUrl: ntfyUrl);
+            return Task.FromResult(settings);
+        }
+    }
+
     private class RecordingHandler : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
@@ -35,7 +47,7 @@ public class NtfyClientTests
     {
         var handler = new RecordingHandler();
         var http = new HttpClient(handler);
-        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), serverUrl: null);
+        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), new FakeSettingsProvider(null));
 
         await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
 
@@ -49,7 +61,7 @@ public class NtfyClientTests
         var client = new NtfyClient(
             http,
             Options.Create(new NtfyOptions()),
-            "http://unreachable.invalid"
+            new FakeSettingsProvider("http://unreachable.invalid")
         );
 
         var exception = await Record.ExceptionAsync(() =>
@@ -65,7 +77,7 @@ public class NtfyClientTests
         var handler = new RecordingHandler();
         var http = new HttpClient(handler);
         var userId = Guid.NewGuid();
-        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), "http://ntfy.local");
+        var client = new NtfyClient(http, Options.Create(new NtfyOptions()), new FakeSettingsProvider("http://ntfy.local"));
 
         await client.PublishAsync(userId, "Title", "Body");
 

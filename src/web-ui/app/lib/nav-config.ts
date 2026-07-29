@@ -42,7 +42,7 @@ export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
     groups.push([
       { label: 'Admin', type: 'label' },
       { label: 'Users', icon: 'i-lucide-users', to: UiRoutes.Admin.Users },
-      { label: 'System Settings', icon: 'i-lucide-settings', disabled: true },
+      { label: 'System Settings', icon: 'i-lucide-settings', to: UiRoutes.Admin.Settings },
       { label: 'Audit Log', icon: 'i-lucide-scroll-text', disabled: true },
       { label: 'Reports', icon: 'i-lucide-bar-chart-3', disabled: true }
     ])
