@@ -22,7 +22,8 @@ public class SystemSettings
         string? ntfyServerUrl = null,
         string? searXngUrl = null,
         string? brandName = null,
-        string? brandLogoUrl = null)
+        string? brandLogoUrl = null
+    )
     {
         if (archivedItemRetentionDays.HasValue)
             ArchivedItemRetentionDays = archivedItemRetentionDays.Value;

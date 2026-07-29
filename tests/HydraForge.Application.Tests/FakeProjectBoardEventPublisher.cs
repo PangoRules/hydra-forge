@@ -26,7 +26,10 @@ internal class FakeNotificationService : INotificationService
         return Task.CompletedTask;
     }
 
-    public Task NotifyBatchAsync(IReadOnlyList<NotifyRequest> requests, CancellationToken ct = default)
+    public Task NotifyBatchAsync(
+        IReadOnlyList<NotifyRequest> requests,
+        CancellationToken ct = default
+    )
     {
         Calls.AddRange(requests);
         return Task.CompletedTask;
@@ -36,5 +39,9 @@ internal class FakeNotificationService : INotificationService
 internal class NullSnapshotRefresher : IProjectSnapshotRefresher
 {
     public Task RefreshAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<ProjectContextSnapshot?> GetSnapshotAsync(Guid projectId, CancellationToken ct = default) => Task.FromResult<ProjectContextSnapshot?>(null);
+
+    public Task<ProjectContextSnapshot?> GetSnapshotAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) => Task.FromResult<ProjectContextSnapshot?>(null);
 }

@@ -10,11 +10,11 @@ using HydraForge.Infrastructure.Cards;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Realtime;
-using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
@@ -133,7 +133,8 @@ builder
     )
     .AddPolicy(AuthPolicies.AdminRequired, policy => policy.RequireRole(Roles.Admin));
 
-builder.Services.AddSignalR()
+builder
+    .Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
         // Without this, hub payload enums (BoardEntityType, BoardAction, etc.) serialize

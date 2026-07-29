@@ -12,7 +12,10 @@ public class ApiClientFactoryTests : IDisposable
 
     public ApiClientFactoryTests()
     {
-        _configDir = Path.Combine(Path.GetTempPath(), "hydraforge-apiclientfactory-tests-" + Guid.NewGuid());
+        _configDir = Path.Combine(
+            Path.GetTempPath(),
+            "hydraforge-apiclientfactory-tests-" + Guid.NewGuid()
+        );
         _configStore = new ConfigStore(_configDir);
     }
 
@@ -22,20 +25,27 @@ public class ApiClientFactoryTests : IDisposable
             Directory.Delete(_configDir, recursive: true);
     }
 
-    private static HttpResponseMessage RefreshSuccessResponse(string token, DateTimeOffset expiresAt)
+    private static HttpResponseMessage RefreshSuccessResponse(
+        string token,
+        DateTimeOffset expiresAt
+    )
     {
         var json = $"{{\"accessToken\":\"{token}\",\"expiresAt\":\"{expiresAt:O}\"}}";
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
     }
 
     [Fact]
     public async Task CreateClient_UsesServerUrlFromConfigAsBaseAddress()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
-        var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" }
+        );
+        var fake = new FakeHttpMessageHandler(_ =>
+            RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1))
+        );
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateClient();
@@ -47,8 +57,12 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public async Task CreateClient_InjectsAuthorizationHeaderWithConfiguredJwt()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
-        var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" }
+        );
+        var fake = new FakeHttpMessageHandler(_ =>
+            RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1))
+        );
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateClient();
@@ -61,7 +75,9 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public void GetClient_CalledTwice_ReturnsSameCachedInstance()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" }
+        );
         var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
@@ -74,8 +90,12 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public async Task CreateUnauthenticatedClient_OmitsAuthorizationHeader()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" });
-        var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1)));
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "jwt-1" }
+        );
+        var fake = new FakeHttpMessageHandler(_ =>
+            RefreshSuccessResponse("t", DateTimeOffset.UtcNow.AddHours(1))
+        );
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var client = factory.CreateUnauthenticatedClient();
@@ -87,12 +107,14 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public async Task RefreshTokenAsync_OnSuccess_PersistsNewTokenAndUsesItOnSubsequentRequests()
     {
-        _configStore.Save(new TuiConfig
-        {
-            ServerUrl = "https://example.test/",
-            JwtToken = "old-token",
-            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(1)
-        });
+        _configStore.Save(
+            new TuiConfig
+            {
+                ServerUrl = "https://example.test/",
+                JwtToken = "old-token",
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(1),
+            }
+        );
         var newExpiry = DateTimeOffset.UtcNow.AddHours(1);
         var fake = new FakeHttpMessageHandler(_ => RefreshSuccessResponse("new-token", newExpiry));
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
@@ -114,7 +136,9 @@ public class ApiClientFactoryTests : IDisposable
     public async Task RefreshTokenAsync_WithEmptyJwtToken_ReturnsFalseWithoutCallingApi()
     {
         _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "" });
-        var fake = new FakeHttpMessageHandler(_ => throw new InvalidOperationException("API must not be called"));
+        var fake = new FakeHttpMessageHandler(_ =>
+            throw new InvalidOperationException("API must not be called")
+        );
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();
@@ -126,8 +150,12 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public async Task RefreshTokenAsync_WhenServerReturnsUnauthorized_ReturnsFalseAndKeepsExistingToken()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" });
-        var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized));
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" }
+        );
+        var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(
+            HttpStatusCode.Unauthorized
+        ));
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();
@@ -139,8 +167,12 @@ public class ApiClientFactoryTests : IDisposable
     [Fact]
     public async Task RefreshTokenAsync_WhenServerReturns5xx_ReturnsFalseAndKeepsExistingToken()
     {
-        _configStore.Save(new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" });
-        var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        _configStore.Save(
+            new TuiConfig { ServerUrl = "https://example.test/", JwtToken = "old-token" }
+        );
+        var fake = new FakeHttpMessageHandler(_ => new HttpResponseMessage(
+            HttpStatusCode.InternalServerError
+        ));
         var factory = new ApiClientFactory(_configStore, new ErrorCollector(), fake);
 
         var result = await factory.RefreshTokenAsync();

@@ -21,7 +21,13 @@ public class Card
     public DateTime MovedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
 
-    public void UpdateDetails(string title, string description, CardType type, Guid? parentCardId, DateTime? dueAt)
+    public void UpdateDetails(
+        string title,
+        string description,
+        CardType type,
+        Guid? parentCardId,
+        DateTime? dueAt
+    )
     {
         Title = title;
         Description = description;
@@ -60,13 +66,20 @@ public class Card
         Version += 1;
     }
 
-    public static Error? ValidateParent(Card child, Card parent, IReadOnlyDictionary<Guid, Card>? cardMap = null)
+    public static Error? ValidateParent(
+        Card child,
+        Card parent,
+        IReadOnlyDictionary<Guid, Card>? cardMap = null
+    )
     {
         if (child.Id == parent.Id)
             return new Error(DomainErrorCodes.Cards.ParentCycle, "Card cannot be its own parent.");
 
         if (child.ProjectId != parent.ProjectId)
-            return new Error(DomainErrorCodes.Cards.InvalidParent, "Parent card must be in the same project.");
+            return new Error(
+                DomainErrorCodes.Cards.InvalidParent,
+                "Parent card must be in the same project."
+            );
 
         if (cardMap != null)
         {
@@ -82,24 +95,35 @@ public class Card
     public static Error? ValidateAllowsSpec(CardType type) =>
         type is CardType.Goal or CardType.Idea or CardType.Issue
             ? null
-            : new Error(DomainErrorCodes.Specs.InvalidCardType, $"{type} cards cannot have a Spec.");
+            : new Error(
+                DomainErrorCodes.Specs.InvalidCardType,
+                $"{type} cards cannot have a Spec."
+            );
 
     // Plan.CardId is direct on Goal/Issue/Task; Idea has no Plans (see D-44).
     public static Error? ValidateAllowsPlan(CardType type) =>
         type is CardType.Goal or CardType.Issue or CardType.Task
             ? null
-            : new Error(DomainErrorCodes.Plans.InvalidCardType, $"{type} cards cannot have a Plan.");
+            : new Error(
+                DomainErrorCodes.Plans.InvalidCardType,
+                $"{type} cards cannot have a Plan."
+            );
 
     // Spec is typed by card: Goal->Specification, Idea->Concept, Issue->Report (see D-44).
-    public static DocType ExpectedSpecDocType(CardType type) => type switch
-    {
-        CardType.Goal => DocType.Specification,
-        CardType.Idea => DocType.Concept,
-        CardType.Issue => DocType.Report,
-        _ => throw new InvalidOperationException($"{type} cards have no Spec.")
-    };
+    public static DocType ExpectedSpecDocType(CardType type) =>
+        type switch
+        {
+            CardType.Goal => DocType.Specification,
+            CardType.Idea => DocType.Concept,
+            CardType.Issue => DocType.Report,
+            _ => throw new InvalidOperationException($"{type} cards have no Spec."),
+        };
 
-    public static Error? ValidateNoCycle(Guid childId, Guid? parentId, IReadOnlyDictionary<Guid, Card> cardMap)
+    public static Error? ValidateNoCycle(
+        Guid childId,
+        Guid? parentId,
+        IReadOnlyDictionary<Guid, Card> cardMap
+    )
     {
         if (parentId == null)
             return null;

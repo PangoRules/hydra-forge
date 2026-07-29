@@ -12,10 +12,13 @@ public class EfCommentRepository(HydraForgeDbContext context) : ICommentReposito
         return await context.Comments.FirstOrDefaultAsync(c => c.Id == commentId, ct);
     }
 
-    public async Task<IReadOnlyList<Comment>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Comment>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    )
     {
-        return await context.Comments
-            .Where(c => c.CardId == cardId)
+        return await context
+            .Comments.Where(c => c.CardId == cardId)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync(ct);
     }

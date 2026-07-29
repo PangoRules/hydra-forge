@@ -12,9 +12,11 @@ public static class ListPrompt
         string title,
         IReadOnlyList<string> choices,
         int initialIndex = 0,
-        Func<Task>? renderBackdrop = null)
+        Func<Task>? renderBackdrop = null
+    )
     {
-        if (choices.Count == 0) return null;
+        if (choices.Count == 0)
+            return null;
 
         var index = Math.Clamp(initialIndex, 0, choices.Count - 1);
 
@@ -54,7 +56,9 @@ public static class ListPrompt
             };
 
             AnsiConsole.Write(panel);
-            AnsiConsole.MarkupLine("[grey]j/k, Ctrl+N/Ctrl+P, or arrows to move; Enter to select; Esc to cancel[/]");
+            AnsiConsole.MarkupLine(
+                "[grey]j/k, Ctrl+N/Ctrl+P, or arrows to move; Enter to select; Esc to cancel[/]"
+            );
 
             var key = Console.ReadKey(intercept: true);
             switch (key.Key)
@@ -85,9 +89,11 @@ public static class ListPrompt
         string title,
         IReadOnlyList<string> choices,
         int initialIndex = 0,
-        Func<Task>? renderBackdrop = null)
+        Func<Task>? renderBackdrop = null
+    )
     {
-        if (choices.Count == 0) return null;
+        if (choices.Count == 0)
+            return null;
 
         var index = Math.Clamp(initialIndex, 0, choices.Count - 1);
 
@@ -125,7 +131,9 @@ public static class ListPrompt
             };
 
             AnsiConsole.Write(panel);
-            AnsiConsole.MarkupLine("[grey]j/k, Ctrl+N/Ctrl+P, or arrows to move; Enter to select; Esc to cancel[/]");
+            AnsiConsole.MarkupLine(
+                "[grey]j/k, Ctrl+N/Ctrl+P, or arrows to move; Enter to select; Esc to cancel[/]"
+            );
 
             var key = Console.ReadKey(intercept: true);
             switch (key.Key)

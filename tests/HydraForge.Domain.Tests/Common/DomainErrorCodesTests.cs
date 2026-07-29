@@ -25,7 +25,10 @@ public class DomainErrorCodesTests
     [Fact]
     public void Projects_LastOwnerRemovalDenied_HasCorrectCode()
     {
-        Assert.Equal("PROJECT_LAST_OWNER_REMOVAL_DENIED", DomainErrorCodes.Projects.LastOwnerRemovalDenied);
+        Assert.Equal(
+            "PROJECT_LAST_OWNER_REMOVAL_DENIED",
+            DomainErrorCodes.Projects.LastOwnerRemovalDenied
+        );
     }
 
     [Fact]

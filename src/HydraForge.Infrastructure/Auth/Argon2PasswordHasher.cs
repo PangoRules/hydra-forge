@@ -62,4 +62,3 @@ public class Argon2PasswordHasher(IOptions<Argon2Options> options) : IPasswordHa
         }
     }
 }
-

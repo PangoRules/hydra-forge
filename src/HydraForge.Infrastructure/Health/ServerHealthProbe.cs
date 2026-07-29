@@ -7,4 +7,3 @@ public class ServerHealthProbe : IHealthProbe
     public Task<HealthStatus> CheckAsync(CancellationToken ct = default) =>
         Task.FromResult(HealthStatus.Healthy);
 }
-

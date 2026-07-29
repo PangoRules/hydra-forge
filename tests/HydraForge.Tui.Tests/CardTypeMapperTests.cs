@@ -1,5 +1,5 @@
-using HydraForge.Tui.Models;
 using HydraForge.Tui.Generated;
+using HydraForge.Tui.Models;
 
 namespace HydraForge.Tui.Tests;
 
@@ -14,7 +14,7 @@ public class CardTypeMapperTests
             { CardType.Task, "Task" },
             { CardType.Issue, "Issue" },
             { CardType.Idea, "Idea" },
-            { CardType.Goal, "Goal" }
+            { CardType.Goal, "Goal" },
         };
 
         // Act & Assert
@@ -34,7 +34,7 @@ public class CardTypeMapperTests
             { CardType.Task, "T" },
             { CardType.Issue, "I" },
             { CardType.Idea, "ID" },
-            { CardType.Goal, "G" }
+            { CardType.Goal, "G" },
         };
 
         // Act & Assert
@@ -54,7 +54,7 @@ public class CardTypeMapperTests
             { "TASK", CardType.Task },
             { "ISSUE", CardType.Issue },
             { "IDEA", CardType.Idea },
-            { "GOAL", CardType.Goal }
+            { "GOAL", CardType.Goal },
         };
 
         // Act & Assert

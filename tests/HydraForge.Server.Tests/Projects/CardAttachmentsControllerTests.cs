@@ -1,4 +1,3 @@
-
 using System.Net;
 using System.Net.Http.Headers;
 using HydraForge.Application.Attachments;
@@ -16,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Result = HydraForge.Domain.Common.Result;
 
 namespace HydraForge.Server.Tests.Projects;
+
 public class CardAttachmentsControllerTests
 {
     [Fact]
@@ -24,7 +24,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -113,7 +117,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -171,7 +179,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -221,7 +233,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -283,7 +299,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -333,7 +353,11 @@ public class CardAttachmentsControllerTests
         var factory = new AttachmentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = AttachmentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = AttachmentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var columnId = Guid.NewGuid();
@@ -424,30 +448,20 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                         d.ServiceType == typeof(ProjectService)
                         || d.ServiceType == typeof(Application.Columns.ColumnService)
                         || d.ServiceType == typeof(CardService)
-                        || d.ServiceType
-                            == typeof(AttachmentService)
-                        || d.ServiceType
-                            == typeof(IProjectRepository)
-                        || d.ServiceType
-                            == typeof(IColumnRepository)
+                        || d.ServiceType == typeof(AttachmentService)
+                        || d.ServiceType == typeof(IProjectRepository)
+                        || d.ServiceType == typeof(IColumnRepository)
                         || d.ServiceType == typeof(ICardRepository)
-                        || d.ServiceType
-                            == typeof(ICardAssigneeRepository)
-                        || d.ServiceType
-                            == typeof(ICardWatcherRepository)
-                        || d.ServiceType
-                            == typeof(ICardRelationshipRepository)
-                        || d.ServiceType
-                            == typeof(IProjectMemberRepository)
+                        || d.ServiceType == typeof(ICardAssigneeRepository)
+                        || d.ServiceType == typeof(ICardWatcherRepository)
+                        || d.ServiceType == typeof(ICardRelationshipRepository)
+                        || d.ServiceType == typeof(IProjectMemberRepository)
                         || d.ServiceType == typeof(Application.Auth.IUserRepository)
-                        || d.ServiceType
-                            == typeof(IProjectContextSnapshotRepository)
-                        || d.ServiceType
-                            == typeof(IChatArchiveService)
+                        || d.ServiceType == typeof(IProjectContextSnapshotRepository)
+                        || d.ServiceType == typeof(IChatArchiveService)
                         || d.ServiceType
                             == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
-                        || d.ServiceType
-                            == typeof(IAttachmentRepository)
+                        || d.ServiceType == typeof(IAttachmentRepository)
                         || d.ServiceType == typeof(IFileStore)
                     )
                     .ToList()
@@ -456,15 +470,13 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                 services.Remove(descriptor);
             }
 
-            services.AddScoped<IProjectRepository>(
-                _ => new AttachmentsTestProjectRepository(_projects)
-            );
-            services.AddScoped<IColumnRepository>(
-                _ => new AttachmentsTestColumnRepository(_columns)
-            );
-            services.AddScoped<ICardRepository>(
-                _ => new AttachmentsTestCardRepository(_cards)
-            );
+            services.AddScoped<IProjectRepository>(_ => new AttachmentsTestProjectRepository(
+                _projects
+            ));
+            services.AddScoped<IColumnRepository>(_ => new AttachmentsTestColumnRepository(
+                _columns
+            ));
+            services.AddScoped<ICardRepository>(_ => new AttachmentsTestCardRepository(_cards));
             services.AddScoped<ICardAssigneeRepository>(
                 _ => new AttachmentsTestCardAssigneeRepository()
             );
@@ -486,14 +498,12 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddScoped<Application.ProjectSnapshots.IProjectSnapshotRefresher>(
                 _ => new AttachmentsTestSnapshotRefresher()
             );
-            services.AddScoped<IChatArchiveService>(
-                _ => new AttachmentsTestChatArchiveService()
-            );
+            services.AddScoped<IChatArchiveService>(_ => new AttachmentsTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new AttachmentsTestAuditLogWriter());
             services.AddScoped<IFileStore>(_ => _fakeFileStore);
-            services.AddScoped<IAttachmentRepository>(
-                _ => new AttachmentsTestAttachmentRepository(_attachments)
-            );
+            services.AddScoped<IAttachmentRepository>(_ => new AttachmentsTestAttachmentRepository(
+                _attachments
+            ));
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<ProjectService>();
             services.AddScoped<Application.Columns.ColumnService>();
@@ -501,14 +511,10 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
             services.AddScoped<ProjectMemberService>();
             services.AddScoped(sp =>
             {
-                var fileStore =
-                    sp.GetRequiredService<IFileStore>();
-                var attachmentRepo =
-                    sp.GetRequiredService<IAttachmentRepository>();
-                var cardRepo =
-                    sp.GetRequiredService<ICardRepository>();
-                var memberRepo =
-                    sp.GetRequiredService<IProjectMemberRepository>();
+                var fileStore = sp.GetRequiredService<IFileStore>();
+                var attachmentRepo = sp.GetRequiredService<IAttachmentRepository>();
+                var cardRepo = sp.GetRequiredService<ICardRepository>();
+                var memberRepo = sp.GetRequiredService<IProjectMemberRepository>();
                 var userRepo = sp.GetRequiredService<Application.Auth.IUserRepository>();
                 var auditWriter = sp.GetRequiredService<IAuditLogWriter>();
                 var snapshotRefresher =
@@ -704,10 +710,7 @@ internal class AttachmentsTestColumnRepository(List<Column> columns) : IColumnRe
     public Task<IReadOnlyList<Column>> GetByProjectIdAsync(
         Guid projectId,
         CancellationToken ct = default
-    ) =>
-        Task.FromResult<IReadOnlyList<Column>>(
-            [.. _columns.Where(c => c.ProjectId == projectId)]
-        );
+    ) => Task.FromResult<IReadOnlyList<Column>>([.. _columns.Where(c => c.ProjectId == projectId)]);
 
     public Task UpdateAsync(Column column, CancellationToken ct = default)
     {
@@ -768,7 +771,9 @@ internal class AttachmentsTestCardRepository(List<Card> cards) : ICardRepository
     {
         var query = _cards.Where(c => c.ProjectId == projectId);
         if (!string.IsNullOrWhiteSpace(filter.Search))
-            query = query.Where(c => c.Title.Contains(filter.Search, StringComparison.InvariantCultureIgnoreCase));
+            query = query.Where(c =>
+                c.Title.Contains(filter.Search, StringComparison.InvariantCultureIgnoreCase)
+            );
         return Task.FromResult<IReadOnlyList<Card>>([.. query.OrderBy(c => c.Position)]);
     }
 
@@ -822,8 +827,7 @@ internal class AttachmentsTestCardRepository(List<Card> cards) : ICardRepository
         Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
-internal class AttachmentsTestCardAssigneeRepository
-    : ICardAssigneeRepository
+internal class AttachmentsTestCardAssigneeRepository : ICardAssigneeRepository
 {
     public Task<CardAssignee?> GetByCardAndUserAsync(
         Guid cardId,
@@ -834,10 +838,7 @@ internal class AttachmentsTestCardAssigneeRepository
     public Task<ILookup<Guid, CardAssignee>> ListByCardIdsAsync(
         IReadOnlyList<Guid> cardIds,
         CancellationToken ct = default
-    ) =>
-        Task.FromResult(
-            Array.Empty<CardAssignee>().ToLookup(a => a.CardId)
-        );
+    ) => Task.FromResult(Array.Empty<CardAssignee>().ToLookup(a => a.CardId));
 
     public Task<IReadOnlyList<CardAssignee>> ListByCardAsync(
         Guid cardId,
@@ -860,8 +861,7 @@ internal class AttachmentsTestCardAssigneeRepository
     }
 }
 
-internal class AttachmentsTestCardWatcherRepository
-    : ICardWatcherRepository
+internal class AttachmentsTestCardWatcherRepository : ICardWatcherRepository
 {
     public Task<CardWatcher?> GetByCardAndUserAsync(
         Guid cardId,
@@ -872,10 +872,7 @@ internal class AttachmentsTestCardWatcherRepository
     public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(
         IReadOnlyList<Guid> cardIds,
         CancellationToken ct = default
-    ) =>
-        Task.FromResult(
-            Array.Empty<CardWatcher>().ToLookup(w => w.CardId)
-        );
+    ) => Task.FromResult(Array.Empty<CardWatcher>().ToLookup(w => w.CardId));
 
     public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(
         Guid cardId,
@@ -898,8 +895,7 @@ internal class AttachmentsTestCardWatcherRepository
     }
 }
 
-internal class AttachmentsTestCardRelationshipRepository
-    : ICardRelationshipRepository
+internal class AttachmentsTestCardRelationshipRepository : ICardRelationshipRepository
 {
     public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(
         Guid cardId,
@@ -956,7 +952,7 @@ internal class AttachmentsTestCardRelationshipRepository
 }
 
 internal class AttachmentsTestProjectMemberRepository(List<ProjectMember> members)
-        : IProjectMemberRepository
+    : IProjectMemberRepository
 {
     private readonly List<ProjectMember> _members = members;
 
@@ -982,9 +978,9 @@ internal class AttachmentsTestProjectMemberRepository(List<ProjectMember> member
         Guid projectId,
         CancellationToken ct = default
     ) =>
-        Task.FromResult<IReadOnlyList<ProjectMember>>(
-            [.. _members.Where(m => m.ProjectId == projectId)]
-        );
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. _members.Where(m => m.ProjectId == projectId),
+        ]);
 
     public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
         IEnumerable<Guid> projectIds,
@@ -1083,23 +1079,18 @@ internal class AttachmentsTestUserRepository(List<User> users) : Application.Aut
     public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-internal class AttachmentsTestSnapshotRepository
-    : IProjectContextSnapshotRepository
+internal class AttachmentsTestSnapshotRepository : IProjectContextSnapshotRepository
 {
-    public Task AddAsync(
-        ProjectContextSnapshot snapshot,
-        CancellationToken ct = default
-    ) => Task.CompletedTask;
+    public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
+        Task.CompletedTask;
 
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(
         Guid projectId,
         CancellationToken ct = default
     ) => Task.FromResult<ProjectContextSnapshot?>(null);
 
-    public Task UpdateAsync(
-        ProjectContextSnapshot snapshot,
-        CancellationToken ct = default
-    ) => Task.CompletedTask;
+    public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
+        Task.CompletedTask;
 }
 
 internal class AttachmentsTestSnapshotRefresher
@@ -1113,8 +1104,7 @@ internal class AttachmentsTestSnapshotRefresher
     ) => Task.FromResult<ProjectContextSnapshot?>(null);
 }
 
-internal class AttachmentsTestChatArchiveService
-    : IChatArchiveService
+internal class AttachmentsTestChatArchiveService : IChatArchiveService
 {
     public Task ArchiveProjectAsync(Guid projectId, CancellationToken ct = default) =>
         Task.CompletedTask;
@@ -1130,7 +1120,7 @@ internal class AttachmentsTestAuditLogWriter : IAuditLogWriter
 }
 
 internal class AttachmentsTestAttachmentRepository(List<Attachment> attachments)
-        : IAttachmentRepository
+    : IAttachmentRepository
 {
     private readonly List<Attachment> _attachments = attachments;
 
@@ -1141,9 +1131,9 @@ internal class AttachmentsTestAttachmentRepository(List<Attachment> attachments)
         Guid cardId,
         CancellationToken ct = default
     ) =>
-        Task.FromResult<IReadOnlyList<Attachment>>(
-            [.. _attachments.Where(a => a.CardId == cardId)]
-        );
+        Task.FromResult<IReadOnlyList<Attachment>>([
+            .. _attachments.Where(a => a.CardId == cardId),
+        ]);
 
     public Task AddAsync(Attachment attachment, CancellationToken ct = default)
     {

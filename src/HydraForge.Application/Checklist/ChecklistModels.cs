@@ -18,12 +18,7 @@ public record UpdateChecklistItemCommand(
     Guid? AssignedTo
 );
 
-public record ToggleChecklistItemCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ItemId,
-    Guid ActorId
-);
+public record ToggleChecklistItemCommand(Guid ProjectId, Guid CardId, Guid ItemId, Guid ActorId);
 
 public record ReorderChecklistItemCommand(
     Guid ProjectId,
@@ -33,12 +28,7 @@ public record ReorderChecklistItemCommand(
     int NewPosition
 );
 
-public record DeleteChecklistItemCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ItemId,
-    Guid ActorId
-);
+public record DeleteChecklistItemCommand(Guid ProjectId, Guid CardId, Guid ItemId, Guid ActorId);
 
 public record ChecklistItemDto(
     Guid Id,
@@ -68,15 +58,8 @@ public record CreateChecklistItemRequest(
     int? Position = null
 );
 
-public record UpdateChecklistItemRequest(
-    string Text,
-    Guid? AssignedTo = null
-);
+public record UpdateChecklistItemRequest(string Text, Guid? AssignedTo = null);
 
-public record ReorderChecklistItemRequest(
-    int NewPosition
-);
+public record ReorderChecklistItemRequest(int NewPosition);
 
-public record ChecklistItemListResponse(
-    IReadOnlyList<ChecklistItemResponse> Items
-);
+public record ChecklistItemListResponse(IReadOnlyList<ChecklistItemResponse> Items);

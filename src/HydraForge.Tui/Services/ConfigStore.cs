@@ -9,15 +9,14 @@ public class ConfigStore
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     private readonly string _configDir;
     private readonly string _configPath;
 
-    public ConfigStore() : this(Path.Combine(FindRepoRoot() ?? AppContext.BaseDirectory, ".hydraforge"))
-    {
-    }
+    public ConfigStore()
+        : this(Path.Combine(FindRepoRoot() ?? AppContext.BaseDirectory, ".hydraforge")) { }
 
     // Walks up from the running assembly looking for the repo root (marked by
     // HydraForge.slnx), so config lives inside the checkout (D-49) regardless
@@ -61,8 +60,7 @@ public class ConfigStore
         // Set 0600 permissions on POSIX
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            File.SetUnixFileMode(_configPath,
-                UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            File.SetUnixFileMode(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
     }
 

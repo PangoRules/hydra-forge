@@ -25,7 +25,8 @@ public class User
         string email,
         string passwordHash,
         bool isAdmin = false,
-        Guid? id = null)
+        Guid? id = null
+    )
     {
         var now = DateTime.UtcNow;
         return new User

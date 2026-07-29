@@ -1,7 +1,7 @@
 namespace HydraForge.Infrastructure.Tests.Projects;
 
-using HydraForge.Infrastructure.Persistence;
 using HydraForge.Domain.Entities.ProjectSpace;
+using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 public class EfColumnRepositoryTests
@@ -9,7 +9,10 @@ public class EfColumnRepositoryTests
     private static DbContextOptions<HydraForgeDbContext> CreateOptions()
     {
         return new DbContextOptionsBuilder<HydraForgeDbContext>()
-            .UseNpgsql("Host=localhost;Database=hydraforge_test;Username=postgres;Password=password", o => o.UseVector())
+            .UseNpgsql(
+                "Host=localhost;Database=hydraforge_test;Username=postgres;Password=password",
+                o => o.UseVector()
+            )
             .Options;
     }
 
@@ -32,12 +35,23 @@ public class EfColumnRepositoryTests
         var entity = model.FindEntityType(typeof(Column));
         Assert.NotNull(entity);
 
-        var requiredProps = new[] { "Id", "ProjectId", "Name", "Position", "WipLimit", "Color", "CreatedAt", "UpdatedAt" };
+        var requiredProps = new[]
+        {
+            "Id",
+            "ProjectId",
+            "Name",
+            "Position",
+            "WipLimit",
+            "Color",
+            "CreatedAt",
+            "UpdatedAt",
+        };
         foreach (var propName in requiredProps)
         {
             Assert.True(
                 entity.GetProperties().Any(p => p.Name == propName),
-                $"Column missing property: {propName}");
+                $"Column missing property: {propName}"
+            );
         }
     }
 
@@ -50,12 +64,18 @@ public class EfColumnRepositoryTests
         var entity = model.FindEntityType(typeof(Column));
         Assert.NotNull(entity);
 
-        var compositeIndex = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
-                                  i.Properties.Any(p => p.Name == "Position"));
+        var compositeIndex = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ProjectId")
+                && i.Properties.Any(p => p.Name == "Position")
+            );
 
         Assert.True(compositeIndex != null, "Expected index on (ProjectId, Position)");
-        Assert.False(compositeIndex!.IsUnique, "Index on (ProjectId, Position) should not be unique");
+        Assert.False(
+            compositeIndex!.IsUnique,
+            "Index on (ProjectId, Position) should not be unique"
+        );
     }
 
     [Fact]
@@ -67,9 +87,12 @@ public class EfColumnRepositoryTests
         var entity = model.FindEntityType(typeof(Column));
         Assert.NotNull(entity);
 
-        var compositeIndex = entity.GetIndexes()
-            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ProjectId") &&
-                                  i.Properties.All(p => p.Name == "ProjectId" || p.Name == "Position"));
+        var compositeIndex = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "ProjectId")
+                && i.Properties.All(p => p.Name == "ProjectId" || p.Name == "Position")
+            );
 
         Assert.True(compositeIndex != null, "Expected index on (ProjectId, Position)");
         var projectIdProp = compositeIndex.Properties.FirstOrDefault(p => p.Name == "ProjectId");

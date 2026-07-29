@@ -24,7 +24,8 @@ public static class CurrentUser
         {
             var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("sub", out var sub)
+            return
+                doc.RootElement.TryGetProperty("sub", out var sub)
                 && Guid.TryParse(sub.GetString(), out var id)
                 ? id
                 : null;

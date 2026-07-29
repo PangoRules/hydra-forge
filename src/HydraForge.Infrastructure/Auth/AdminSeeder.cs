@@ -63,7 +63,8 @@ public class AdminSeeder(
             _options.LastName ?? "Admin",
             _options.Email ?? "admin@localhost",
             passwordHasher.HashPassword(password),
-            isAdmin: true);
+            isAdmin: true
+        );
 
         await userRepository.CreateAsync(user);
         logger.LogInformation("Admin user created successfully");

@@ -9,29 +9,30 @@ namespace HydraForge.Server.Controllers;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/[controller]")]
-public class NotificationsController(
-    INotificationRepository notifRepo
-) : ControllerBase
+public class NotificationsController(INotificationRepository notifRepo) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(List<NotificationResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var userId = User.GetRequiredUserId();
         var notifications = await notifRepo.ListByUserAsync(userId, skip, take, ct: ct);
-        var response = notifications.Select(n => new NotificationResponse(
-            n.Id,
-            n.Title,
-            n.Body,
-            n.CardId,
-            n.ProjectId,
-            n.ActionUrl,
-            n.IsRead,
-            n.CreatedAt
-        )).ToList();
+        var response = notifications
+            .Select(n => new NotificationResponse(
+                n.Id,
+                n.Title,
+                n.Body,
+                n.CardId,
+                n.ProjectId,
+                n.ActionUrl,
+                n.IsRead,
+                n.CreatedAt
+            ))
+            .ToList();
         return Ok(response);
     }
 

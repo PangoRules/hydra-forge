@@ -9,7 +9,8 @@ public static class MembershipGuard
         IProjectMemberRepository memberRepo,
         Guid projectId,
         Guid userId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (await userRepo.IsAdminAsync(userId, ct))
             return true;

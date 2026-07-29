@@ -1,5 +1,5 @@
-using HydraForge.Application.Comments;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Comments;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -129,4 +129,3 @@ public class CardCommentsController(CommentService commentService) : ControllerB
         return Ok(response);
     }
 }
-

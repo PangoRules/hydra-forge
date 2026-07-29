@@ -49,7 +49,10 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
         {
             query = query.Where(x =>
                 EF.Functions.ILike(x.Project.Name, $"%{search}%")
-                || (x.Project.Description != null && EF.Functions.ILike(x.Project.Description, $"%{search}%"))
+                || (
+                    x.Project.Description != null
+                    && EF.Functions.ILike(x.Project.Description, $"%{search}%")
+                )
             );
         }
 
@@ -129,8 +132,7 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
         var query =
             from p in context.Projects
             join m in context.ProjectMembers
-                on new { ProjectId = p.Id, UserId = userId }
-                equals new { m.ProjectId, m.UserId }
+                on new { ProjectId = p.Id, UserId = userId } equals new { m.ProjectId, m.UserId }
                 into gj
             from m in gj.DefaultIfEmpty()
             where (Guid?)m.ProjectId == null // null membership row = not a member

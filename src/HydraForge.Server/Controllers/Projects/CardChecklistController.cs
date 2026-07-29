@@ -1,5 +1,5 @@
-using HydraForge.Application.Checklist;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Checklist;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -192,4 +192,3 @@ public class CardChecklistController(ChecklistService checklistService) : Contro
         return NoContent();
     }
 }
-

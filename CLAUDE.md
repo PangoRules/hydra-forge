@@ -25,6 +25,13 @@ dotnet build
 # Run all tests
 dotnet test
 
+# Format C# code (CSharpier — same formatter/version as the nvim setup's format-on-save,
+# pinned via .config/dotnet-tools.json so CI and any clone stay in sync)
+dotnet csharpier format .
+
+# Check formatting without writing (what CI runs)
+dotnet csharpier check .
+
 # Run server (from repo root)
 dotnet run --project src/HydraForge.Server
 

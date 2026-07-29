@@ -10,7 +10,8 @@ public class DesignTimeHydraForgeDbContextFactoryTests
     public void CreateDbContext_UsesConnectionStringFromConfiguration()
     {
         const string variableName = "ConnectionStrings__Default";
-        const string expected = "Host=example.local;Port=15432;Database=hydraforge_test;Username=test_user;Password=test_password";
+        const string expected =
+            "Host=example.local;Port=15432;Database=hydraforge_test;Username=test_user;Password=test_password";
         var original = Environment.GetEnvironmentVariable(variableName);
 
         try
@@ -19,7 +20,9 @@ public class DesignTimeHydraForgeDbContextFactoryTests
 
             using var context = new DesignTimeHydraForgeDbContextFactory().CreateDbContext([]);
 
-            var connectionString = new NpgsqlConnectionStringBuilder(context.Database.GetDbConnection().ConnectionString);
+            var connectionString = new NpgsqlConnectionStringBuilder(
+                context.Database.GetDbConnection().ConnectionString
+            );
             Assert.Equal("example.local", connectionString.Host);
             Assert.Equal(15432, connectionString.Port);
             Assert.Equal("hydraforge_test", connectionString.Database);

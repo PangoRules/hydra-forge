@@ -21,7 +21,11 @@ public class ColumnEndpointTests
     {
         var factory = new ColumnsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ColumnsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = ColumnsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -126,7 +130,11 @@ public class ColumnEndpointTests
     {
         var factory = new ColumnsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ColumnsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = ColumnsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -498,7 +506,11 @@ public class ColumnEndpointTests
     {
         var factory = new ColumnsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ColumnsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = ColumnsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         var columnId = Guid.NewGuid();

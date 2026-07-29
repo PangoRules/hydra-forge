@@ -53,9 +53,9 @@ public class PlansControllerTests
         )
         {
             Content = new StringContent(
-            "{\"title\":\"My Plan\",\"description\":\"desc\",\"content\":\"# Plan\"}",
-            Encoding.UTF8,
-            "application/json"
+                "{\"title\":\"My Plan\",\"description\":\"desc\",\"content\":\"# Plan\"}",
+                Encoding.UTF8,
+                "application/json"
             ),
         };
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -73,7 +73,11 @@ public class PlansControllerTests
     {
         var factory = new PlansTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = PlansTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = PlansTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
@@ -85,9 +89,9 @@ public class PlansControllerTests
         )
         {
             Content = new StringContent(
-            "{\"title\":\"P\",\"description\":null,\"content\":\"# P\"}",
-            Encoding.UTF8,
-            "application/json"
+                "{\"title\":\"P\",\"description\":null,\"content\":\"# P\"}",
+                Encoding.UTF8,
+                "application/json"
             ),
         };
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -290,9 +294,9 @@ public class PlansControllerTests
         )
         {
             Content = new StringContent(
-            "{\"title\":\"Updated\",\"description\":null,\"content\":\"V2\"}",
-            Encoding.UTF8,
-            "application/json"
+                "{\"title\":\"Updated\",\"description\":null,\"content\":\"V2\"}",
+                Encoding.UTF8,
+                "application/json"
             ),
         };
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -511,9 +515,9 @@ public class PlansControllerTests
         )
         {
             Content = new StringContent(
-            "{\"status\":\"Pending\"}",
-            Encoding.UTF8,
-            "application/json"
+                "{\"status\":\"Pending\"}",
+                Encoding.UTF8,
+                "application/json"
             ),
         };
         request.Headers.Add("Authorization", $"Bearer {token}");
@@ -545,49 +549,49 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             foreach (
-            var descriptor in services
-            .Where(d =>
-                d.ServiceType == typeof(ProjectService)
-                || d.ServiceType == typeof(PlanService)
-                || d.ServiceType == typeof(IProjectRepository)
-                || d.ServiceType == typeof(IPlanRepository)
-                || d.ServiceType == typeof(ICardRepository)
-                || d.ServiceType == typeof(IProjectMemberRepository)
-                || d.ServiceType == typeof(IProjectContextSnapshotRepository)
-                || d.ServiceType == typeof(IChatArchiveService)
-                || d.ServiceType
-                == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
-                || d.ServiceType == typeof(IColumnRepository)
-                || d.ServiceType == typeof(ICardAssigneeRepository)
-                || d.ServiceType == typeof(ICardWatcherRepository)
-                || d.ServiceType == typeof(ICardRelationshipRepository)
+                var descriptor in services
+                    .Where(d =>
+                        d.ServiceType == typeof(ProjectService)
+                        || d.ServiceType == typeof(PlanService)
+                        || d.ServiceType == typeof(IProjectRepository)
+                        || d.ServiceType == typeof(IPlanRepository)
+                        || d.ServiceType == typeof(ICardRepository)
+                        || d.ServiceType == typeof(IProjectMemberRepository)
+                        || d.ServiceType == typeof(IProjectContextSnapshotRepository)
+                        || d.ServiceType == typeof(IChatArchiveService)
+                        || d.ServiceType
+                            == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
+                        || d.ServiceType == typeof(IColumnRepository)
+                        || d.ServiceType == typeof(ICardAssigneeRepository)
+                        || d.ServiceType == typeof(ICardWatcherRepository)
+                        || d.ServiceType == typeof(ICardRelationshipRepository)
+                    )
+                    .ToList()
             )
-            .ToList()
-        )
             {
                 services.Remove(descriptor);
             }
 
             services.AddScoped<IProjectRepository>(_ => new PlansTestProjectRepository(_projects));
             services.AddScoped<IPlanRepository>(_ => new PlansTestPlanRepository(
-            _plans,
-            _planVersions
-        ));
+                _plans,
+                _planVersions
+            ));
             services.AddScoped<ICardRepository>(_ => new PlansTestCardRepository(_cards));
             services.AddScoped<IProjectMemberRepository>(_ => new PlansTestMemberRepository(
-            _members
-        ));
+                _members
+            ));
             services.AddScoped<IProjectContextSnapshotRepository>(
-            _ => new PlansTestSnapshotRepository()
-        );
+                _ => new PlansTestSnapshotRepository()
+            );
             services.AddScoped<IChatArchiveService>(_ => new PlansTestChatArchiveService());
             services.AddScoped<IAuditLogWriter>(_ => new PlansTestAuditLogWriter());
             services.AddScoped<Application.ProjectSnapshots.IProjectSnapshotRefresher>(
-            _ => new TestSnapshotRefresher()
-        );
+                _ => new TestSnapshotRefresher()
+            );
             services.AddScoped<Application.Realtime.IProjectBoardEventPublisher>(
-            _ => new FakeProjectBoardEventPublisher()
-        );
+                _ => new FakeProjectBoardEventPublisher()
+            );
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
@@ -609,24 +613,22 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
     {
         var claims = new[]
         {
-        new System.Security.Claims.Claim(
-        System.Security.Claims.ClaimTypes.NameIdentifier,
-        userId.ToString()
-        ),
-        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username),
-        new System.Security.Claims.Claim(
-        System.Security.Claims.ClaimTypes.Role,
-        isAdmin ? "Admin" : "User"
-        ),
-    };
+            new System.Security.Claims.Claim(
+                System.Security.Claims.ClaimTypes.NameIdentifier,
+                userId.ToString()
+            ),
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username),
+            new System.Security.Claims.Claim(
+                System.Security.Claims.ClaimTypes.Role,
+                isAdmin ? "Admin" : "User"
+            ),
+        };
         var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
         _ = new System.Security.Claims.ClaimsPrincipal(identity);
 
         var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
         var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(
-            "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
-            )
+            Encoding.UTF8.GetBytes("test-secret-key-that-is-at-least-32-chars-long-for-hs256")
         );
         var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(
             key,
@@ -734,7 +736,8 @@ internal class PlansTestProjectRepository(List<Project> projects) : IProjectRepo
     ) => throw new NotImplementedException();
 }
 
-internal class PlansTestPlanRepository(List<Plan> plans, List<PlanVersion> versions) : IPlanRepository
+internal class PlansTestPlanRepository(List<Plan> plans, List<PlanVersion> versions)
+    : IPlanRepository
 {
     public Task<Plan?> GetByIdAsync(Guid planId, CancellationToken ct = default) =>
         Task.FromResult(plans.FirstOrDefault(p => p.Id == planId));
@@ -761,9 +764,9 @@ internal class PlansTestPlanRepository(List<Plan> plans, List<PlanVersion> versi
         Guid planId,
         CancellationToken ct = default
     ) =>
-        Task.FromResult<IReadOnlyList<PlanVersion>>(
-    [.. versions.Where(v => v.PlanId == planId).OrderBy(v => v.Version)]
-    );
+        Task.FromResult<IReadOnlyList<PlanVersion>>([
+            .. versions.Where(v => v.PlanId == planId).OrderBy(v => v.Version),
+        ]);
 
     public Task AddAsync(Plan plan, CancellationToken ct = default)
     {
@@ -800,7 +803,7 @@ internal class PlansTestCardRepository(List<Card> cards) : ICardRepository
         CancellationToken ct = default
     ) =>
         Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
-        _cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+            _cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
         );
 
     public Task<Card?> GetByProjectAndNumberAsync(
@@ -809,7 +812,7 @@ internal class PlansTestCardRepository(List<Card> cards) : ICardRepository
         CancellationToken ct = default
     ) =>
         Task.FromResult(
-        _cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+            _cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
         );
 
     public Task<IReadOnlyList<Card>> ListByProjectAsync(
@@ -820,11 +823,11 @@ internal class PlansTestCardRepository(List<Card> cards) : ICardRepository
 
     public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
         Task.FromResult(
-        _cards
-            .Where(c => c.ProjectId == projectId)
-            .Select(c => c.CardNumber)
-            .DefaultIfEmpty(0)
-            .Max()
+            _cards
+                .Where(c => c.ProjectId == projectId)
+                .Select(c => c.CardNumber)
+                .DefaultIfEmpty(0)
+                .Max()
         );
 
     public Task AddAsync(Card card, CancellationToken ct = default)
@@ -866,7 +869,7 @@ internal class PlansTestCardRepository(List<Card> cards) : ICardRepository
     {
         var toCompact = _cards
             .Where(c =>
-            c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null
+                c.ColumnId == columnId && c.Position > exceptPosition && c.ArchivedAt == null
             )
             .ToList();
         foreach (var c in toCompact)
@@ -889,16 +892,16 @@ internal class PlansTestMemberRepository(List<ProjectMember> members) : IProject
         CancellationToken ct = default
     ) =>
         Task.FromResult(
-        members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+            members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
         );
 
     public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
         Guid projectId,
         CancellationToken ct = default
     ) =>
-        Task.FromResult<IReadOnlyList<ProjectMember>>(
-    [.. members.Where(m => m.ProjectId == projectId)]
-    );
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. members.Where(m => m.ProjectId == projectId),
+        ]);
 
     public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
         IEnumerable<Guid> projectIds,
@@ -960,10 +963,7 @@ internal class PlansTestSnapshotRepository : IProjectContextSnapshotRepository
     public Task<ProjectContextSnapshot?> GetByProjectIdAsync(
         Guid projectId,
         CancellationToken ct = default
-    ) =>
-        Task.FromResult(
-        _snapshots.FirstOrDefault(s => s.ProjectId == projectId)
-        );
+    ) => Task.FromResult(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
 
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
         Task.CompletedTask;

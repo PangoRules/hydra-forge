@@ -61,7 +61,9 @@ public class DependencyPanel(
         };
 
         AnsiConsole.Write(panel);
-        AnsiConsole.MarkupLine("[grey][[Tab]] Switch focus  [[Enter]] Select/Confirm  [[Esc]] Cancel[/]");
+        AnsiConsole.MarkupLine(
+            "[grey][[Tab]] Switch focus  [[Enter]] Select/Confirm  [[Esc]] Cancel[/]"
+        );
     }
 
     private Panel BuildSearchSection()
@@ -266,7 +268,9 @@ public class DependencyPanel(
                 new CreateRelationshipRequest { TargetCardId = targetCard.Id, Type = relType }
             );
 
-            AnsiConsole.MarkupLine($"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]");
+            AnsiConsole.MarkupLine(
+                $"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]"
+            );
             _appState.CurrentScreen = null;
         }
         catch (ApiException ex)

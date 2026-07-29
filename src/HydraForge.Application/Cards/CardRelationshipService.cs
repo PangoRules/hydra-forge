@@ -1,7 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -61,7 +61,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<CardRelationshipDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -169,7 +177,13 @@ public class CardRelationshipService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, relationship.SourceCardId, BoardAction.Created, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            relationship.Id,
+            relationship.SourceCardId,
+            BoardAction.Created,
+            ct
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         cardsById.TryGetValue(relationship.SourceCardId, out var s);
@@ -182,7 +196,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -222,7 +244,13 @@ public class CardRelationshipService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, relationship.SourceCardId, BoardAction.Deleted, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            relationship.Id,
+            relationship.SourceCardId,
+            BoardAction.Deleted,
+            ct
+        );
 
         return Result.Success();
     }
@@ -232,7 +260,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ArchiveImpactResponse>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -345,7 +381,13 @@ public class CardRelationshipService(
         );
     }
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, Guid cardId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid entityId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),

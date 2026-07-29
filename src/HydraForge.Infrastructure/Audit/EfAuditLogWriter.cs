@@ -75,4 +75,3 @@ public class EfAuditLogWriter(HydraForgeDbContext dbContext, ILogger<EfAuditLogW
         }
     }
 }
-

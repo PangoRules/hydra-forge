@@ -5,5 +5,5 @@ public enum MessageRole
     User = 0,
     Assistant = 1,
     System = 2,
-    Tool = 3
+    Tool = 3,
 }

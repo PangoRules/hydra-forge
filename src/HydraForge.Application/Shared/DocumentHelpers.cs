@@ -12,7 +12,8 @@ public static class VersionAppender
         int version,
         string content,
         Guid actorId,
-        Func<Guid, int, string, Guid, DateTime, TSpecVersion> factory)
+        Func<Guid, int, string, Guid, DateTime, TSpecVersion> factory
+    )
         where TSpecVersion : class
     {
         return factory(specId, version, content, actorId, DateTime.UtcNow);

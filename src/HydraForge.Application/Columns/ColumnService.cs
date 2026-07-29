@@ -23,12 +23,21 @@ public class ColumnService(
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ColumnDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -50,7 +59,13 @@ public class ColumnService(
 
         await columnRepo.AddAsync(column, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Created, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Column,
+            column.Id,
+            BoardAction.Created,
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -110,7 +125,15 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ColumnDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -125,7 +148,13 @@ public class ColumnService(
 
         await columnRepo.UpdateAsync(column, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, column.Id, BoardAction.Updated, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Column,
+            column.Id,
+            BoardAction.Updated,
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -146,7 +175,15 @@ public class ColumnService(
 
     public async Task<Result> DeleteAsync(DeleteColumnCommand cmd, CancellationToken ct = default)
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -176,7 +213,13 @@ public class ColumnService(
             await columnRepo.UpdateAsync(remaining[i], ct);
         }
 
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, cmd.ColumnId, BoardAction.Deleted, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Column,
+            cmd.ColumnId,
+            BoardAction.Deleted,
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -200,7 +243,15 @@ public class ColumnService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -223,7 +274,13 @@ public class ColumnService(
 
         await columnRepo.ReorderAsync(cmd.ProjectId, cmd.ColumnIds, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, BoardEntityType.Column, Guid.Empty, BoardAction.Moved, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            BoardEntityType.Column,
+            Guid.Empty,
+            BoardAction.Moved,
+            ct
+        );
 
         await _auditLogWriter.WriteAsync(
             new AuditLogRequest(
@@ -245,7 +302,13 @@ public class ColumnService(
     private static ColumnDto MapToDto(Column column) =>
         new(column.Id, column.Name, column.Position, column.WipLimit, column.Color);
 
-    private async Task PublishAsync(Guid projectId, BoardEntityType entityType, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        BoardEntityType entityType,
+        Guid entityId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -260,4 +323,3 @@ public class ColumnService(
         await _publisher.PublishAsync(envelope, ct);
     }
 }
-

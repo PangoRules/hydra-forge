@@ -44,7 +44,8 @@ public class TestUserSeeder(
                 "User",
                 $"{username}@localhost",
                 passwordHasher.HashPassword(password),
-                isAdmin);
+                isAdmin
+            );
 
             await userRepository.CreateAsync(user);
             if (logger.IsEnabled(LogLevel.Information))

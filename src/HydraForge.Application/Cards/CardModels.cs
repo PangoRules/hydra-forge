@@ -36,51 +36,19 @@ public record MoveCardCommand(
     int Version
 );
 
-public record AssignCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid AssigneeUserId,
-    Guid ActorId
-);
+public record AssignCardCommand(Guid ProjectId, Guid CardId, Guid AssigneeUserId, Guid ActorId);
 
-public record UnassignCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid AssigneeUserId,
-    Guid ActorId
-);
+public record UnassignCardCommand(Guid ProjectId, Guid CardId, Guid AssigneeUserId, Guid ActorId);
 
-public record ArchiveCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId,
-    int Version
-);
+public record ArchiveCardCommand(Guid ProjectId, Guid CardId, Guid ActorId, int Version);
 
-public record RestoreCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId,
-    int Version
-);
+public record RestoreCardCommand(Guid ProjectId, Guid CardId, Guid ActorId, int Version);
 
-public record DeleteCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId
-);
+public record DeleteCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
 
-public record WatchCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId
-);
+public record WatchCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
 
-public record UnwatchCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId
-);
+public record UnwatchCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
 
 public record CardDto(
     Guid Id,
@@ -117,18 +85,9 @@ public record CardRelationshipBadgeDto(
     bool IsSource
 );
 
-public record CardAssigneeDto(
-    Guid Id,
-    Guid UserId,
-    string Username,
-    DateTime AssignedAt
-);
+public record CardAssigneeDto(Guid Id, Guid UserId, string Username, DateTime AssignedAt);
 
-public record CardWatcherDto(
-    Guid UserId,
-    string Username,
-    DateTime AddedAt
-);
+public record CardWatcherDto(Guid UserId, string Username, DateTime AddedAt);
 
 public record CardListFilter(
     Guid? ColumnId = null,
@@ -139,10 +98,7 @@ public record CardListFilter(
     int? ArchivedLimit = 200
 );
 
-public record BlockedMoveWarningDto(
-    Guid CardId,
-    IReadOnlyList<BlockerDto> Blockers
-);
+public record BlockedMoveWarningDto(Guid CardId, IReadOnlyList<BlockerDto> Blockers);
 
 public record BlockerDto(
     Guid CardId,
@@ -154,7 +110,7 @@ public record BlockerDto(
 public enum RelationshipBlockerType
 {
     BlockedBy,
-    Precedes
+    Precedes,
 }
 
 public record CreateCardRequest(
@@ -183,17 +139,11 @@ public record MoveCardRequest(
     int Version
 );
 
-public record AssignCardRequest(
-    Guid AssigneeUserId
-);
+public record AssignCardRequest(Guid AssigneeUserId);
 
-public record ArchiveCardRequest(
-    int Version
-);
+public record ArchiveCardRequest(int Version);
 
-public record RestoreCardRequest(
-    int Version
-);
+public record RestoreCardRequest(int Version);
 
 public record CardResponse(
     Guid Id,
@@ -225,31 +175,12 @@ public record CardRelationshipBadgeResponse(
     bool IsSource
 );
 
-public record CardAssigneeResponse(
-    Guid Id,
-    Guid UserId,
-    string Username,
-    DateTime AssignedAt
-);
+public record CardAssigneeResponse(Guid Id, Guid UserId, string Username, DateTime AssignedAt);
 
-public record CardWatcherResponse(
-    Guid UserId,
-    string Username,
-    DateTime AddedAt
-);
+public record CardWatcherResponse(Guid UserId, string Username, DateTime AddedAt);
 
-public record CardListResponse(
-    IReadOnlyList<CardResponse> Cards
-);
+public record CardListResponse(IReadOnlyList<CardResponse> Cards);
 
-public record BlockedMoveWarningResponse(
-    Guid CardId,
-    IReadOnlyList<BlockerResponse> Blockers
-);
+public record BlockedMoveWarningResponse(Guid CardId, IReadOnlyList<BlockerResponse> Blockers);
 
-public record BlockerResponse(
-    Guid CardId,
-    int CardNumber,
-    string Title,
-    string BlockerType
-);
+public record BlockerResponse(Guid CardId, int CardNumber, string Title, string BlockerType);

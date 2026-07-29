@@ -24,7 +24,11 @@ public class ProjectsControllerTests
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ProjectsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "admin", isAdmin: true);
+        var token = ProjectsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
         {
@@ -49,7 +53,11 @@ public class ProjectsControllerTests
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ProjectsTestWebApplicationFactory.IssueApplicationToken(Guid.NewGuid(), "admin", isAdmin: true);
+        var token = ProjectsTestWebApplicationFactory.IssueApplicationToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
         {
@@ -71,7 +79,11 @@ public class ProjectsControllerTests
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ProjectsTestWebApplicationFactory.IssueRawSubToken(Guid.NewGuid(), "admin", isAdmin: true);
+        var token = ProjectsTestWebApplicationFactory.IssueRawSubToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
         {
@@ -93,7 +105,10 @@ public class ProjectsControllerTests
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ProjectsTestWebApplicationFactory.IssueTokenWithoutUserId("admin", isAdmin: true);
+        var token = ProjectsTestWebApplicationFactory.IssueTokenWithoutUserId(
+            "admin",
+            isAdmin: true
+        );
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/projects")
         {
@@ -115,7 +130,11 @@ public class ProjectsControllerTests
     {
         var factory = new ProjectsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ProjectsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = ProjectsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Private Project" });
@@ -194,8 +213,16 @@ public class ProjectsControllerTests
         using var client = factory.CreateClient();
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
-        var ownerToken = ProjectsTestWebApplicationFactory.IssueToken(ownerId, "owner", isAdmin: false);
-        var memberToken = ProjectsTestWebApplicationFactory.IssueToken(memberId, "member", isAdmin: false);
+        var ownerToken = ProjectsTestWebApplicationFactory.IssueToken(
+            ownerId,
+            "owner",
+            isAdmin: false
+        );
+        var memberToken = ProjectsTestWebApplicationFactory.IssueToken(
+            memberId,
+            "member",
+            isAdmin: false
+        );
 
         var projectId = Guid.NewGuid();
         factory.AddProject(new Project { Id = projectId, Name = "Add Member Test" });
@@ -256,7 +283,11 @@ public class ProjectsControllerTests
                 Role = MemberRole.Owner,
             }
         );
-        var token = ProjectsTestWebApplicationFactory.IssueToken(userId, "testuser", isAdmin: false);
+        var token = ProjectsTestWebApplicationFactory.IssueToken(
+            userId,
+            "testuser",
+            isAdmin: false
+        );
         client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 

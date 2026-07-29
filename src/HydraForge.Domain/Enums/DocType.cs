@@ -4,5 +4,5 @@ public enum DocType
 {
     Specification = 1,
     Concept = 2,
-    Report = 3
+    Report = 3,
 }

@@ -23,7 +23,11 @@ public class ChecklistCommentsControllerTests
     {
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -65,7 +69,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -88,7 +96,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
 
         var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -120,7 +130,11 @@ public class ChecklistCommentsControllerTests
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
         var assigneeId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -151,8 +165,12 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(assigneeId, "assignee", "a@a.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(assigneeId, "assignee", "a@a.com")
+        );
 
         var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -181,7 +199,11 @@ public class ChecklistCommentsControllerTests
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
         var nonMemberId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -204,8 +226,12 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(nonMemberId, "outsider", "o@o.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(nonMemberId, "outsider", "o@o.com")
+        );
 
         var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -233,7 +259,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
@@ -257,7 +287,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
         factory.AddChecklistItem(
             new ChecklistItem
             {
@@ -288,7 +320,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
@@ -312,7 +348,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
         factory.AddChecklistItem(
             new ChecklistItem
             {
@@ -360,7 +398,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
@@ -384,7 +426,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
         factory.AddChecklistItem(
             new ChecklistItem
             {
@@ -413,7 +457,11 @@ public class ChecklistCommentsControllerTests
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
         var mentionedId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -444,8 +492,12 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com"));
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(mentionedId, "alice", "alice@a.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com")
+        );
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(mentionedId, "alice", "alice@a.com")
+        );
 
         var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -475,7 +527,11 @@ public class ChecklistCommentsControllerTests
     {
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "outsider", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "outsider",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -517,7 +573,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var commentId = Guid.NewGuid();
@@ -541,7 +601,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com")
+        );
         factory.AddComment(
             new Comment
             {
@@ -580,7 +642,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var commentId = Guid.NewGuid();
@@ -604,7 +670,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com")
+        );
         factory.AddComment(
             new Comment
             {
@@ -634,7 +702,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -657,7 +729,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "author", "a@a.com")
+        );
         factory.AddComment(
             new Comment
             {
@@ -687,7 +761,11 @@ public class ChecklistCommentsControllerTests
         var factory = new ChecklistCommentsTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var token = ChecklistCommentsTestWebApplicationFactory.IssueToken(
+            userId,
+            "member",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
@@ -710,7 +788,9 @@ public class ChecklistCommentsControllerTests
                 Title = "Card",
             }
         );
-        factory.AddUser(ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com"));
+        factory.AddUser(
+            ChecklistCommentsTestWebApplicationFactory.MakeUser(userId, "member", "m@m.com")
+        );
         factory.AddChecklistItem(
             new ChecklistItem
             {

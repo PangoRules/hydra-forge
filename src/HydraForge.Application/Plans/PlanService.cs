@@ -1,8 +1,8 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
 using HydraForge.Application.Specs;
@@ -37,7 +37,15 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -201,7 +209,15 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -214,7 +230,10 @@ public class PlanService(
 
         if (plan.IsDone)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+                new Error(
+                    DomainErrorCodes.Plans.EditForbiddenWhenDone,
+                    "Done plans are read-only. Reactivate before editing."
+                )
             );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
@@ -305,7 +324,15 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -318,7 +345,10 @@ public class PlanService(
 
         if (plan.IsDone)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+                new Error(
+                    DomainErrorCodes.Plans.EditForbiddenWhenDone,
+                    "Done plans are read-only. Reactivate before editing."
+                )
             );
 
         var oldVersion = await _planRepo.GetVersionAsync(cmd.PlanId, cmd.Version, ct);
@@ -374,12 +404,24 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
-            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var plan = await _planRepo.GetByIdAsync(cmd.PlanId, ct);
         if (plan == null || plan.ProjectId != cmd.ProjectId)
-            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Plan not found."));
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Plans.NotFound, "Plan not found.")
+            );
 
         if (plan.Status == cmd.Status)
             return Result<PlanDto>.Success(MapToDto(plan));
@@ -394,7 +436,13 @@ public class PlanService(
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid planId, Guid cardId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid planId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),

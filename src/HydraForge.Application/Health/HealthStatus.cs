@@ -5,5 +5,5 @@ public enum HealthStatus
     Healthy,
     Degraded,
     Unhealthy,
-    NotConfigured
+    NotConfigured,
 }

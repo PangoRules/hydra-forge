@@ -25,7 +25,11 @@ public class AdminControllerTests
     {
         var factory = new AdminTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = AdminTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await client.GetAsync("/api/admin/users");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -36,7 +40,11 @@ public class AdminControllerTests
     {
         var factory = new AdminTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = AdminTestWebApplicationFactory.IssueToken(Guid.NewGuid(), "admin", isAdmin: true);
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await client.GetAsync("/api/admin/users");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

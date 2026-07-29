@@ -11,9 +11,10 @@ public class EditorLauncher
         {
             await File.WriteAllTextAsync(tempFile, initialContent);
 
-            var editor = Environment.GetEnvironmentVariable("EDITOR")
-                         ?? Environment.GetEnvironmentVariable("VISUAL")
-                         ?? (OperatingSystem.IsWindows() ? "notepad.exe" : "vi");
+            var editor =
+                Environment.GetEnvironmentVariable("EDITOR")
+                ?? Environment.GetEnvironmentVariable("VISUAL")
+                ?? (OperatingSystem.IsWindows() ? "notepad.exe" : "vi");
 
             var process = new Process
             {
@@ -22,7 +23,7 @@ public class EditorLauncher
                     FileName = editor,
                     Arguments = tempFile,
                     UseShellExecute = true,
-                }
+                },
             };
 
             process.Start();
@@ -36,7 +37,11 @@ public class EditorLauncher
         }
         finally
         {
-            try { File.Delete(tempFile); } catch { }
+            try
+            {
+                File.Delete(tempFile);
+            }
+            catch { }
         }
     }
 }

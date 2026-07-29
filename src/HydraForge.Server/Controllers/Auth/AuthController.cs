@@ -21,7 +21,8 @@ public class AuthController(
         var result = await loginUserHandler.HandleAsync(request);
         if (result.IsFailure)
         {
-            var correlationId = HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
+            var correlationId =
+                HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
             var problemDetails = ProblemDetailsMapper.FromError(result.Error, correlationId);
             return new ObjectResult(problemDetails)
             {

@@ -6,8 +6,10 @@ public class Result
 
     private Result(bool isSuccess, Error? error)
     {
-        if (isSuccess && error != null) throw new InvalidOperationException("Success result cannot have an error.");
-        if (!isSuccess && error == null) throw new InvalidOperationException("Failure result must have an error.");
+        if (isSuccess && error != null)
+            throw new InvalidOperationException("Success result cannot have an error.");
+        if (!isSuccess && error == null)
+            throw new InvalidOperationException("Failure result must have an error.");
         IsSuccess = isSuccess;
         IsFailure = !isSuccess;
         _error = error;
@@ -17,7 +19,8 @@ public class Result
 
     public bool IsFailure { get; }
 
-    public Error Error => _error ?? throw new InvalidOperationException("Success result has no error.");
+    public Error Error =>
+        _error ?? throw new InvalidOperationException("Success result has no error.");
 
     public static Result Success() => new(true, null);
 
@@ -31,9 +34,12 @@ public class Result<T>
 
     private Result(bool isSuccess, T? value, Error? error)
     {
-        if (isSuccess && value == null && error == null) throw new InvalidOperationException("Success result must have a value.");
-        if (isSuccess && error != null) throw new InvalidOperationException("Success result cannot have an error.");
-        if (!isSuccess && error == null) throw new InvalidOperationException("Failure result must have an error.");
+        if (isSuccess && value == null && error == null)
+            throw new InvalidOperationException("Success result must have a value.");
+        if (isSuccess && error != null)
+            throw new InvalidOperationException("Success result cannot have an error.");
+        if (!isSuccess && error == null)
+            throw new InvalidOperationException("Failure result must have an error.");
         IsSuccess = isSuccess;
         IsFailure = !isSuccess;
         _value = value;
@@ -46,7 +52,8 @@ public class Result<T>
 
     public T Value => _value ?? throw new InvalidOperationException("Failure result has no value.");
 
-    public Error Error => _error ?? throw new InvalidOperationException("Success result has no error.");
+    public Error Error =>
+        _error ?? throw new InvalidOperationException("Success result has no error.");
 
     public static Result<T> Success(T value) => new(true, value, null);
 

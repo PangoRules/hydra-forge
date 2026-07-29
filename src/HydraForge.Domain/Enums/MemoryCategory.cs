@@ -7,5 +7,5 @@ public enum MemoryCategory
     Identity = 3,
     Event = 4,
     Contact = 5,
-    Instruction = 6
+    Instruction = 6,
 }
