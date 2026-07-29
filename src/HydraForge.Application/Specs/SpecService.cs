@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
@@ -14,6 +15,7 @@ public class SpecService(
     ISpecRepository specRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher
@@ -22,6 +24,7 @@ public class SpecService(
     private readonly ISpecRepository _specRepo = specRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
@@ -31,8 +34,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -134,8 +136,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -156,8 +157,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -175,8 +175,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -191,8 +190,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -260,8 +258,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecVersionDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -294,8 +291,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );

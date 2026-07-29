@@ -35,6 +35,8 @@ internal class FakeUserRepository : IUserRepository
     public Task<bool> AnyAdminExistsAsync()
         => Task.FromResult(true);
 
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+
     public Task CreateAsync(User user)
         => Task.CompletedTask;
 }

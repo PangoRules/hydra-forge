@@ -1,4 +1,5 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Attachments;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
@@ -44,6 +45,31 @@ public class AttachmentServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var attachmentRepo = new InMemoryAttachmentRepository();
+        var cardRepo = new InMemoryCardRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepoAdmin();
+        var fileStore = new FakeFileStore();
+        var auditWriter = new InMemoryAuditLogWriter();
+        var snapshotRefresher = new NullSnapshotRefresher();
+        var publisher = new FakeProjectBoardEventPublisher();
+        var service = new AttachmentService(
+            attachmentRepo, cardRepo, memberRepo, userRepo, fileStore, auditWriter, snapshotRefresher, publisher, 10_000_000, AttachmentContentTypes.Allowed);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
+        fileStore.NextStoreResult = Result<string>.Success("key");
+
+        var result = await service.CreateAsync(new CreateAttachmentCommand(
+            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -106,7 +132,7 @@ public class AttachmentServiceTests
         fileStore.NextStoreResult = Result<string>.Failure(new Error("STORE_ERROR", "Store failed"));
 
         var service2 = new AttachmentService(
-            new InMemoryAttachmentRepository(), cardRepo, memberRepo, fileStore, new InMemoryAuditLogWriter(),
+            new InMemoryAttachmentRepository(), cardRepo, memberRepo, new FakeUserRepo(), fileStore, new InMemoryAuditLogWriter(),
             new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), 10_000_000, AttachmentContentTypes.Allowed);
 
         var result = await service2.CreateAsync(new CreateAttachmentCommand(
@@ -326,6 +352,7 @@ public class AttachmentServiceTests
         var attachmentRepo = new InMemoryAttachmentRepository();
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepo();
         var fileStore = new FakeFileStore();
         var auditWriter = new InMemoryAuditLogWriter();
         var snapshotRefresher = new NullSnapshotRefresher();
@@ -333,7 +360,7 @@ public class AttachmentServiceTests
         var allowedTypes = AttachmentContentTypes.Allowed;
 
         var service = new AttachmentService(
-            attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
+            attachmentRepo, cardRepo, memberRepo, userRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
 
         return (service, fileStore, attachmentRepo, cardRepo, memberRepo, auditWriter);
     }
@@ -486,5 +513,29 @@ public class AttachmentServiceTests
         }
 
         public void Clear() => Writes.Clear();
+    }
+
+    private sealed class FakeUserRepo : IUserRepository
+    {
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<User?> FindByUsernameAsync(string username) => throw new NotImplementedException();
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => throw new NotImplementedException();
+        public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+        public Task CreateAsync(User user) => throw new NotImplementedException();
+    }
+
+    private sealed class FakeUserRepoAdmin : IUserRepository
+    {
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<User?> FindByUsernameAsync(string username) => throw new NotImplementedException();
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => throw new NotImplementedException();
+        public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task CreateAsync(User user) => throw new NotImplementedException();
     }
 }

@@ -223,6 +223,21 @@ public class ProjectServiceTests
     }
 
     [Fact]
+    public async Task GetByIdAsync_AdminNonMember_Succeeds()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService) = CreateAdminMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService);
+        var projectId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = projectId, Name = "Private Project" });
+
+        var result = await handler.GetByIdAsync(projectId, adminId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Private Project", result.Value.Name);
+    }
+
+    [Fact]
     public async Task GetAllAsync_ReturnsPagedProjectsWithMyRole()
     {
         var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService) = CreateMocks();
@@ -279,12 +294,50 @@ public class ProjectServiceTests
             new FakeNotificationService()
         );
     }
+
+    private static (
+        InMemoryProjectRepository repo,
+        InMemoryColumnRepository columnRepo,
+        InMemoryProjectMemberRepository memberRepo,
+        InMemorySnapshotRepository snapshotRepo,
+        InMemoryChatArchiveService chatService,
+        NullSnapshotRefresher snapshotRefresher,
+        FakeProjectBoardEventPublisher publisher,
+        InMemoryAuditLogWriter auditWriter,
+        FakeAdminUserRepo userRepo,
+        FakeNotificationService notifService
+    ) CreateAdminMocks()
+    {
+        return (
+            new InMemoryProjectRepository(),
+            new InMemoryColumnRepository(),
+            new InMemoryProjectMemberRepository(),
+            new InMemorySnapshotRepository(),
+            new InMemoryChatArchiveService(),
+            new NullSnapshotRefresher(),
+            new FakeProjectBoardEventPublisher(),
+            new InMemoryAuditLogWriter(),
+            new FakeAdminUserRepo(),
+            new FakeNotificationService()
+        );
+    }
 }
 
 internal class InMemoryProjectRepository : IProjectRepository
 {
     public List<Project> Projects { get; } = [];
+    public Dictionary<Guid, HashSet<Guid>> UserMemberships { get; } = [];
     public int LastTake { get; private set; }
+
+    public void AddMembership(Guid userId, Guid projectId)
+    {
+        if (!UserMemberships.TryGetValue(userId, out var set))
+        {
+            set = [];
+            UserMemberships[userId] = set;
+        }
+        set.Add(projectId);
+    }
 
     public Task AddAsync(Project project, CancellationToken ct = default)
     {
@@ -338,6 +391,72 @@ internal class InMemoryProjectRepository : IProjectRepository
         var idx = Projects.FindIndex(p => p.Id == project.Id);
         if (idx >= 0) Projects[idx] = project;
         return Task.CompletedTask;
+    }
+
+    public Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+    {
+        var filtered = Projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+
+        var all = sorted.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
+
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+    {
+        var memberProjectIds = UserMemberships.TryGetValue(userId, out var set) ? set : [];
+
+        var filtered = Projects
+            .Where(p => !memberProjectIds.Contains(p.Id))
+            .AsEnumerable();
+
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+
+        var all = sorted.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
     }
 }
 
@@ -498,10 +617,33 @@ internal class InMemoryUserRepository : HydraForge.Application.Auth.IUserReposit
     public Task<bool> AnyAdminExistsAsync()
         => Task.FromResult(false);
 
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default)
+        => Task.FromResult(false);
+
     public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user)
     {
         return Task.CompletedTask;
     }
+}
+
+internal sealed class FakeAdminUserRepo : HydraForge.Application.Auth.IUserRepository
+{
+    public Task<HydraForge.Domain.Entities.Auth.User?> FindByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
+
+    public Task<IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<Guid, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>());
+
+    public Task<HydraForge.Domain.Entities.Auth.User?> FindByUsernameAsync(string username)
+        => Task.FromResult<HydraForge.Domain.Entities.Auth.User?>(null);
+
+    public Task<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyDictionary<string, HydraForge.Domain.Entities.Auth.User>>(new Dictionary<string, HydraForge.Domain.Entities.Auth.User>());
+
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(HydraForge.Domain.Entities.Auth.User user) => Task.CompletedTask;
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter

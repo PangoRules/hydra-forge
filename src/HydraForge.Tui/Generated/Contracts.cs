@@ -283,7 +283,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, ProjectSortField? sortBy = null, bool? sortDescending = null, MemberRole? role = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ProjectListPageResponse> ProjectsGETAsync(bool? includeArchived = null, string? search = null, ProjectSortField? sortBy = null, bool? sortDescending = null, MemberRole? role = null, int? skip = null, int? take = null, bool? excludeMembership = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
@@ -1575,9 +1575,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("memberCount", Required = Newtonsoft.Json.Required.Always)]
         public int MemberCount { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("myRole", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonProperty("myRole", Required = Newtonsoft.Json.Required.AllowNull)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public MemberRole MyRole { get; set; } = default!;
+        public MemberRole? MyRole { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

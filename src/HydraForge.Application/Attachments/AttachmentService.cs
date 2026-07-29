@@ -1,8 +1,9 @@
 using System.Text.RegularExpressions;
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -14,6 +15,7 @@ public partial class AttachmentService(
     IAttachmentRepository attachmentRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IFileStore fileStore,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
@@ -25,6 +27,7 @@ public partial class AttachmentService(
     private readonly IAttachmentRepository _attachmentRepo = attachmentRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IFileStore _fileStore = fileStore;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
@@ -32,10 +35,20 @@ public partial class AttachmentService(
     private readonly long _maxBytes = maxBytes;
     private readonly IReadOnlySet<string> _allowedContentTypes = allowedContentTypes;
 
-    public async Task<Result<AttachmentDto>> CreateAsync(CreateAttachmentCommand cmd, CancellationToken ct = default)
+    public async Task<Result<AttachmentDto>> CreateAsync(
+        CreateAttachmentCommand cmd,
+        CancellationToken ct = default
+    )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<AttachmentDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -48,12 +61,18 @@ public partial class AttachmentService(
 
         if (cmd.Size > _maxBytes)
             return Result<AttachmentDto>.Failure(
-                new Error(DomainErrorCodes.Attachments.FileTooLarge, $"File exceeds maximum size of {_maxBytes} bytes.")
+                new Error(
+                    DomainErrorCodes.Attachments.FileTooLarge,
+                    $"File exceeds maximum size of {_maxBytes} bytes."
+                )
             );
 
         if (!_allowedContentTypes.Contains(cmd.ContentType))
             return Result<AttachmentDto>.Failure(
-                new Error(DomainErrorCodes.Attachments.UnsupportedContentType, $"Content type '{cmd.ContentType}' is not allowed.")
+                new Error(
+                    DomainErrorCodes.Attachments.UnsupportedContentType,
+                    $"Content type '{cmd.ContentType}' is not allowed."
+                )
             );
 
         var sanitizedFileName = SanitizeFileName(cmd.FileName);
@@ -62,7 +81,10 @@ public partial class AttachmentService(
         var storeResult = await _fileStore.StoreAsync(cmd.Content, cmd.ContentType, storageKey, ct);
         if (storeResult.IsFailure)
             return Result<AttachmentDto>.Failure(
-                new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable.")
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
             );
 
         var attachment = new Attachment
@@ -94,7 +116,13 @@ public partial class AttachmentService(
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, attachment.Id, attachment.CardId, BoardAction.Created, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            attachment.Id,
+            attachment.CardId,
+            BoardAction.Created,
+            ct
+        );
 
         return Result<AttachmentDto>.Success(MapToDto(attachment));
     }
@@ -106,8 +134,7 @@ public partial class AttachmentService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<AttachmentDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -119,9 +146,7 @@ public partial class AttachmentService(
             );
 
         var attachments = await _attachmentRepo.ListByCardAsync(cardId, ct);
-        return Result<IReadOnlyList<AttachmentDto>>.Success(
-            attachments.Select(MapToDto).ToList()
-        );
+        return Result<IReadOnlyList<AttachmentDto>>.Success(attachments.Select(MapToDto).ToList());
     }
 
     public async Task<Result<(Stream Stream, string ContentType, string FileName)>> DownloadAsync(
@@ -132,8 +157,7 @@ public partial class AttachmentService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<(Stream, string, string)>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -153,10 +177,15 @@ public partial class AttachmentService(
         var openResult = await _fileStore.OpenReadAsync(attachment.StoragePath, ct);
         if (openResult.IsFailure)
             return Result<(Stream, string, string)>.Failure(
-                new Error(DomainErrorCodes.Attachments.FileStoreUnavailable, "File store unavailable.")
+                new Error(
+                    DomainErrorCodes.Attachments.FileStoreUnavailable,
+                    "File store unavailable."
+                )
             );
 
-        return Result<(Stream, string, string)>.Success((openResult.Value, attachment.ContentType, attachment.FileName));
+        return Result<(Stream, string, string)>.Success(
+            (openResult.Value, attachment.ContentType, attachment.FileName)
+        );
     }
 
     public async Task<Result> DeleteAsync(
@@ -167,17 +196,14 @@ public partial class AttachmentService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var card = await _cardRepo.GetByIdAsync(cardId, ct);
         if (card == null || card.ProjectId != projectId)
-            return Result.Failure(
-                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
-            );
+            return Result.Failure(new Error(DomainErrorCodes.Cards.NotFound, "Card not found."));
 
         var attachment = await _attachmentRepo.GetByIdAsync(attachmentId, ct);
         if (attachment == null || attachment.CardId != cardId)
@@ -216,7 +242,13 @@ public partial class AttachmentService(
         return Result.Success();
     }
 
-    private async Task PublishAsync(Guid projectId, Guid attachmentId, Guid cardId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid attachmentId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -255,9 +287,7 @@ public partial class AttachmentService(
         var ext = Path.GetExtension(value);
         var nameWithoutExt = Path.GetFileNameWithoutExtension(value);
         var availableForName = maxLength - ext.Length;
-        return availableForName > 0
-            ? nameWithoutExt[..availableForName] + ext
-            : value[..maxLength];
+        return availableForName > 0 ? nameWithoutExt[..availableForName] + ext : value[..maxLength];
     }
 
     private static AttachmentDto MapToDto(Attachment a) =>

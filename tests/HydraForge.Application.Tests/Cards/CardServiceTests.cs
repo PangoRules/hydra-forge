@@ -10,6 +10,18 @@ using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Result = HydraForge.Domain.Common.Result;
 
+internal sealed class FakeUserRepositoryForAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
 public class CardServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
@@ -916,6 +928,30 @@ public class CardServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
+    [Fact]
+    public async Task GetByIdAsync_AdminNonMember_Succeeds()
+    {
+        var cardRepo = new InMemoryCardRepository();
+        var assigneeRepo = new InMemoryCardAssigneeRepository();
+        var watcherRepo = new InMemoryCardWatcherRepository();
+        var relationshipRepo = new InMemoryCardRelationshipRepository();
+        var columnRepo = new InMemoryColumnRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepositoryForAdmin();
+        var auditWriter = new InMemoryAuditLogWriter();
+        var service = new CardService(cardRepo, assigneeRepo, watcherRepo, relationshipRepo, columnRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), new FakeNotificationService());
+        var projectId = NewId();
+        var actorId = NewId();
+        var cardId = NewId();
+
+        cardRepo.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Admin Card" });
+
+        var result = await service.GetByIdAsync(projectId, cardId, actorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Admin Card", result.Value.Title);
+    }
+
     private static (
         InMemoryCardRepository cardRepo,
         InMemoryCardAssigneeRepository assigneeRepo,
@@ -1158,6 +1194,7 @@ internal class InMemoryUserRepository : IUserRepository
 => Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
     public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
     public void Add(User user) => CreateAsync(user).GetAwaiter().GetResult();
 }

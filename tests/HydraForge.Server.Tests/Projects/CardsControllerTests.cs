@@ -448,12 +448,50 @@ internal class CardsTestProjectRepository : HydraForge.Application.Projects.IPro
         var page = all.Skip(skip).Take(take).ToList();
         return Task.FromResult(new ProjectListPage(page, all.Count));
     }
+    public Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var filtered = _projects.AsEnumerable();
+        if (!includeArchived)
+            filtered = filtered.Where(p => p.ArchivedAt == null);
+        if (!string.IsNullOrWhiteSpace(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        IEnumerable<Project> sorted = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending ? filtered.OrderByDescending(p => p.Name) : filtered.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending ? filtered.OrderByDescending(p => p.UpdatedAt) : filtered.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending ? filtered.OrderByDescending(p => p.CreatedAt) : filtered.OrderBy(p => p.CreatedAt),
+        };
+        var all = sorted.ToList();
+        var page = all.Skip(skip).Take(take).ToList();
+        return Task.FromResult(new ProjectListPage(page, all.Count));
+    }
     public Task UpdateAsync(Project project, CancellationToken ct = default)
     {
         var idx = _projects.FindIndex(p => p.Id == project.Id);
         if (idx >= 0) _projects[idx] = project;
         return Task.CompletedTask;
     }
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default)
+        => throw new NotImplementedException();
 }
 
 internal class CardsTestColumnRepository : HydraForge.Application.Projects.IColumnRepository
@@ -657,6 +695,7 @@ internal class CardsTestUserRepository : HydraForge.Application.Auth.IUserReposi
 => Task.FromResult<IReadOnlyDictionary<string, User>>(_users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
     public Task CreateAsync(User user) { _users.Add(user); return Task.CompletedTask; }
 }
 

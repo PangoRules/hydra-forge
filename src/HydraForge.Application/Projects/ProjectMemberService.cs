@@ -49,12 +49,7 @@ public class ProjectMemberService(
                 )
             );
 
-        var actorMembership = await memberRepo.GetByProjectAndUserAsync(
-            cmd.ProjectId,
-            cmd.AddedByUserId,
-            ct
-        );
-        if (actorMembership == null)
+        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.AddedByUserId, ct))
             return Result<ProjectMemberDto>.Failure(
                 new Error(
                     DomainErrorCodes.Projects.MembershipDenied,
@@ -62,7 +57,12 @@ public class ProjectMemberService(
                 )
             );
 
-        if (actorMembership.Role != MemberRole.Owner)
+        var actorMembership = await memberRepo.GetByProjectAndUserAsync(
+            cmd.ProjectId,
+            cmd.AddedByUserId,
+            ct
+        );
+        if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result<ProjectMemberDto>.Failure(
                 new Error(
                     DomainErrorCodes.Projects.OwnerRequired,
@@ -113,12 +113,20 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
+        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.ChangedByUserId, ct))
+            return Result<ProjectMemberDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
+
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
             cmd.ProjectId,
             cmd.ChangedByUserId,
             ct
         );
-        if (actorMembership == null || actorMembership.Role != MemberRole.Owner)
+        if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result<ProjectMemberDto>.Failure(
                 new Error(
                     DomainErrorCodes.Projects.OwnerRequired,
@@ -151,12 +159,20 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Projects.NotFound, "Project not found.")
             );
 
+        if (!await MembershipGuard.HasAccessAsync(userRepo, memberRepo, cmd.ProjectId, cmd.RemovedByUserId, ct))
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Projects.MembershipDenied,
+                    "Access denied."
+                )
+            );
+
         var actorMembership = await memberRepo.GetByProjectAndUserAsync(
             cmd.ProjectId,
             cmd.RemovedByUserId,
             ct
         );
-        if (actorMembership == null || actorMembership.Role != MemberRole.Owner)
+        if (actorMembership != null && actorMembership.Role != MemberRole.Owner)
             return Result.Failure(
                 new Error(
                     DomainErrorCodes.Projects.OwnerRequired,

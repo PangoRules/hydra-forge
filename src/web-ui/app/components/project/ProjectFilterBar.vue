@@ -18,7 +18,8 @@ const emit = defineEmits<{
 const roleOptions = [
   { label: 'All roles', value: 'all' },
   { label: 'Owner', value: 'Owner' },
-  { label: 'Member', value: 'Member' }
+  { label: 'Member', value: 'Member' },
+  { label: 'Not member', value: 'notmember' }
 ]
 
 const sortOptions = [

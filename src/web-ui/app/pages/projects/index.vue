@@ -50,7 +50,11 @@ async function fetchProjects() {
     const params = new URLSearchParams()
     if (showArchived.value) params.set('includeArchived', 'true')
     if (search.value) params.set('search', search.value)
-    if (role.value && role.value !== 'all') params.set('role', role.value)
+    if (role.value === 'notmember') {
+      params.set('excludeMembership', 'true')
+    } else if (role.value && role.value !== 'all') {
+      params.set('role', role.value)
+    }
     params.set('sortBy', sortBy.value)
     params.set('sortDescending', String(sortDescending.value))
     params.set('skip', String((page.value - 1) * pageSize.value))

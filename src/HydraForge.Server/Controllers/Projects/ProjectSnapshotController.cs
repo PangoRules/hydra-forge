@@ -21,10 +21,7 @@ public class ProjectSnapshotController(
     [HttpGet]
     public async Task<IActionResult> GetSnapshot(Guid projectId, CancellationToken ct)
     {
-        var userId = User.GetRequiredUserId();
-
-        var membership = await memberRepo.GetByProjectAndUserAsync(projectId, userId, ct);
-        if (membership == null)
+        if (!await User.IsProjectMemberOrAdmin(memberRepo, projectId, ct))
         {
             return this.ToProblemResult(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
         }

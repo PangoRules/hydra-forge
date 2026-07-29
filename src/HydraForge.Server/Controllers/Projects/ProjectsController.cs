@@ -79,10 +79,12 @@ public class ProjectsController(
         [FromQuery] bool sortDescending = true,
         [FromQuery] MemberRole? role = null,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 20
+        [FromQuery] int take = 20,
+        [FromQuery] bool excludeMembership = false
     )
     {
         var userId = User.GetRequiredUserId();
+        var isAdmin = User.IsInRole(HydraForge.Domain.Constants.Roles.Admin);
 
         var result = await projectService.GetAllAsync(
             userId,
@@ -92,7 +94,9 @@ public class ProjectsController(
             sortDescending,
             role,
             skip,
-            take
+            take,
+            isAdmin,
+            excludeMembership
         );
 
         if (result.IsFailure)

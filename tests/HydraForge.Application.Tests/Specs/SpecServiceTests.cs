@@ -1,6 +1,7 @@
 namespace HydraForge.Application.Tests.Specs;
 
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
@@ -10,6 +11,30 @@ using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Result = HydraForge.Domain.Common.Result;
 
+internal sealed class FakeUserRepositoryForAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(false);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
+internal sealed class FakeUserRepositoryAdmin : IUserRepository
+{
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
+    public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+    public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+    public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(true);
+    public Task CreateAsync(User user) => throw new NotImplementedException();
+}
+
 public class SpecServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
@@ -17,8 +42,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CreatesSpecAndVersion1InSameTransaction()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -39,8 +64,8 @@ public class SpecServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -66,8 +91,8 @@ public class SpecServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -92,8 +117,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -113,8 +138,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CardNotFound_ReturnsCardNotFound()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var actorId = NewId();
 
@@ -129,8 +154,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CardInDifferentProject_ReturnsProjectMismatch()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -147,8 +172,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_TaskCard_ReturnsInvalidCardType()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -168,8 +193,8 @@ public class SpecServiceTests
     [InlineData(CardType.Issue, DocType.Report)]
     public async Task CreateAsync_MatchingDocTypeForCardType_Succeeds(CardType cardType, DocType docType)
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -185,8 +210,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_DocTypeMismatchForCardType_ReturnsDocTypeMismatch()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -203,8 +228,8 @@ public class SpecServiceTests
     [Fact]
     public async Task CreateAsync_CardAlreadyHasSpec_ReturnsAlreadyExists()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -219,13 +244,30 @@ public class SpecServiceTests
         Assert.Equal(DomainErrorCodes.Specs.AlreadyExists, result.Error.Code);
     }
 
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var (specRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var adminUserRepo = new FakeUserRepositoryAdmin();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, adminUserRepo, auditWriter, snapshotRefresher, publisher);
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, Type = CardType.Goal });
+
+        var result = await service.CreateAsync(new CreateSpecCommand(projectId, cardId, actorId, DocType.Specification, "Admin Spec", null, "# Spec"));
+
+        Assert.True(result.IsSuccess);
+    }
+
     // ─── Audit tests ───────────────────────────────────────────────────────────
 
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
@@ -248,8 +290,8 @@ public class SpecServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -274,8 +316,8 @@ public class SpecServiceTests
     [Fact]
     public async Task RestoreVersionAsync_WritesAuditLog()
     {
-        var (specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new SpecService(specRepo, cardRepo, memberRepo, auditWriter, snapshotRefresher, publisher);
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
+        var service = new SpecService(specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
         var projectId = NewId();
         var actorId = NewId();
         var specId = NewId();
@@ -302,6 +344,7 @@ public class SpecServiceTests
         InMemorySpecRepository specRepo,
         InMemoryCardRepository cardRepo,
         InMemoryProjectMemberRepository memberRepo,
+        FakeUserRepositoryForAdmin userRepo,
         InMemoryAuditLogWriter auditWriter,
         NullSnapshotRefresher snapshotRefresher,
         FakeProjectBoardEventPublisher publisher
@@ -311,6 +354,7 @@ public class SpecServiceTests
             new InMemorySpecRepository(),
             new InMemoryCardRepository(),
             new InMemoryProjectMemberRepository(),
+            new FakeUserRepositoryForAdmin(),
             new InMemoryAuditLogWriter(),
             new NullSnapshotRefresher(),
             new FakeProjectBoardEventPublisher()
