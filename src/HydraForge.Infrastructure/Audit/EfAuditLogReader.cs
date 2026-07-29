@@ -29,21 +29,26 @@ public class EfAuditLogReader(HydraForgeDbContext db) : IAuditLogReader
             .OrderByDescending(e => e.Timestamp)
             .Skip(query.Skip)
             .Take(query.Take)
-            .Join(db.Users,
+            .GroupJoin(
+                db.Users,
                 entry => entry.ActorId,
                 user => user.Id,
-                (entry, user) => new AuditLogEntryDto(
-                    entry.Id,
-                    entry.ProjectId,
-                    entry.ActorId,
-                    user.Username,
-                    entry.EntityType,
-                    entry.EntityId,
-                    entry.Action,
-                    entry.OldValue,
-                    entry.NewValue,
-                    entry.Timestamp,
-                    entry.Scope.ToString()
+                (entry, users) => new { entry, users }
+            )
+            .SelectMany(
+                x => x.users.DefaultIfEmpty(),
+                (x, user) => new AuditLogEntryDto(
+                    x.entry.Id,
+                    x.entry.ProjectId,
+                    x.entry.ActorId,
+                    user == null ? "(deleted)" : user.Username,
+                    x.entry.EntityType,
+                    x.entry.EntityId,
+                    x.entry.Action,
+                    x.entry.OldValue,
+                    x.entry.NewValue,
+                    x.entry.Timestamp,
+                    x.entry.Scope.ToString()
                 ))
             .ToListAsync(ct);
 

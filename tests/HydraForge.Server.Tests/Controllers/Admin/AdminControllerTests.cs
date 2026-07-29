@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HydraForge.Application.Admin;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
@@ -179,6 +180,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(IUserRepository)
                         || d.ServiceType == typeof(ISettingsRepository)
                         || d.ServiceType == typeof(ISettingsProvider)
+                        || d.ServiceType == typeof(IAuditLogReader)
                     )
                     .ToList()
             )
@@ -193,6 +195,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(
                 _settingsRepo
             ));
+            services.AddScoped<IAuditLogReader>(_ => new TestAuditLogReader());
         });
     }
 
@@ -338,4 +341,10 @@ internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsP
         repo.GetSingletonAsync(ct);
 
     public void Invalidate() { }
+}
+
+internal class TestAuditLogReader : IAuditLogReader
+{
+    public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default) =>
+        Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
 }

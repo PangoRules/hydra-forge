@@ -22,6 +22,7 @@ public class EfAuditLogReaderTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task QueryAsync_EmptyDb_ReturnsEmptyResult()
     {
         string? connectionString = Environment.GetEnvironmentVariable(
@@ -41,6 +42,7 @@ public class EfAuditLogReaderTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task QueryAsync_FilterByEntityType_ReturnsMatching()
     {
         string? connectionString = Environment.GetEnvironmentVariable(
