@@ -170,21 +170,23 @@ public class ProjectService(
                 ct
             );
         }
+        else if (isAdmin && !role.HasValue)
+        {
+            page = await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct);
+        }
         else
         {
-            page = isAdmin
-                ? await projectRepo.ListAllAsync(includeArchived, search, sortBy, sortDescending, clampedSkip, clampedTake, ct)
-                : await projectRepo.ListByUserIdAsync(
-                    requestUserId,
-                    includeArchived,
-                    search,
-                    sortBy,
-                    sortDescending,
-                    role,
-                    clampedSkip,
-                    clampedTake,
-                    ct
-                );
+            page = await projectRepo.ListByUserIdAsync(
+                requestUserId,
+                includeArchived,
+                search,
+                sortBy,
+                sortDescending,
+                role,
+                clampedSkip,
+                clampedTake,
+                ct
+            );
         }
 
         var projectIds = page.Items.Select(p => p.Id).ToList();

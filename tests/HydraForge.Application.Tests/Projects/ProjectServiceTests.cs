@@ -256,6 +256,35 @@ public class ProjectServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_AdminWithRoleFilter_RoutesToListByUserIdAsync()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService) = CreateAdminMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService);
+        var adminId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = Guid.NewGuid(), Name = "Test Project" });
+
+        await handler.GetAllAsync(adminId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: MemberRole.Owner, skip: 0, take: 20, isAdmin: true);
+
+        Assert.Equal(MemberRole.Owner, repo.LastRoleFilter);
+        Assert.Equal(1, repo.ListByUserIdAsyncCallCount);
+        Assert.Equal(0, repo.ListAllAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_AdminWithoutRoleFilter_RoutesToListAllAsync()
+    {
+        var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService) = CreateAdminMocks();
+        var handler = new ProjectService(repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService);
+        var adminId = Guid.NewGuid();
+        repo.Projects.Add(new Project { Id = Guid.NewGuid(), Name = "Test Project" });
+
+        await handler.GetAllAsync(adminId, includeArchived: false, search: null, sortBy: ProjectSortField.Name, sortDescending: false, role: null, skip: 0, take: 20, isAdmin: true);
+
+        Assert.Equal(0, repo.ListByUserIdAsyncCallCount);
+        Assert.Equal(1, repo.ListAllAsyncCallCount);
+    }
+
+    [Fact]
     public async Task GetAllAsync_ClampsTakeToMaxOneHundred()
     {
         var (repo, columnRepo, memberRepo, snapshotRepo, chatService, snapshotRefresher, publisher, auditWriter, userRepo, notifService) = CreateMocks();
@@ -328,6 +357,9 @@ internal class InMemoryProjectRepository : IProjectRepository
     public List<Project> Projects { get; } = [];
     public Dictionary<Guid, HashSet<Guid>> UserMemberships { get; } = [];
     public int LastTake { get; private set; }
+    public int ListAllAsyncCallCount { get; private set; }
+    public int ListByUserIdAsyncCallCount { get; private set; }
+    public MemberRole? LastRoleFilter { get; private set; }
 
     public void AddMembership(Guid userId, Guid projectId)
     {
@@ -364,6 +396,8 @@ internal class InMemoryProjectRepository : IProjectRepository
     )
     {
         LastTake = take;
+        ListByUserIdAsyncCallCount++;
+        LastRoleFilter = role;
 
         var filtered = Projects.AsEnumerable();
         if (!includeArchived)
@@ -402,6 +436,8 @@ internal class InMemoryProjectRepository : IProjectRepository
         int take,
         CancellationToken ct = default)
     {
+        ListAllAsyncCallCount++;
+
         var filtered = Projects.AsEnumerable();
         if (!includeArchived)
             filtered = filtered.Where(p => p.ArchivedAt == null);
