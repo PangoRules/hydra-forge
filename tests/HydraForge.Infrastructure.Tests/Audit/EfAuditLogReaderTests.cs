@@ -54,9 +54,11 @@ public class EfAuditLogReaderTests
         var options = CreateOptions(connectionString);
         using var db = new HydraForgeDbContext(options);
         db.AuditLogEntries.Add(Domain.Entities.ProjectSpace.AuditLogEntry.Create(
-            Guid.NewGuid(), Domain.Enums.AuditLogScope.Project, "Card", Guid.NewGuid(), "Created"));
+            Guid.NewGuid(), Domain.Enums.AuditLogScope.Project, "Card", Guid.NewGuid(), "Created",
+            projectId: Guid.NewGuid()));
         db.AuditLogEntries.Add(Domain.Entities.ProjectSpace.AuditLogEntry.Create(
-            Guid.NewGuid(), Domain.Enums.AuditLogScope.Project, "Column", Guid.NewGuid(), "Created"));
+            Guid.NewGuid(), Domain.Enums.AuditLogScope.Project, "Column", Guid.NewGuid(), "Created",
+            projectId: Guid.NewGuid()));
         await db.SaveChangesAsync();
 
         var reader = new EfAuditLogReader(db);
