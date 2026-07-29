@@ -7,7 +7,7 @@ public interface IAdminService
     Task<Result<UserListPageDto>> ListUsersAsync(int skip, int take, string? search, CancellationToken ct = default);
     Task<Result<UserDto>> GetUserAsync(Guid userId, CancellationToken ct = default);
     Task<Result<UserDto>> CreateUserAsync(CreateUserRequest request, CancellationToken ct = default);
-    Task<Result> DisableUserAsync(Guid userId, CancellationToken ct = default);
+    Task<Result> DisableUserAsync(Guid actorId, Guid userId, CancellationToken ct = default);
     Task<Result> EnableUserAsync(Guid userId, CancellationToken ct = default);
     Task<Result> ResetPasswordAsync(Guid userId, string newPassword, CancellationToken ct = default);
     Task<Result> ToggleAdminRoleAsync(Guid actorId, Guid targetUserId, CancellationToken ct = default);

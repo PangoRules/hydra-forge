@@ -22,14 +22,26 @@ const projects = ref<ProjectRow[]>([])
 const totalCount = ref(0)
 const loading = ref(false)
 const search = ref('')
-const page = ref(0)
+const page = ref(1)
 const pageSize = 20
+
+const columns = [
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'description', header: 'Description' },
+  { accessorKey: 'archivedAt', header: 'Status' },
+  { accessorKey: 'actions', header: 'Actions', enableSorting: false }
+]
+
+watch(search, () => {
+  page.value = 1
+  loadProjects()
+})
 
 async function loadProjects() {
   loading.value = true
   try {
     const { data, error } = await api.GET<{ items: ProjectRow[], totalCount: number }>(
-      ApiRoutes.Admin.projectsList(page.value * pageSize, pageSize, search.value || undefined))
+      ApiRoutes.Admin.projectsList((page.value - 1) * pageSize, pageSize, search.value || undefined))
     if (error) throw error
     projects.value = data!.items
     totalCount.value = data!.totalCount
@@ -53,14 +65,14 @@ onMounted(() => loadProjects())
       v-model="search"
       placeholder="Search projects..."
       class="mb-4"
-      @update:model-value="loadProjects"
     />
 
     <UTable
       :data="projects"
+      :columns="columns"
       :loading="loading"
     >
-      <template #archived-cell="{ row }">
+      <template #archivedAt-cell="{ row }">
         <UBadge :color="row.original.archivedAt ? 'error' : 'success'">
           {{ row.original.archivedAt ? 'Archived' : 'Active' }}
         </UBadge>
@@ -75,6 +87,14 @@ onMounted(() => loadProjects())
         </UButton>
       </template>
     </UTable>
+
+    <UPagination
+      v-model:page="page"
+      :total="totalCount"
+      :page-size="pageSize"
+      class="mt-4"
+      @update:page="loadProjects"
+    />
 
     <p class="text-sm text-gray-500 mt-3">
       {{ totalCount }} total projects
