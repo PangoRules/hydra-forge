@@ -2,6 +2,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HydraForge.Server.Controllers.Auth;
 
@@ -14,8 +15,11 @@ public class AuthController(
 ) : ControllerBase
 {
     [HttpPost("login")]
+    [AllowAnonymous]
+    [EnableRateLimiting("Login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await loginUserHandler.HandleAsync(request);

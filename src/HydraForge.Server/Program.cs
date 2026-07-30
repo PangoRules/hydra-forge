@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -23,6 +24,7 @@ using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -55,11 +57,55 @@ builder.Services.AddCors(options =>
     );
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Strict login limit: 5 attempts per minute per IP
+    options.AddFixedWindowLimiter(
+        "Login",
+        config =>
+        {
+            config.PermitLimit = 5;
+            config.Window = TimeSpan.FromMinutes(1);
+            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            config.QueueLimit = 0;
+        }
+    );
+
+    // Global limit: 300 requests per minute per IP
+    options.AddFixedWindowLimiter(
+        "Global",
+        config =>
+        {
+            config.PermitLimit = 300;
+            config.Window = TimeSpan.FromMinutes(1);
+            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            config.QueueLimit = 10;
+        }
+    );
+
+    // SignalR hubs: 60 messages per minute per connection
+    options.AddFixedWindowLimiter(
+        "SignalR",
+        config =>
+        {
+            config.PermitLimit = 60;
+            config.Window = TimeSpan.FromMinutes(1);
+            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            config.QueueLimit = 5;
+        }
+    );
+});
+
 builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>()
 );
 builder
-    .Services.AddControllers()
+    .Services.AddControllers(options =>
+    {
+        options.Conventions.Add(new HydraForge.Server.Conventions.RateLimitConvention("Global"));
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -216,6 +262,8 @@ app.UseSerilogRequestLogging(options =>
 });
 
 app.UseCors();
+
+app.UseRateLimiter();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();

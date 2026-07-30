@@ -5,11 +5,13 @@ using HydraForge.Application.Projects;
 using HydraForge.Domain.Constants;
 using HydraForge.Infrastructure.Realtime;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace HydraForge.Server.Hubs;
 
 [Authorize]
+[EnableRateLimiting("SignalR")]
 public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
 {
     public static string ProjectGroup(Guid projectId) => $"project-{projectId}";
