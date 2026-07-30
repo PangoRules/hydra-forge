@@ -336,6 +336,8 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | IsDisabled | bool | Admin can disable access without deleting |
 | CreatedAt | DateTime | |
 | LastLoginAt | DateTime? | |
+| FailedLoginAttempts | int | Consecutive failed logins; reset on success or on lockout expiry |
+| LockedOutUntil | DateTime? | Set after 5 consecutive failures (15-minute lockout) |
 
 ### ChatFolder
 
