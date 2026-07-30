@@ -1025,5 +1025,5 @@ Per CLAUDE.md, Application/Domain layers need >90% test coverage — each task b
 - [x] Task 9: Admin controller + user management — `User.Disable()`/`Enable()`/`SetAdminRole()`/`SetPasswordHash()` instance methods (replacing direct property sets), `AdminController` (users CRUD), `AdminService`, Web UI admin user page; tests: self-demotion rejection, each instance method, service methods call instance methods not property setters
 - [x] Task 10: System settings API + cache — `SystemSettings.UpdateSettings(...)` instance method (partial-update, replacing direct property sets), schema migration (NtfyServerUrl, SearXngUrl, BrandName, BrandLogoUrl), `CachedSettingsProvider`, settings controller, `ApiRoutes.Admin.*` in `routes.ts`, Web UI settings page; tests: `UpdateSettings` only touches non-null args, cache invalidation on write
 - [x] Task 11: Audit log reader — `IAuditLogReader`, `EfAuditLogReader`, `AuditLogQuery`, `AuditLogController`; tests: each filter dimension (project/actor/entityType/date range)
-- [ ] Task 12: Audit log Web UI page — filter bar, results table, pagination
+- [x] Task 12: Audit log Web UI page — filter bar, results table, pagination
 - [ ] Task 13: Admin dashboard home page — summary cards, health status, recent audit entries, quick-action buttons
