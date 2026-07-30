@@ -30,7 +30,7 @@ const emit = defineEmits<{
   'update:page': [number]
   'update:pageSize': [number]
   'select': [T]
-  'update:expanded': [Record<string, boolean>]
+  'update:expanded': [Record<string, boolean> | boolean]
 }>()
 
 const rangeStart = computed(() => props.totalCount === 0 ? 0 : (props.page - 1) * props.pageSize + 1)
@@ -66,13 +66,13 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
           :columns="columns"
           :loading="loading"
           :get-row-id="rowKey"
-          :expanded="expanded"
+          :expanded="expanded ?? {}"
           :sticky="fillHeight ? 'header' : undefined"
           class="w-full"
           :class="$slots.card ? 'hidden md:block' : ''"
           :meta="{ class: { tr: selectable ? 'cursor-pointer' : '' } }"
           @select="(_e, row) => emit('select', row.original)"
-          @update:expanded="emit('update:expanded', $event)"
+          @update:expanded="emit('update:expanded', $event as Record<string, boolean>)"
         >
           <template
             v-for="(_, name) in $slots"
