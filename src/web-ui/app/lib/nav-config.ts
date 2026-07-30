@@ -41,6 +41,7 @@ export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
   if (isAdmin) {
     groups.push([
       { label: 'Admin', type: 'label' },
+      { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: UiRoutes.Admin.Home },
       { label: 'Users', icon: 'i-lucide-users', to: UiRoutes.Admin.Users },
       { label: 'System Settings', icon: 'i-lucide-settings', to: UiRoutes.Admin.Settings },
       { label: 'Audit Log', icon: 'i-lucide-scroll-text', to: UiRoutes.Admin.AuditLog },
