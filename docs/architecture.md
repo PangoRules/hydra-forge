@@ -375,6 +375,7 @@ Failures in these services must never bring down the core board:
 | **Web search** | SearXNG | Open-source, self-hosted metasearch. Bundled as optional Docker service. |
 | **Push notifications** | ntfy | Open-source push. No email infrastructure. Per-user topic. |
 | **Package manager (web)** | pnpm | Fast, efficient disk use. |
+| **Scheduled jobs** | Hangfire + `Hangfire.PostgreSql` | Persistent recurring jobs on storage we already run. Survives restarts, auto-retries, admin-visible dashboard/history (see D-57). |
 
 ---
 

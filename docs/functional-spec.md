@@ -558,8 +558,10 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 ### Phase 6: LLM Infrastructure 🔧
 > Goal: all AI plumbing in place before any chat or AI feature is built on top.
 
-> ⚠️ **Pre-phase decision needed:** Nightly job scheduler — pick one before implementing `ProjectContextSnapshot.AiNarrative` and any other scheduled work. Options: (a) `BackgroundService` (built-in .NET, simple, no UI) — recommended for MVP; (b) Hangfire (persistent jobs, retry, admin dashboard); (c) Quartz.NET (full cron engine). Recommendation: start with `BackgroundService`, migrate to Hangfire if job visibility becomes important.
+> ✅ **Pre-phase decision resolved:** Nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (see D-57) — chosen over `BackgroundService` for restart-persistence/retry/history, over Quartz.NET for not needing full cron flexibility.
 
+- [ ] Hangfire wired: `Hangfire.AspNetCore` + `Hangfire.PostgreSql`, dashboard mounted at `/hangfire` behind admin auth filter
+- [ ] Recurring job registered: `ProjectContextSnapshotService.GenerateAiNarrative()` for all active projects, admin-configurable time (default midnight server time, per D-32)
 - [ ] `ILlmClient` abstraction: `StreamChatAsync()`, `GetModelsAsync()`, `SupportsToolCalling()`, cache block placement
 - [ ] OpenAI-compatible adapter (covers OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp)
 - [ ] Anthropic adapter (with prompt caching `cache_control` blocks)
@@ -606,7 +608,9 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [ ] "Summarize → start my own" fork action
 - [ ] Project archive → chat folder archived (revivable)
 - [ ] `ChatArchiveService.ArchiveFolder(folderId)`: sets `ChatFolder.ArchivedAt` and cascades to every child `ChatSession.ArchivedAt`. Invoked by `ProjectArchiveService` and by explicit user "archive folder" action.
-- [ ] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects
+- [ ] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects (Hangfire recurring job, wired in Phase 6 — see D-57)
+- [ ] Web UI: "View Narrative" button next to project title on board view → modal showing `AiNarrative` + `AiNarrativeGeneratedAt` (D-58)
+- [ ] TUI: narrative viewer screen, same overlay pattern as spec/plan viewer, launched from Board screen keybinding (falls back to `?` help overlay only if status bar has no room — D-58)
 - [ ] TUI: chat mode for general chats + project chat panel
 
 ### Phase 8: AI Features — Project Space 🤖

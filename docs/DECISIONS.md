@@ -253,6 +253,10 @@ Each entry has:
 | D-52 | ntfy client implementation | `INtfyClient` port in Application; `NtfyClient` + `NtfyOptions` in Infrastructure; `SystemSettings.NtfyServerUrl`; docker-compose `ntfy` service; best-effort push (null URL = no-op) | ✅ |
 | D-53 | SignalR JsonStringEnumConverter | Hub payload enums must serialize as strings, not ints — TUI silently drops int-encoded board events | ✅ |
 | D-54 | Targeted realtime board patching | `useRealtime.ts` routes by entity type for per-entity re-fetch instead of full board refresh; `CardId` on envelope for card-scoped sub-entities | ✅ |
+| D-55 | Notification triggers never block business op | `try/catch` + `IWarnLogger` at every `NotifyAsync` call site | ✅ |
+| D-56 | Dependency-resolved notification fires on Archive | Moved from `MoveAsync` to `ArchiveAsync` — only place `ArchivedAt` is set | ✅ |
+| D-57 | Nightly job scheduler | Hangfire + `Hangfire.PostgreSql`, not `BackgroundService` or Quartz.NET | ✅ |
+| D-58 | AiNarrative display surface | Web UI: "View Narrative" button next to project title → modal. TUI: same viewer pattern as spec/plan, bound to board screen's help overlay if bar has no room | ✅ |
 
 ---
 
@@ -900,3 +904,30 @@ Chats
 | **Decision** | The "blocker resolved" notification call lives in `CardService.ArchiveAsync`, not `MoveAsync`. `CardRelationship`'s "is this blocker still active" check requires `ArchivedAt != null`. |
 | **Rationale** | Plan 7 originally placed the call in `MoveAsync` on the assumption that moving a blocking card to a terminal column resolves it. But this codebase has no "Archived" pseudo-column — `ArchivedAt` is the only signal a card is done, and only `ArchiveAsync` sets it. With the call in `MoveAsync`, the "last active blocker" check always saw the just-moved card as still active (since `ArchivedAt` was still null) and the notification never fired, regardless of which column the card moved to. Caught during Plan 7's manual validation pass — zero automated coverage existed for this path beforehand, which is why the wiring bug shipped unnoticed. |
 | **Impact** | `NotifyResolvedDependenciesAsync` call moved to `ArchiveAsync`. Two regression tests added: `ArchiveAsync_ArchivingLastActiveBlocker_NotifiesBlockedCardAssignees`, `ArchiveAsync_OtherActiveBlockerRemains_DoesNotNotify`. See `CLAUDE.md` "Notification trigger patterns (Plan 7 lessons)". |
+
+---
+
+## D-57: Nightly Job Scheduler — Hangfire + PostgreSQL
+
+| Field | Value |
+|---|---|
+| **Topic** | Pre-phase decision blocking Phase 6 — how `ProjectContextSnapshot.AiNarrative` and any future scheduled work actually run |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled — supersedes the `BackgroundService`-for-MVP recommendation in `docs/functional-spec.md` §Phase 6 (that line was a suggestion, never a ratified decision) |
+| **Decision** | **Hangfire, with `Hangfire.PostgreSql` as the job store** (same Postgres instance the app already runs — no new infra service). One recurring job (`RecurringJob.AddOrUpdate`) calls `ProjectContextSnapshotService.GenerateAiNarrative()` for every active project, on the admin-configurable time from D-52-adjacent settings (default midnight server time, per D-32/570s). Hangfire's built-in dashboard mounted admin-only in the admin space, alongside the existing audit-log/settings/users pages (Phase 5). |
+| **Rationale** | User explicitly asked for **robust**. `BackgroundService` is an in-memory timer — a server restart mid-run silently drops the job, no retry, no history, no visibility. LLM calls are already known-flaky (Phase 6's own `ModelRouter` spec calls out rate-limit/5xx fallback) — narrative generation needs the same resilience, not less. Hangfire gives persistent job storage (survives restarts), automatic retry on failure, and run history/dashboard — for free, on infra we already run. Quartz.NET was rejected as solving a problem this app doesn't have: multiple cron schedules, misfire policies, per-job triggers. HydraForge needs exactly one global recurring job with one configurable time — Quartz's flexibility is pure overhead here. |
+| **Alternatives considered** | 1. `BackgroundService` (rejected — no persistence/retry/visibility, wrong tradeoff given "robust" requirement). 2. Quartz.NET (rejected — cron-engine flexibility unused, heavier setup for zero benefit over Hangfire here). |
+| **Impact** | New NuGet deps: `Hangfire.AspNetCore`, `Hangfire.PostgreSql`. `Program.cs` registers `AddHangfire(...).UsePostgreSqlStorage(...)` + `AddHangfireServer()`, mounts `/hangfire` dashboard behind admin auth filter. `docs/architecture.md` Technology Stack table updated. `docs/functional-spec.md` §Phase 6 pre-phase note marked resolved, points here. |
+
+---
+
+## D-58: AiNarrative Display Surface — Web UI Modal + TUI Viewer
+
+| Field | Value |
+|---|---|
+| **Topic** | Where a user actually reads the nightly `AiNarrative` digest (D-32/D-570s settled that it's generated and stored, but no UI task existed anywhere in the spec to display it — gap found while reviewing Phase 6 readiness) |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **Web UI:** a "View Narrative" button next to the project title (board view header) opens a modal (`UModal`) showing `AiNarrative` + `AiNarrativeGeneratedAt` (fetched via existing `GET /api/projects/{projectId}/ProjectSnapshot`). **TUI:** same pattern as the existing spec/plan viewer screen (overlay push/pop, per D-4x TUI conventions) — a keybinding on the board screen opens a read-only narrative view. If the board status bar has no room for a new binding hint (it's already carrying connection/online/error-count per Phase 4), the binding lives in that screen's `?` help overlay only, not forced onto the bar. |
+| **Rationale** | Directly requested. Closes a real spec gap: `AiNarrative` had a producer (nightly job) and an API (`ProjectSnapshotController`) but zero consumer task in either client — it would have shipped generated and unreadable. Reusing the spec/plan viewer overlay pattern on TUI and the modal pattern already established for card details on Web UI avoids inventing a new UI primitive for a read-only text panel. |
+| **Impact** | Web UI: new button in board header component, new modal component (or reuse `AppModal` per its `#body` slot convention), no new store needed beyond the existing snapshot fetch. TUI: new `NarrativeViewerScreen` (or extends existing spec/plan viewer), overlay-launched from Board screen per the `PreviousScreen`/`CurrentScreen` pattern, help-table entry added to Board's `ShowHelp()` binding list. `docs/functional-spec.md` Phase 7 checklist gets an explicit display task (previously only had "generate," never "display"). |
