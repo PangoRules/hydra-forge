@@ -24,6 +24,7 @@ using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -173,6 +174,14 @@ if (argon2Options.MemorySizeKiB < 32768)
 if (argon2Options.Parallelism < 1)
     throw new InvalidOperationException("Argon2:Parallelism must be at least 1.");
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Trust the reverse proxy — in production, restrict to known proxy IPs
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
 
 builder
@@ -288,6 +297,12 @@ if (initResult.IsFailure)
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     logger.LogWarning("File store initialization failed: {Error}", initResult.Error.Message);
 }
+
+// Must run before anything that reads the connection's remote IP — in particular
+// app.UseRateLimiter() below, which partitions by httpContext.Connection.RemoteIpAddress.
+// Placed ahead of request logging and CORS too, since ASP.NET Core guidance is for
+// forwarded-headers to run first in the pipeline.
+app.UseForwardedHeaders();
 
 app.UseSerilogRequestLogging(options =>
 {
