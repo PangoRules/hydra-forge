@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HydraForge.Application.Admin;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
@@ -144,6 +145,52 @@ public class AdminControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetAuditLog_Unauthenticated_Returns401()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var response = await client.GetAsync("/api/admin/audit-log");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAuditLog_NonAdmin_Returns403()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/audit-log");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAuditLog_Admin_ReturnsOkWithResult()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/audit-log?entityType=Card&take=1000");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<AuditLogQueryResultResponse>();
+        Assert.NotNull(json);
+        Assert.Equal("Card", TestAuditLogReader.LastQuery?.EntityType);
+        Assert.Equal(500, TestAuditLogReader.LastQuery?.Take);
+    }
+
+    private record AuditLogQueryResultResponse(object[] Items, int TotalCount);
+
     private record SettingsResponse(
         int ArchivedItemRetentionDays,
         int AuditLogRetentionDays,
@@ -179,6 +226,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(IUserRepository)
                         || d.ServiceType == typeof(ISettingsRepository)
                         || d.ServiceType == typeof(ISettingsProvider)
+                        || d.ServiceType == typeof(IAuditLogReader)
                     )
                     .ToList()
             )
@@ -193,6 +241,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(
                 _settingsRepo
             ));
+            services.AddScoped<IAuditLogReader>(_ => new TestAuditLogReader());
         });
     }
 
@@ -338,4 +387,15 @@ internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsP
         repo.GetSingletonAsync(ct);
 
     public void Invalidate() { }
+}
+
+internal class TestAuditLogReader : IAuditLogReader
+{
+    public static AuditLogQuery? LastQuery { get; private set; }
+
+    public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default)
+    {
+        LastQuery = query;
+        return Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
+    }
 }
