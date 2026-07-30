@@ -163,6 +163,16 @@ if (jwtSigningKey == "your-256-bit-secret-key-here-replace-in-production")
 var accessTokenMinutes = builder.Configuration.GetValue("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
+
+// Validate Argon2 parameters at startup
+Argon2Options argon2Options = builder.Configuration.GetSection("Argon2").Get<Argon2Options>()!;
+if (argon2Options.Iterations < 2)
+    throw new InvalidOperationException("Argon2:Iterations must be at least 2.");
+if (argon2Options.MemorySizeKiB < 32768)
+    throw new InvalidOperationException("Argon2:MemorySizeKiB must be at least 32768 (32 MiB).");
+if (argon2Options.Parallelism < 1)
+    throw new InvalidOperationException("Argon2:Parallelism must be at least 1.");
+
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
 
 builder
