@@ -153,10 +153,26 @@ var jwtSigningKey =
     builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is required");
 
-if (jwtSigningKey == "your-256-bit-secret-key-here-replace-in-production")
+// Two placeholders ship in this repo: appsettings.json's and .env.example's (the Docker
+// Compose path, which CLAUDE.md documents first). Checking only one left the other bootable
+// with a publicly-known signing key and no objection from this validation.
+string[] knownJwtSigningKeyPlaceholders =
+[
+    "your-256-bit-secret-key-here-replace-in-production",
+    "change-this-to-at-least-32-random-characters",
+];
+if (knownJwtSigningKeyPlaceholders.Contains(jwtSigningKey))
 {
     throw new InvalidOperationException(
         "Jwt:SigningKey must be changed from the default placeholder. "
+            + "Set it via environment variable Jwt__SigningKey or user-secrets."
+    );
+}
+
+if (jwtSigningKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey must be at least 32 characters long for HS256 signing. "
             + "Set it via environment variable Jwt__SigningKey or user-secrets."
     );
 }
