@@ -151,6 +151,15 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey =
     builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+
+if (jwtSigningKey == "your-256-bit-secret-key-here-replace-in-production")
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey must be changed from the default placeholder. "
+            + "Set it via environment variable Jwt__SigningKey or user-secrets."
+    );
+}
+
 var accessTokenMinutes = builder.Configuration.GetValue("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
