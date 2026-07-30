@@ -45,6 +45,10 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
             "Jwt:SigningKey",
             "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
         );
+        builder.UseSetting(
+            "Llm:EncryptionKey",
+            "0YEf4ZBA47CpqWSH0ZczKZ62owvbQ7T5IRfcecZ4Vgo="
+        );
         builder.ConfigureServices(services =>
         {
             // Remove existing IHealthProbe registrations (singleton GetHealthHandler already constructed with them)
