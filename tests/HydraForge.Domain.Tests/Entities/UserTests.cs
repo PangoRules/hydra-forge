@@ -67,4 +67,38 @@ public class UserTests
         user.RecordLogin(loginAt);
         Assert.Equal(loginAt, user.LastLoginAt);
     }
+
+    [Fact]
+    public void RecordFailedLogin_IncrementsFailedLoginAttempts()
+    {
+        var user = User.Create("bob", "Bob", "Jones", "bob@example.com", "hash");
+        user.RecordFailedLogin();
+        Assert.Equal(1, user.FailedLoginAttempts);
+        user.RecordFailedLogin();
+        Assert.Equal(2, user.FailedLoginAttempts);
+    }
+
+    [Fact]
+    public void Lockout_SetsLockedOutUntilInTheFuture()
+    {
+        var user = User.Create("bob", "Bob", "Jones", "bob@example.com", "hash");
+        var before = DateTime.UtcNow;
+        user.Lockout(TimeSpan.FromMinutes(15));
+        Assert.NotNull(user.LockedOutUntil);
+        Assert.True(user.LockedOutUntil.Value >= before.AddMinutes(15));
+    }
+
+    [Fact]
+    public void ResetFailedAttempts_ClearsCounterAndLockout()
+    {
+        var user = User.Create("bob", "Bob", "Jones", "bob@example.com", "hash");
+        user.RecordFailedLogin();
+        user.RecordFailedLogin();
+        user.Lockout(TimeSpan.FromMinutes(15));
+
+        user.ResetFailedAttempts();
+
+        Assert.Equal(0, user.FailedLoginAttempts);
+        Assert.Null(user.LockedOutUntil);
+    }
 }

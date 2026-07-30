@@ -13,6 +13,8 @@ public class User
     public bool IsAdmin { get; private set; }
     public bool IsDisabled { get; private set; }
     public DateTime? LastLoginAt { get; private set; }
+    public int FailedLoginAttempts { get; private set; }
+    public DateTime? LockedOutUntil { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
@@ -73,6 +75,25 @@ public class User
     public void RecordLogin(DateTime loginAt)
     {
         LastLoginAt = loginAt;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RecordFailedLogin()
+    {
+        FailedLoginAttempts++;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Lockout(TimeSpan duration)
+    {
+        LockedOutUntil = DateTime.UtcNow.Add(duration);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetFailedAttempts()
+    {
+        FailedLoginAttempts = 0;
+        LockedOutUntil = null;
         UpdatedAt = DateTime.UtcNow;
     }
 }

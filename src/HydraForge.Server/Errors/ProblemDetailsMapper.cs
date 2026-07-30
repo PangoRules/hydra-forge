@@ -17,6 +17,7 @@ public static class ProblemDetailsMapper
         {
             DomainErrorCodes.Auth.InvalidCredentials => (401, "Invalid credentials"),
             DomainErrorCodes.Auth.UserDisabled => (403, "Access denied"),
+            DomainErrorCodes.Auth.AccountLocked => (401, "Account locked"),
             DomainErrorCodes.Auth.AdminSeedNotConfigured => (500, "Internal server error"),
             DomainErrorCodes.Infrastructure.DatabaseUnavailable => (503, "Service unavailable"),
             DomainErrorCodes.Infrastructure.AuditWriteFailed => (500, "Internal server error"),
