@@ -197,7 +197,16 @@ public class AdminController(
         CancellationToken ct = default
     )
     {
-        var query = new AuditLogQuery(projectId, actorId, entityType, action, from, to, skip, Math.Min(take, 500));
+        var query = new AuditLogQuery(
+            projectId,
+            actorId,
+            entityType,
+            action,
+            from,
+            to,
+            skip,
+            Math.Min(take, 500)
+        );
         var result = await auditLogReader.QueryAsync(query, ct);
         return Ok(result);
     }

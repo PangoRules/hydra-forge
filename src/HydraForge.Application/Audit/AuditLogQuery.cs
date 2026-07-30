@@ -11,10 +11,7 @@ public record AuditLogQuery(
     int Take = 50
 );
 
-public record AuditLogQueryResult(
-    IReadOnlyList<AuditLogEntryDto> Items,
-    int TotalCount
-);
+public record AuditLogQueryResult(IReadOnlyList<AuditLogEntryDto> Items, int TotalCount);
 
 public record AuditLogEntryDto(
     Guid Id,
