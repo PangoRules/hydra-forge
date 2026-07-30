@@ -49,6 +49,7 @@
 │  │  - AuditService                │        │
 │  │  - NotificationService         │
 │  │  - INotificationHubBus (port)  │        │
+│  │  - IKeyVault (port)            │        │
 │  └──────────────┬─────────────────┘        │
 ├─────────────────┼──────────────────────────┤
 │  ┌──────────────▼─────────────────┐        │
@@ -62,6 +63,8 @@
 │  │  - EF Core / Npgsql provider   │        │
 │  │  - Git service                 │        │
 │  │  - LLM client (OpenAI/etc)     │        │
+│  │    + AesGcmKeyVault (IKeyVault)│        │
+│  │    + LlmServiceCollectionExtensions│        │
 │  │  - SignalR messaging           │        │
 │  │    + BoardHub, PresenceHub     │        │
 │  │    + NotificationHub            │
@@ -207,8 +210,9 @@ Web UI User: ◀─────────────────────�
 **Rules:**
 - Server is the **only** component that calls LLMs. TUI and Web UI never call LLMs directly.
 - Admin configures API keys centrally. Users never touch credentials.
+- **API keys encrypted at rest** via `IKeyVault`/`AesGcmKeyVault` (AES-256-GCM, key from `Llm:EncryptionKey` config). Migration `20260731000000_ReencryptLlmProviderApiKeys` backfills existing placeholder rows. Decrypted at call time in `ILlmClientFactory` — never cached in adapter state.
 - All LLM calls go through `ModelRouter`, which selects provider based on feature tier.
-- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`.
+- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IKeyVault`.
 
 ### ModelRouter
 
@@ -433,8 +437,9 @@ hydra-forge/
 │   │   ├── Persistence/
 │   │   ├── Auth/
 │   │   ├── Audit/
-│   │   ├── FileStorage/         # LocalFileStore, S3FileStore
-│   │   ├── Attachments/         # EfAttachmentRepository, DI extensions
+│   │   ├── FileStorage/            # LocalFileStore, S3FileStore
+│   │   ├── Llm/                    # AesGcmKeyVault, LlmServiceCollectionExtensions
+│   │   ├── Attachments/            # EfAttachmentRepository, DI extensions
 │   │   ├── Realtime/            # BoardHub, SignalRProjectBoardEventPublisher, RealtimeServiceCollectionExtensions
 │   │   └── Health/
 │   │

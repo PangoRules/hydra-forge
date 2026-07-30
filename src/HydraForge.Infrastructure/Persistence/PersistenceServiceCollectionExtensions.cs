@@ -3,6 +3,7 @@ namespace HydraForge.Infrastructure.Persistence;
 using HydraForge.Application.Health;
 using HydraForge.Infrastructure.Audit;
 using HydraForge.Infrastructure.Health;
+using HydraForge.Infrastructure.Llm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IHealthProbe, LlmProviderHealthProbe>();
 
         services.AddAuditServices();
+        services.AddLlmInfrastructure(configuration);
 
         return services;
     }

@@ -177,6 +177,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, ...)` — they inspect `context.Model` and do not need a database
 - Never mock the database — use a real test PostgreSQL instance once that infrastructure exists (not in place yet)
 - **`ISettingsProvider` in endpoint tests:** When a controller injects `ISettingsProvider` but the test registers a fake `ISettingsRepository`, the real `CachedSettingsProvider` wraps `IMemoryCache` — the cache TTL means writes via the fake repo are invisible on subsequent reads. Register a `TestCachedSettingsProvider` that delegates directly to the fake repo without caching (same pattern as `TestCachedSettingsProvider` in `AdminControllerTests`).
+- **`Llm:EncryptionKey` in test factories:** When `AddLlmInfrastructure` is called from `PersistenceServiceCollectionExtensions.AddPersistence`, the `Llm:EncryptionKey` config key is validated at startup (missing/invalid → `InvalidOperationException`). Every `WebApplicationFactory` fixture must set `Llm:EncryptionKey` in its `ConfigureWebHost` override — same pattern as the "new Application-layer port checklist" in AGENTS.md but for required config keys, not ports. Caught in `cce0d18` when 14 test factories all failed with "Llm:EncryptionKey is required."
 
 **Database:**
 - PostgreSQL only — no SQLite fallback
@@ -211,7 +212,8 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Server is the only component that calls LLMs — TUI and Web UI never call LLMs directly
 - All LLM calls go through `ModelRouter` which selects provider based on feature tier
 - Admin configures providers — users cannot add personal API keys
-- `ILlmClient`, `IImageClient`, `IEmbeddingClient` — always code to the interface
+- `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IKeyVault` — always code to the interface
+- **API keys encrypted at rest** via `IKeyVault`/`AesGcmKeyVault` (AES-256-GCM, `Llm:EncryptionKey` config). `AddLlmInfrastructure` validates key at startup — server fails to start if missing/invalid. Migration `20260731000000_ReencryptLlmProviderApiKeys` backfills existing placeholder rows. Ciphertext format: `v1:{nonceB64}:{ciphertextB64}:{tagB64}`. `LlmOptions.SectionName = "Llm"`.
 
 ### API smoke tests
 
@@ -236,7 +238,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 5 complete, Phase 6 not yet started
+## Current Phase — Phase 6 in progress (Task 2: Key Vault)
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
@@ -244,7 +246,7 @@ Phase 4 (TUI) is **complete** — see `docs/functional-spec.md` §25 Phase 4 che
 
 Phase 5 (Multi-User, Notifications & Admin) is **complete** (2026-07-29) — see `docs/functional-spec.md` §25 Phase 5 checklist (all items checked except self-service change-password and PR-created notifications, both explicitly deferred), `docs/archive/specs/phase-5-multi-user-notifications-admin.md` for the full design spec, and `docs/archive/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md` for the consolidated validation matrix. All 13 plans shipped: JWT role claim + `Roles.Admin` (Plan 1), notification domain/app/infra (Plan 2), `NotificationHub` + SignalR push (Plan 3), Web UI bell icon + panel (Plan 4), TUI status-bar unread count + `U` key list (Plan 5), ntfy integration (Plan 6 — initial close-out was incomplete, see D-52's 2026-07-27 correction), notification triggers wiring 7 triggers across 4 services (Plan 7 — see D-55/D-56 for the `IWarnLogger`/try-catch pattern and the dependency-resolved-on-Archive-not-Move fix), admin all-projects bypass (Plan 8), admin controller + user management (Plan 9), system settings API + cache + Web UI (Plan 10), audit log reader + controller (Plan 11), audit log Web UI page (Plan 12), and admin dashboard home page (Plan 13). Out of scope, correctly deferred: self-service `POST /api/Auth/change-password` (admin-initiated reset-password shipped instead) and "PR created → all members" (no Git/PR event source exists yet).
 
-Phase 6 (LLM Infrastructure) has not started. Its pre-phase blocking decision is resolved: nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (D-57), chosen for restart-persistence/retry/admin-visible history over `BackgroundService`, and over Quartz.NET for not needing full cron flexibility. `AiNarrative` display was also a spec gap (generated, but nowhere to view it) — closed by D-58: Web UI gets a "View Narrative" button next to the project title opening a modal; TUI gets a narrative viewer screen using the same overlay pattern as the spec/plan viewer, launched from the Board screen (bound to the `?` help overlay if the status bar has no room for a new key hint).
+Phase 6 (LLM Infrastructure) is **in progress**. Pre-phase blocking decisions resolved: nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (D-57), `AiNarrative` display surface is Web UI modal + TUI viewer (D-58). Task 2 **complete** (2026-07-30): `IKeyVault` port in Application, `AesGcmKeyVault` impl in Infrastructure (AES-256-GCM, `Llm:EncryptionKey` config, startup validation), migration `20260731000000_ReencryptLlmProviderApiKeys` re-encrypts placeholder rows idempotently, `LlmServiceCollectionExtensions.AddLlmInfrastructure` registered via `PersistenceServiceCollectionExtensions`. See D-59 in `docs/DECISIONS.md`.
 
 ### Nuxt UI v4 patterns
 
