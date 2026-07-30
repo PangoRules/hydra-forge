@@ -499,7 +499,10 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
         ConfigureEntity<FeatureRoutingConfig>(
             modelBuilder,
             "feature_routing_configs",
-            b => { b.HasIndex(e => e.Feature).IsUnique(); }
+            b =>
+            {
+                b.HasIndex(e => e.Feature).IsUnique();
+            }
         );
 
         ConfigureEntity<DocumentVersion>(
