@@ -19,11 +19,19 @@ const props = withDefaults(defineProps<{
    * normal page that just grows with content, leave this off (default).
    */
   fillHeight?: boolean
+  /**
+   * Opt-in: hide the rows-per-page/pagination footer entirely. For a fixed-size
+   * preview list (e.g. "last 10" on a dashboard) with no `@update:page`/
+   * `@update:pageSize` handler wired up — showing controls that don't do
+   * anything is worse than not showing them.
+   */
+  hideFooter?: boolean
 }>(), {
   pageSizeOptions: () => [10, 20, 50],
   selectable: false,
   expanded: undefined,
-  fillHeight: false
+  fillHeight: false,
+  hideFooter: false
 })
 
 const emit = defineEmits<{
@@ -101,7 +109,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
     </template>
 
     <div
-      v-if="totalCount > 0"
+      v-if="totalCount > 0 && !hideFooter"
       :class="fillHeight ? 'shrink-0' : ''"
       class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
     >

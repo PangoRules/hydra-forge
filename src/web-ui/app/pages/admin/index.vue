@@ -183,19 +183,11 @@ onMounted(() => loadDashboard())
       :page-size="10"
       :total-count="auditTotalCount"
       :row-key="(item: AuditEntry) => item.id"
+      hide-footer
     >
       <template #timestamp-cell="{ row }">
         <span class="text-sm">{{ formatDate(row.original.timestamp) }}</span>
       </template>
     </DataTable>
-
-    <UButton
-      v-if="recentAudit.length > 0"
-      :to="UiRoutes.Admin.AuditLog"
-      label="View Full Audit Log"
-      color="neutral"
-      variant="ghost"
-      class="mt-3"
-    />
   </div>
 </template>

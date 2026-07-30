@@ -6,13 +6,24 @@ import { UiRoutes } from '~/lib/routes'
  * `type: 'label'` header, followed by real/disabled items. Disabled items
  * have no `to` — they render greyed and non-navigable until their feature
  * ships (System Settings: Plans 10-12; everything else: backlog).
+ *
+ * `currentPath` drives the Projects item's `active` override — the board
+ * route (`/projects/{id}/board`) is a sibling route to `/projects`, not a
+ * nested child, so vue-router's default (non-exact) active match doesn't
+ * mark "Projects" active while looking at a board. Every other item stays
+ * on vue-router's default matching (no `active` override needed).
  */
-export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
+export function getNavGroups(isAdmin: boolean, currentPath: string = ''): NavigationMenuItem[][] {
   const groups: NavigationMenuItem[][] = [
     [
       { label: 'Workspace', type: 'label' },
       { label: 'Chats', icon: 'i-lucide-message-circle', to: UiRoutes.Chats },
-      { label: 'Projects', icon: 'i-lucide-layout-dashboard', to: UiRoutes.Projects.List }
+      {
+        label: 'Projects',
+        icon: 'i-lucide-layout-dashboard',
+        to: UiRoutes.Projects.List,
+        active: currentPath === UiRoutes.Projects.List || currentPath.startsWith(`${UiRoutes.Projects.List}/`)
+      }
     ],
     [
       { label: 'AI Tools', type: 'label' },
@@ -41,7 +52,7 @@ export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
   if (isAdmin) {
     groups.push([
       { label: 'Admin', type: 'label' },
-      { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: UiRoutes.Admin.Home },
+      { label: 'Dashboard', icon: 'i-lucide-gauge', to: UiRoutes.Admin.Home },
       { label: 'Users', icon: 'i-lucide-users', to: UiRoutes.Admin.Users },
       { label: 'System Settings', icon: 'i-lucide-settings', to: UiRoutes.Admin.Settings },
       { label: 'Audit Log', icon: 'i-lucide-scroll-text', to: UiRoutes.Admin.AuditLog },
