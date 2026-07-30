@@ -20,13 +20,17 @@ public class AesGcmKeyVault : IKeyVault
 
     public AesGcmKeyVault(IOptions<LlmOptions> options)
     {
-        var encoded = options.Value.EncryptionKey
-            ?? throw new InvalidOperationException($"Configuration '{LlmOptions.SectionName}:EncryptionKey' is required.");
+        var encoded =
+            options.Value.EncryptionKey
+            ?? throw new InvalidOperationException(
+                $"Configuration '{LlmOptions.SectionName}:EncryptionKey' is required."
+            );
 
         var keyBytes = Convert.FromBase64String(encoded);
         if (keyBytes.Length != KeySizeBytes)
             throw new InvalidOperationException(
-                $"'{LlmOptions.SectionName}:EncryptionKey' must be a base64-encoded {KeySizeBytes}-byte AES-256 key.");
+                $"'{LlmOptions.SectionName}:EncryptionKey' must be a base64-encoded {KeySizeBytes}-byte AES-256 key."
+            );
 
         _key = keyBytes;
     }

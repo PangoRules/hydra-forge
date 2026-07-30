@@ -1,8 +1,8 @@
 namespace HydraForge.Infrastructure.Tests.Llm;
 
+using System.Security.Cryptography;
 using HydraForge.Infrastructure.Llm;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
 
 public class AesGcmKeyVaultTests
 {
@@ -58,7 +58,8 @@ public class AesGcmKeyVaultTests
         var tagB64 = parts[3];
 
         var tamperedCipherB64 = Convert.ToBase64String(
-            Convert.FromBase64String(cipherB64).Select(b => (byte)(b ^ 0xFF)).ToArray());
+            Convert.FromBase64String(cipherB64).Select(b => (byte)(b ^ 0xFF)).ToArray()
+        );
 
         var tampered = $"v1:{nonceB64}:{tamperedCipherB64}:{tagB64}";
 
@@ -106,7 +107,9 @@ public class AesGcmKeyVaultTests
     public void Constructor_WrongKeyLength_Throws()
     {
         var shortKey = new byte[16];
-        var options = Options.Create(new LlmOptions { EncryptionKey = Convert.ToBase64String(shortKey) });
+        var options = Options.Create(
+            new LlmOptions { EncryptionKey = Convert.ToBase64String(shortKey) }
+        );
         var ex = Assert.Throws<InvalidOperationException>(() => new AesGcmKeyVault(options));
         Assert.Contains("32-byte", ex.Message);
     }

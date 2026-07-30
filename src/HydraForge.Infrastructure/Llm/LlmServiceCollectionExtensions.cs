@@ -11,26 +11,42 @@ public static class LlmServiceCollectionExtensions
         IConfiguration configuration
     )
     {
-        services.Configure<LlmOptions>(LlmOptions.SectionName, configuration.GetSection(LlmOptions.SectionName));
+        services.Configure<LlmOptions>(
+            LlmOptions.SectionName,
+            configuration.GetSection(LlmOptions.SectionName)
+        );
 
-        var keyValid = ValidateEncryptionKey(configuration);
-        if (keyValid)
-            services.AddSingleton<IKeyVault, AesGcmKeyVault>();
+        ValidateEncryptionKey(configuration);
+        services.AddSingleton<IKeyVault, AesGcmKeyVault>();
 
         return services;
     }
 
-    private static bool ValidateEncryptionKey(IConfiguration configuration)
+    private static byte[] ValidateEncryptionKey(IConfiguration configuration)
     {
         var encoded = configuration[$"{LlmOptions.SectionName}:{nameof(LlmOptions.EncryptionKey)}"];
         if (string.IsNullOrWhiteSpace(encoded))
-            return false;
+            throw new InvalidOperationException(
+                "Llm:EncryptionKey must be a base64-encoded 32-byte AES-256 key."
+            );
 
-        var keyBytes = Convert.FromBase64String(encoded);
+        byte[] keyBytes;
+        try
+        {
+            keyBytes = Convert.FromBase64String(encoded);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException(
+                "Llm:EncryptionKey must be a base64-encoded 32-byte AES-256 key."
+            );
+        }
+
         if (keyBytes.Length != 32)
             throw new InvalidOperationException(
-                $"'{LlmOptions.SectionName}:{nameof(LlmOptions.EncryptionKey)}' must be a base64-encoded 32-byte AES-256 key.");
+                "Llm:EncryptionKey must be a base64-encoded 32-byte AES-256 key."
+            );
 
-        return true;
+        return keyBytes;
     }
 }

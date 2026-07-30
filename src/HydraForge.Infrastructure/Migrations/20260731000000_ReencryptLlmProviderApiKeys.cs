@@ -1,7 +1,6 @@
 using HydraForge.Infrastructure.Llm;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
-using System.Text;
 
 #nullable disable
 
@@ -9,8 +8,6 @@ namespace HydraForge.Infrastructure.Migrations;
 
 public partial class ReencryptLlmProviderApiKeys : Migration
 {
-    private const string VersionPrefix = "v1:";
-
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         var connectionString = GetConnectionStringOrThrow();
@@ -21,9 +18,9 @@ public partial class ReencryptLlmProviderApiKeys : Migration
         connection.Open();
 
         using var selectCmd = new NpgsqlCommand(
-            $@"SELECT ""id"", ""api_key_encrypted"" FROM ""llm_providers""
-                WHERE ""api_key_encrypted"" = '' OR ""api_key_encrypted"" IS NULL
-                   OR (""api_key_encrypted"" <> '' AND NOT ""api_key_encrypted"" LIKE '{VersionPrefix}%')",
+            @"SELECT ""id"", ""api_key_encrypted"" FROM ""llm_providers""
+              WHERE ""api_key_encrypted"" IN ('not-configured', 'placeholder', 'dummy', 'test', 'sk_test')
+                 OR (""api_key_encrypted"" <> '' AND NOT ""api_key_encrypted"" LIKE 'v1:%')",
             connection);
 
         using var reader = selectCmd.ExecuteReader();
@@ -63,12 +60,20 @@ public partial class ReencryptLlmProviderApiKeys : Migration
         var key = Environment.GetEnvironmentVariable("Llm__EncryptionKey");
         if (string.IsNullOrWhiteSpace(key))
             throw new InvalidOperationException(
-                $"'Llm:EncryptionKey' environment variable must be set to a base64-encoded 32-byte AES-256 key.");
+                "'Llm:EncryptionKey' environment variable must be set to a base64-encoded 32-byte AES-256 key.");
 
-        var keyBytes = Convert.FromBase64String(key);
+        byte[] keyBytes;
+        try
+        {
+            keyBytes = Convert.FromBase64String(key);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Llm:EncryptionKey must be a base64-encoded 32-byte AES-256 key.");
+        }
+
         if (keyBytes.Length != 32)
-            throw new InvalidOperationException(
-                $"'Llm:EncryptionKey' must be a base64-encoded 32-byte AES-256 key.");
+            throw new InvalidOperationException("Llm:EncryptionKey must be a base64-encoded 32-byte AES-256 key.");
 
         return key;
     }
