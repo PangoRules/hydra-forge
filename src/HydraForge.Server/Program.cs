@@ -57,44 +57,65 @@ builder.Services.AddCors(options =>
     );
 });
 
+// AddFixedWindowLimiter(name, configure) creates one counter shared by every caller of
+// that policy — not per-client, despite "per IP" in the comments below. A single caller
+// sending 5 rapid requests locked out every other user for the rest of the window. Using
+// AddPolicy + RateLimitPartition instead gives each client IP its own independent counter.
+// Reads Connection.RemoteIpAddress directly, so it sees the reverse-proxy IP once this app
+// sits behind one — becomes proxy-aware when forwarded-headers middleware is added later.
+static string ClientIp(HttpContext httpContext) =>
+    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     // Strict login limit: 5 attempts per minute per IP
-    options.AddFixedWindowLimiter(
+    options.AddPolicy(
         "Login",
-        config =>
-        {
-            config.PermitLimit = 5;
-            config.Window = TimeSpan.FromMinutes(1);
-            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-            config.QueueLimit = 0;
-        }
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0,
+                }
+            )
     );
 
     // Global limit: 300 requests per minute per IP
-    options.AddFixedWindowLimiter(
+    options.AddPolicy(
         "Global",
-        config =>
-        {
-            config.PermitLimit = 300;
-            config.Window = TimeSpan.FromMinutes(1);
-            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-            config.QueueLimit = 10;
-        }
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 300,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 10,
+                }
+            )
     );
 
-    // SignalR hubs: 60 messages per minute per connection
-    options.AddFixedWindowLimiter(
+    // SignalR hubs: 60 messages per minute per connection's underlying IP
+    options.AddPolicy(
         "SignalR",
-        config =>
-        {
-            config.PermitLimit = 60;
-            config.Window = TimeSpan.FromMinutes(1);
-            config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-            config.QueueLimit = 5;
-        }
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 5,
+                }
+            )
     );
 });
 
