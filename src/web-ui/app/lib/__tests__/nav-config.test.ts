@@ -33,7 +33,7 @@ describe('nav-config', () => {
     expect(deepResearch.to).toBeUndefined()
   })
 
-  it('Admin group only exposes Users with a real route; the rest are disabled', () => {
+  it('Admin group exposes Users, System Settings and Audit Log with real routes; Reports stays disabled', () => {
     const groups = getNavGroups(true)
     const admin = groups.find(g => g[0]!.label === 'Admin')!
     const users = admin.find(i => i.label === 'Users')!
@@ -44,7 +44,8 @@ describe('nav-config', () => {
     expect(users.disabled).toBeUndefined()
     expect(settings.to).toBe('/admin/settings')
     expect(settings.disabled).toBeUndefined()
-    expect(auditLog.disabled).toBe(true)
+    expect(auditLog.to).toBe('/admin/audit-log')
+    expect(auditLog.disabled).toBeUndefined()
     expect(reports.disabled).toBe(true)
   })
 })

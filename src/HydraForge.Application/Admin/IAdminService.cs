@@ -12,12 +12,14 @@ public interface IAdminService
     );
     Task<Result<UserDto>> GetUserAsync(Guid userId, CancellationToken ct = default);
     Task<Result<UserDto>> CreateUserAsync(
+        Guid actorId,
         CreateUserRequest request,
         CancellationToken ct = default
     );
     Task<Result> DisableUserAsync(Guid actorId, Guid userId, CancellationToken ct = default);
-    Task<Result> EnableUserAsync(Guid userId, CancellationToken ct = default);
+    Task<Result> EnableUserAsync(Guid actorId, Guid userId, CancellationToken ct = default);
     Task<Result> ResetPasswordAsync(
+        Guid actorId,
         Guid userId,
         string newPassword,
         CancellationToken ct = default

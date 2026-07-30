@@ -1,3 +1,4 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -10,10 +11,17 @@ public class ProjectMemberService(
     IProjectRepository projectRepo,
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    IAuditLogWriter auditLogWriter
 )
 {
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
+
+    private sealed record ProjectMemberAuditSnapshot(Guid UserId, MemberRole Role);
+
+    private static ProjectMemberAuditSnapshot BuildSnapshot(ProjectMember member) =>
+        new(member.UserId, member.Role);
 
     private async Task PublishAsync(
         Guid projectId,
@@ -98,6 +106,21 @@ public class ProjectMemberService(
         };
 
         await memberRepo.AddMemberAsync(newMember, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.AddedByUserId,
+                AuditLogScope.Project,
+                "ProjectMember",
+                newMember.Id,
+                "Created",
+                cmd.ProjectId,
+                null,
+                AuditSnapshot.Serialize(BuildSnapshot(newMember))
+            ),
+            ct
+        );
+
         await PublishAsync(
             cmd.ProjectId,
             BoardEntityType.Card,
@@ -159,8 +182,23 @@ public class ProjectMemberService(
                 new Error(DomainErrorCodes.Membership.NotFound, "Member not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(member);
         member.ChangeRole(cmd.NewRole);
         await memberRepo.UpdateMemberAsync(member, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ChangedByUserId,
+                AuditLogScope.Project,
+                "ProjectMember",
+                member.Id,
+                "RoleChanged",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(member))
+            ),
+            ct
+        );
 
         return Result<ProjectMemberDto>.Success(
             new ProjectMemberDto(
@@ -226,7 +264,24 @@ public class ProjectMemberService(
                 );
         }
 
+        var oldSnapshot = BuildSnapshot(member);
+
         await memberRepo.RemoveMemberAsync(member.Id, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.RemovedByUserId,
+                AuditLogScope.Project,
+                "ProjectMember",
+                member.Id,
+                "Deleted",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                null
+            ),
+            ct
+        );
+
         await PublishAsync(
             cmd.ProjectId,
             BoardEntityType.Project,

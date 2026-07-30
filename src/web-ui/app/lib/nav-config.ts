@@ -5,7 +5,7 @@ import { UiRoutes } from '~/lib/routes'
  * Sidebar nav structure. Each group is an array whose first item is a
  * `type: 'label'` header, followed by real/disabled items. Disabled items
  * have no `to` — they render greyed and non-navigable until their feature
- * ships (System Settings/Audit Log: Plans 10-12; everything else: backlog).
+ * ships (System Settings: Plans 10-12; everything else: backlog).
  */
 export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
   const groups: NavigationMenuItem[][] = [
@@ -43,7 +43,7 @@ export function getNavGroups(isAdmin: boolean): NavigationMenuItem[][] {
       { label: 'Admin', type: 'label' },
       { label: 'Users', icon: 'i-lucide-users', to: UiRoutes.Admin.Users },
       { label: 'System Settings', icon: 'i-lucide-settings', to: UiRoutes.Admin.Settings },
-      { label: 'Audit Log', icon: 'i-lucide-scroll-text', disabled: true },
+      { label: 'Audit Log', icon: 'i-lucide-scroll-text', to: UiRoutes.Admin.AuditLog },
       { label: 'Reports', icon: 'i-lucide-bar-chart-3', disabled: true }
     ])
   }

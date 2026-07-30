@@ -146,6 +146,8 @@ export const ApiRoutes = {
     userEnable: (userId: string) => `/api/admin/users/${userId}/enable`,
     userResetPassword: (userId: string) => `/api/admin/users/${userId}/reset-password`,
     userRole: (userId: string) => `/api/admin/users/${userId}/role`,
+    projectsList: (skip = 0, take = 20, search?: string) =>
+      `/api/admin/projects?skip=${skip}&take=${take}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
     projectGet: (projectId: string) => `/api/admin/projects/${projectId}`,
     settingsGet: () => '/api/admin/settings',
     settingsUpdate: () => '/api/admin/settings',

@@ -425,6 +425,11 @@ namespace HydraForge.Tui.Generated
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task SettingsPUTAsync(UpdateSystemSettingsRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<AuditLogQueryResult> AuditLogAsync(System.Guid? projectId = null, System.Guid? actorId = null, string? entityType = null, string? action = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -515,6 +520,78 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("assigneeUserId", Required = Newtonsoft.Json.Required.Always)]
         public System.Guid AssigneeUserId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuditLogEntryDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? ProjectId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectName", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? ProjectName { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("actorId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid ActorId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("actorName", Required = Newtonsoft.Json.Required.Always)]
+        public string ActorName { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("entityType", Required = Newtonsoft.Json.Required.Always)]
+        public string EntityType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("entityId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid EntityId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("action", Required = Newtonsoft.Json.Required.Always)]
+        public string Action { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("oldValue", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? OldValue { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("newValue", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? NewValue { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("timestamp", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset Timestamp { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("scope", Required = Newtonsoft.Json.Required.Always)]
+        public string Scope { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuditLogQueryResult
+    {
+
+        [Newtonsoft.Json.JsonProperty("items", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<AuditLogEntryDto> Items { get; set; } = new System.Collections.ObjectModel.Collection<AuditLogEntryDto>();
+
+        [Newtonsoft.Json.JsonProperty("totalCount", Required = Newtonsoft.Json.Required.Always)]
+        public int TotalCount { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

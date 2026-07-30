@@ -24,6 +24,16 @@ public class ColumnService(
     private readonly IProjectBoardEventPublisher _publisher = publisher;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
 
+    private sealed record ColumnAuditSnapshot(
+        string Name,
+        string? Color,
+        int? WipLimit,
+        int Position
+    );
+
+    private static ColumnAuditSnapshot BuildSnapshot(Column column) =>
+        new(column.Name, column.Color, column.WipLimit, column.Position);
+
     public async Task<Result<ColumnDto>> CreateAsync(
         CreateColumnCommand cmd,
         CancellationToken ct = default
@@ -76,7 +86,7 @@ public class ColumnService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(column))
             ),
             ct
         );
@@ -144,6 +154,7 @@ public class ColumnService(
                 new Error(DomainErrorCodes.Columns.NotFound, "Column not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(column);
         column.UpdateDetails(cmd.Name, cmd.Color, cmd.WipLimit);
 
         await columnRepo.UpdateAsync(column, ct);
@@ -164,8 +175,8 @@ public class ColumnService(
                 column.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(column))
             ),
             ct
         );
@@ -203,6 +214,8 @@ public class ColumnService(
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(column);
+
         await columnRepo.DeleteAsync(cmd.ColumnId, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
@@ -229,7 +242,7 @@ public class ColumnService(
                 cmd.ColumnId,
                 "Deleted",
                 cmd.ProjectId,
-                null,
+                AuditSnapshot.Serialize(oldSnapshot),
                 null
             ),
             ct
@@ -272,6 +285,8 @@ public class ColumnService(
                 );
         }
 
+        var oldOrder = existing.OrderBy(c => c.Position).Select(c => c.Id).ToList();
+
         await columnRepo.ReorderAsync(cmd.ProjectId, cmd.ColumnIds, ct);
         await snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(
@@ -290,8 +305,8 @@ public class ColumnService(
                 Guid.Empty,
                 "Reordered",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldOrder),
+                AuditSnapshot.Serialize(cmd.ColumnIds)
             ),
             ct
         );

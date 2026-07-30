@@ -150,12 +150,19 @@ public class CommentService(
         }
     }
 
+    private sealed record CommentAuditSnapshot(string Content, DateTime? ArchivedAt);
+
+    private static CommentAuditSnapshot BuildSnapshot(Comment comment) =>
+        new(comment.Content, comment.ArchivedAt);
+
     private async Task WriteAuditAsync(
         Guid actorId,
         Guid commentId,
         Guid projectId,
         string action,
-        CancellationToken ct
+        CancellationToken ct,
+        string? oldValueJson = null,
+        string? newValueJson = null
     )
     {
         await _auditLogWriter.WriteAsync(
@@ -166,8 +173,8 @@ public class CommentService(
                 commentId,
                 action,
                 projectId,
-                null,
-                null
+                oldValueJson,
+                newValueJson
             ),
             ct
         );
@@ -204,7 +211,15 @@ public class CommentService(
 
         await _commentRepo.AddAsync(comment, ct);
         await EnsureWatcherAsync(cmd.CardId, cmd.ActorId, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Created",
+            ct,
+            null,
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Created, ct);
 
@@ -297,10 +312,19 @@ public class CommentService(
         var mentionedUsernames = MentionExtractor.Extract(cmd.Content);
         var mentionedUserIds = await ResolveMentionsAsync(cmd.ProjectId, mentionedUsernames, ct);
 
+        var oldSnapshot = BuildSnapshot(comment);
         comment.Content = cmd.Content;
         comment.UpdatedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Updated", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Updated",
+            ct,
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Updated, ct);
 
@@ -332,9 +356,18 @@ public class CommentService(
                 new Error(DomainErrorCodes.Comments.Archived, "Comment is already archived.")
             );
 
+        var oldSnapshot = BuildSnapshot(comment);
         comment.ArchivedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Archived", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Archived",
+            ct,
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
         await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Archived, ct);
 

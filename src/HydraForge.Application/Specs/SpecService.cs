@@ -29,6 +29,11 @@ public class SpecService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
+    private sealed record SpecAuditSnapshot(string Title, string? Description, string Content);
+
+    private static SpecAuditSnapshot BuildSnapshot(Spec spec) =>
+        new(spec.Title, spec.Description, spec.Content);
+
     public async Task<Result<SpecDto>> CreateAsync(
         CreateSpecCommand cmd,
         CancellationToken ct = default
@@ -127,7 +132,7 @@ public class SpecService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );
@@ -225,6 +230,7 @@ public class SpecService(
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(spec);
         spec.Title = cmd.Title;
         spec.Description = cmd.Description;
         spec.Content = cmd.Content;
@@ -256,8 +262,8 @@ public class SpecService(
                 spec.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );
@@ -330,6 +336,7 @@ public class SpecService(
                 new Error(DomainErrorCodes.Specs.DocumentVersionNotFound, "Spec version not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(spec);
         spec.Title = oldVersion.Title;
         spec.Description = oldVersion.Description;
         spec.Content = oldVersion.Content;
@@ -361,8 +368,8 @@ public class SpecService(
                 spec.Id,
                 "Restored",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );

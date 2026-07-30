@@ -35,6 +35,11 @@ public partial class AttachmentService(
     private readonly long _maxBytes = maxBytes;
     private readonly IReadOnlySet<string> _allowedContentTypes = allowedContentTypes;
 
+    private sealed record AttachmentAuditSnapshot(string FileName, string ContentType, long Size);
+
+    private static AttachmentAuditSnapshot BuildSnapshot(Attachment attachment) =>
+        new(attachment.FileName, attachment.ContentType, attachment.Size);
+
     public async Task<Result<AttachmentDto>> CreateAsync(
         CreateAttachmentCommand cmd,
         CancellationToken ct = default
@@ -111,7 +116,7 @@ public partial class AttachmentService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(attachment))
             ),
             ct
         );
@@ -211,6 +216,8 @@ public partial class AttachmentService(
                 new Error(DomainErrorCodes.Attachments.NotFound, "Attachment not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(attachment);
+
         await _attachmentRepo.DeleteAsync(attachmentId, ct);
         await _snapshotRefresher.RefreshAsync(projectId, ct);
 
@@ -231,7 +238,7 @@ public partial class AttachmentService(
                 attachmentId,
                 "Deleted",
                 projectId,
-                null,
+                AuditSnapshot.Serialize(oldSnapshot),
                 null
             ),
             ct

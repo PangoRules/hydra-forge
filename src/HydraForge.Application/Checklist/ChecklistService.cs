@@ -28,6 +28,16 @@ public class ChecklistService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
+    private sealed record ChecklistItemAuditSnapshot(
+        string Text,
+        bool IsCompleted,
+        int Position,
+        Guid? AssignedTo
+    );
+
+    private static ChecklistItemAuditSnapshot BuildSnapshot(ChecklistItem item) =>
+        new(item.Text, item.IsCompleted, item.Position, item.AssignedTo);
+
     private async Task PublishAsync(
         Guid projectId,
         Guid entityId,
@@ -145,7 +155,7 @@ public class ChecklistService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
@@ -216,6 +226,7 @@ public class ChecklistService(
                 );
         }
 
+        var oldSnapshot = BuildSnapshot(item);
         item.Text = cmd.Text;
         item.AssignedTo = cmd.AssignedTo;
         await _checklistRepo.UpdateAsync(item, ct);
@@ -229,8 +240,8 @@ public class ChecklistService(
                 item.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
@@ -276,6 +287,7 @@ public class ChecklistService(
                 new Error(DomainErrorCodes.Checklist.ItemNotFound, "Checklist item not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(item);
         item.IsCompleted = !item.IsCompleted;
         await _checklistRepo.UpdateAsync(item, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
@@ -288,8 +300,8 @@ public class ChecklistService(
                 item.Id,
                 item.IsCompleted ? "Completed" : "Uncompleted",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
@@ -346,6 +358,7 @@ public class ChecklistService(
 
         var oldPosition = item.Position;
         var newPosition = cmd.NewPosition;
+        var oldSnapshot = BuildSnapshot(item);
 
         if (oldPosition == newPosition)
         {
@@ -389,8 +402,8 @@ public class ChecklistService(
                 item.Id,
                 "Reordered",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
@@ -435,6 +448,7 @@ public class ChecklistService(
             );
 
         var deletedPosition = item.Position;
+        var oldSnapshot = BuildSnapshot(item);
         await _checklistRepo.DeleteAsync(cmd.ItemId, ct);
         await _checklistRepo.CompactPositionsAsync(cmd.CardId, deletedPosition, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
@@ -447,7 +461,7 @@ public class ChecklistService(
                 item.Id,
                 "Deleted",
                 cmd.ProjectId,
-                null,
+                AuditSnapshot.Serialize(oldSnapshot),
                 null
             ),
             ct

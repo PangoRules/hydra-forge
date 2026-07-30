@@ -32,6 +32,16 @@ public class PlanService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
+    private sealed record PlanAuditSnapshot(
+        string Title,
+        string? Description,
+        string Content,
+        PlanStatus Status
+    );
+
+    private static PlanAuditSnapshot BuildSnapshot(Plan plan) =>
+        new(plan.Title, plan.Description, plan.Content, plan.Status);
+
     public async Task<Result<PlanDto>> CreateAsync(
         CreatePlanCommand cmd,
         CancellationToken ct = default
@@ -138,7 +148,7 @@ public class PlanService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
@@ -244,6 +254,7 @@ public class PlanService(
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.Title = cmd.Title;
         plan.Description = cmd.Description;
         plan.Content = cmd.Content;
@@ -275,8 +286,8 @@ public class PlanService(
                 plan.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
@@ -357,6 +368,7 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.DocumentVersionNotFound, "Plan version not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.Title = oldVersion.Title;
         plan.Description = oldVersion.Description;
         plan.Content = oldVersion.Content;
@@ -388,8 +400,8 @@ public class PlanService(
                 plan.Id,
                 "Restored",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
@@ -426,11 +438,27 @@ public class PlanService(
         if (plan.Status == cmd.Status)
             return Result<PlanDto>.Success(MapToDto(plan));
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.SetStatus(cmd.Status);
         plan.UpdatedAt = DateTime.UtcNow;
 
         await _planRepo.UpdateAsync(plan, ct);
         await _planRepo.SaveChangesAsync(ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Plan",
+                plan.Id,
+                "StatusChanged",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
+            ),
+            ct
+        );
+
         await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Updated, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));

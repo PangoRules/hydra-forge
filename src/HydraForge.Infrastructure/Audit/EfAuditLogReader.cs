@@ -37,14 +37,28 @@ public class EfAuditLogReader(HydraForgeDbContext db) : IAuditLogReader
                 user => user.Id,
                 (entry, users) => new { entry, users }
             )
+            .SelectMany(x => x.users.DefaultIfEmpty(), (x, user) => new { x.entry, user })
+            .GroupJoin(
+                db.Projects,
+                x => x.entry.ProjectId,
+                project => (Guid?)project.Id,
+                (x, projects) =>
+                    new
+                    {
+                        x.entry,
+                        x.user,
+                        projects,
+                    }
+            )
             .SelectMany(
-                x => x.users.DefaultIfEmpty(),
-                (x, user) =>
+                x => x.projects.DefaultIfEmpty(),
+                (x, project) =>
                     new AuditLogEntryDto(
                         x.entry.Id,
                         x.entry.ProjectId,
+                        project == null ? null : project.Name,
                         x.entry.ActorId,
-                        user == null ? "(deleted)" : user.Username,
+                        x.user == null ? "(deleted)" : x.user.Username,
                         x.entry.EntityType,
                         x.entry.EntityId,
                         x.entry.Action,
