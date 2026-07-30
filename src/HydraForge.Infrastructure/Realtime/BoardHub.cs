@@ -23,9 +23,9 @@ public class BoardHub(IProjectMemberRepository memberRepo) : Hub<IBoardHub>
 
     public async Task JoinProject(Guid projectId)
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
 
-        var isAdmin = Context.User.IsInRole(Roles.Admin);
+        var isAdmin = Context.User!.IsInRole(Roles.Admin);
         if (!isAdmin)
         {
             _ =

@@ -12,7 +12,7 @@ public class NotificationHub : Hub<INotificationHub>
 {
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User.GetRequiredUserId();
+        var userId = Context.User!.GetRequiredUserId();
         await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
         await base.OnConnectedAsync();
     }
