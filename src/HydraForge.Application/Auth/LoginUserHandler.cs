@@ -88,15 +88,24 @@ public class LoginUserHandler(
             );
         }
 
-        if (user.LockedOutUntil.HasValue && user.LockedOutUntil.Value > DateTime.UtcNow)
+        if (user.LockedOutUntil.HasValue)
         {
-            var remaining = user.LockedOutUntil.Value - DateTime.UtcNow;
-            return Result<LoginResponse>.Failure(
-                new Error(
-                    DomainErrorCodes.Auth.AccountLocked,
-                    $"Account locked. Try again in {remaining.Minutes + 1} minute(s)."
-                )
-            );
+            if (user.LockedOutUntil.Value > DateTime.UtcNow)
+            {
+                var remaining = user.LockedOutUntil.Value - DateTime.UtcNow;
+                return Result<LoginResponse>.Failure(
+                    new Error(
+                        DomainErrorCodes.Auth.AccountLocked,
+                        $"Account locked. Try again in {remaining.Minutes + 1} minute(s)."
+                    )
+                );
+            }
+
+            // Lockout window has expired — treat it as fully cleared, not just "not
+            // currently blocking". Without this, FailedLoginAttempts (still 5 from before)
+            // survives the expiry, so one more wrong password takes it to 6 and re-locks
+            // the account immediately, degenerating into a permanent one-strike lockout.
+            user.ResetFailedAttempts();
         }
 
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))

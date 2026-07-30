@@ -116,6 +116,35 @@ public class LoginUserHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ExpiredLockout_ClearsCounterBeforeCheckingPassword()
+    {
+        var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
+        user.RecordFailedLogin();
+        user.RecordFailedLogin();
+        user.RecordFailedLogin();
+        user.RecordFailedLogin();
+        user.RecordFailedLogin();
+        // Negative duration simulates the 15-minute lockout window having already elapsed —
+        // Lockout adds the TimeSpan to UtcNow, so a negative one lands in the past.
+        user.Lockout(TimeSpan.FromMilliseconds(-1));
+        var repo = new InMemoryUserRepository(user);
+        var hasher = new StrictPasswordHasher(false);
+        var issuer = new FixedTokenIssuer("jwt-token");
+        var auditLogWriter = new InMemoryAuditLogWriter();
+        var handler = new LoginUserHandler(repo, hasher, issuer, auditLogWriter);
+        var request = new LoginRequest("admin", "wrongpassword");
+
+        var result = await handler.HandleAsync(request);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Auth.InvalidCredentials, result.Error.Code);
+        // Expired lockout must be treated as fully cleared: this one wrong password should
+        // record as attempt #1, not attempt #6, and must not immediately re-lock the account.
+        Assert.Equal(1, user.FailedLoginAttempts);
+        Assert.Null(user.LockedOutUntil);
+    }
+
+    [Fact]
     public async Task Handle_LockedOutAccount_RejectsCorrectPasswordWithAccountLockedError()
     {
         var user = User.Create("admin", "Test", "User", "test@localhost", "hashed", isAdmin: true);
