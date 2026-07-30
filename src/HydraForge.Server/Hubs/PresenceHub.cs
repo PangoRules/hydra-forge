@@ -87,6 +87,15 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
     public async Task FocusCard(Guid projectId, Guid cardId)
     {
         var userId = Context.User!.GetRequiredUserId();
+
+        var isAdmin = Context.User!.IsInRole(Roles.Admin);
+        if (!isAdmin)
+        {
+            var membership =
+                await _memberRepo.GetByProjectAndUserAsync(projectId, userId)
+                ?? throw new HubException("Access denied");
+        }
+
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)
@@ -104,6 +113,15 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
     public async Task UnfocusCard(Guid projectId)
     {
         var userId = Context.User!.GetRequiredUserId();
+
+        var isAdmin = Context.User!.IsInRole(Roles.Admin);
+        if (!isAdmin)
+        {
+            var membership =
+                await _memberRepo.GetByProjectAndUserAsync(projectId, userId)
+                ?? throw new HubException("Access denied");
+        }
+
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)
