@@ -98,6 +98,19 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task ListUsers_ClampsTakeToAdminMaxOfFiveHundred()
+    {
+        var repo = new InMemoryAdminUserRepo();
+        var hasher = new TestPasswordHasher();
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
+
+        var result = await service.ListUsersAsync(0, 9999, null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(500, repo.LastTake);
+    }
+
+    [Fact]
     public async Task DisableUser_AdminUser_ReturnsFailure()
     {
         var repo = new InMemoryAdminUserRepo();
@@ -158,6 +171,8 @@ internal class InMemoryAdminUserRepo : IUserRepository
         return Task.CompletedTask;
     }
 
+    public int LastTake { get; private set; }
+
     public Task<IReadOnlyList<User>> ListAsync(
         int skip,
         int take,
@@ -165,6 +180,7 @@ internal class InMemoryAdminUserRepo : IUserRepository
         CancellationToken ct = default
     )
     {
+        LastTake = take;
         var query = _users.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(u =>

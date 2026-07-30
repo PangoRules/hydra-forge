@@ -35,6 +35,22 @@ public class ProblemDetailsMapperTests
     }
 
     [Fact]
+    public void FromError_AuthAccountLocked_MapsTo401()
+    {
+        var error = new Error(
+            DomainErrorCodes.Auth.AccountLocked,
+            "Account locked. Try again in 15 minute(s)."
+        );
+
+        var details = ProblemDetailsMapper.FromError(error, "corr-locked");
+
+        Assert.Equal(401, details.Status);
+        Assert.Equal("Account locked", details.Title);
+        Assert.Equal("corr-locked", details.Extensions["correlationId"]);
+        Assert.Equal(DomainErrorCodes.Auth.AccountLocked, details.Extensions["code"]);
+    }
+
+    [Fact]
     public void FromError_AuthAdminSeedNotConfigured_MapsTo500()
     {
         var error = new Error(

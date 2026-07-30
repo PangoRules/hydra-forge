@@ -1,5 +1,7 @@
+using HydraForge.Application.Audit;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Auth;
 
@@ -65,7 +67,8 @@ public record LoginResponse(
 public class LoginUserHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
-    IAccessTokenIssuer accessTokenIssuer
+    IAccessTokenIssuer accessTokenIssuer,
+    IAuditLogWriter auditLogWriter
 )
 {
     public async Task<Result<LoginResponse>> HandleAsync(LoginRequest request)
@@ -85,12 +88,58 @@ public class LoginUserHandler(
             );
         }
 
+        if (user.LockedOutUntil.HasValue)
+        {
+            if (user.LockedOutUntil.Value > DateTime.UtcNow)
+            {
+                var remaining = user.LockedOutUntil.Value - DateTime.UtcNow;
+                return Result<LoginResponse>.Failure(
+                    new Error(
+                        DomainErrorCodes.Auth.AccountLocked,
+                        $"Account locked. Try again in {remaining.Minutes + 1} minute(s)."
+                    )
+                );
+            }
+
+            // Lockout window has expired — treat it as fully cleared, not just "not
+            // currently blocking". Without this, FailedLoginAttempts (still 5 from before)
+            // survives the expiry, so one more wrong password takes it to 6 and re-locks
+            // the account immediately, degenerating into a permanent one-strike lockout.
+            user.ResetFailedAttempts();
+        }
+
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
+            user.RecordFailedLogin();
+
+            // Lockout after 5 consecutive failures for 15 minutes
+            if (user.FailedLoginAttempts >= 5)
+            {
+                user.Lockout(TimeSpan.FromMinutes(15));
+            }
+
+            await userRepository.UpdateAsync(user);
+
+            // Audit log the failed attempt
+            await auditLogWriter.WriteAsync(
+                new AuditLogRequest(
+                    ActorId: user.Id,
+                    Scope: AuditLogScope.System,
+                    EntityType: "User",
+                    EntityId: user.Id,
+                    Action: "LoginFailed",
+                    NewValueJson: $"{{\"failedAttempts\": {user.FailedLoginAttempts}}}"
+                )
+            );
+
             return Result<LoginResponse>.Failure(
                 new Error(DomainErrorCodes.Auth.InvalidCredentials, "Invalid credentials.")
             );
         }
+
+        // Successful login — reset failed attempts
+        user.ResetFailedAttempts();
+        await userRepository.UpdateAsync(user);
 
         var token = accessTokenIssuer.IssueToken(user);
         await userRepository.UpdateLastLoginAsync(user.Id, DateTime.UtcNow);

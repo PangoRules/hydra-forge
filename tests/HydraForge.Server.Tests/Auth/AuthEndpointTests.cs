@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -67,6 +68,10 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
     {
         builder.UseSetting("Environment", "Test");
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+        builder.UseSetting(
+            "Jwt:SigningKey",
+            "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
+        );
         builder.ConfigureServices(services =>
         {
             foreach (
@@ -75,6 +80,7 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
                         d.ServiceType == typeof(IUserRepository)
                         || d.ServiceType == typeof(IPasswordHasher)
                         || d.ServiceType == typeof(IAccessTokenIssuer)
+                        || d.ServiceType == typeof(IAuditLogWriter)
                     )
                     .ToList()
             )
@@ -85,6 +91,10 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
             services.AddScoped<IUserRepository>(_ => new AuthTestUserRepository(userDisabled));
             services.AddSingleton<IPasswordHasher>(_ => new AuthTestPasswordHasher(passwordValid));
             services.AddSingleton<IAccessTokenIssuer>(_ => new AuthTestTokenIssuer());
+            // LoginUserHandler now audit-logs failed attempts — the real EfAuditLogWriter
+            // needs a live Postgres connection this factory doesn't provide, so swap in the
+            // in-memory fake (same pattern as ProjectsTestWebApplicationFactory).
+            services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
         });
     }
 }

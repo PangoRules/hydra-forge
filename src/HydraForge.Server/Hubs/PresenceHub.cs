@@ -5,11 +5,13 @@ using HydraForge.Application.Projects;
 using HydraForge.Domain.Constants;
 using HydraForge.Infrastructure.Realtime;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace HydraForge.Server.Hubs;
 
 [Authorize]
+[EnableRateLimiting("SignalR")]
 public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
 {
     public static string ProjectGroup(Guid projectId) => $"project-{projectId}";
@@ -85,6 +87,15 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
     public async Task FocusCard(Guid projectId, Guid cardId)
     {
         var userId = Context.User!.GetRequiredUserId();
+
+        var isAdmin = Context.User!.IsInRole(Roles.Admin);
+        if (!isAdmin)
+        {
+            var membership =
+                await _memberRepo.GetByProjectAndUserAsync(projectId, userId)
+                ?? throw new HubException("Access denied");
+        }
+
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)
@@ -102,6 +113,15 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
     public async Task UnfocusCard(Guid projectId)
     {
         var userId = Context.User!.GetRequiredUserId();
+
+        var isAdmin = Context.User!.IsInRole(Roles.Admin);
+        if (!isAdmin)
+        {
+            var membership =
+                await _memberRepo.GetByProjectAndUserAsync(projectId, userId)
+                ?? throw new HubException("Access denied");
+        }
+
         var groupName = BoardHub.ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)

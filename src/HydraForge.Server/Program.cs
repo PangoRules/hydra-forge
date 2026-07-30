@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -23,6 +24,8 @@ using HydraForge.Server.Auth;
 using HydraForge.Server.Hubs;
 using HydraForge.Server.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -55,11 +58,76 @@ builder.Services.AddCors(options =>
     );
 });
 
+// AddFixedWindowLimiter(name, configure) creates one counter shared by every caller of
+// that policy — not per-client, despite "per IP" in the comments below. A single caller
+// sending 5 rapid requests locked out every other user for the rest of the window. Using
+// AddPolicy + RateLimitPartition instead gives each client IP its own independent counter.
+// Reads Connection.RemoteIpAddress directly, so it sees the reverse-proxy IP once this app
+// sits behind one — becomes proxy-aware when forwarded-headers middleware is added later.
+static string ClientIp(HttpContext httpContext) =>
+    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Strict login limit: 5 attempts per minute per IP
+    options.AddPolicy(
+        "Login",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0,
+                }
+            )
+    );
+
+    // Global limit: 300 requests per minute per IP
+    options.AddPolicy(
+        "Global",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 300,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 10,
+                }
+            )
+    );
+
+    // SignalR hubs: 60 messages per minute per connection's underlying IP
+    options.AddPolicy(
+        "SignalR",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                ClientIp(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 5,
+                }
+            )
+    );
+});
+
 builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer<HydraForge.Server.OpenApi.EnumSchemaTransformer>()
 );
 builder
-    .Services.AddControllers()
+    .Services.AddControllers(options =>
+    {
+        options.Conventions.Add(new HydraForge.Server.Conventions.RateLimitConvention("Global"));
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -84,9 +152,79 @@ var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey =
     builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+
+// Two placeholders ship in this repo: appsettings.json's and .env.example's (the Docker
+// Compose path, which CLAUDE.md documents first). Checking only one left the other bootable
+// with a publicly-known signing key and no objection from this validation.
+string[] knownJwtSigningKeyPlaceholders =
+[
+    "your-256-bit-secret-key-here-replace-in-production",
+    "change-this-to-at-least-32-random-characters",
+];
+if (knownJwtSigningKeyPlaceholders.Contains(jwtSigningKey))
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey must be changed from the default placeholder. "
+            + "Set it via environment variable Jwt__SigningKey or user-secrets."
+    );
+}
+
+if (jwtSigningKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey must be at least 32 characters long for HS256 signing. "
+            + "Set it via environment variable Jwt__SigningKey or user-secrets."
+    );
+}
+
 var accessTokenMinutes = builder.Configuration.GetValue("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
+
+// Validate Argon2 parameters at startup
+Argon2Options argon2Options = builder.Configuration.GetSection("Argon2").Get<Argon2Options>()!;
+if (argon2Options.Iterations < 2)
+    throw new InvalidOperationException("Argon2:Iterations must be at least 2.");
+if (argon2Options.MemorySizeKiB < 32768)
+    throw new InvalidOperationException("Argon2:MemorySizeKiB must be at least 32768 (32 MiB).");
+if (argon2Options.Parallelism < 1)
+    throw new InvalidOperationException("Argon2:Parallelism must be at least 1.");
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    // ASP.NET Core's built-in default trusts only loopback proxies. Clearing KnownNetworks/
+    // KnownProxies unconditionally (as this used to do) makes the middleware trust
+    // X-Forwarded-For from ANY client — with docker-compose.yml publishing the server
+    // directly on 5000:8080 (bypassing the nginx service it also ships), that let an
+    // attacker set an arbitrary X-Forwarded-For per request and get a fresh rate-limit
+    // partition every time, defeating the per-IP Login/Global limiters entirely. Only widen
+    // trust when an operator explicitly configures their proxy's network range; otherwise
+    // keep the safe loopback-only default. Uses KnownIPNetworks (System.Net.IPNetwork), not
+    // the older KnownNetworks property, which is obsolete in this ASP.NET Core version.
+    var knownNetworksConfig = builder.Configuration["ForwardedHeaders:KnownNetworks"];
+    if (!string.IsNullOrWhiteSpace(knownNetworksConfig))
+    {
+        options.KnownIPNetworks.Clear();
+        foreach (
+            var cidr in knownNetworksConfig.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
+        {
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
+        }
+    }
+    // else: leave ASP.NET Core's default (loopback-only) KnownIPNetworks/KnownProxies in
+    // place. Operators deploying behind the nginx service in docker-compose.yml (or any
+    // other reverse proxy) must set ForwardedHeaders__KnownNetworks to that proxy's network
+    // range, or X-Forwarded-For is ignored and rate limiting/audit logging see the proxy's
+    // own IP for every request instead of the real client's — safe but suboptimal, not a
+    // security hole.
+});
+
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
 
 builder
@@ -166,6 +304,13 @@ builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProb
 
 builder.Services.AddRealtimeServices();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Global request body size limit: 1 MB for most endpoints
+    // Spec/plan content endpoints have their own validation (MarkdownPayloadTooLarge)
+    options.Limits.MaxRequestBodySize = 1_048_576; // 1 MB
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -203,6 +348,12 @@ if (initResult.IsFailure)
     logger.LogWarning("File store initialization failed: {Error}", initResult.Error.Message);
 }
 
+// Must run before anything that reads the connection's remote IP — in particular
+// app.UseRateLimiter() below, which partitions by httpContext.Connection.RemoteIpAddress.
+// Placed ahead of request logging and CORS too, since ASP.NET Core guidance is for
+// forwarded-headers to run first in the pipeline.
+app.UseForwardedHeaders();
+
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
@@ -216,6 +367,8 @@ app.UseSerilogRequestLogging(options =>
 });
 
 app.UseCors();
+
+app.UseRateLimiter();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();

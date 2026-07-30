@@ -1,5 +1,6 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
+using HydraForge.Domain.Constants;
 using HydraForge.Server.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,8 @@ public class UsersController(IUserRepository userRepo, IProjectMemberRepository 
         [FromQuery] Guid? excludeProjectId = null
     )
     {
+        limit = Math.Min(limit, PaginationConstants.MaxPageSize);
+
         // Load existing member IDs if excluding a project
         HashSet<Guid>? excludeIds = null;
         if (excludeProjectId.HasValue)

@@ -1,5 +1,6 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
+using HydraForge.Domain.Constants;
 using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
@@ -83,6 +84,8 @@ public class ProjectsController(
         [FromQuery] bool excludeMembership = false
     )
     {
+        take = Math.Min(take, PaginationConstants.MaxPageSize);
+
         var userId = User.GetRequiredUserId();
         var isAdmin = User.IsInRole(Domain.Constants.Roles.Admin);
 

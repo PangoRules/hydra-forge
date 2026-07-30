@@ -1,5 +1,6 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Notifications;
+using HydraForge.Domain.Constants;
 using HydraForge.Server.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,8 @@ public class NotificationsController(INotificationRepository notifRepo) : Contro
         CancellationToken ct = default
     )
     {
+        take = Math.Min(take, PaginationConstants.MaxPageSize);
+
         var userId = User.GetRequiredUserId();
         var notifications = await notifRepo.ListByUserAsync(userId, skip, take, ct: ct);
         var response = notifications

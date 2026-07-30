@@ -5,6 +5,7 @@ using HydraForge.Application.Notifications;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Constants;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 
@@ -164,6 +165,10 @@ public class ProjectService(
         return Result<ProjectDto>.Success(MapToDto(project, columns, members));
     }
 
+    // maxTake defaults to the user-facing ceiling — shared by both the member-facing project
+    // list and the admin project list. Admin callers pass PaginationConstants.MaxAdminPageSize
+    // explicitly so admins get up to 500 rows per page without loosening the cap for everyone
+    // else (that would reintroduce the unbounded-pagination risk this cap was added to close).
     public async Task<Result<ProjectListPageDto>> GetAllAsync(
         Guid requestUserId,
         bool includeArchived,
@@ -175,11 +180,12 @@ public class ProjectService(
         int take,
         bool isAdmin = false,
         bool excludeMembership = false,
-        CancellationToken ct = default
+        CancellationToken ct = default,
+        int maxTake = PaginationConstants.MaxPageSize
     )
     {
         var clampedSkip = Math.Max(skip, 0);
-        var clampedTake = Math.Clamp(take, 1, 100);
+        var clampedTake = Math.Clamp(take, 1, maxTake);
 
         ProjectListPage page;
         if (isAdmin && excludeMembership)

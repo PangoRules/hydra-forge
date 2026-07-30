@@ -7,6 +7,7 @@ public static class DomainErrorCodes
         public const string InvalidCredentials = "AUTH_INVALID_CREDENTIALS";
         public const string UserDisabled = "AUTH_USER_DISABLED";
         public const string AdminSeedNotConfigured = "AUTH_ADMIN_SEED_NOT_CONFIGURED";
+        public const string AccountLocked = "AUTH_ACCOUNT_LOCKED";
     }
 
     public static class Infrastructure
