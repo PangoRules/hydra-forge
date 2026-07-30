@@ -471,7 +471,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 
 ## Tasks
 
-- [ ] Task 1: Add `DallE` + `StabilityAi` to `AdapterType`; add `Llm.*` error codes (`TokenBudgetExceeded`, `ImageBudgetExceeded`, `NoModelForFeature`, `ContextWindowExceeded`, `EncryptionKeyInvalid`); reconcile `data-model.md` `UserTokenBudget` section with entity.
+- [x] Task 1: Add `DallE` + `StabilityAi` to `AdapterType`; add `Llm.*` error codes (`TokenBudgetExceeded`, `ImageBudgetExceeded`, `NoModelForFeature`, `ContextWindowExceeded`, `EncryptionKeyInvalid`); reconcile `data-model.md` `UserTokenBudget` section with entity.
 - [ ] Task 2: `IKeyVault` port (Application) + `AesGcmKeyVault` impl (Infrastructure) + startup validation of `Llm:EncryptionKey`; migration to re-encrypt placeholder rows idempotently.
 - [ ] Task 3: Define Application ports: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IModelRouter`, `IContextCompressor`, `IUsageRecorder`, `ILlmAdminService`, `ILlmClientFactory` + DTOs (`ChatRequest`/`ChatChunk`/`CacheBlock`/`RouteDecision`/`CompressedContext`/usage inputs).
 - [ ] Task 4: `OpenAiCompatibleAdapter` (SSE stream parse, cache-block prefix hashing, `UsageSnapshot` from final chunk, `GetModelsAsync`, `SupportsToolCalling`).

@@ -53,6 +53,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     public DbSet<ImageTag> ImageTags => Set<ImageTag>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
+    public DbSet<FeatureRoutingConfig> FeatureRoutingConfigs => Set<FeatureRoutingConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -492,6 +493,15 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                         UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     }
                 );
+            }
+        );
+
+        ConfigureEntity<FeatureRoutingConfig>(
+            modelBuilder,
+            "feature_routing_configs",
+            b =>
+            {
+                b.HasIndex(e => e.Feature).IsUnique();
             }
         );
 
