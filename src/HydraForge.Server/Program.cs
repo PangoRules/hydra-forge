@@ -261,6 +261,13 @@ builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProb
 
 builder.Services.AddRealtimeServices();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Global request body size limit: 1 MB for most endpoints
+    // Spec/plan content endpoints have their own validation (MarkdownPayloadTooLarge)
+    options.Limits.MaxRequestBodySize = 1_048_576; // 1 MB
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
