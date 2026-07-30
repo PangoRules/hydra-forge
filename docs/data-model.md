@@ -459,8 +459,19 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | Field | Type | Description |
 |---|---|---|
 | UserId | Guid | FK to User |
-| DailyLimit | int? | Token cap per day (null = unlimited) |
-| MonthlyLimit | int? | Token cap per month (null = unlimited) |
+| MonthlyTokenBudget | int? | Token cap per billing period (null = unlimited) |
+| MonthlyTokenUsed | int | Current period token spend |
+| MonthlyImageBudget | int? | Image generation cap per billing period (null = unlimited) |
+| MonthlyImageUsed | int | Current period image spend |
+| PeriodStart | DateTime | Start of the current billing period |
+| PeriodEnd | DateTime | End of the current billing period |
+
+### AdapterType
+
+| Value | Name |
+|---|---|
+| 6 | DallE |
+| 7 | StabilityAi |
 
 ### TokenUsageRecord
 
