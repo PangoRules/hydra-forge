@@ -177,9 +177,36 @@ if (argon2Options.Parallelism < 1)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // Trust the reverse proxy — in production, restrict to known proxy IPs
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
+
+    // ASP.NET Core's built-in default trusts only loopback proxies. Clearing KnownNetworks/
+    // KnownProxies unconditionally (as this used to do) makes the middleware trust
+    // X-Forwarded-For from ANY client — with docker-compose.yml publishing the server
+    // directly on 5000:8080 (bypassing the nginx service it also ships), that let an
+    // attacker set an arbitrary X-Forwarded-For per request and get a fresh rate-limit
+    // partition every time, defeating the per-IP Login/Global limiters entirely. Only widen
+    // trust when an operator explicitly configures their proxy's network range; otherwise
+    // keep the safe loopback-only default. Uses KnownIPNetworks (System.Net.IPNetwork), not
+    // the older KnownNetworks property, which is obsolete in this ASP.NET Core version.
+    var knownNetworksConfig = builder.Configuration["ForwardedHeaders:KnownNetworks"];
+    if (!string.IsNullOrWhiteSpace(knownNetworksConfig))
+    {
+        options.KnownIPNetworks.Clear();
+        foreach (
+            var cidr in knownNetworksConfig.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
+        {
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
+        }
+    }
+    // else: leave ASP.NET Core's default (loopback-only) KnownIPNetworks/KnownProxies in
+    // place. Operators deploying behind the nginx service in docker-compose.yml (or any
+    // other reverse proxy) must set ForwardedHeaders__KnownNetworks to that proxy's network
+    // range, or X-Forwarded-For is ignored and rate limiting/audit logging see the proxy's
+    // own IP for every request instead of the real client's — safe but suboptimal, not a
+    // security hole.
 });
 
 builder.Services.Configure<AdminSeederOptions>(builder.Configuration.GetSection("AdminSeed"));
