@@ -85,7 +85,7 @@ public class NtfyClientTests
         var client = new NtfyClient(
             http,
             Options.Create(new NtfyOptions()),
-            new FakeSettingsProvider("http://unreachable.invalid")
+            new FakeSettingsProvider("https://unreachable.invalid")
         );
 
         var exception = await Record.ExceptionAsync(() =>
