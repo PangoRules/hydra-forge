@@ -17,7 +17,14 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   const emailTaskTitle = 'Write launch announcement email'
 
   // ---- 1. Create project ----
-  await page.goto('/projects')
+  // waitUntil: 'networkidle' (not the default 'load') — the very first navigation in a
+  // fresh browser context races Nuxt's client-side hydration: 'load' fires once assets
+  // are fetched, but the app isn't interactive until initApp() finishes resolving its
+  // router/plugin chain a few hundred ms later. A click that lands in that gap is a real,
+  // trusted DOM click (no Playwright error) but reaches a component whose event handlers
+  // aren't wired up yet, so "New Project" silently does nothing. Every later navigation in
+  // this spec is client-side (no full reload), so this only needs to guard the first one.
+  await page.goto('/projects', { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: 'New Project' }).click()
 
   await page.getByPlaceholder('My Project').fill(projectName)
@@ -102,13 +109,13 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
 
   // ---- 6. "Write launch announcement email": checklist, attachments, dependency, column move ----
   await openCard(emailTaskTitle)
-  await desktop.getByRole('tab', { name: 'Checklist', exact: true }).click()
 
-  // CardChecklist.vue is mounted twice inside card-modal-desktop: once as the
-  // full "Checklist" tab body (.flex-1.pr-4), once as a visible-limit=4
-  // condensed copy in the sidebar. Scope to the tab body to avoid matching
-  // both live instances of the same aria-labels/placeholders.
-  const checklistTab = desktop.locator('.flex-1.pr-4')
+  // Checklist has no tab of its own on desktop — it's a single always-visible
+  // CardChecklist in the right-hand sidebar (:visible-limit="4"; only truncates
+  // the list past 4 items, doesn't hide add/toggle/delete/reorder). Scoping to
+  // the sidebar isn't strictly required now (only one CardChecklist renders on
+  // desktop) but keeps this resilient if a second copy is ever reintroduced.
+  const checklistTab = desktop.locator('.w-64.flex-shrink-0')
 
   async function addChecklistItem(text: string) {
     await checklistTab.getByPlaceholder('Add item...').fill(text)
@@ -160,13 +167,14 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
 
   // ---- 7. Parent/child visibility both directions ----
   await openCard(heroTaskTitle)
-  await expect(desktop.getByText(new RegExp(`— ${goalTitle}`))).toBeVisible()
+  // Both the Parent chip and Children chips render as "{Type} #{cardNumber}" only
+  // — no title. goalTitle is the first card created in this project, so it's #1.
+  await expect(desktop.getByText('Goal #1', { exact: true })).toBeVisible()
   await closeCard()
 
   await openCard(goalTitle)
-  // Children chips render as "{Type} #{cardNumber}" only — no title (unlike
-  // the Parent chip, which is "#{cardNumber} — {title}"). One child exists
-  // here, so matching the type+number is enough to prove the link is live.
+  // One child exists here, so matching the type+number is enough to prove the
+  // link is live.
   await expect(desktop.getByText(/Task #\d+/)).toBeVisible()
   await closeCard()
 
@@ -214,7 +222,9 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   // reproduces on plain `card-description-save.spec.ts`'s reload-based
   // test, so it's not something introduced here). Not part of what this
   // flow is meant to cover; worth its own investigation separately.
-  await page.getByRole('link', { name: 'HydraForge' }).click()
+  // Sidebar "Projects" link, not the "HydraForge" logo — the logo always goes
+  // to /chats (the app's home), it was never a "back to projects" shortcut.
+  await page.getByRole('link', { name: 'Projects', exact: true }).click()
   await expect(page).toHaveURL(/\/projects$/)
   await page.getByTestId('project-search-input').fill(projectName)
   const projectRow = page.getByRole('button', { name: new RegExp(projectName) })

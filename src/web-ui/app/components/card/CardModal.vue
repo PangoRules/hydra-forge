@@ -188,10 +188,18 @@ async function fetchCard() {
 
 // Same fetch, but for a background realtime refresh — doesn't touch loading/error,
 // so a remote edit updates the modal in place instead of flashing the spinner.
+//
+// Keeps the locally-held `version` even though everything else refreshes: `version`
+// is the optimistic-concurrency token every save action in this modal (description,
+// metadata, archive/restore) sends back. Silently adopting the server's newer version
+// here would make a save from this tab succeed as if it read the latest state, even
+// though the user never saw or acknowledged the change that happened elsewhere —
+// defeating the stale-save conflict check the save endpoints are meant to enforce.
+// Only an explicit reload (fetchCard, on mount/reopen) should advance it.
 async function refetchCardQuietly() {
   try {
     const { data } = await api.GET(ApiRoutes.Cards.detail(props.projectId, props.cardId))
-    if (data) card.value = data as CardResponse
+    if (data && card.value) card.value = { ...(data as CardResponse), version: card.value.version }
   } catch {
     // best-effort — the modal keeps showing its last-known-good state
   }
