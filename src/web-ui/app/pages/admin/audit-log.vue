@@ -41,7 +41,7 @@ const page = ref(1)
 const pageSize = 50
 
 const entityTypes = [
-  { label: 'All', value: '' },
+  { label: 'All', value: '__all__' },
   { label: 'Card', value: 'Card' },
   { label: 'Column', value: 'Column' },
   { label: 'Project', value: 'Project' },
@@ -53,7 +53,7 @@ const entityTypes = [
   { label: 'CardRelationship', value: 'CardRelationship' }
 ]
 const actions = [
-  { label: 'All', value: '' },
+  { label: 'All', value: '__all__' },
   { label: 'Created', value: 'Created' },
   { label: 'Updated', value: 'Updated' },
   { label: 'Deleted', value: 'Deleted' },
@@ -128,8 +128,8 @@ async function loadEntries() {
     if (filterActorId.value && isValidGuid(filterActorId.value)) {
       params.set('actorId', filterActorId.value)
     }
-    if (filterEntityType.value) params.set('entityType', filterEntityType.value)
-    if (filterAction.value) params.set('action', filterAction.value)
+    if (filterEntityType.value && filterEntityType.value !== '__all__') params.set('entityType', filterEntityType.value)
+    if (filterAction.value && filterAction.value !== '__all__') params.set('action', filterAction.value)
     if (filterFrom.value) params.set('from', new Date(filterFrom.value).toISOString())
     if (filterTo.value) params.set('to', new Date(filterTo.value).toISOString())
 
@@ -233,6 +233,7 @@ onMounted(() => loadEntries())
           color="neutral"
           variant="ghost"
           :label="expandedRow[row.original.id] ? 'Collapse' : 'Details'"
+          @click="row.toggleExpanded()"
         />
       </template>
       <template #expanded="{ row }">
