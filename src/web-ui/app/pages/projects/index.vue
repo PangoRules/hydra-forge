@@ -144,17 +144,17 @@ onMounted(() => fetchProjects())
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <div class="p-4 sm:p-6 lg:p-8 pb-0 w-full flex-1 flex flex-col">
-      <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 class="text-2xl font-bold">
-          Projects
-        </h1>
-        <UButton @click="showCreateModal = true">
-          New Project
-        </UButton>
-      </div>
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">
+        Projects
+      </h1>
+      <UButton @click="showCreateModal = true">
+        New Project
+      </UButton>
+    </div>
 
+    <div class="shrink-0 px-4 sm:px-6 lg:px-8">
       <ProjectFilterBar
         v-model:search="search"
         v-model:role="role"
@@ -163,21 +163,22 @@ onMounted(() => fetchProjects())
         v-model:show-archived="showArchived"
         class="mb-6"
       />
+    </div>
 
-      <div class="flex-1">
-        <ProjectListTable
-          :projects="projects"
-          :loading="loading"
-          :page="page"
-          :page-size="pageSize"
-          :total-count="totalCount"
-          @update:page="page = $event"
-          @update:page-size="pageSize = $event"
-          @select="onProjectSelect"
-          @toggle-archive="handleToggleArchive"
-          @edit="handleEditProject"
-        />
-      </div>
+    <div class="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+      <ProjectListTable
+        :projects="projects"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        fill-height
+        @update:page="page = $event"
+        @update:page-size="pageSize = $event"
+        @select="onProjectSelect"
+        @toggle-archive="handleToggleArchive"
+        @edit="handleEditProject"
+      />
     </div>
 
     <ProjectCreateModal

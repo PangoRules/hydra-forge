@@ -5,8 +5,9 @@ import { UiRoutes } from '~/lib/routes'
 
 const authStore = useAuthStore()
 const { collapsed } = useSidebarCollapse()
+const route = useRoute()
 
-const navGroups = computed(() => getNavGroups(authStore.user?.isAdmin ?? false))
+const navGroups = computed(() => getNavGroups(authStore.user?.isAdmin ?? false, route.path))
 </script>
 
 <template>

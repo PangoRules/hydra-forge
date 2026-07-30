@@ -12,6 +12,7 @@ defineProps<{
   page: number
   pageSize: number
   totalCount: number
+  fillHeight?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -53,6 +54,7 @@ function displayRole(role: number | string | null): string {
     :total-count="totalCount"
     :page-size-options="[5, 10, 15]"
     :row-key="(item: ProjectListResponse) => item.id"
+    :fill-height="fillHeight"
     selectable
     @update:page="emit('update:page', $event)"
     @update:page-size="emit('update:pageSize', $event)"

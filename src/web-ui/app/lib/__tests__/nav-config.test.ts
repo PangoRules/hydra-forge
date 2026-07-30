@@ -33,13 +33,17 @@ describe('nav-config', () => {
     expect(deepResearch.to).toBeUndefined()
   })
 
-  it('Admin group exposes Users, System Settings and Audit Log with real routes; Reports stays disabled', () => {
+  it('Admin group exposes Dashboard, Users, System Settings and Audit Log with real routes; Reports stays disabled', () => {
     const groups = getNavGroups(true)
     const admin = groups.find(g => g[0]!.label === 'Admin')!
+    const dashboard = admin.find(i => i.label === 'Dashboard')!
     const users = admin.find(i => i.label === 'Users')!
     const settings = admin.find(i => i.label === 'System Settings')!
     const auditLog = admin.find(i => i.label === 'Audit Log')!
     const reports = admin.find(i => i.label === 'Reports')!
+    expect(dashboard.to).toBe('/admin')
+    expect(dashboard.disabled).toBeUndefined()
+    expect(dashboard.icon).not.toBe(users.icon)
     expect(users.to).toBe('/admin/users')
     expect(users.disabled).toBeUndefined()
     expect(settings.to).toBe('/admin/settings')
@@ -47,5 +51,28 @@ describe('nav-config', () => {
     expect(auditLog.to).toBe('/admin/audit-log')
     expect(auditLog.disabled).toBeUndefined()
     expect(reports.disabled).toBe(true)
+  })
+
+  it('Dashboard and Projects icons do not collide', () => {
+    const groups = getNavGroups(true)
+    const workspace = groups.find(g => g[0]!.label === 'Workspace')!
+    const admin = groups.find(g => g[0]!.label === 'Admin')!
+    const projects = workspace.find(i => i.label === 'Projects')!
+    const dashboard = admin.find(i => i.label === 'Dashboard')!
+    expect(projects.icon).not.toBe(dashboard.icon)
+  })
+
+  it('Projects stays active while viewing a project board (sibling route, not nested)', () => {
+    const onBoard = getNavGroups(false, '/projects/abc-123/board')
+    const projectsOnBoard = onBoard[0]!.find(i => i.label === 'Projects')!
+    expect(projectsOnBoard.active).toBe(true)
+
+    const onList = getNavGroups(false, '/projects')
+    const projectsOnList = onList[0]!.find(i => i.label === 'Projects')!
+    expect(projectsOnList.active).toBe(true)
+
+    const elsewhere = getNavGroups(false, '/chats')
+    const projectsElsewhere = elsewhere[0]!.find(i => i.label === 'Projects')!
+    expect(projectsElsewhere.active).toBe(false)
   })
 })
