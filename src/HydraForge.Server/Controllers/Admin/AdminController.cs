@@ -52,7 +52,8 @@ public class AdminController(
         CancellationToken ct
     )
     {
-        var result = await adminService.CreateUserAsync(request, ct);
+        var actorId = User.GetRequiredUserId();
+        var result = await adminService.CreateUserAsync(actorId, request, ct);
         return result.IsFailure
             ? this.ToProblemResult(result.Error)
             : CreatedAtAction(nameof(GetUser), new { userId = result.Value.Id }, result.Value);
@@ -74,7 +75,8 @@ public class AdminController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EnableUser(Guid userId, CancellationToken ct)
     {
-        var result = await adminService.EnableUserAsync(userId, ct);
+        var actorId = User.GetRequiredUserId();
+        var result = await adminService.EnableUserAsync(actorId, userId, ct);
         return result.IsFailure ? this.ToProblemResult(result.Error) : NoContent();
     }
 
@@ -88,7 +90,13 @@ public class AdminController(
         CancellationToken ct
     )
     {
-        var result = await adminService.ResetPasswordAsync(userId, request.NewPassword, ct);
+        var actorId = User.GetRequiredUserId();
+        var result = await adminService.ResetPasswordAsync(
+            actorId,
+            userId,
+            request.NewPassword,
+            ct
+        );
         return result.IsFailure ? this.ToProblemResult(result.Error) : NoContent();
     }
 

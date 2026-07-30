@@ -1,3 +1,4 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -54,7 +55,13 @@ public class ProjectMemberServiceTests
     public async Task AddMemberAsync_OwnerAddsMember_Success()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var newMemberId = Guid.NewGuid();
@@ -81,7 +88,13 @@ public class ProjectMemberServiceTests
     public async Task AddMemberAsync_NonOwnerDenied_ReturnsOwnerRequired()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
@@ -116,7 +129,13 @@ public class ProjectMemberServiceTests
     public async Task AddMemberAsync_DuplicateMember_ReturnsDuplicateError()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var existingMemberId = Guid.NewGuid();
@@ -150,7 +169,13 @@ public class ProjectMemberServiceTests
     public async Task RemoveMemberAsync_LastOwnerDenied_ReturnsLastOwnerRemovalDenied()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
@@ -177,7 +202,13 @@ public class ProjectMemberServiceTests
     public async Task AddMemberAsync_AdminNonMember_Succeeds()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateAdminMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
         var newMemberId = Guid.NewGuid();
@@ -196,7 +227,13 @@ public class ProjectMemberServiceTests
     public async Task UpdateMemberAsync_AdminNonMember_Succeeds()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateAdminMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
@@ -223,7 +260,13 @@ public class ProjectMemberServiceTests
     public async Task RemoveMemberAsync_AdminNonMember_Succeeds()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateAdminMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
@@ -266,7 +309,13 @@ public class ProjectMemberServiceTests
     public async Task RemoveMemberAsync_NonAdminNonMember_Denies()
     {
         var (repo, memberRepo, userRepo, publisher) = CreateMocks();
-        var handler = new ProjectMemberService(repo, memberRepo, userRepo, publisher);
+        var handler = new ProjectMemberService(
+            repo,
+            memberRepo,
+            userRepo,
+            publisher,
+            new InMemoryAuditLogWriter()
+        );
         var projectId = Guid.NewGuid();
         var nonMemberId = Guid.NewGuid();
         var memberToRemoveId = Guid.NewGuid();

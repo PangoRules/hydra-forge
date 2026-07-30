@@ -1,5 +1,7 @@
 using HydraForge.Application.Admin;
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 
 namespace HydraForge.Application.Tests.Admin;
@@ -11,7 +13,7 @@ public class AdminServiceTests
     {
         var repo = new InMemoryAdminUserRepo();
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var request = new CreateUserRequest(
             "newuser",
             "Pass123!",
@@ -20,7 +22,7 @@ public class AdminServiceTests
             "new@test.com",
             false
         );
-        var result = await service.CreateUserAsync(request);
+        var result = await service.CreateUserAsync(Guid.NewGuid(), request);
         Assert.True(result.IsSuccess);
         Assert.Equal("newuser", result.Value.Username);
     }
@@ -31,7 +33,7 @@ public class AdminServiceTests
         var repo = new InMemoryAdminUserRepo();
         await repo.CreateAsync(User.Create("existing", "Existing", "User", "e@test.com", "hash"));
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var request = new CreateUserRequest(
             "existing",
             "Pass123!",
@@ -40,7 +42,7 @@ public class AdminServiceTests
             "new@test.com",
             false
         );
-        var result = await service.CreateUserAsync(request);
+        var result = await service.CreateUserAsync(Guid.NewGuid(), request);
         Assert.True(result.IsFailure);
         Assert.Equal("USERNAME_TAKEN", result.Error.Code);
     }
@@ -50,7 +52,7 @@ public class AdminServiceTests
     {
         var repo = new InMemoryAdminUserRepo();
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var result = await service.DisableUserAsync(Guid.NewGuid(), Guid.NewGuid());
         Assert.True(result.IsFailure);
         Assert.Equal("USER_NOT_FOUND", result.Error.Code);
@@ -63,7 +65,7 @@ public class AdminServiceTests
         var user = User.Create("admin", "Admin", "User", "a@test.com", "hash", isAdmin: true);
         await repo.CreateAsync(user);
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var result = await service.DisableUserAsync(user.Id, user.Id);
         Assert.True(result.IsFailure);
         Assert.Equal("SELF_DISABLE", result.Error.Code);
@@ -76,7 +78,7 @@ public class AdminServiceTests
         var user = User.Create("admin", "Admin", "User", "a@test.com", "hash", isAdmin: true);
         await repo.CreateAsync(user);
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var result = await service.ToggleAdminRoleAsync(user.Id, user.Id);
         Assert.True(result.IsFailure);
         Assert.Equal("ADMIN_SELF_DEMOTION", result.Error.Code);
@@ -89,7 +91,7 @@ public class AdminServiceTests
         await repo.CreateAsync(User.Create("alice", "A", "U", "a@test.com", "hash"));
         await repo.CreateAsync(User.Create("bob", "B", "U", "b@test.com", "hash"));
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var result = await service.ListUsersAsync(0, 10, null);
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.TotalCount);
@@ -102,7 +104,7 @@ public class AdminServiceTests
         var admin = User.Create("admin", "Admin", "User", "a@test.com", "hash", isAdmin: true);
         await repo.CreateAsync(admin);
         var hasher = new TestPasswordHasher();
-        var service = new AdminService(repo, hasher);
+        var service = new AdminService(repo, hasher, new InMemoryAuditLogWriter());
         var actorId = Guid.NewGuid();
         var result = await service.DisableUserAsync(actorId, admin.Id);
         Assert.True(result.IsFailure);
@@ -196,4 +198,15 @@ internal class TestPasswordHasher : IPasswordHasher
     public string HashPassword(string password) => "hashed:" + password;
 
     public bool VerifyPassword(string password, string hash) => hash == "hashed:" + password;
+}
+
+internal class InMemoryAuditLogWriter : IAuditLogWriter
+{
+    public List<AuditLogRequest> Writes { get; } = [];
+
+    public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
 }

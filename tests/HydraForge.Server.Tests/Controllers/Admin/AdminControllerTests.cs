@@ -236,6 +236,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddScoped<IUserRepository>(_ => new TestAdminUserRepository(_users));
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
+            services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ISettingsRepository>(_ => _settingsRepo);
             services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(

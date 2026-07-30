@@ -1,11 +1,50 @@
+using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Admin;
 
-public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHasher) : IAdminService
+public class AdminService(
+    IUserRepository userRepo,
+    IPasswordHasher passwordHasher,
+    IAuditLogWriter auditLogWriter
+) : IAdminService
 {
+    private sealed record UserAuditSnapshot(
+        string Username,
+        string Name,
+        string Email,
+        bool IsAdmin,
+        bool IsDisabled
+    );
+
+    private static UserAuditSnapshot BuildSnapshot(User user) =>
+        new(user.Username, user.Name, user.Email, user.IsAdmin, user.IsDisabled);
+
+    private Task<Result> WriteAuditAsync(
+        Guid actorId,
+        Guid userId,
+        string action,
+        string? oldValueJson,
+        string? newValueJson,
+        CancellationToken ct
+    ) =>
+        auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                actorId,
+                AuditLogScope.System,
+                "User",
+                userId,
+                action,
+                null,
+                oldValueJson,
+                newValueJson
+            ),
+            ct
+        );
+
     public async Task<Result<UserListPageDto>> ListUsersAsync(
         int skip,
         int take,
@@ -31,6 +70,7 @@ public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHash
     }
 
     public async Task<Result<UserDto>> CreateUserAsync(
+        Guid actorId,
         CreateUserRequest request,
         CancellationToken ct = default
     )
@@ -56,6 +96,14 @@ public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHash
         );
 
         await userRepo.CreateAsync(user, ct);
+        await WriteAuditAsync(
+            actorId,
+            user.Id,
+            "Created",
+            null,
+            AuditSnapshot.Serialize(BuildSnapshot(user)),
+            ct
+        );
         return Result<UserDto>.Success(MapToDto(user));
     }
 
@@ -80,22 +128,45 @@ public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHash
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(user);
         user.Disable();
         await userRepo.UpdateAsync(user, ct);
+        await WriteAuditAsync(
+            actorId,
+            user.Id,
+            "Disabled",
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(user)),
+            ct
+        );
         return Result.Success();
     }
 
-    public async Task<Result> EnableUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<Result> EnableUserAsync(
+        Guid actorId,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         var user = await userRepo.FindByIdAsync(userId, ct);
         if (user == null)
             return Result.Failure(new Error("USER_NOT_FOUND", "User not found."));
+        var oldSnapshot = BuildSnapshot(user);
         user.Enable();
         await userRepo.UpdateAsync(user, ct);
+        await WriteAuditAsync(
+            actorId,
+            user.Id,
+            "Enabled",
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(user)),
+            ct
+        );
         return Result.Success();
     }
 
     public async Task<Result> ResetPasswordAsync(
+        Guid actorId,
         Guid userId,
         string newPassword,
         CancellationToken ct = default
@@ -106,6 +177,16 @@ public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHash
             return Result.Failure(new Error("USER_NOT_FOUND", "User not found."));
         user.SetPasswordHash(passwordHasher.HashPassword(newPassword));
         await userRepo.UpdateAsync(user, ct);
+        // Password hash is never included in the snapshot — the audit entry records
+        // that a reset happened and by whom, not the secret value.
+        await WriteAuditAsync(
+            actorId,
+            user.Id,
+            "PasswordReset",
+            null,
+            AuditSnapshot.Serialize(new { ResetAt = DateTime.UtcNow }),
+            ct
+        );
         return Result.Success();
     }
 
@@ -123,8 +204,17 @@ public class AdminService(IUserRepository userRepo, IPasswordHasher passwordHash
         var user = await userRepo.FindByIdAsync(targetUserId, ct);
         if (user == null)
             return Result.Failure(new Error("USER_NOT_FOUND", "User not found."));
+        var oldSnapshot = BuildSnapshot(user);
         user.SetAdminRole(!user.IsAdmin);
         await userRepo.UpdateAsync(user, ct);
+        await WriteAuditAsync(
+            actorId,
+            user.Id,
+            "RoleChanged",
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(user)),
+            ct
+        );
         return Result.Success();
     }
 

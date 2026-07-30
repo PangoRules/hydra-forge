@@ -27,6 +27,21 @@ public class CardRelationshipService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
+    private sealed record CardRelationshipAuditSnapshot(
+        Guid SourceCardId,
+        Guid TargetCardId,
+        RelationshipType Type,
+        DateTime? ArchivedAt
+    );
+
+    private static CardRelationshipAuditSnapshot BuildSnapshot(CardRelationship relationship) =>
+        new(
+            relationship.SourceCardId,
+            relationship.TargetCardId,
+            relationship.Type,
+            relationship.ArchivedAt
+        );
+
     public async Task<Result<CardRelationshipListResponse>> ListAsync(
         Guid projectId,
         Guid cardId,
@@ -172,7 +187,7 @@ public class CardRelationshipService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(relationship))
             ),
             ct
         );
@@ -227,6 +242,9 @@ public class CardRelationshipService(
                 new Error(DomainErrorCodes.Cards.NotFound, "Source card not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(relationship);
+        var archivedAt = DateTime.UtcNow;
+
         await _relationshipRepo.ArchiveAsync(cmd.RelationshipId, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
@@ -238,8 +256,8 @@ public class CardRelationshipService(
                 relationship.Id,
                 "Deleted",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(oldSnapshot with { ArchivedAt = archivedAt })
             ),
             ct
         );
@@ -346,6 +364,7 @@ public class CardRelationshipService(
             );
 
         var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        DateTime? oldArchivedAt = card?.ArchivedAt;
         if (card != null)
         {
             card.Archive();
@@ -366,8 +385,10 @@ public class CardRelationshipService(
                 cmd.CardId,
                 "ArchivedWithRelationships",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(new { ArchivedAt = oldArchivedAt }),
+                AuditSnapshot.Serialize(
+                    new { card?.ArchivedAt, RelationshipsArchived = relationshipIds.Count }
+                )
             ),
             ct
         );

@@ -16,6 +16,7 @@ public record AuditLogQueryResult(IReadOnlyList<AuditLogEntryDto> Items, int Tot
 public record AuditLogEntryDto(
     Guid Id,
     Guid? ProjectId,
+    string? ProjectName,
     Guid ActorId,
     string ActorName,
     string EntityType,

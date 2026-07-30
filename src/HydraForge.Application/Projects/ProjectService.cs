@@ -31,6 +31,23 @@ public class ProjectService(
     private readonly INotificationService _notifService = notifService;
     private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
+    private sealed record ProjectAuditSnapshot(
+        string Name,
+        string? Description,
+        string? GitRemoteUrl,
+        string? GitProvider,
+        DateTime? ArchivedAt
+    );
+
+    private static ProjectAuditSnapshot BuildSnapshot(Project project) =>
+        new(
+            project.Name,
+            project.Description,
+            project.GitRemoteUrl,
+            project.GitProvider,
+            project.ArchivedAt
+        );
+
     public async Task<Result<ProjectDto>> CreateAsync(
         CreateProjectCommand cmd,
         CancellationToken ct = default
@@ -108,7 +125,7 @@ public class ProjectService(
                 "Created",
                 project.Id,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(project))
             ),
             ct
         );
@@ -309,6 +326,7 @@ public class ProjectService(
                 new Error(DomainErrorCodes.Projects.OwnerRequired, "Owner or Member role required.")
             );
 
+        var oldSnapshot = BuildSnapshot(project);
         project.UpdateDetails(cmd.Name, cmd.Description, cmd.GitRemoteUrl, cmd.GitProvider);
 
         await projectRepo.UpdateAsync(project, ct);
@@ -335,8 +353,8 @@ public class ProjectService(
                 project.Id,
                 "Updated",
                 project.Id,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(project))
             ),
             ct
         );
@@ -409,6 +427,7 @@ public class ProjectService(
             );
 
         bool isArchiving = project.ArchivedAt == null;
+        var oldSnapshot = BuildSnapshot(project);
         if (isArchiving)
         {
             project.Archive();
@@ -443,8 +462,8 @@ public class ProjectService(
                 project.Id,
                 isArchiving ? "Archived" : "Restored",
                 project.Id,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(project))
             ),
             ct
         );

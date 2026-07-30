@@ -11,15 +11,26 @@ const props = withDefaults(defineProps<{
   pageSizeOptions?: number[]
   rowKey: (item: T) => string
   selectable?: boolean
+  expanded?: Record<string, boolean>
+  /**
+   * Opt-in: fill the parent's height and scroll rows internally instead of
+   * letting the page scroll. Only meaningful when an ancestor actually
+   * clamps height (e.g. a `flex-1 ... min-h-0` dashboard layout) — on a
+   * normal page that just grows with content, leave this off (default).
+   */
+  fillHeight?: boolean
 }>(), {
   pageSizeOptions: () => [10, 20, 50],
-  selectable: false
+  selectable: false,
+  expanded: undefined,
+  fillHeight: false
 })
 
 const emit = defineEmits<{
   'update:page': [number]
   'update:pageSize': [number]
   'select': [T]
+  'update:expanded': [Record<string, boolean>]
 }>()
 
 const rangeStart = computed(() => props.totalCount === 0 ? 0 : (props.page - 1) * props.pageSize + 1)
@@ -28,9 +39,10 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
 </script>
 
 <template>
-  <div>
+  <div :class="fillHeight ? 'h-full flex flex-col min-h-0' : ''">
     <div
       v-if="loading && data.length === 0"
+      :class="fillHeight ? 'flex-1' : ''"
       class="flex justify-center items-center p-8 min-h-50"
     >
       <UIcon
@@ -41,48 +53,56 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
 
     <div
       v-else-if="isEmpty"
+      :class="fillHeight ? 'flex-1' : ''"
       class="text-center p-8 text-muted min-h-50 flex items-center justify-center"
     >
       <p>No results found.</p>
     </div>
 
     <template v-else>
-      <UTable
-        :data="data"
-        :columns="columns"
-        :loading="loading"
-        class="w-full"
-        :class="$slots.card ? 'hidden md:block' : ''"
-        :meta="{ class: { tr: selectable ? 'cursor-pointer' : '' } }"
-        @select="(_e, row) => emit('select', row.original)"
-      >
-        <template
-          v-for="(_, name) in $slots"
-          #[name]="slotProps"
+      <div :class="fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : ''">
+        <UTable
+          :data="data"
+          :columns="columns"
+          :loading="loading"
+          :get-row-id="rowKey"
+          :expanded="expanded"
+          :sticky="fillHeight ? 'header' : undefined"
+          class="w-full"
+          :class="$slots.card ? 'hidden md:block' : ''"
+          :meta="{ class: { tr: selectable ? 'cursor-pointer' : '' } }"
+          @select="(_e, row) => emit('select', row.original)"
+          @update:expanded="emit('update:expanded', $event)"
+        >
+          <template
+            v-for="(_, name) in $slots"
+            #[name]="slotProps"
+          >
+            <slot
+              v-if="name !== 'card'"
+              :name="name"
+              v-bind="slotProps"
+            />
+          </template>
+        </UTable>
+
+        <div
+          v-if="$slots.card"
+          class="md:hidden grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           <slot
-            v-if="name !== 'card'"
-            :name="name"
-            v-bind="slotProps"
+            v-for="item in data"
+            :key="rowKey(item)"
+            name="card"
+            :item="item"
           />
-        </template>
-      </UTable>
-
-      <div
-        v-if="$slots.card"
-        class="md:hidden grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      >
-        <slot
-          v-for="item in data"
-          :key="rowKey(item)"
-          name="card"
-          :item="item"
-        />
+        </div>
       </div>
     </template>
 
     <div
       v-if="totalCount > 0"
+      :class="fillHeight ? 'shrink-0' : ''"
       class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
     >
       <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">

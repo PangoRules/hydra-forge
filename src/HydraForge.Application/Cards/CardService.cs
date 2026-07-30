@@ -39,6 +39,31 @@ public class CardService(
     private readonly INotificationService _notifService = notifService;
     private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
+    private sealed record CardAuditSnapshot(
+        Guid ColumnId,
+        Guid? ParentCardId,
+        string Title,
+        string? Description,
+        CardType Type,
+        int Position,
+        DateTime? DueAt,
+        DateTime? ArchivedAt
+    );
+
+    private sealed record CardAssigneeAuditSnapshot(Guid UserId, string Username);
+
+    private static CardAuditSnapshot BuildSnapshot(Card card) =>
+        new(
+            card.ColumnId,
+            card.ParentCardId,
+            card.Title,
+            card.Description,
+            card.Type,
+            card.Position,
+            card.DueAt,
+            card.ArchivedAt
+        );
+
     public async Task<Result<CardDto>> CreateAsync(
         CreateCardCommand cmd,
         CancellationToken ct = default
@@ -123,7 +148,7 @@ public class CardService(
                         "Created",
                         cmd.ProjectId,
                         null,
-                        null
+                        AuditSnapshot.Serialize(BuildSnapshot(card))
                     ),
                     ct
                 );
@@ -472,6 +497,7 @@ public class CardService(
                 return Result<CardDto>.Failure(parentError);
         }
 
+        var oldSnapshot = BuildSnapshot(card);
         card.UpdateDetails(cmd.Title, cmd.Description, cmd.Type, cmd.ParentCardId, cmd.DueAt);
 
         await _cardRepo.UpdateAsync(card, ct);
@@ -485,8 +511,8 @@ public class CardService(
                 card.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(card))
             ),
             ct
         );
@@ -649,6 +675,7 @@ public class CardService(
 
         var oldColumnId = card.ColumnId;
         var oldPosition = card.Position;
+        var oldSnapshot = BuildSnapshot(card);
 
         var toUpdate = new List<Card>();
 
@@ -724,8 +751,8 @@ public class CardService(
                 card.Id,
                 "Moved",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(card))
             ),
             ct
         );
@@ -841,7 +868,9 @@ public class CardService(
                 "Assigned",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(
+                    new CardAssigneeAuditSnapshot(assigneeUser.Id, assigneeUser.Username)
+                )
             ),
             ct
         );
@@ -908,6 +937,8 @@ public class CardService(
                 new Error(DomainErrorCodes.Cards.InvalidAssignee, "Assignee not found.")
             );
 
+        var removedUser = await _userRepo.FindByIdAsync(cmd.AssigneeUserId, ct);
+
         await _assigneeRepo.RemoveAsync(cmd.CardId, cmd.AssigneeUserId, ct);
 
         await _auditLogWriter.WriteAsync(
@@ -918,7 +949,12 @@ public class CardService(
                 card.Id,
                 "Unassigned",
                 cmd.ProjectId,
-                null,
+                AuditSnapshot.Serialize(
+                    new CardAssigneeAuditSnapshot(
+                        cmd.AssigneeUserId,
+                        removedUser?.Username ?? "(deleted)"
+                    )
+                ),
                 null
             ),
             ct
@@ -966,6 +1002,7 @@ public class CardService(
 
         var oldPosition = card.Position;
         var oldColumnId = card.ColumnId;
+        var oldSnapshot = BuildSnapshot(card);
 
         card.Archive();
 
@@ -985,8 +1022,8 @@ public class CardService(
                 card.Id,
                 "Archived",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(card))
             ),
             ct
         );
@@ -1031,6 +1068,7 @@ public class CardService(
             );
 
         var maxPosition = await _cardRepo.CountByColumnIdAsync(card.ColumnId, ct);
+        var oldSnapshot = BuildSnapshot(card);
 
         card.Restore();
         card.Position = maxPosition + 1;
@@ -1046,8 +1084,8 @@ public class CardService(
                 card.Id,
                 "Restored",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(card))
             ),
             ct
         );
@@ -1078,6 +1116,7 @@ public class CardService(
 
         var oldPosition = card.Position;
         var oldColumnId = card.ColumnId;
+        var oldSnapshot = BuildSnapshot(card);
 
         await _cardRepo.DeleteAsync(cmd.CardId, ct);
         await _cardRepo.CompactColumnPositionsAsync(oldColumnId, oldPosition, ct);
@@ -1091,7 +1130,7 @@ public class CardService(
                 card.Id,
                 "Deleted",
                 cmd.ProjectId,
-                null,
+                AuditSnapshot.Serialize(oldSnapshot),
                 null
             ),
             ct
