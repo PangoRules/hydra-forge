@@ -41,6 +41,10 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("Environment", "Test");
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+        builder.UseSetting(
+            "Jwt:SigningKey",
+            "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
+        );
         builder.ConfigureServices(services =>
         {
             // Remove existing IHealthProbe registrations (singleton GetHealthHandler already constructed with them)

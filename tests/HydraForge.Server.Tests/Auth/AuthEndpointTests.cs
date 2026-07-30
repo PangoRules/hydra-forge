@@ -68,6 +68,10 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
     {
         builder.UseSetting("Environment", "Test");
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+        builder.UseSetting(
+            "Jwt:SigningKey",
+            "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
+        );
         builder.ConfigureServices(services =>
         {
             foreach (
