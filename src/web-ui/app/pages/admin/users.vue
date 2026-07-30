@@ -110,130 +110,134 @@ onMounted(() => loadUsers())
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl font-bold">
-        Users
-      </h1>
-      <UButton
-        label="Create User"
-        @click="showCreateModal = true"
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="shrink-0 px-6 pt-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">
+          Users
+        </h1>
+        <UButton
+          label="Create User"
+          @click="showCreateModal = true"
+        />
+      </div>
+
+      <UInput
+        v-model="search"
+        placeholder="Search users..."
       />
     </div>
 
-    <UInput
-      v-model="search"
-      placeholder="Search users..."
-      class="mb-4"
-    />
-
-    <DataTable
-      :data="users"
-      :columns="columns"
-      :loading="loading"
-      :page="page"
-      :page-size="pageSize"
-      :total-count="totalCount"
-      :row-key="(item: UserRow) => item.id"
-      @update:page="page = $event"
-      @update:page-size="pageSize = $event"
-    >
-      <template #isDisabled-cell="{ row }">
-        <UBadge :color="row.original.isDisabled ? 'error' : 'success'">
-          {{ row.original.isDisabled ? 'Disabled' : 'Active' }}
-        </UBadge>
-      </template>
-      <template #isAdmin-cell="{ row }">
-        <UBadge
-          v-if="row.original.isAdmin"
-          color="info"
-        >
-          Admin
-        </UBadge>
-        <span
-          v-else
-          class="text-gray-400"
-        >—</span>
-      </template>
-      <template #actions-cell="{ row }">
-        <div class="flex gap-1">
-          <UButton
-            size="xs"
-            color="neutral"
-            @click="toggleDisable(row.original.id, row.original.isDisabled)"
-          >
-            {{ row.original.isDisabled ? 'Enable' : 'Disable' }}
-          </UButton>
-          <UButton
-            size="xs"
-            color="neutral"
-            @click="toggleAdmin(row.original.id)"
-          >
-            {{ row.original.isAdmin ? 'Remove Admin' : 'Make Admin' }}
-          </UButton>
-          <UButton
-            size="xs"
-            color="neutral"
-            @click="openResetPassword(row.original.id)"
-          >
-            Reset Password
-          </UButton>
-        </div>
-      </template>
-
-      <template #card="{ item }">
-        <UCard>
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <div class="min-w-0">
-              <p class="font-medium truncate">
-                {{ item.username }}
-              </p>
-              <p class="text-xs text-muted truncate">
-                {{ item.name }}
-              </p>
-            </div>
-            <UBadge
-              v-if="item.isAdmin"
-              color="info"
-            >
-              Admin
-            </UBadge>
-          </div>
-          <p class="text-sm text-muted truncate mb-2">
-            {{ item.email }}
-          </p>
-          <UBadge
-            :color="item.isDisabled ? 'error' : 'success'"
-            class="mb-3"
-          >
-            {{ item.isDisabled ? 'Disabled' : 'Active' }}
+    <div class="flex-1 min-h-0 px-6 pb-6 pt-4">
+      <DataTable
+        :data="users"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        :row-key="(item: UserRow) => item.id"
+        fill-height
+        @update:page="page = $event"
+        @update:page-size="pageSize = $event"
+      >
+        <template #isDisabled-cell="{ row }">
+          <UBadge :color="row.original.isDisabled ? 'error' : 'success'">
+            {{ row.original.isDisabled ? 'Disabled' : 'Active' }}
           </UBadge>
-          <div class="flex flex-wrap gap-1">
+        </template>
+        <template #isAdmin-cell="{ row }">
+          <UBadge
+            v-if="row.original.isAdmin"
+            color="info"
+          >
+            Admin
+          </UBadge>
+          <span
+            v-else
+            class="text-gray-400"
+          >—</span>
+        </template>
+        <template #actions-cell="{ row }">
+          <div class="flex gap-1">
             <UButton
               size="xs"
               color="neutral"
-              @click="toggleDisable(item.id, item.isDisabled)"
+              @click="toggleDisable(row.original.id, row.original.isDisabled)"
             >
-              {{ item.isDisabled ? 'Enable' : 'Disable' }}
+              {{ row.original.isDisabled ? 'Enable' : 'Disable' }}
             </UButton>
             <UButton
               size="xs"
               color="neutral"
-              @click="toggleAdmin(item.id)"
+              @click="toggleAdmin(row.original.id)"
             >
-              {{ item.isAdmin ? 'Remove Admin' : 'Make Admin' }}
+              {{ row.original.isAdmin ? 'Remove Admin' : 'Make Admin' }}
             </UButton>
             <UButton
               size="xs"
               color="neutral"
-              @click="openResetPassword(item.id)"
+              @click="openResetPassword(row.original.id)"
             >
               Reset Password
             </UButton>
           </div>
-        </UCard>
-      </template>
-    </DataTable>
+        </template>
+
+        <template #card="{ item }">
+          <UCard>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="min-w-0">
+                <p class="font-medium truncate">
+                  {{ item.username }}
+                </p>
+                <p class="text-xs text-muted truncate">
+                  {{ item.name }}
+                </p>
+              </div>
+              <UBadge
+                v-if="item.isAdmin"
+                color="info"
+              >
+                Admin
+              </UBadge>
+            </div>
+            <p class="text-sm text-muted truncate mb-2">
+              {{ item.email }}
+            </p>
+            <UBadge
+              :color="item.isDisabled ? 'error' : 'success'"
+              class="mb-3"
+            >
+              {{ item.isDisabled ? 'Disabled' : 'Active' }}
+            </UBadge>
+            <div class="flex flex-wrap gap-1">
+              <UButton
+                size="xs"
+                color="neutral"
+                @click="toggleDisable(item.id, item.isDisabled)"
+              >
+                {{ item.isDisabled ? 'Enable' : 'Disable' }}
+              </UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                @click="toggleAdmin(item.id)"
+              >
+                {{ item.isAdmin ? 'Remove Admin' : 'Make Admin' }}
+              </UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                @click="openResetPassword(item.id)"
+              >
+                Reset Password
+              </UButton>
+            </div>
+          </UCard>
+        </template>
+      </DataTable>
+    </div>
 
     <UserCreateModal
       v-model:open="showCreateModal"
