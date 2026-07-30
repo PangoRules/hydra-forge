@@ -26,6 +26,27 @@ public class NtfyClient(
         if (string.IsNullOrWhiteSpace(settings.NtfyServerUrl))
             return;
 
+        // Validate URL scheme
+        if (!Uri.TryCreate(settings.NtfyServerUrl, UriKind.Absolute, out var serverUri))
+        {
+            return;
+        }
+
+        if (serverUri.Scheme != "https" && serverUri.Scheme != "http")
+        {
+            return;
+        }
+
+        // In production, require HTTPS (allow http://localhost for dev)
+        if (
+            serverUri.Scheme == "http"
+            && serverUri.Host != "localhost"
+            && serverUri.Host != "127.0.0.1"
+        )
+        {
+            return;
+        }
+
         var topic = $"hydraforge-{userId}";
         var url = $"{settings.NtfyServerUrl.TrimEnd('/')}/{topic}";
 

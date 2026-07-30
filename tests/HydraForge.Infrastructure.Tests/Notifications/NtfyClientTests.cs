@@ -104,14 +104,14 @@ public class NtfyClientTests
         var client = new NtfyClient(
             http,
             Options.Create(new NtfyOptions()),
-            new FakeSettingsProvider("http://ntfy.local")
+            new FakeSettingsProvider("https://ntfy.example.com")
         );
 
         await client.PublishAsync(userId, "Title", "Body");
 
         Assert.Equal(1, handler.CallCount);
         Assert.Equal(
-            $"http://ntfy.local/hydraforge-{userId}",
+            $"https://ntfy.example.com/hydraforge-{userId}",
             handler.LastRequest!.RequestUri!.ToString()
         );
     }
@@ -133,7 +133,7 @@ public class NtfyClientTests
     [Fact]
     public async Task PublishAsync_UrlChangeBetweenCalls_DoesNotThrow()
     {
-        var countingProvider = new CountingFakeSettingsProvider("http://ntfy.local");
+        var countingProvider = new CountingFakeSettingsProvider("https://ntfy.example.com");
         var handler = new RecordingHandler();
         var http = new HttpClient(handler);
         var client = new NtfyClient(http, Options.Create(new NtfyOptions()), countingProvider);
@@ -148,5 +148,101 @@ public class NtfyClientTests
         Assert.Null(exception);
         Assert.Equal(2, countingProvider.CallCount);
         Assert.Equal(1, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithHttpsUrl_MakesHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("https://ntfy.example.com")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(1, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithHttpLocalhostUrl_MakesHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("http://localhost:8080")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(1, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithHttp127001Url_MakesHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("http://127.0.0.1:8080")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(1, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithHttpRemoteHostUrl_MakesNoHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("http://ntfy.example.com")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(0, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithMalformedUrl_MakesNoHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("not a valid url at all")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(0, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithUnsupportedScheme_MakesNoHttpCall()
+    {
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var client = new NtfyClient(
+            http,
+            Options.Create(new NtfyOptions()),
+            new FakeSettingsProvider("ftp://ntfy.example.com")
+        );
+
+        await client.PublishAsync(Guid.NewGuid(), "Title", "Body");
+
+        Assert.Equal(0, handler.CallCount);
     }
 }
