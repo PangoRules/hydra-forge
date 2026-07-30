@@ -145,6 +145,52 @@ public class AdminControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetAuditLog_Unauthenticated_Returns401()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var response = await client.GetAsync("/api/admin/audit-log");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAuditLog_NonAdmin_Returns403()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/audit-log");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAuditLog_Admin_ReturnsOkWithResult()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/admin/audit-log?entityType=Card&take=1000");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<AuditLogQueryResultResponse>();
+        Assert.NotNull(json);
+        Assert.Equal("Card", TestAuditLogReader.LastQuery?.EntityType);
+        Assert.Equal(500, TestAuditLogReader.LastQuery?.Take);
+    }
+
+    private record AuditLogQueryResultResponse(object[] Items, int TotalCount);
+
     private record SettingsResponse(
         int ArchivedItemRetentionDays,
         int AuditLogRetentionDays,
@@ -345,6 +391,11 @@ internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsP
 
 internal class TestAuditLogReader : IAuditLogReader
 {
-    public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default) =>
-        Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
+    public static AuditLogQuery? LastQuery { get; private set; }
+
+    public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default)
+    {
+        LastQuery = query;
+        return Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
+    }
 }
