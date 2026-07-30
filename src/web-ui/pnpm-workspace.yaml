@@ -3,3 +3,8 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
   vue-demi: true
+
+overrides:
+  js-yaml@<4.3.0: '>=4.3.0'
+  brace-expansion@<5.0.8: '>=5.0.8'
+  esbuild@<0.28.1: '>=0.28.1'
