@@ -20,7 +20,10 @@ const props = defineProps<{
   cardId: string
   projectId: string
   readonly?: boolean
+  refreshKey?: number
 }>()
+
+watch(() => props.refreshKey, fetchRelationships)
 
 const relationships = ref<CardRelationshipDto[]>([])
 const loading = ref(true)

@@ -4,7 +4,17 @@
   "tools": {
     "nswag.consolecore": {
       "version": "14.7.1",
-      "commands": ["nswag"]
+      "commands": [
+        "nswag"
+      ],
+      "rollForward": false
+    },
+    "csharpier": {
+      "version": "1.2.6",
+      "commands": [
+        "csharpier"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -15,20 +15,114 @@ public class CommentServiceTests
 {
     private static Guid NewId() => Guid.NewGuid();
 
+    private sealed class FakeUserRepoForAdmin : IUserRepository
+    {
+        public List<User> Users { get; } = [];
+
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, User>>(
+                Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id)
+            );
+
+        public Task<User?> FindByUsernameAsync(string username) =>
+            Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
+
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+            IReadOnlyList<string> usernames,
+            string? searchTerm = null,
+            int maxResults = 10,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<string, User>>(
+                Users
+                    .Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase))
+                    .ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase)
+            );
+
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
+        public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(true);
+
+        public Task CreateAsync(User user, CancellationToken ct = default)
+        {
+            Users.Add(user);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<User>> ListAsync(
+            int skip,
+            int take,
+            string? search,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     [Fact]
     public async Task CreateAsync_CreatesComment_AuthorAutoAddedAsWatcher()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Hello world")
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Hello world", result.Value.Content);
@@ -45,20 +139,65 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_WithMention_ExtractsMentionedUser()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var mentionedId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "alice", Email = "b@b.com", PasswordHash = "x" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = mentionedId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("alice", "Test", "User", "b@b.com", "x", id: mentionedId));
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @alice check this"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Hey @alice check this")
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Contains(mentionedId, result.Value.MentionedUserIds);
@@ -67,20 +206,67 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_MentionDisabledUser_IgnoresMention()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var disabledId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = disabledId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = disabledId, Username = "ghost", Email = "g@g.com", PasswordHash = "x", IsDisabled = true });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = disabledId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        var ghostUser = User.Create("ghost", "Test", "User", "g@g.com", "x", id: disabledId);
+        ghostUser.Disable();
+        userRepo.Users.Add(ghostUser);
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @ghost are you there?"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Hey @ghost are you there?")
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.MentionedUserIds);
@@ -89,19 +275,59 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_MentionNonMember_IgnoresMention()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var nonMemberId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = nonMemberId, Username = "outsider", Email = "o@o.com", PasswordHash = "x" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(
+            User.Create("outsider", "Test", "User", "o@o.com", "x", id: nonMemberId)
+        );
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hey @outsider"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Hey @outsider")
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.MentionedUserIds);
@@ -110,18 +336,56 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_AlreadyWatching_DoesNotDuplicateWatcher()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
         watcherRepo.Watchers.Add(new CardWatcher { CardId = cardId, UserId = actorId });
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Second comment"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Second comment")
+        );
 
         Assert.True(result.IsSuccess);
         var watchers = await watcherRepo.ListByCardAsync(cardId);
@@ -131,13 +395,35 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var nonMemberId = NewId();
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, nonMemberId, "Hello"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, nonMemberId, "Hello")
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
@@ -146,22 +432,75 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_UpdatesContent_ReExtractsMentions()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
         var mentionedId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "bob", Email = "b@b.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = mentionedId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("bob", "Test", "User", "b@b.com", "x", id: mentionedId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "Old",
+            }
+        );
 
-        var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated @bob"));
+        var result = await service.UpdateAsync(
+            new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated @bob")
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Updated @bob", result.Value.Content);
@@ -171,19 +510,66 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_ArchivedComment_ReturnsArchived()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old", ArchivedAt = DateTime.UtcNow });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "Old",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
 
-        var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "New"));
+        var result = await service.UpdateAsync(
+            new UpdateCommentCommand(projectId, cardId, commentId, actorId, "New")
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Comments.Archived, result.Error.Code);
@@ -192,19 +578,65 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_SetsArchivedAt()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "To archive" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "To archive",
+            }
+        );
 
-        var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
+        var result = await service.ArchiveAsync(
+            new ArchiveCommentCommand(projectId, cardId, commentId, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value.ArchivedAt);
@@ -213,19 +645,66 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_AlreadyArchived_ReturnsArchived()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Already gone", ArchivedAt = DateTime.UtcNow });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "Already gone",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
 
-        var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
+        var result = await service.ArchiveAsync(
+            new ArchiveCommentCommand(projectId, cardId, commentId, actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Comments.Archived, result.Error.Code);
@@ -234,19 +713,70 @@ public class CommentServiceTests
     [Fact]
     public async Task ListAsync_ReturnsCommentsWithMentions()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var mentionedId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = mentionedId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        userRepo.Users.Add(new User { Id = mentionedId, Username = "alice", Email = "b@b.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = NewId(), CardId = cardId, AuthorId = actorId, Content = "Hi @alice" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = mentionedId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        userRepo.Users.Add(User.Create("alice", "Test", "User", "b@b.com", "x", id: mentionedId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = NewId(),
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "Hi @alice",
+            }
+        );
 
         var result = await service.ListAsync(projectId, cardId, actorId);
 
@@ -260,17 +790,55 @@ public class CommentServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
 
-        var result = await service.CreateAsync(new CreateCommentCommand(projectId, cardId, actorId, "Hello world"));
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, actorId, "Hello world")
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -285,19 +853,65 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "Old" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "Old",
+            }
+        );
 
-        var result = await service.UpdateAsync(new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated"));
+        var result = await service.UpdateAsync(
+            new UpdateCommentCommand(projectId, cardId, commentId, actorId, "Updated")
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -312,19 +926,65 @@ public class CommentServiceTests
     [Fact]
     public async Task ArchiveAsync_WritesAuditLog()
     {
-        var (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) = CreateMocks();
-        var service = new CommentService(commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var commentId = NewId();
 
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = NewId(), CardNumber = 1, Title = "Card" });
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        userRepo.Users.Add(new User { Id = actorId, Username = "author", Email = "a@a.com", PasswordHash = "x" });
-        commentRepo.Comments.Add(new Comment { Id = commentId, CardId = cardId, AuthorId = actorId, Content = "To archive" });
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        userRepo.Users.Add(User.Create("author", "Test", "User", "a@a.com", "x", id: actorId));
+        commentRepo.Comments.Add(
+            new Comment
+            {
+                Id = commentId,
+                CardId = cardId,
+                AuthorId = actorId,
+                Content = "To archive",
+            }
+        );
 
-        var result = await service.ArchiveAsync(new ArchiveCommentCommand(projectId, cardId, commentId, actorId));
+        var result = await service.ArchiveAsync(
+            new ArchiveCommentCommand(projectId, cardId, commentId, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -336,7 +996,68 @@ public class CommentServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
-    private static (InMemoryCommentRepository, InMemoryCardWatcherRepository, InMemoryCardRepository, InMemoryProjectMemberRepository, InMemoryUserRepository, InMemoryAuditLogWriter, NullSnapshotRefresher, FakeProjectBoardEventPublisher) CreateMocks()
+    // ─── Admin bypass tests ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateAdminMocks();
+        var service = new CommentService(
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var adminId = NewId();
+
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+
+        var result = await service.CreateAsync(
+            new CreateCommentCommand(projectId, cardId, adminId, "Hello from admin")
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Hello from admin", result.Value.Content);
+        Assert.Equal(adminId, result.Value.AuthorId);
+    }
+
+    private static (
+        InMemoryCommentRepository,
+        InMemoryCardWatcherRepository,
+        InMemoryCardRepository,
+        InMemoryProjectMemberRepository,
+        InMemoryUserRepository,
+        InMemoryAuditLogWriter,
+        NullSnapshotRefresher,
+        FakeProjectBoardEventPublisher,
+        FakeNotificationService
+    ) CreateMocks()
     {
         var commentRepo = new InMemoryCommentRepository();
         var watcherRepo = new InMemoryCardWatcherRepository();
@@ -344,7 +1065,48 @@ public class CommentServiceTests
         var memberRepo = new InMemoryProjectMemberRepository();
         var userRepo = new InMemoryUserRepository();
         var auditWriter = new InMemoryAuditLogWriter();
-        return (commentRepo, watcherRepo, cardRepo, memberRepo, userRepo, auditWriter, new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher());
+        return (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            new NullSnapshotRefresher(),
+            new FakeProjectBoardEventPublisher(),
+            new FakeNotificationService()
+        );
+    }
+
+    private static (
+        InMemoryCommentRepository,
+        InMemoryCardWatcherRepository,
+        InMemoryCardRepository,
+        InMemoryProjectMemberRepository,
+        FakeUserRepoForAdmin,
+        InMemoryAuditLogWriter,
+        NullSnapshotRefresher,
+        FakeProjectBoardEventPublisher,
+        FakeNotificationService
+    ) CreateAdminMocks()
+    {
+        var commentRepo = new InMemoryCommentRepository();
+        var watcherRepo = new InMemoryCardWatcherRepository();
+        var cardRepo = new InMemoryCardRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepoForAdmin();
+        var auditWriter = new InMemoryAuditLogWriter();
+        return (
+            commentRepo,
+            watcherRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            new NullSnapshotRefresher(),
+            new FakeProjectBoardEventPublisher(),
+            new FakeNotificationService()
+        );
     }
 }
 
@@ -352,17 +1114,28 @@ internal class InMemoryCommentRepository : ICommentRepository
 {
     public List<Comment> Comments { get; } = [];
 
-    public Task<Comment?> GetByIdAsync(Guid commentId, CancellationToken ct = default)
-        => Task.FromResult(Comments.FirstOrDefault(c => c.Id == commentId));
+    public Task<Comment?> GetByIdAsync(Guid commentId, CancellationToken ct = default) =>
+        Task.FromResult(Comments.FirstOrDefault(c => c.Id == commentId));
 
-    public Task<IReadOnlyList<Comment>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<Comment>>(Comments.Where(c => c.CardId == cardId).OrderBy(c => c.CreatedAt).ToList());
+    public Task<IReadOnlyList<Comment>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<Comment>>([
+            .. Comments.Where(c => c.CardId == cardId).OrderBy(c => c.CreatedAt),
+        ]);
 
-    public Task AddAsync(Comment comment, CancellationToken ct = default) { Comments.Add(comment); return Task.CompletedTask; }
+    public Task AddAsync(Comment comment, CancellationToken ct = default)
+    {
+        Comments.Add(comment);
+        return Task.CompletedTask;
+    }
+
     public Task UpdateAsync(Comment comment, CancellationToken ct = default)
     {
         var idx = Comments.FindIndex(c => c.Id == comment.Id);
-        if (idx >= 0) Comments[idx] = comment;
+        if (idx >= 0)
+            Comments[idx] = comment;
         return Task.CompletedTask;
     }
 }
@@ -371,34 +1144,70 @@ internal class InMemoryCardWatcherRepository : ICardWatcherRepository
 {
     public List<CardWatcher> Watchers { get; } = [];
 
-    public Task<CardWatcher?> GetByCardAndUserAsync(Guid cardId, Guid userId, CancellationToken ct = default)
-        => Task.FromResult(Watchers.FirstOrDefault(w => w.CardId == cardId && w.UserId == userId));
+    public Task<CardWatcher?> GetByCardAndUserAsync(
+        Guid cardId,
+        Guid userId,
+        CancellationToken ct = default
+    ) => Task.FromResult(Watchers.FirstOrDefault(w => w.CardId == cardId && w.UserId == userId));
 
-    public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<ILookup<Guid, CardWatcher>>(Watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
+    public Task<ILookup<Guid, CardWatcher>> ListByCardIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) => Task.FromResult(Watchers.Where(w => cardIds.Contains(w.CardId)).ToLookup(w => w.CardId));
 
-    public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardWatcher>>(Watchers.Where(w => w.CardId == cardId).ToList());
+    public Task<IReadOnlyList<CardWatcher>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<CardWatcher>>([.. Watchers.Where(w => w.CardId == cardId)]);
 
-    public Task AddAsync(CardWatcher watcher, CancellationToken ct = default) { Watchers.Add(watcher); return Task.CompletedTask; }
-    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default) { Watchers.AddRange(watchers); return Task.CompletedTask; }
-    public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default) { Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId); return Task.CompletedTask; }
+    public Task AddAsync(CardWatcher watcher, CancellationToken ct = default)
+    {
+        Watchers.Add(watcher);
+        return Task.CompletedTask;
+    }
+
+    public Task AddRangeAsync(IReadOnlyList<CardWatcher> watchers, CancellationToken ct = default)
+    {
+        Watchers.AddRange(watchers);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(Guid cardId, Guid userId, CancellationToken ct = default)
+    {
+        Watchers.RemoveAll(w => w.CardId == cardId && w.UserId == userId);
+        return Task.CompletedTask;
+    }
 }
 
 internal class InMemoryCardRepository : ICardRepository
 {
     public List<Card> Cards { get; } = [];
 
-    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
+    public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+        Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
 
-    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+    public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+            Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+        );
 
-    public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-        => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+    public Task<Card?> GetByProjectAndNumberAsync(
+        Guid projectId,
+        int cardNumber,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+        );
 
-    public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
+    public Task<IReadOnlyList<Card>> ListByProjectAsync(
+        Guid projectId,
+        CardListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = Cards.Where(c => c.ProjectId == projectId);
         if (filter.ColumnId.HasValue)
@@ -407,93 +1216,184 @@ internal class InMemoryCardRepository : ICardRepository
             query = query.Where(c => c.ArchivedAt == null);
         if (filter.Type.HasValue)
             query = query.Where(c => c.Type == filter.Type.Value);
-        return Task.FromResult<IReadOnlyList<Card>>(query.ToList());
+        return Task.FromResult<IReadOnlyList<Card>>([.. query]);
     }
 
-    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+    public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
+        Task.FromResult(
+            Cards
+                .Where(c => c.ProjectId == projectId)
+                .Select(c => c.CardNumber)
+                .DefaultIfEmpty(0)
+                .Max()
+        );
 
-    public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
+    public Task AddAsync(Card card, CancellationToken ct = default)
+    {
+        Cards.Add(card);
+        return Task.CompletedTask;
+    }
+
     public Task UpdateAsync(Card card, CancellationToken ct = default)
     {
         var idx = Cards.FindIndex(c => c.Id == card.Id);
-        if (idx >= 0) Cards[idx] = card;
+        if (idx >= 0)
+            Cards[idx] = card;
         return Task.CompletedTask;
     }
+
     public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
     {
         foreach (var c in cards)
         {
             var idx = Cards.FindIndex(x => x.Id == c.Id);
-            if (idx >= 0) Cards[idx] = c;
+            if (idx >= 0)
+                Cards[idx] = c;
         }
         return Task.CompletedTask;
     }
-    public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-    public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-        => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+    {
+        Cards.RemoveAll(c => c.Id == cardId);
+        return Task.CompletedTask;
+    }
+
+    public Task CompactColumnPositionsAsync(
+        Guid columnId,
+        int exceptPosition,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
+
+    public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+        Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository
 {
     public List<ProjectMember> Members { get; } = [];
 
-    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
+    public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
 
-    public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-        => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
+    public Task<ProjectMember?> GetByProjectAndUserAsync(
+        Guid projectId,
+        Guid userId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+        );
 
-    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(m => m.ProjectId == projectId).ToList());
+    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. Members.Where(m => m.ProjectId == projectId),
+        ]);
 
-    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+        IEnumerable<Guid> projectIds,
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+        var counts = Members
+            .Where(m => idList.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
 
     public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
         IEnumerable<Guid> projectIds,
         Guid userId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        var roles = Members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
         return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
 
-    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
+    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
+    {
+        Members.Add(member);
+        return Task.CompletedTask;
+    }
+
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
     {
         var idx = Members.FindIndex(m => m.Id == member.Id);
-        if (idx >= 0) Members[idx] = member;
+        if (idx >= 0)
+            Members[idx] = member;
         return Task.CompletedTask;
     }
-    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) { Members.RemoveAll(m => m.Id == id); return Task.CompletedTask; }
+
+    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
+    {
+        Members.RemoveAll(m => m.Id == id);
+        return Task.CompletedTask;
+    }
 }
 
 internal class InMemoryUserRepository : IUserRepository
 {
     public List<User> Users { get; } = [];
 
-    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Users.FirstOrDefault(u => u.Id == id));
 
-    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<Guid, User>>(Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id));
+    public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, User>>(
+            Users.Where(u => ids.Contains(u.Id)).ToDictionary(u => u.Id)
+        );
 
-    public Task<User?> FindByUsernameAsync(string username)
-        => Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
+    public Task<User?> FindByUsernameAsync(string username) =>
+        Task.FromResult(Users.FirstOrDefault(u => u.Username == username));
 
-    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(IReadOnlyList<string> usernames, string? searchTerm = null, int maxResults = 10, CancellationToken ct = default)
-=> Task.FromResult<IReadOnlyDictionary<string, User>>(Users.Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase)).ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase));
+    public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+        IReadOnlyList<string> usernames,
+        string? searchTerm = null,
+        int maxResults = 10,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyDictionary<string, User>>(
+            Users
+                .Where(u => usernames.Contains(u.Username, StringComparer.OrdinalIgnoreCase))
+                .ToDictionary(u => u.Username, StringComparer.OrdinalIgnoreCase)
+        );
 
     public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
     public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
-    public Task CreateAsync(User user) { Users.Add(user); return Task.CompletedTask; }
+
+    public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult(false);
+
+    public Task CreateAsync(User user, CancellationToken ct = default)
+    {
+        Users.Add(user);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<User>> ListAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+    public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+        Task.FromResult(0);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter

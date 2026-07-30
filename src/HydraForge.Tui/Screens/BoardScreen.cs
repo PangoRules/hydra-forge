@@ -11,17 +11,20 @@ public class BoardScreen(
     ApiClientFactory apiClientFactory,
     AppState appState,
     ErrorCollector errorCollector,
-    ConnectionManager connectionManager
+    ConnectionManager connectionManager,
+    SignalRConnectionManager signalRConnectionManager,
+    NotificationCenter notificationCenter
 ) : IScreen
 {
     private readonly ApiClientFactory _apiClientFactory = apiClientFactory;
     private readonly AppState _appState = appState;
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly ConnectionManager _connectionManager = connectionManager;
+    private readonly SignalRConnectionManager _signalRConnectionManager = signalRConnectionManager;
+    private readonly NotificationCenter _notificationCenter = notificationCenter;
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
-    private readonly BoardRenderer _renderer = new();
-    private SignalRConnectionManager? _signalR;
     private readonly SemaphoreSlim _renderLock = new(1, 1);
+    private bool _signalRSubscribed;
 
     private List<BoardRenderer.ColumnData> _columns = [];
     private int _selectedColumn;
@@ -34,6 +37,7 @@ public class BoardScreen(
     public async Task OnEnterAsync()
     {
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
+
         await LoadBoardAsync();
 
         if (_appState.BoardCursorCol.HasValue && _appState.BoardCursorCard.HasValue)
@@ -54,47 +58,52 @@ public class BoardScreen(
         }
 
         // Connect SignalR — real-time sync degrades gracefully if the server is unreachable.
-        // Only create + connect once; OnExitAsync nulls _signalR so a true exit (not modal
-        // return) triggers a fresh connect on next OnEnterAsync.
-        if (_signalR == null)
+        // SignalRConnectionManager is a singleton shared across screen instances; event
+        // handlers are subscribed once per instance (guarded, since OnEnterAsync can run
+        // again on the same instance after an overlay dismiss) and unsubscribed in
+        // OnExitAsync so a discarded BoardScreen instance doesn't leak stale closures onto
+        // the singleton's event list.
+        if (!_signalRSubscribed)
         {
-            _signalR = new SignalRConnectionManager(_appState, _errorCollector);
-            _signalR.OnBoardEvent += HandleBoardEvent;
-            _signalR.OnCurrentUsers += async users =>
-            {
-                _appState.OnlineCount = users.Count;
-                await RenderAsync();
-            };
-            _signalR.OnUserJoined += async _ =>
-            {
-                _appState.OnlineCount++;
-                await RenderAsync();
-            };
-            _signalR.OnUserLeft += async _ =>
-            {
-                _appState.OnlineCount = Math.Max(0, _appState.OnlineCount - 1);
-                await RenderAsync();
-            };
-
-            try
-            {
-                await _signalR.ConnectAsync(_projectId);
-            }
-            catch (Exception ex)
-            {
-                _appState.Connection = ConnectionStatus.Disconnected;
-                _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
-            }
+            _signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
+            _signalRConnectionManager.OnCurrentUsers += HandleCurrentUsers;
+            _signalRConnectionManager.OnUserJoined += HandleUserJoined;
+            _signalRConnectionManager.OnUserLeft += HandleUserLeft;
+            _signalRConnectionManager.OnCardFocused += HandleCardFocused;
+            _signalRConnectionManager.OnCardUnfocused += HandleCardUnfocused;
+            _signalRConnectionManager.OnUnreadCountChanged += HandleUnreadCountChanged;
+            _signalRSubscribed = true;
         }
+
+        try
+        {
+            await _signalRConnectionManager.ConnectAsync(_projectId);
+        }
+        catch (Exception ex)
+        {
+            _appState.Connection = ConnectionStatus.Disconnected;
+            _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+        }
+
+        // NotificationHub connects once, in ProjectListScreen, before any board is opened —
+        // just refresh the count here in case it changed while we were elsewhere.
+        await _notificationCenter.FetchUnreadCountAsync();
     }
 
     public async Task OnExitAsync()
     {
-        if (_signalR != null)
+        if (_signalRSubscribed)
         {
-            await _signalR.DisconnectAsync();
-            _signalR = null;
+            _signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
+            _signalRConnectionManager.OnCurrentUsers -= HandleCurrentUsers;
+            _signalRConnectionManager.OnUserJoined -= HandleUserJoined;
+            _signalRConnectionManager.OnUserLeft -= HandleUserLeft;
+            _signalRConnectionManager.OnCardFocused -= HandleCardFocused;
+            _signalRConnectionManager.OnCardUnfocused -= HandleCardUnfocused;
+            _signalRConnectionManager.OnUnreadCountChanged -= HandleUnreadCountChanged;
+            _signalRSubscribed = false;
         }
+        await _signalRConnectionManager.DisconnectAsync();
     }
 
     public async Task RenderAsync()
@@ -109,7 +118,7 @@ public class BoardScreen(
             AnsiConsole.Clear();
 
             var totalCards = _columns.Sum(c => c.Cards.Count);
-            var layout = _renderer.BuildLayout(
+            var layout = BoardRenderer.BuildLayout(
                 _columns,
                 _selectedColumn,
                 _selectedCard,
@@ -118,7 +127,8 @@ public class BoardScreen(
                 _appState.Connection,
                 _appState.OnlineCount,
                 _errorCollector.Count,
-                _reorderCardId
+                _reorderCardId,
+                _appState.UnreadNotifications
             );
 
             AnsiConsole.Write(layout);
@@ -138,6 +148,7 @@ public class BoardScreen(
                 "[e] Edit",
                 "[m] Move",
                 "[r] Reorder",
+                "[u] Notifications",
                 "[Del] Archive",
                 "[x] Errors",
                 "[?] Help",
@@ -231,7 +242,9 @@ public class BoardScreen(
                         _apiClientFactory,
                         _appState,
                         _errorCollector,
-                        _connectionManager
+                        _connectionManager,
+                        _signalRConnectionManager,
+                        _notificationCenter
                     );
                     _appState.CurrentScreen = projectListScreen;
                     _appState.SelectedProjectId = null;
@@ -294,6 +307,15 @@ public class BoardScreen(
                 await errorPanel.RenderAsync();
                 break;
 
+            case ConsoleKey.U:
+                await _notificationCenter.ShowNotificationsAsync(RenderAsync);
+                break;
+
+            case ConsoleKey.O:
+                ShowOnlineUsers();
+                await RenderAsync();
+                break;
+
             case ConsoleKey.Q:
                 var confirm = AnsiConsole.Confirm("Quit HydraForge?");
                 if (confirm)
@@ -320,6 +342,8 @@ public class BoardScreen(
                 ("e", "Edit card title"),
                 ("m", "Move card to column"),
                 ("r", "Reorder mode (j/k to place, Enter to confirm, Esc to cancel)"),
+                ("u", "Notifications"),
+                ("o", "Online users"),
                 ("Del", "Archive card"),
                 ("d", "Add dependency"),
                 ("x", "Error panel"),
@@ -330,11 +354,29 @@ public class BoardScreen(
         );
     }
 
+    private void ShowOnlineUsers()
+    {
+        var currentUserId = CurrentUser.GetId();
+        var allCards = _columns.SelectMany(c => c.Cards).ToList();
+
+        var users = _appState
+            .OnlineUsers.Where(u => u.Key != currentUserId)
+            .Select(u =>
+            {
+                int? cardNumber = _appState.FocusedCards.TryGetValue(u.Key, out var cardId)
+                    ? allCards.FirstOrDefault(c => c.Id == cardId)?.CardNumber
+                    : null;
+                return (u.Value, cardNumber);
+            })
+            .ToList();
+
+        OnlineUsersOverlay.Show(users);
+    }
+
     private async Task LoadBoardAsync()
     {
         try
         {
-
             // Load project
             var project = await Client.ProjectsGET2Async(_projectId);
             _projectName = project.Name;
@@ -361,6 +403,15 @@ public class BoardScreen(
                 // Non-fatal: board renders without relationship indicators
             }
 
+            // Parent lookup + child count are derived client-side from the already-loaded
+            // card list, same as the web UI does — there's no dedicated endpoint for either.
+            var cardsById = cards.ToDictionary(c => c.Id);
+            var childCounts = cards
+                .Where(c => c.ParentCardId.HasValue)
+                .GroupBy(c => c.ParentCardId!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var currentUserId = CurrentUser.GetId();
+
             // Build column data
             _columns =
             [
@@ -376,16 +427,35 @@ public class BoardScreen(
                             .. cards
                                 .Where(c => c.ColumnId == col.Id)
                                 .OrderBy(c => c.Position)
-                                .Select(c => new BoardRenderer.CardData(
-                                    c.Id,
-                                    c.CardNumber,
-                                    c.Title,
-                                    CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
-                                    cardBadges.GetValueOrDefault(c.Id, []),
-                                    c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
-                                        ?? [],
-                                    c.Version
-                                )),
+                                .Select(c =>
+                                {
+                                    var parent = c.ParentCardId.HasValue
+                                        ? cardsById.GetValueOrDefault(c.ParentCardId.Value)
+                                        : null;
+
+                                    return new BoardRenderer.CardData(
+                                        c.Id,
+                                        c.CardNumber,
+                                        c.Title,
+                                        CardTypeMapper.ToDisplayString(c.Type), // Convert enum to string
+                                        cardBadges.GetValueOrDefault(c.Id, []),
+                                        c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
+                                            ?? [],
+                                        c.Version,
+                                        parent?.CardNumber,
+                                        parent != null
+                                            ? CardTypeMapper.ToDisplayString(parent.Type)
+                                            : null,
+                                        childCounts.GetValueOrDefault(c.Id, 0),
+                                        c.DueAt,
+                                        currentUserId.HasValue
+                                            && (
+                                                c.Watchers?.Any(w =>
+                                                    w.UserId == currentUserId.Value
+                                                ) ?? false
+                                            )
+                                    );
+                                }),
                         ]
                     )),
             ];
@@ -418,7 +488,9 @@ public class BoardScreen(
             _apiClientFactory,
             _appState,
             _errorCollector,
-            _connectionManager
+            _connectionManager,
+            _signalRConnectionManager,
+            _notificationCenter
         );
         _appState.CurrentScreen = detailScreen;
         await detailScreen.OnEnterAsync();
@@ -440,13 +512,11 @@ public class BoardScreen(
         );
 
         var typeChoices = new[] { "Task", "Issue", "Goal", "Idea" };
-        var typeName =
-            await ListPrompt.Show("Type:", typeChoices, renderBackdrop: RenderAsync) ?? "Task";
-        var type = Enum.Parse<CardType>(typeName);
+        var typeIdx = await ListPrompt.Show("Type:", typeChoices, renderBackdrop: RenderAsync) ?? 0;
+        var type = Enum.Parse<CardType>(typeChoices[typeIdx]);
 
         try
         {
-
             await Client.CardsPOSTAsync(
                 _projectId,
                 new CreateCardRequest
@@ -484,23 +554,22 @@ public class BoardScreen(
         var card = sourceCol.Cards[_selectedCard];
 
         var targetNames = _columns.Select(c => c.Name).ToList();
-        var targetName = await ListPrompt.Show(
+        var targetIdx = await ListPrompt.Show(
             "Move to column:",
             targetNames,
             _selectedColumn,
             RenderAsync
         );
-        if (targetName == null)
+        if (!targetIdx.HasValue)
         {
             await RenderAsync();
             return;
         }
 
-        var targetCol = _columns.First(c => c.Name == targetName);
+        var targetCol = _columns[targetIdx.Value];
 
         try
         {
-
             await Client.MoveAsync(
                 _projectId,
                 card.Id,
@@ -547,7 +616,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.ArchiveAsync(
                 _projectId,
                 card.Id,
@@ -578,7 +646,6 @@ public class BoardScreen(
 
         try
         {
-
             var newTitle = AnsiConsole.Prompt(
                 new TextPrompt<string>($"New title (current: {card.Title}):")
                     .DefaultValue(card.Title)
@@ -651,7 +718,6 @@ public class BoardScreen(
 
         try
         {
-
             await Client.MoveAsync(
                 _projectId,
                 card.Id,
@@ -693,11 +759,65 @@ public class BoardScreen(
         }
     }
 
+    // Overlays pushed from here (DependencyPanel, ErrorPanelScreen, SpecViewerScreen via
+    // CardDetailScreen) are entered by direct _appState.CurrentScreen assignment, bypassing
+    // OnExitAsync — so this screen's handlers can still be subscribed while a different
+    // screen is actually on-screen. Data still refreshes regardless; RenderAsync() is
+    // guarded so a background event doesn't stomp whatever the user is really looking at.
     private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
     {
         // Reload board data on any event for simplicity
         // (Future optimization: apply delta updates)
         await LoadBoardAsync();
-        await RenderAsync();
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleCurrentUsers(List<SignalRConnectionManager.PresenceUser> users)
+    {
+        _appState.OnlineUsers.Clear();
+        foreach (var user in users)
+            _appState.OnlineUsers[user.UserId] = user.Username;
+        _appState.OnlineCount = _appState.OnlineUsers.Count;
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleUserJoined(SignalRConnectionManager.PresenceUser user)
+    {
+        _appState.OnlineUsers[user.UserId] = user.Username;
+        _appState.OnlineCount = _appState.OnlineUsers.Count;
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleUserLeft(SignalRConnectionManager.PresenceUser user)
+    {
+        _appState.OnlineUsers.Remove(user.UserId);
+        _appState.OnlineCount = _appState.OnlineUsers.Count;
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleCardFocused(Guid userId, Guid cardId)
+    {
+        _appState.FocusedCards[userId] = cardId;
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleCardUnfocused(Guid userId)
+    {
+        _appState.FocusedCards.Remove(userId);
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleUnreadCountChanged(int count)
+    {
+        // count is authoritative from SignalRConnectionManager (already applied to
+        // AppState.UnreadNotifications) — just trigger a re-render.
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
     }
 }

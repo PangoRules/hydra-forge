@@ -23,6 +23,8 @@ jobs:
         run: dotnet restore HydraForge.slnx
       - name: Restore tools
         run: dotnet tool restore
+      - name: Format check
+        run: dotnet csharpier check .
       - name: Build
         run: dotnet build HydraForge.slnx --configuration Release --no-restore
       - name: Test

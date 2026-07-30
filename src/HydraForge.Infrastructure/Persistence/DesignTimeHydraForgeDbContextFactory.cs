@@ -3,7 +3,6 @@ namespace HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using Pgvector.EntityFrameworkCore;
 
 public class DesignTimeHydraForgeDbContextFactory : IDesignTimeDbContextFactory<HydraForgeDbContext>
 {
@@ -12,7 +11,9 @@ public class DesignTimeHydraForgeDbContextFactory : IDesignTimeDbContextFactory<
         var connectionString = BuildConfiguration().GetConnectionString("Default");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("Connection string 'Default' is not configured for EF Core design-time operations.");
+            throw new InvalidOperationException(
+                "Connection string 'Default' is not configured for EF Core design-time operations."
+            );
         }
 
         var optionsBuilder = new DbContextOptionsBuilder<HydraForgeDbContext>();
@@ -23,7 +24,8 @@ public class DesignTimeHydraForgeDbContextFactory : IDesignTimeDbContextFactory<
 
     private static IConfiguration BuildConfiguration()
     {
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+        var environment =
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
             ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
             ?? "Development";
 
@@ -47,12 +49,17 @@ public class DesignTimeHydraForgeDbContextFactory : IDesignTimeDbContextFactory<
                 return serverPath;
             }
 
-            if (directory.Name == "HydraForge.Server" && File.Exists(Path.Combine(directory.FullName, "appsettings.json")))
+            if (
+                directory.Name == "HydraForge.Server"
+                && File.Exists(Path.Combine(directory.FullName, "appsettings.json"))
+            )
             {
                 return directory.FullName;
             }
         }
 
-        throw new InvalidOperationException("Could not find HydraForge.Server appsettings.json for EF Core design-time configuration.");
+        throw new InvalidOperationException(
+            "Could not find HydraForge.Server appsettings.json for EF Core design-time configuration."
+        );
     }
 }

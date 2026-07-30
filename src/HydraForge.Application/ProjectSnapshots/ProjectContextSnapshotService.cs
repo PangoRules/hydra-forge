@@ -48,7 +48,10 @@ public class ProjectContextSnapshotService(
         }
     }
 
-    Task<ProjectContextSnapshot?> IProjectSnapshotRefresher.GetSnapshotAsync(Guid projectId, CancellationToken ct)
+    Task<ProjectContextSnapshot?> IProjectSnapshotRefresher.GetSnapshotAsync(
+        Guid projectId,
+        CancellationToken ct
+    )
     {
         return snapshotRepo.GetByProjectIdAsync(projectId, ct);
     }

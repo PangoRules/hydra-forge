@@ -12,18 +12,21 @@ public class EfChecklistItemRepository(HydraForgeDbContext context) : IChecklist
         return await context.ChecklistItems.FirstOrDefaultAsync(i => i.Id == itemId, ct);
     }
 
-    public async Task<IReadOnlyList<ChecklistItem>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChecklistItem>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ChecklistItems
-            .Where(i => i.CardId == cardId)
+        return await context
+            .ChecklistItems.Where(i => i.CardId == cardId)
             .OrderBy(i => i.Position)
             .ToListAsync(ct);
     }
 
     public async Task<int> GetMaxPositionAsync(Guid cardId, CancellationToken ct = default)
     {
-        var max = await context.ChecklistItems
-            .Where(i => i.CardId == cardId)
+        var max = await context
+            .ChecklistItems.Where(i => i.CardId == cardId)
             .MaxAsync(i => (int?)i.Position, ct);
         return max ?? -1;
     }
@@ -50,10 +53,14 @@ public class EfChecklistItemRepository(HydraForgeDbContext context) : IChecklist
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task CompactPositionsAsync(Guid cardId, int deletedPosition, CancellationToken ct = default)
+    public async Task CompactPositionsAsync(
+        Guid cardId,
+        int deletedPosition,
+        CancellationToken ct = default
+    )
     {
-        var toCompact = await context.ChecklistItems
-            .Where(i => i.CardId == cardId && i.Position > deletedPosition)
+        var toCompact = await context
+            .ChecklistItems.Where(i => i.CardId == cardId && i.Position > deletedPosition)
             .ToListAsync(ct);
 
         foreach (var item in toCompact)
@@ -62,7 +69,10 @@ public class EfChecklistItemRepository(HydraForgeDbContext context) : IChecklist
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task UpdatePositionsAsync(IReadOnlyList<ChecklistItem> items, CancellationToken ct = default)
+    public async Task UpdatePositionsAsync(
+        IReadOnlyList<ChecklistItem> items,
+        CancellationToken ct = default
+    )
     {
         context.ChecklistItems.UpdateRange(items);
         await context.SaveChangesAsync(ct);

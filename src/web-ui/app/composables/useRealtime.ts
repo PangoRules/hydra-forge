@@ -34,9 +34,36 @@ export function useRealtime() {
       version: number
       occurredAt: string
       payload: unknown
+      cardId?: string
     }) => {
-      if (envelope.projectId === projectId) {
-        board.fetchBoard(projectId)
+      if (envelope.projectId !== projectId) return
+
+      switch (envelope.entityType) {
+        case 'Card':
+          board.applyRealtimeCardEvent(projectId, envelope.entityId, envelope.action)
+          board.signalCardContentEvent(envelope.entityId, envelope.entityType, envelope.action)
+          break
+        case 'Column':
+          board.applyRealtimeColumnEvent(projectId, envelope.entityId, envelope.action)
+          break
+        case 'CardRelationship':
+          // Affects relationship badges on both the source and target card, neither of
+          // which is the relationship's own entityId — full refresh is simplest and this
+          // event is comparatively rare (dependency add/remove, not routine card editing).
+          board.fetchBoard(projectId)
+          if (envelope.cardId) board.signalCardContentEvent(envelope.cardId, envelope.entityType, envelope.action)
+          break
+        case 'Comment':
+        case 'ChecklistItem':
+        case 'Attachment':
+        case 'Spec':
+        case 'Plan':
+          // These don't render on the board card tile — nothing to patch here. If a
+          // CardModal for this card happens to be open, it'll pick this signal up itself.
+          if (envelope.cardId) board.signalCardContentEvent(envelope.cardId, envelope.entityType, envelope.action)
+          break
+        default:
+          break
       }
     })
 

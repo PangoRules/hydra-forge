@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
+import AppSidebar from '~/components/layout/AppSidebar.vue'
+import AppTopbar from '~/components/layout/AppTopbar.vue'
 
-const { logout, isAuthenticated, checkAuth } = useAuth()
+const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
+const { fetchUnreadCount } = useNotifications()
+const notificationHub = useNotificationHub()
 const {
   isExpired,
   isExpiringSoon,
@@ -17,9 +21,19 @@ const {
 // mounts or API calls fire. onMounted is too late: the page's onMounted
 // (which calls fetchBoard) fires right after the layout's onMounted.
 checkAuth()
+listenForAuthChanges()
 
-onMounted(() => startSessionManager())
-onUnmounted(() => stopSessionManager())
+onMounted(() => {
+  startSessionManager()
+  if (isAuthenticated) {
+    fetchUnreadCount()
+    notificationHub.connect()
+  }
+})
+onUnmounted(() => {
+  stopSessionManager()
+  notificationHub.disconnect()
+})
 
 const showSessionModal = computed(() => isExpiringSoon.value || isExpired.value)
 
@@ -37,33 +51,19 @@ function handleSessionLogout() {
     :toaster="{ position: 'bottom-right', duration: 5000 }"
     class="h-full flex flex-col overflow-hidden"
   >
-    <UHeader>
-      <template #left>
-        <NuxtLink
-          to="/projects"
-          class="flex items-center gap-2"
-        >
-          <span class="text-lg font-bold">HydraForge</span>
-        </NuxtLink>
-      </template>
+    <UDashboardGroup class="flex-1 overflow-hidden">
+      <AppSidebar />
 
-      <template #right>
-        <UColorModeButton />
-        <ClientOnly>
-          <UButton
-            v-if="isAuthenticated"
-            label="Logout"
-            color="neutral"
-            variant="ghost"
-            @click="logout"
-          />
-        </ClientOnly>
-      </template>
-    </UHeader>
+      <UDashboardPanel class="flex-1 flex flex-col overflow-hidden">
+        <template #header>
+          <AppTopbar />
+        </template>
 
-    <UMain class="flex-1 flex flex-col overflow-hidden">
-      <slot />
-    </UMain>
+        <template #body>
+          <slot />
+        </template>
+      </UDashboardPanel>
+    </UDashboardGroup>
 
     <ClientOnly>
       <SessionExpiryModal

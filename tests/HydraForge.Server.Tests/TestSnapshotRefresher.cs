@@ -6,6 +6,9 @@ namespace HydraForge.Server.Tests;
 internal class TestSnapshotRefresher : IProjectSnapshotRefresher
 {
     public Task RefreshAsync(Guid projectId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<ProjectContextSnapshot?> GetSnapshotAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<ProjectContextSnapshot?>(null);
+
+    public Task<ProjectContextSnapshot?> GetSnapshotAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) => Task.FromResult<ProjectContextSnapshot?>(null);
 }

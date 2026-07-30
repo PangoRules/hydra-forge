@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { ApiRoutes } from '~/lib/routes'
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
@@ -237,6 +237,16 @@ const onlineUsers = computed(() => {
   return users ? users : []
 })
 
+function viewingCardNumber(userId: string): number | string | null {
+  const cardId = presenceStore.focusedCards.get(userId)
+  if (!cardId) return null
+  for (const cards of board.cardsByColumn.values()) {
+    const found = cards.find(c => c.id === cardId)
+    if (found) return found.cardNumber
+  }
+  return null
+}
+
 // Helper function to generate consistent avatar colors based on user ID
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6']
 function hashColor(id: string): string {
@@ -250,6 +260,13 @@ function hashColor(id: string): string {
   <div class="flex-1 flex flex-col min-h-0">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2 min-w-0">
+        <UButton
+          icon="i-lucide-arrow-left"
+          variant="ghost"
+          size="sm"
+          :to="UiRoutes.Projects.List"
+          aria-label="Back to projects"
+        />
         <h1 class="text-xl font-bold truncate">
           {{ projectName || 'Board' }}
         </h1>
@@ -263,20 +280,47 @@ function hashColor(id: string): string {
         </UBadge>
       </div>
       <div class="flex items-center gap-1">
-        <div
-          v-if="onlineUsers.length > 0"
-          class="flex items-center -space-x-1.5 ml-2"
-        >
-          <span
-            v-for="u in onlineUsers"
-            :key="u.userId"
-            :title="u.username"
-            class="inline-flex items-center justify-center size-6 rounded-full text-xs font-medium text-white ring-2 ring-white dark:ring-gray-900"
-            :style="{ backgroundColor: hashColor(u.userId) }"
+        <UPopover v-if="onlineUsers.length > 0">
+          <button
+            type="button"
+            class="flex items-center -space-x-1.5 ml-2 cursor-pointer"
+            :aria-label="`${onlineUsers.length} online`"
           >
-            {{ (u.username[0] ?? '').toUpperCase() }}
-          </span>
-        </div>
+            <span
+              v-for="u in onlineUsers"
+              :key="u.userId"
+              class="inline-flex items-center justify-center size-6 rounded-full text-xs font-medium text-white ring-2 ring-white dark:ring-gray-900"
+              :style="{ backgroundColor: hashColor(u.userId) }"
+            >
+              {{ (u.username[0] ?? '').toUpperCase() }}
+            </span>
+          </button>
+
+          <template #content>
+            <div class="w-56 py-1">
+              <div class="px-3 py-1.5 text-xs font-medium text-muted uppercase">
+                Online — {{ onlineUsers.length }}
+              </div>
+              <div
+                v-for="u in onlineUsers"
+                :key="u.userId"
+                class="px-3 py-1.5 flex items-center gap-2 text-sm"
+              >
+                <span
+                  class="inline-flex items-center justify-center size-5 rounded-full text-xs font-medium text-white shrink-0"
+                  :style="{ backgroundColor: hashColor(u.userId) }"
+                >
+                  {{ (u.username[0] ?? '').toUpperCase() }}
+                </span>
+                <span class="truncate">{{ u.username }}</span>
+                <span
+                  v-if="viewingCardNumber(u.userId)"
+                  class="text-xs text-muted shrink-0 ml-auto"
+                >viewing #{{ viewingCardNumber(u.userId) }}</span>
+              </div>
+            </div>
+          </template>
+        </UPopover>
         <UButton
           v-if="projectArchived"
           variant="ghost"

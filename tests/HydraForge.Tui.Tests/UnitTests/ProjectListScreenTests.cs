@@ -2,7 +2,6 @@ using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
 using HydraForge.Tui.Screens;
 using HydraForge.Tui.Services;
-using Xunit;
 
 namespace HydraForge.Tui.Tests.UnitTests;
 
@@ -23,6 +22,7 @@ public class ProjectListTestApiClient : TestApiClient
     public MemberRole? LastRole { get; private set; }
     public int? LastSkip { get; private set; }
     public int? LastTake { get; private set; }
+    public bool? LastExcludeMembership { get; private set; }
 
     public override Task<ProjectListPageResponse> ProjectsGETAsync(
         bool? includeArchived = null,
@@ -32,7 +32,9 @@ public class ProjectListTestApiClient : TestApiClient
         MemberRole? role = null,
         int? skip = null,
         int? take = null,
-        CancellationToken cancellationToken = default)
+        bool? excludeMembership = null,
+        CancellationToken cancellationToken = default
+    )
     {
         CallCount++;
         LastIncludeArchived = includeArchived;
@@ -42,47 +44,61 @@ public class ProjectListTestApiClient : TestApiClient
         LastRole = role;
         LastSkip = skip;
         LastTake = take;
+        LastExcludeMembership = excludeMembership;
 
         if (ThrowApiExceptionOnProjects)
-            throw new ApiException("deserialization failed", 200, null, new Dictionary<string, IEnumerable<string>>(), null);
+            throw new ApiException(
+                "deserialization failed",
+                200,
+                null,
+                new Dictionary<string, IEnumerable<string>>(),
+                null
+            );
 
         if (ThrowOnProjects)
             throw new HttpRequestException("Network error");
 
-        return Task.FromResult(new ProjectListPageResponse
-        {
-            Items = new System.Collections.ObjectModel.ObservableCollection<ProjectListResponse>
+        return Task.FromResult(
+            new ProjectListPageResponse
             {
-                new ProjectListResponse
+                Items = new System.Collections.ObjectModel.ObservableCollection<ProjectListResponse>
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "Test Project",
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    MemberCount = 1,
-                    MyRole = MemberRole.Owner
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Test Project",
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        MemberCount = 1,
+                        MyRole = MemberRole.Owner,
+                    },
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Second Project",
+                        CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
+                        MemberCount = 2,
+                        MyRole = MemberRole.Member,
+                    },
                 },
-                new ProjectListResponse
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Second Project",
-                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-                    MemberCount = 2,
-                    MyRole = MemberRole.Member
-                }
-            },
-            TotalCount = TotalCount
-        });
+                TotalCount = TotalCount,
+            }
+        );
     }
 
-    public override Task<ProjectResponse> ProjectsPOSTAsync(CreateProjectRequest request, CancellationToken cancellationToken = default)
+    public override Task<ProjectResponse> ProjectsPOSTAsync(
+        CreateProjectRequest request,
+        CancellationToken cancellationToken = default
+    )
     {
-        return Task.FromResult(new ProjectResponse
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Description = "",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
+        return Task.FromResult(
+            new ProjectResponse
+            {
+                Id = Guid.NewGuid(),
+                Name = request.Name,
+                Description = "",
+                CreatedAt = DateTimeOffset.UtcNow,
+            }
+        );
     }
 }
 
@@ -97,9 +113,18 @@ public class ProjectListScreenTests
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var mockApiClient = new ProjectListTestApiClient();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
 
         // Act & Assert - RenderAsync should not throw
         await projectListScreen.RenderAsync();
@@ -114,28 +139,57 @@ public class ProjectListScreenTests
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var mockApiClient = new ProjectListTestApiClient();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
-        
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
+
         // Load some test projects
         await projectListScreen.OnEnterAsync();
 
         // Act - Handle J key (down)
-        await projectListScreen.HandleKeyAsync(new ConsoleKeyInfo('j', ConsoleKey.J, false, false, false));
+        await projectListScreen.HandleKeyAsync(
+            new ConsoleKeyInfo('j', ConsoleKey.J, false, false, false)
+        );
 
         // Assert
-        Assert.Equal(1, projectListScreen.GetType()
-            .GetField("_selectedIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(projectListScreen));
+        Assert.Equal(
+            1,
+            projectListScreen
+                .GetType()
+                .GetField(
+                    "_selectedIndex",
+                    System.Reflection.BindingFlags.NonPublic
+                        | System.Reflection.BindingFlags.Instance
+                )
+                ?.GetValue(projectListScreen)
+        );
 
         // Act - Handle K key (up)
-        await projectListScreen.HandleKeyAsync(new ConsoleKeyInfo('k', ConsoleKey.K, false, false, false));
+        await projectListScreen.HandleKeyAsync(
+            new ConsoleKeyInfo('k', ConsoleKey.K, false, false, false)
+        );
 
         // Assert
-        Assert.Equal(0, projectListScreen.GetType()
-            .GetField("_selectedIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(projectListScreen));
+        Assert.Equal(
+            0,
+            projectListScreen
+                .GetType()
+                .GetField(
+                    "_selectedIndex",
+                    System.Reflection.BindingFlags.NonPublic
+                        | System.Reflection.BindingFlags.Instance
+                )
+                ?.GetValue(projectListScreen)
+        );
     }
 
     [Fact]
@@ -147,21 +201,36 @@ public class ProjectListScreenTests
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var mockApiClient = new ProjectListTestApiClient();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
 
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
-        
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
+
         // Load some test projects
         await projectListScreen.OnEnterAsync();
 
         // Act - Handle A key
-        await projectListScreen.HandleKeyAsync(new ConsoleKeyInfo('a', ConsoleKey.A, false, false, false));
+        await projectListScreen.HandleKeyAsync(
+            new ConsoleKeyInfo('a', ConsoleKey.A, false, false, false)
+        );
 
         // Assert - _showArchived should be true
-        var showArchived = projectListScreen.GetType()
-            .GetField("_showArchived", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+        var showArchived = projectListScreen
+            .GetType()
+            .GetField(
+                "_showArchived",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            )
             ?.GetValue(projectListScreen);
-            
+
         Assert.True((bool)showArchived!);
     }
 
@@ -177,13 +246,27 @@ public class ProjectListScreenTests
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
         var mockApiClient = new ProjectListTestApiClient { ThrowApiExceptionOnProjects = true };
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
 
         await projectListScreen.OnEnterAsync();
 
-        Assert.Equal(1, errorCollector.Count);
-        Assert.Contains("Failed to load projects", errorCollector.GetErrors()[0].Message);
+        // OnEnterAsync also attempts to connect NotificationHub, which fails against the
+        // fake server URL and adds its own (expected, non-fatal) error — assert on the
+        // project-load failure specifically rather than an exact total count.
+        Assert.Contains(
+            errorCollector.GetErrors(),
+            e => e.Message.Contains("Failed to load projects")
+        );
     }
 
     [Fact]
@@ -195,8 +278,17 @@ public class ProjectListScreenTests
         var errorCollector = new ErrorCollector();
         errorCollector.Add("corr-1", "Simulated failure");
         var mockApiClient = new ProjectListTestApiClient();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
 
         var exception = await Record.ExceptionAsync(projectListScreen.RenderAsync);
 
@@ -213,11 +305,22 @@ public class ProjectListScreenTests
         errorCollector.Add("corr-1", "First failure");
         errorCollector.Add("corr-2", "Second failure");
         var mockApiClient = new ProjectListTestApiClient();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var projectListScreen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var projectListScreen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
         await projectListScreen.OnEnterAsync();
 
-        await projectListScreen.HandleKeyAsync(new ConsoleKeyInfo('x', ConsoleKey.X, false, false, false));
+        await projectListScreen.HandleKeyAsync(
+            new ConsoleKeyInfo('x', ConsoleKey.X, false, false, false)
+        );
 
         Assert.Equal(0, errorCollector.Count);
     }
@@ -282,14 +385,25 @@ public class ProjectListScreenTests
         await screen.OnEnterAsync();
         var rKey = new ConsoleKeyInfo('r', ConsoleKey.R, false, false, false);
 
+        // 1st press: All -> Owner
         await screen.HandleKeyAsync(rKey);
         Assert.Equal(MemberRole.Owner, mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
 
+        // 2nd press: Owner -> Member
         await screen.HandleKeyAsync(rKey);
         Assert.Equal(MemberRole.Member, mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
 
+        // 3rd press: Member -> Not member
         await screen.HandleKeyAsync(rKey);
         Assert.Null(mockApiClient.LastRole);
+        Assert.True(mockApiClient.LastExcludeMembership);
+
+        // 4th press: Not member -> All
+        await screen.HandleKeyAsync(rKey);
+        Assert.Null(mockApiClient.LastRole);
+        Assert.Null(mockApiClient.LastExcludeMembership);
     }
 
     [Fact]
@@ -339,13 +453,27 @@ public class ProjectListScreenTests
         Assert.Equal(0, mockApiClient.LastSkip);
     }
 
-    private static (ProjectListScreen Screen, ErrorCollector ErrorCollector) CreateScreen(ProjectListTestApiClient mockApiClient)
+    private static (ProjectListScreen Screen, ErrorCollector ErrorCollector) CreateScreen(
+        ProjectListTestApiClient mockApiClient
+    )
     {
-        var configStore = new TestConfigStore { Config = new TuiConfig { ServerUrl = "http://localhost:5000" } };
+        var configStore = new TestConfigStore
+        {
+            Config = new TuiConfig { ServerUrl = "http://localhost:5000" },
+        };
         var appState = new AppState();
         var errorCollector = new ErrorCollector();
-        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, appState, errorCollector);
-        var screen = new ProjectListScreen(apiClientFactory, appState, errorCollector, new ConnectionManager(appState, apiClientFactory, errorCollector));
+        var apiClientFactory = new TestApiClientFactory(mockApiClient, configStore, errorCollector);
+        var signalRConnectionManager = new SignalRConnectionManager(appState, errorCollector);
+        var notificationCenter = new NotificationCenter(apiClientFactory, appState, errorCollector);
+        var screen = new ProjectListScreen(
+            apiClientFactory,
+            appState,
+            errorCollector,
+            new ConnectionManager(appState, apiClientFactory, errorCollector),
+            signalRConnectionManager,
+            notificationCenter
+        );
         return (screen, errorCollector);
     }
 }

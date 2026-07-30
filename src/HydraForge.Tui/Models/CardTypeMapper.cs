@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using HydraForge.Tui.Generated;
 
 namespace HydraForge.Tui.Models;
@@ -13,7 +12,7 @@ public static class CardTypeMapper
             CardType.Issue => "Issue",
             CardType.Idea => "Idea",
             CardType.Goal => "Goal",
-            _ => cardType.ToString()
+            _ => cardType.ToString(),
         };
     }
 
@@ -25,7 +24,10 @@ public static class CardTypeMapper
             "ISSUE" => CardType.Issue,
             "IDEA" => CardType.Idea,
             "GOAL" => CardType.Goal,
-            _ => throw new ArgumentException($"Unknown card type: {displayString}", nameof(displayString))
+            _ => throw new ArgumentException(
+                $"Unknown card type: {displayString}",
+                nameof(displayString)
+            ),
         };
     }
 
@@ -37,7 +39,7 @@ public static class CardTypeMapper
             CardType.Issue => "I",
             CardType.Idea => "ID",
             CardType.Goal => "G",
-            _ => cardType.ToString()[0].ToString().ToUpper()
+            _ => cardType.ToString()[0].ToString().ToUpper(),
         };
     }
 
@@ -49,11 +51,15 @@ public static class CardTypeMapper
     public static bool AllowsPlan(CardType cardType) =>
         cardType is CardType.Goal or CardType.Issue or CardType.Task;
 
-    public static DocType ToDocType(CardType cardType) => cardType switch
-    {
-        CardType.Goal => DocType.Specification,
-        CardType.Idea => DocType.Concept,
-        CardType.Issue => DocType.Report,
-        _ => throw new ArgumentException($"Card type {cardType} has no Spec.", nameof(cardType))
-    };
+    public static DocType ToDocType(CardType cardType) =>
+        cardType switch
+        {
+            CardType.Goal => DocType.Specification,
+            CardType.Idea => DocType.Concept,
+            CardType.Issue => DocType.Report,
+            _ => throw new ArgumentException(
+                $"Card type {cardType} has no Spec.",
+                nameof(cardType)
+            ),
+        };
 }

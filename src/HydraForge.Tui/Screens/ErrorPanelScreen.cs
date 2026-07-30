@@ -41,7 +41,8 @@ public class ErrorPanelScreen(AppState appState, ErrorCollector errorCollector) 
         {
             var e = errors[i];
             var prefix = i == _selectedIndex ? "[blue]>[/]" : " ";
-            var corrId = e.CorrelationId.Length > 12 ? e.CorrelationId[..12] + "..." : e.CorrelationId;
+            var corrId =
+                e.CorrelationId.Length > 12 ? e.CorrelationId[..12] + "..." : e.CorrelationId;
 
             table.AddRow(
                 prefix,
@@ -59,7 +60,9 @@ public class ErrorPanelScreen(AppState appState, ErrorCollector errorCollector) 
         };
 
         AnsiConsole.Write(panel);
-        AnsiConsole.MarkupLine("[grey][[j/k]] Navigate  [[Del]] Dismiss  [[?]] Help  [[Esc]] Close[/]");
+        AnsiConsole.MarkupLine(
+            "[grey][[j/k]] Navigate  [[Del]] Dismiss  [[?]] Help  [[Esc]] Close[/]"
+        );
 
         return Task.CompletedTask;
     }
@@ -76,7 +79,8 @@ public class ErrorPanelScreen(AppState appState, ErrorCollector errorCollector) 
                 await RenderAsync();
                 return;
 
-            case ConsoleKey.K or ConsoleKey.UpArrow:
+            case ConsoleKey.K
+            or ConsoleKey.UpArrow:
                 if (errors.Count > 0)
                     _selectedIndex = (_selectedIndex - 1 + errors.Count) % errors.Count;
                 await RenderAsync();

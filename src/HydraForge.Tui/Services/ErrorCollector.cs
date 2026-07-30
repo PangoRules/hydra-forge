@@ -2,7 +2,7 @@ namespace HydraForge.Tui.Services;
 
 public class ErrorCollector
 {
-    private readonly List<(DateTime Timestamp, string CorrelationId, string Message)> _errors = new();
+    private readonly List<(DateTime Timestamp, string CorrelationId, string Message)> _errors = [];
 
     public void Add(string correlationId, string message)
     {
@@ -11,8 +11,8 @@ public class ErrorCollector
             _errors.RemoveAt(0);
     }
 
-    public IReadOnlyList<(DateTime Timestamp, string CorrelationId, string Message)> GetErrors()
-        => _errors.AsReadOnly();
+    public IReadOnlyList<(DateTime Timestamp, string CorrelationId, string Message)> GetErrors() =>
+        _errors.AsReadOnly();
 
     public void Dismiss(int index)
     {

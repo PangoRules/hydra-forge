@@ -11,16 +11,21 @@ type CardResponse = components['schemas']['CardResponse']
 
 const mockGET = vi.fn()
 const mockPOST = vi.fn()
+const mockDELETE = vi.fn()
 const mockToastAdd = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({
   GET: mockGET,
   POST: mockPOST,
   PUT: vi.fn(),
-  DELETE: vi.fn()
+  DELETE: mockDELETE
 }))
 
 mockNuxtImport('useToast', () => () => ({ add: mockToastAdd }))
+
+mockNuxtImport('useAuthStore', () => () => ({
+  user: { userId: 'me', username: 'me', isAdmin: false }
+}))
 
 function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
   return {
@@ -30,7 +35,7 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     cardNumber: 1,
     title: 'Test card',
     description: '',
-    type: 0,
+    type: 'Task',
     position: 0,
     dueAt: null,
     version: 1,
@@ -41,6 +46,8 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     parentCardId: null,
     assignees: [],
     watchers: [],
+    relationshipBadges: [],
+    relationshipCount: 0,
     ...overrides
   }
 }
@@ -69,6 +76,7 @@ describe('CardModal', () => {
   beforeEach(() => {
     mockGET.mockReset()
     mockPOST.mockReset()
+    mockDELETE.mockReset()
     mockToastAdd.mockReset()
   })
 
@@ -95,6 +103,61 @@ describe('CardModal', () => {
     })
     await flushPromises()
     expect((wrapper.vm as any).error).toBeTruthy()
+  })
+
+  it('watches the card via POST when not already watching', async () => {
+    const wrapper = await mountLoadedModal()
+    mockPOST.mockResolvedValue({
+      data: makeCard({ watchers: [{ userId: 'me', username: 'me', addedAt: '2024-01-01T00:00:00Z' }] }),
+      error: undefined
+    })
+
+    expect((wrapper.vm as any).isWatching).toBe(false)
+    await (wrapper.vm as any).toggleWatch()
+    await flushPromises()
+
+    expect(mockPOST).toHaveBeenCalledWith(expect.stringContaining('/watch'))
+    expect((wrapper.vm as any).isWatching).toBe(true)
+  })
+
+  it('unwatches the card via DELETE when already watching', async () => {
+    mockGET.mockResolvedValue({
+      data: makeCard({ watchers: [{ userId: 'me', username: 'me', addedAt: '2024-01-01T00:00:00Z' }] }),
+      error: undefined
+    })
+    const wrapper = await mountSuspended(CardModal, {
+      props: { cardId: 'c1', projectId: 'p1' },
+      global: {
+        stubs: {
+          AppModal: {
+            render() {
+              return h('div', { 'data-testid': 'app-modal' }, this.$slots.default?.())
+            }
+          },
+          CardDescription: true,
+          CardMetadata: true
+        }
+      }
+    })
+    await flushPromises()
+    mockDELETE.mockResolvedValue({ data: makeCard({ watchers: [] }), error: undefined })
+
+    expect((wrapper.vm as any).isWatching).toBe(true)
+    await (wrapper.vm as any).toggleWatch()
+    await flushPromises()
+
+    expect(mockDELETE).toHaveBeenCalledWith(expect.stringContaining('/watch'))
+    expect((wrapper.vm as any).isWatching).toBe(false)
+  })
+
+  it('shows an error toast when toggling watch fails', async () => {
+    const wrapper = await mountLoadedModal()
+    mockPOST.mockRejectedValue(new ApiError(500, 'UNKNOWN', 'Server error', null, 'about:blank', 'corr-3'))
+
+    await (wrapper.vm as any).toggleWatch()
+    await flushPromises()
+
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Failed to watch card', color: 'error' }))
   })
 
   it('archives the card and emits archived on confirm', async () => {

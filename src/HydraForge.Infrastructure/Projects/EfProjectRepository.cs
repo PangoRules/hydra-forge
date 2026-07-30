@@ -49,7 +49,10 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
         {
             query = query.Where(x =>
                 EF.Functions.ILike(x.Project.Name, $"%{search}%")
-                || (x.Project.Description != null && EF.Functions.ILike(x.Project.Description, $"%{search}%"))
+                || (
+                    x.Project.Description != null
+                    && EF.Functions.ILike(x.Project.Description, $"%{search}%")
+                )
             );
         }
 
@@ -70,6 +73,96 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
 
         var items = await query.Skip(skip).Take(take).Select(x => x.Project).ToListAsync(ct);
 
+        return new ProjectListPage(items, totalCount);
+    }
+
+    public async Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var query = context.Projects.AsQueryable();
+
+        if (!includeArchived)
+            query = query.Where(p => p.ArchivedAt == null);
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(p =>
+                EF.Functions.ILike(p.Name, $"%{search}%")
+                || (p.Description != null && EF.Functions.ILike(p.Description, $"%{search}%"))
+            );
+
+        var totalCount = await query.CountAsync(ct);
+
+        query = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending
+                ? query.OrderByDescending(p => p.Name)
+                : query.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending
+                ? query.OrderByDescending(p => p.UpdatedAt)
+                : query.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending
+                ? query.OrderByDescending(p => p.CreatedAt)
+                : query.OrderBy(p => p.CreatedAt),
+        };
+
+        var items = await query.Skip(skip).Take(take).ToListAsync(ct);
+
+        return new ProjectListPage(items, totalCount);
+    }
+
+    public async Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        // Left join: projects that have NO matching membership row for userId
+        var query =
+            from p in context.Projects
+            join m in context.ProjectMembers
+                on new { ProjectId = p.Id, UserId = userId } equals new { m.ProjectId, m.UserId }
+                into gj
+            from m in gj.DefaultIfEmpty()
+            where (Guid?)m.ProjectId == null // null membership row = not a member
+            select p;
+
+        if (!includeArchived)
+            query = query.Where(p => p.ArchivedAt == null);
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(p =>
+                EF.Functions.ILike(p.Name, $"%{search}%")
+                || (p.Description != null && EF.Functions.ILike(p.Description, $"%{search}%"))
+            );
+
+        var totalCount = await query.CountAsync(ct);
+
+        query = sortBy switch
+        {
+            ProjectSortField.Name => sortDescending
+                ? query.OrderByDescending(p => p.Name)
+                : query.OrderBy(p => p.Name),
+            ProjectSortField.UpdatedAt => sortDescending
+                ? query.OrderByDescending(p => p.UpdatedAt)
+                : query.OrderBy(p => p.UpdatedAt),
+            _ => sortDescending
+                ? query.OrderByDescending(p => p.CreatedAt)
+                : query.OrderBy(p => p.CreatedAt),
+        };
+
+        var items = await query.Skip(skip).Take(take).ToListAsync(ct);
         return new ProjectListPage(items, totalCount);
     }
 

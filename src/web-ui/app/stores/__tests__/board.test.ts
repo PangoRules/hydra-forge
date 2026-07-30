@@ -1,6 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBoardStore } from '~/stores/board'
+
+const mockGET = vi.fn()
+mockNuxtImport('useApi', () => () => ({
+  GET: mockGET,
+  POST: vi.fn(),
+  PUT: vi.fn(),
+  DELETE: vi.fn(),
+  PATCH: vi.fn()
+}))
 
 const makeColumn = (id: string, name: string, position = 0) => ({
   id,
@@ -10,7 +20,8 @@ const makeColumn = (id: string, name: string, position = 0) => ({
   color: null,
 })
 
-const makeCard = (id: string, columnId: string, title: string, type = 0) => ({
+type CardType = 'Task' | 'Issue' | 'Idea' | 'Goal'
+const makeCard = (id: string, columnId: string, title: string, type: CardType = 'Task') => ({
   id,
   projectId: 'p1',
   columnId,
@@ -28,11 +39,14 @@ const makeCard = (id: string, columnId: string, title: string, type = 0) => ({
   parentCardId: null,
   assignees: [],
   watchers: [],
+  relationshipBadges: [],
+  relationshipCount: 0,
 })
 
 describe('useBoardStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockGET.mockReset()
   })
 
   it('starts with empty columns and empty cards', () => {
@@ -126,6 +140,67 @@ describe('useBoardStore', () => {
     expect(board.columns.map(c => c.id)).toEqual(['col2'])
     expect(board.cardsByColumn.has('col1')).toBe(false)
   })
+
+  it('applyRealtimeCardEvent Updated re-fetches the single card and patches it in place', async () => {
+    const board = useBoardStore()
+    board.columns = [makeColumn('col1', 'Todo')]
+    board.cardsByColumn = new Map([['col1', [makeCard('c1', 'col1', 'Old Title')]]])
+    mockGET.mockResolvedValueOnce({ data: { ...makeCard('c1', 'col1', 'New Title'), position: 0 }, error: null })
+
+    await board.applyRealtimeCardEvent('p1', 'c1', 'Updated')
+
+    expect(board.cardsByColumn.get('col1')?.[0]?.title).toBe('New Title')
+    expect(mockGET).toHaveBeenCalledTimes(1)
+  })
+
+  it('applyRealtimeCardEvent Moved relocates the card into its new column at the fetched position', async () => {
+    const board = useBoardStore()
+    board.columns = [makeColumn('col1', 'Todo'), makeColumn('col2', 'Done')]
+    board.cardsByColumn = new Map([
+      ['col1', [makeCard('c1', 'col1', 'Task 1')]],
+      ['col2', []],
+    ])
+    mockGET.mockResolvedValueOnce({ data: { ...makeCard('c1', 'col2', 'Task 1'), position: 0 }, error: null })
+
+    await board.applyRealtimeCardEvent('p1', 'c1', 'Moved')
+
+    expect(board.cardsByColumn.get('col1')?.length).toBe(0)
+    expect(board.cardsByColumn.get('col2')?.map(c => c.id)).toEqual(['c1'])
+  })
+
+  it('applyRealtimeCardEvent Archived falls back to a full board refresh', async () => {
+    const board = useBoardStore()
+    board.columns = [makeColumn('col1', 'Todo')]
+    board.cardsByColumn = new Map([['col1', [makeCard('c1', 'col1', 'Task 1')]]])
+    mockGET.mockResolvedValueOnce({ data: [], error: null })
+    mockGET.mockResolvedValueOnce({ data: { cards: [] }, error: null })
+
+    await board.applyRealtimeCardEvent('p1', 'c1', 'Archived')
+
+    // fetchBoard fires two GETs (columns + cards) — Archived never hits the single-card GET at all
+    expect(mockGET).toHaveBeenCalledTimes(2)
+  })
+
+  it('applyRealtimeColumnEvent Updated re-fetches the single column and merges it', async () => {
+    const board = useBoardStore()
+    board.columns = [makeColumn('col1', 'Backlog')]
+    mockGET.mockResolvedValueOnce({ data: makeColumn('col1', 'Renamed'), error: null })
+
+    await board.applyRealtimeColumnEvent('p1', 'col1', 'Updated')
+
+    expect(board.columns[0]?.name).toBe('Renamed')
+  })
+
+  it('applyRealtimeColumnEvent Moved re-fetches the full column order only (no card fetch)', async () => {
+    const board = useBoardStore()
+    board.columns = [makeColumn('col1', 'A', 0), makeColumn('col2', 'B', 1)]
+    mockGET.mockResolvedValueOnce({ data: [makeColumn('col2', 'B', 0), makeColumn('col1', 'A', 1)], error: null })
+
+    await board.applyRealtimeColumnEvent('p1', 'col2', 'Moved')
+
+    expect(board.columns.map(c => c.id)).toEqual(['col2', 'col1'])
+    expect(mockGET).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('BoardStore filters', () => {
@@ -148,7 +223,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
       ['c2', []]
     ])
     expect(store.visibleColumns.length).toBe(2)
@@ -161,7 +236,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
       ['c2', []]
     ])
     store.boardFilters.hideEmptyColumns = true
@@ -177,7 +252,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 0, cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '' }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
       ['c2', []]
     ])
     store.boardFilters.visibleColumnIds = ['c2']

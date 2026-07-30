@@ -1,19 +1,15 @@
 namespace HydraForge.Infrastructure.Persistence;
 
-using HydraForge.Domain.Entities.Auth;
-using HydraForge.Domain.Entities.ProjectSpace;
-using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.Admin;
+using HydraForge.Domain.Entities.Auth;
+using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-public class HydraForgeDbContext : DbContext
+public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) : DbContext(options)
 {
-    public HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<User> Users => Set<User>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Column> Columns => Set<Column>();
@@ -64,313 +60,512 @@ public class HydraForgeDbContext : DbContext
 
         modelBuilder.HasPostgresExtension("vector");
 
-        ConfigureEntity<User>(modelBuilder, "users", b =>
-        {
-            b.HasIndex(e => e.UsernameNormalized).IsUnique();
-            b.HasIndex(e => e.EmailNormalized);
-        });
-
-        ConfigureEntity<Project>(modelBuilder, "projects", b =>
-        {
-            b.HasIndex(e => e.Name);
-        });
-
-        ConfigureEntity<Column>(modelBuilder, "columns", b =>
-        {
-            b.HasIndex(e => new { e.ProjectId, e.Position });
-        });
-
-        ConfigureEntity<Card>(modelBuilder, "cards", b =>
-        {
-            b.HasIndex(e => new { e.ProjectId, e.CardNumber }).IsUnique();
-            b.HasIndex(e => e.ColumnId);
-            b.HasIndex(e => e.ParentCardId);
-        });
-
-        ConfigureEntity<CardAssignee>(modelBuilder, "card_assignees", b =>
-        {
-            b.HasIndex(e => new { e.CardId, e.UserId }).IsUnique();
-        });
-
-        ConfigureEntity<CardRelationship>(modelBuilder, "card_relationships", b =>
-        {
-            b.HasIndex(e => new { e.SourceCardId, e.TargetCardId })
-                .IsUnique()
-                .HasFilter("\"ArchivedAt\" IS NULL");
-        });
-
-        ConfigureEntity<CardWatcher>(modelBuilder, "card_watchers", b =>
-        {
-            b.HasKey(e => new { e.CardId, e.UserId });
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<Comment>(modelBuilder, "comments", b =>
-        {
-            b.HasIndex(e => e.CardId);
-        });
-
-        ConfigureEntity<ChecklistItem>(modelBuilder, "checklist_items", b =>
-        {
-            b.HasIndex(e => e.CardId);
-        });
-
-        ConfigureEntity<Attachment>(modelBuilder, "attachments", b =>
-        {
-            b.HasIndex(e => e.CardId);
-        });
-
-        ConfigureEntity<Spec>(modelBuilder, "specs", b =>
-        {
-            b.HasIndex(e => e.ProjectId);
-            b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
-            b.Property(e => e.DocType).HasColumnName("doc_type").HasConversion<int>().HasDefaultValue(DocType.Specification).IsRequired();
-            b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
-            b.HasIndex(e => e.CardId).HasDatabaseName("ix_specs_card_id");
-        });
-
-        ConfigureEntity<SpecVersion>(modelBuilder, "spec_versions", b =>
-        {
-            b.HasIndex(e => e.SpecId);
-            b.HasIndex(e => new { e.SpecId, e.Version }).IsUnique();
-            b.HasOne<Spec>()
-                .WithMany()
-                .HasForeignKey(e => e.SpecId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        ConfigureEntity<Plan>(modelBuilder, "plans", b =>
-        {
-            b.HasIndex(e => e.ProjectId);
-            b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
-            b.Property(e => e.SpecId).HasColumnName("spec_id");
-            b.Property(e => e.Status).HasColumnName("status").HasConversion<int>().HasDefaultValue(PlanStatus.Pending).IsRequired();
-            b.Property(e => e.Position).HasColumnName("position").HasDefaultValue(0).IsRequired();
-            b.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Cascade);
-            b.HasOne<Spec>().WithMany().HasForeignKey(e => e.SpecId).OnDelete(DeleteBehavior.SetNull);
-            b.HasIndex(e => e.CardId).HasDatabaseName("ix_plans_card_id");
-            b.HasIndex(e => e.SpecId).HasDatabaseName("ix_plans_spec_id");
-        });
-
-        ConfigureEntity<PlanVersion>(modelBuilder, "plan_versions", b =>
-        {
-            b.HasIndex(e => e.PlanId);
-            b.HasIndex(e => new { e.PlanId, e.Version }).IsUnique();
-            b.HasOne<Plan>()
-                .WithMany()
-                .HasForeignKey(e => e.PlanId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        ConfigureEntity<AuditLogEntry>(modelBuilder, "audit_log_entries", b =>
-        {
-            b.HasIndex(e => e.ProjectId);
-            b.HasIndex(e => e.ActorId);
-            b.HasIndex(e => new { e.EntityType, e.EntityId });
-        });
-
-        ConfigureEntity<ProjectMember>(modelBuilder, "project_members", b =>
-        {
-            b.HasIndex(e => new { e.ProjectId, e.UserId }).IsUnique();
-            b.HasOne(e => e.User)
-                .WithMany()
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        ConfigureEntity<ProjectContextSnapshot>(modelBuilder, "project_context_snapshots", b =>
-        {
-            b.HasIndex(e => e.ProjectId).IsUnique();
-        });
-
-        ConfigureEntity<ChatFolder>(modelBuilder, "chat_folders", b =>
-        {
-            b.HasIndex(e => e.OwnerId);
-            b.HasIndex(e => e.ParentFolderId);
-            b.HasIndex(e => e.ProjectId);
-        });
-
-        ConfigureEntity<ChatSession>(modelBuilder, "chat_sessions", b =>
-        {
-            b.HasIndex(e => e.OwnerId);
-            b.HasIndex(e => e.FolderId);
-            b.HasIndex(e => e.ProjectId);
-        });
-
-        ConfigureEntity<CardChatLink>(modelBuilder, "card_chat_links", b =>
-        {
-            b.HasIndex(e => new { e.CardId, e.ChatSessionId }).IsUnique();
-        });
-
-        ConfigureEntity<LlmProvider>(modelBuilder, "llm_providers", b =>
-        {
-            b.HasIndex(e => e.Name);
-            b.HasIndex(e => e.AdapterType);
-            b.HasIndex(e => e.ProviderType);
-            b.HasIndex(e => e.Tier);
-            b.HasIndex(e => e.FallbackProviderId);
-        });
-
-        ConfigureEntity<ProviderModelConfig>(modelBuilder, "provider_model_configs", b =>
-        {
-            b.HasIndex(e => e.ProviderId);
-            b.HasIndex(e => e.ModelId);
-        });
-
-        ConfigureEntity<UserTokenBudget>(modelBuilder, "user_token_budgets", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<TokenUsageRecord>(modelBuilder, "token_usage_records", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => e.ProviderModelConfigId);
-            b.HasIndex(e => e.ProviderId);
-            b.HasIndex(e => e.ModelId);
-            b.HasIndex(e => e.Feature);
-            b.HasIndex(e => e.PipelineRunId);
-            b.HasIndex(e => e.CreatedAt);
-        });
-
-        ConfigureEntity<ImageUsageRecord>(modelBuilder, "image_usage_records", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => e.ProviderModelConfigId);
-            b.HasIndex(e => e.ProviderId);
-            b.HasIndex(e => e.ModelId);
-            b.HasIndex(e => e.Feature);
-            b.HasIndex(e => e.CreatedAt);
-        });
-
-        ConfigureEntity<AgentPersonality>(modelBuilder, "agent_personalities", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<MemoryEntry>(modelBuilder, "memory_entries", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => e.Category);
-            b.Property(e => e.Embedding).HasColumnType("vector(1536)");
-        });
-
-        ConfigureEntity<Note>(modelBuilder, "notes", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<PersonalTask>(modelBuilder, "personal_tasks", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => new { e.IsCompleted, e.DueAt });
-        });
-
-        ConfigureEntity<CalendarSource>(modelBuilder, "calendar_sources", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<CalendarEvent>(modelBuilder, "calendar_events", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => e.CalendarSourceId);
-            b.HasIndex(e => e.ExternalUid);
-        });
-
-        ConfigureEntity<Document>(modelBuilder, "documents", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<GalleryImage>(modelBuilder, "gallery_images", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<Album>(modelBuilder, "albums", b =>
-        {
-            b.HasIndex(e => e.UserId);
-        });
-
-        ConfigureEntity<AlbumImage>(modelBuilder, "album_images", b =>
-        {
-            b.HasIndex(e => e.AlbumId);
-        });
-
-        ConfigureEntity<ImageTag>(modelBuilder, "image_tags", b =>
-        {
-            b.HasIndex(e => e.ImageId);
-            b.HasIndex(e => e.Tag);
-        });
-
-        ConfigureEntity<Notification>(modelBuilder, "notifications", b =>
-        {
-            b.HasIndex(e => e.UserId);
-            b.HasIndex(e => new { e.IsRead, e.CreatedAt });
-        });
-
-        ConfigureEntity<SystemSettings>(modelBuilder, "system_settings", b =>
-        {
-            b.HasData(new SystemSettings
+        ConfigureEntity<User>(
+            modelBuilder,
+            "users",
+            b =>
             {
-                Id = SystemSettingsSingletonId,
-                ArchivedItemRetentionDays = 730,
-                AuditLogRetentionDays = 90,
-                NotificationRetentionDays = 30,
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-            });
-        });
+                b.HasIndex(e => e.UsernameNormalized).IsUnique();
+                b.HasIndex(e => e.EmailNormalized);
+            }
+        );
 
-        ConfigureEntity<DocumentVersion>(modelBuilder, "document_versions", b =>
-        {
-            b.HasIndex(e => e.DocumentId);
-            b.HasOne<Document>()
-                .WithMany()
-                .HasForeignKey(e => e.DocumentId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        ConfigureEntity<Project>(
+            modelBuilder,
+            "projects",
+            b =>
+            {
+                b.HasIndex(e => e.Name);
+            }
+        );
 
-        ConfigureEntity<DocumentChunk>(modelBuilder, "document_chunks", b =>
-        {
-            b.HasIndex(e => e.DocumentId);
-            b.HasIndex(e => new { e.SourceType, e.SourceId });
-            b.Property(e => e.Embedding).HasColumnType("vector(1536)");
-        });
+        ConfigureEntity<Column>(
+            modelBuilder,
+            "columns",
+            b =>
+            {
+                b.HasIndex(e => new { e.ProjectId, e.Position });
+            }
+        );
 
-        ConfigureEntity<NoteReminder>(modelBuilder, "note_reminders", b =>
-        {
-            b.HasIndex(e => e.NoteId);
-            b.HasIndex(e => new { e.IsSent, e.TriggerAt });
-            b.HasOne<Note>()
-                .WithMany()
-                .HasForeignKey(e => e.NoteId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        ConfigureEntity<Card>(
+            modelBuilder,
+            "cards",
+            b =>
+            {
+                b.HasIndex(e => new { e.ProjectId, e.CardNumber }).IsUnique();
+                b.HasIndex(e => e.ColumnId);
+                b.HasIndex(e => e.ParentCardId);
+            }
+        );
 
-        ConfigureEntity<NoteImageAttachment>(modelBuilder, "note_image_attachments", b =>
-        {
-            b.HasIndex(e => e.NoteId);
-            b.HasOne<Note>()
-                .WithMany()
-                .HasForeignKey(e => e.NoteId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        ConfigureEntity<CardAssignee>(
+            modelBuilder,
+            "card_assignees",
+            b =>
+            {
+                b.HasIndex(e => new { e.CardId, e.UserId }).IsUnique();
+            }
+        );
 
-        ConfigureEntity<ChatMessage>(modelBuilder, "chat_messages", b =>
-        {
-            b.HasIndex(e => e.SessionId);
-            b.HasOne<ChatSession>()
-                .WithMany()
-                .HasForeignKey(e => e.SessionId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        ConfigureEntity<CardRelationship>(
+            modelBuilder,
+            "card_relationships",
+            b =>
+            {
+                b.HasIndex(e => new { e.SourceCardId, e.TargetCardId })
+                    .IsUnique()
+                    .HasFilter("\"ArchivedAt\" IS NULL");
+            }
+        );
+
+        ConfigureEntity<CardWatcher>(
+            modelBuilder,
+            "card_watchers",
+            b =>
+            {
+                b.HasKey(e => new { e.CardId, e.UserId });
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<Comment>(
+            modelBuilder,
+            "comments",
+            b =>
+            {
+                b.HasIndex(e => e.CardId);
+            }
+        );
+
+        ConfigureEntity<ChecklistItem>(
+            modelBuilder,
+            "checklist_items",
+            b =>
+            {
+                b.HasIndex(e => e.CardId);
+            }
+        );
+
+        ConfigureEntity<Attachment>(
+            modelBuilder,
+            "attachments",
+            b =>
+            {
+                b.HasIndex(e => e.CardId);
+            }
+        );
+
+        ConfigureEntity<Spec>(
+            modelBuilder,
+            "specs",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectId);
+                b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
+                b.Property(e => e.DocType)
+                    .HasColumnName("doc_type")
+                    .HasConversion<int>()
+                    .HasDefaultValue(DocType.Specification)
+                    .HasSentinel(default)
+                    .IsRequired();
+                b.HasOne<Card>()
+                    .WithMany()
+                    .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasIndex(e => e.CardId).HasDatabaseName("ix_specs_card_id");
+            }
+        );
+
+        ConfigureEntity<SpecVersion>(
+            modelBuilder,
+            "spec_versions",
+            b =>
+            {
+                b.HasIndex(e => e.SpecId);
+                b.HasIndex(e => new { e.SpecId, e.Version }).IsUnique();
+                b.HasOne<Spec>()
+                    .WithMany()
+                    .HasForeignKey(e => e.SpecId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<Plan>(
+            modelBuilder,
+            "plans",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectId);
+                b.Property(e => e.CardId).HasColumnName("card_id").IsRequired();
+                b.Property(e => e.SpecId).HasColumnName("spec_id");
+                b.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasConversion<int>()
+                    .HasDefaultValue(PlanStatus.Pending)
+                    .HasSentinel(default)
+                    .IsRequired();
+                b.Property(e => e.Position)
+                    .HasColumnName("position")
+                    .HasDefaultValue(0)
+                    .IsRequired();
+                b.HasOne<Card>()
+                    .WithMany()
+                    .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasOne<Spec>()
+                    .WithMany()
+                    .HasForeignKey(e => e.SpecId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                b.HasIndex(e => e.CardId).HasDatabaseName("ix_plans_card_id");
+                b.HasIndex(e => e.SpecId).HasDatabaseName("ix_plans_spec_id");
+            }
+        );
+
+        ConfigureEntity<PlanVersion>(
+            modelBuilder,
+            "plan_versions",
+            b =>
+            {
+                b.HasIndex(e => e.PlanId);
+                b.HasIndex(e => new { e.PlanId, e.Version }).IsUnique();
+                b.HasOne<Plan>()
+                    .WithMany()
+                    .HasForeignKey(e => e.PlanId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<AuditLogEntry>(
+            modelBuilder,
+            "audit_log_entries",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectId);
+                b.HasIndex(e => e.ActorId);
+                b.HasIndex(e => new { e.EntityType, e.EntityId });
+            }
+        );
+
+        ConfigureEntity<ProjectMember>(
+            modelBuilder,
+            "project_members",
+            b =>
+            {
+                b.HasIndex(e => new { e.ProjectId, e.UserId }).IsUnique();
+                b.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            }
+        );
+
+        ConfigureEntity<ProjectContextSnapshot>(
+            modelBuilder,
+            "project_context_snapshots",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectId).IsUnique();
+            }
+        );
+
+        ConfigureEntity<ChatFolder>(
+            modelBuilder,
+            "chat_folders",
+            b =>
+            {
+                b.HasIndex(e => e.OwnerId);
+                b.HasIndex(e => e.ParentFolderId);
+                b.HasIndex(e => e.ProjectId);
+            }
+        );
+
+        ConfigureEntity<ChatSession>(
+            modelBuilder,
+            "chat_sessions",
+            b =>
+            {
+                b.HasIndex(e => e.OwnerId);
+                b.HasIndex(e => e.FolderId);
+                b.HasIndex(e => e.ProjectId);
+            }
+        );
+
+        ConfigureEntity<CardChatLink>(
+            modelBuilder,
+            "card_chat_links",
+            b =>
+            {
+                b.HasIndex(e => new { e.CardId, e.ChatSessionId }).IsUnique();
+            }
+        );
+
+        ConfigureEntity<LlmProvider>(
+            modelBuilder,
+            "llm_providers",
+            b =>
+            {
+                b.HasIndex(e => e.Name);
+                b.HasIndex(e => e.AdapterType);
+                b.HasIndex(e => e.ProviderType);
+                b.HasIndex(e => e.Tier);
+                b.HasIndex(e => e.FallbackProviderId);
+            }
+        );
+
+        ConfigureEntity<ProviderModelConfig>(
+            modelBuilder,
+            "provider_model_configs",
+            b =>
+            {
+                b.HasIndex(e => e.ProviderId);
+                b.HasIndex(e => e.ModelId);
+            }
+        );
+
+        ConfigureEntity<UserTokenBudget>(
+            modelBuilder,
+            "user_token_budgets",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<TokenUsageRecord>(
+            modelBuilder,
+            "token_usage_records",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.ProviderModelConfigId);
+                b.HasIndex(e => e.ProviderId);
+                b.HasIndex(e => e.ModelId);
+                b.HasIndex(e => e.Feature);
+                b.HasIndex(e => e.PipelineRunId);
+                b.HasIndex(e => e.CreatedAt);
+            }
+        );
+
+        ConfigureEntity<ImageUsageRecord>(
+            modelBuilder,
+            "image_usage_records",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.ProviderModelConfigId);
+                b.HasIndex(e => e.ProviderId);
+                b.HasIndex(e => e.ModelId);
+                b.HasIndex(e => e.Feature);
+                b.HasIndex(e => e.CreatedAt);
+            }
+        );
+
+        ConfigureEntity<AgentPersonality>(
+            modelBuilder,
+            "agent_personalities",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<MemoryEntry>(
+            modelBuilder,
+            "memory_entries",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.Category);
+                b.Property(e => e.Embedding).HasColumnType("vector(1536)");
+            }
+        );
+
+        ConfigureEntity<Note>(
+            modelBuilder,
+            "notes",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<PersonalTask>(
+            modelBuilder,
+            "personal_tasks",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => new { e.IsCompleted, e.DueAt });
+            }
+        );
+
+        ConfigureEntity<CalendarSource>(
+            modelBuilder,
+            "calendar_sources",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<CalendarEvent>(
+            modelBuilder,
+            "calendar_events",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.CalendarSourceId);
+                b.HasIndex(e => e.ExternalUid);
+            }
+        );
+
+        ConfigureEntity<Document>(
+            modelBuilder,
+            "documents",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<GalleryImage>(
+            modelBuilder,
+            "gallery_images",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<Album>(
+            modelBuilder,
+            "albums",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<AlbumImage>(
+            modelBuilder,
+            "album_images",
+            b =>
+            {
+                b.HasIndex(e => e.AlbumId);
+            }
+        );
+
+        ConfigureEntity<ImageTag>(
+            modelBuilder,
+            "image_tags",
+            b =>
+            {
+                b.HasIndex(e => e.ImageId);
+                b.HasIndex(e => e.Tag);
+            }
+        );
+
+        ConfigureEntity<Notification>(
+            modelBuilder,
+            "notifications",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => new { e.IsRead, e.CreatedAt });
+            }
+        );
+
+        ConfigureEntity<SystemSettings>(
+            modelBuilder,
+            "system_settings",
+            b =>
+            {
+                b.HasData(
+                    new SystemSettings
+                    {
+                        Id = Domain.Entities.PersonalSpace.SystemSettings.SingletonId,
+                        ArchivedItemRetentionDays = 730,
+                        AuditLogRetentionDays = 90,
+                        NotificationRetentionDays = 30,
+                        CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    }
+                );
+            }
+        );
+
+        ConfigureEntity<DocumentVersion>(
+            modelBuilder,
+            "document_versions",
+            b =>
+            {
+                b.HasIndex(e => e.DocumentId);
+                b.HasOne<Document>()
+                    .WithMany()
+                    .HasForeignKey(e => e.DocumentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<DocumentChunk>(
+            modelBuilder,
+            "document_chunks",
+            b =>
+            {
+                b.HasIndex(e => e.DocumentId);
+                b.HasIndex(e => new { e.SourceType, e.SourceId });
+                b.Property(e => e.Embedding).HasColumnType("vector(1536)");
+            }
+        );
+
+        ConfigureEntity<NoteReminder>(
+            modelBuilder,
+            "note_reminders",
+            b =>
+            {
+                b.HasIndex(e => e.NoteId);
+                b.HasIndex(e => new { e.IsSent, e.TriggerAt });
+                b.HasOne<Note>()
+                    .WithMany()
+                    .HasForeignKey(e => e.NoteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<NoteImageAttachment>(
+            modelBuilder,
+            "note_image_attachments",
+            b =>
+            {
+                b.HasIndex(e => e.NoteId);
+                b.HasOne<Note>()
+                    .WithMany()
+                    .HasForeignKey(e => e.NoteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<ChatMessage>(
+            modelBuilder,
+            "chat_messages",
+            b =>
+            {
+                b.HasIndex(e => e.SessionId);
+                b.HasOne<ChatSession>()
+                    .WithMany()
+                    .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
     }
 
-    public static readonly Guid SystemSettingsSingletonId = new("00000000-0000-0000-0000-000000000001");
-
-    private static void ConfigureEntity<T>(ModelBuilder modelBuilder, string tableName, Action<Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T>>? configure = null)
+    private static void ConfigureEntity<T>(
+        ModelBuilder modelBuilder,
+        string tableName,
+        Action<Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T>>? configure =
+            null
+    )
         where T : class
     {
         modelBuilder.Entity<T>(b =>

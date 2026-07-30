@@ -6,11 +6,15 @@ public static class ColumnScrollCalculator
 {
     public const int MaxBadgesPerCard = 5;
 
-    public static int CardBoxHeight(int badgeCount)
+    public static int CardBoxHeight(int badgeCount, int extraLines = 0)
     {
         var shown = Math.Min(badgeCount, MaxBadgesPerCard);
         var overflowLine = badgeCount > MaxBadgesPerCard ? 1 : 0;
-        return 2 /* border */ + 1 /* title */ + shown + overflowLine;
+        return 2 /* border */
+            + 1 /* title */
+            + shown
+            + overflowLine
+            + extraLines;
     }
 
     public record ScrollWindow(int Start, int End, bool HasMoreAbove, bool HasMoreBelow);
@@ -83,7 +87,10 @@ public static class ColumnScrollCalculator
         // Scroll indicators cost a row each — shrink the window to make room, trimming
         // the side farther from the active card (or the bottom, when top-anchored).
         var anchorIndex = activeIndex ?? start;
-        while (end - start > 1 && Height(start, end) + (hasMoreAbove ? 1 : 0) + (hasMoreBelow ? 1 : 0) > innerHeight)
+        while (
+            end - start > 1
+            && Height(start, end) + (hasMoreAbove ? 1 : 0) + (hasMoreBelow ? 1 : 0) > innerHeight
+        )
         {
             if (activeIndex is not null && end - 1 - anchorIndex > anchorIndex - start)
                 end--;

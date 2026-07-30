@@ -38,9 +38,15 @@ public class AuditLogEntry
 
         // Scope validation
         if (scope == AuditLogScope.Project && projectId == null)
-            throw new ArgumentException("ProjectId is required for Project scope.", nameof(projectId));
+            throw new ArgumentException(
+                "ProjectId is required for Project scope.",
+                nameof(projectId)
+            );
         if (scope != AuditLogScope.Project && projectId != null)
-            throw new ArgumentException("ProjectId must be null for System or Personal scope.", nameof(projectId));
+            throw new ArgumentException(
+                "ProjectId must be null for System or Personal scope.",
+                nameof(projectId)
+            );
 
         var now = DateTime.UtcNow;
 
@@ -56,7 +62,7 @@ public class AuditLogEntry
             OldValue = oldValue,
             NewValue = newValue,
             Timestamp = now,
-            CreatedAt = now
+            CreatedAt = now,
         };
     }
 }

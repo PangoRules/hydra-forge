@@ -12,5 +12,5 @@ public enum AiFeature
     CardReview = 8,
     ImageChat = 9,
     ImageDocument = 10,
-    ImageGalleryEditor = 11
+    ImageGalleryEditor = 11,
 }

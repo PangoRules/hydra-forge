@@ -39,7 +39,9 @@ function makeCard(type: string): CardResponse {
     archivedAt: null,
     parentCardId: null,
     assignees: [],
-    watchers: []
+    watchers: [],
+    relationshipBadges: [],
+    relationshipCount: 0
   }
 }
 

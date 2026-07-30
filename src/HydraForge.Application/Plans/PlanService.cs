@@ -1,7 +1,8 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
 using HydraForge.Application.Specs;
@@ -16,6 +17,7 @@ public class PlanService(
     ICardRepository cardRepo,
     ISpecRepository specRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher
@@ -25,17 +27,35 @@ public class PlanService(
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly ISpecRepository _specRepo = specRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private sealed record PlanAuditSnapshot(
+        string Title,
+        string? Description,
+        string Content,
+        PlanStatus Status
+    );
+
+    private static PlanAuditSnapshot BuildSnapshot(Plan plan) =>
+        new(plan.Title, plan.Description, plan.Content, plan.Status);
 
     public async Task<Result<PlanDto>> CreateAsync(
         CreatePlanCommand cmd,
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -128,12 +148,12 @@ public class PlanService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Created, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -145,8 +165,7 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -167,8 +186,7 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<PlanDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -186,8 +204,7 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<PlanDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -202,8 +219,15 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -216,7 +240,10 @@ public class PlanService(
 
         if (plan.IsDone)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+                new Error(
+                    DomainErrorCodes.Plans.EditForbiddenWhenDone,
+                    "Done plans are read-only. Reactivate before editing."
+                )
             );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
@@ -227,6 +254,7 @@ public class PlanService(
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.Title = cmd.Title;
         plan.Description = cmd.Description;
         plan.Content = cmd.Content;
@@ -258,13 +286,13 @@ public class PlanService(
                 plan.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Updated, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -276,8 +304,7 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<PlanVersionDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -308,8 +335,15 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<PlanDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -322,7 +356,10 @@ public class PlanService(
 
         if (plan.IsDone)
             return Result<PlanDto>.Failure(
-                new Error(DomainErrorCodes.Plans.EditForbiddenWhenDone, "Done plans are read-only. Reactivate before editing.")
+                new Error(
+                    DomainErrorCodes.Plans.EditForbiddenWhenDone,
+                    "Done plans are read-only. Reactivate before editing."
+                )
             );
 
         var oldVersion = await _planRepo.GetVersionAsync(cmd.PlanId, cmd.Version, ct);
@@ -331,6 +368,7 @@ public class PlanService(
                 new Error(DomainErrorCodes.Plans.DocumentVersionNotFound, "Plan version not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.Title = oldVersion.Title;
         plan.Description = oldVersion.Description;
         plan.Content = oldVersion.Content;
@@ -362,13 +400,13 @@ public class PlanService(
                 plan.Id,
                 "Restored",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Restored, ct);
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Restored, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
@@ -378,28 +416,61 @@ public class PlanService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
-            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var plan = await _planRepo.GetByIdAsync(cmd.PlanId, ct);
         if (plan == null || plan.ProjectId != cmd.ProjectId)
-            return Result<PlanDto>.Failure(new Error(DomainErrorCodes.Plans.NotFound, "Plan not found."));
+            return Result<PlanDto>.Failure(
+                new Error(DomainErrorCodes.Plans.NotFound, "Plan not found.")
+            );
 
         if (plan.Status == cmd.Status)
             return Result<PlanDto>.Success(MapToDto(plan));
 
+        var oldSnapshot = BuildSnapshot(plan);
         plan.SetStatus(cmd.Status);
         plan.UpdatedAt = DateTime.UtcNow;
 
         await _planRepo.UpdateAsync(plan, ct);
         await _planRepo.SaveChangesAsync(ct);
-        await PublishAsync(cmd.ProjectId, plan.Id, BoardAction.Updated, ct);
+
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "Plan",
+                plan.Id,
+                "StatusChanged",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(plan))
+            ),
+            ct
+        );
+
+        await PublishAsync(cmd.ProjectId, plan.Id, plan.CardId, BoardAction.Updated, ct);
 
         return Result<PlanDto>.Success(MapToDto(plan));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid planId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid planId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -409,7 +480,8 @@ public class PlanService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

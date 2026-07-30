@@ -1,7 +1,8 @@
 using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
 using HydraForge.Domain.Common;
@@ -14,6 +15,7 @@ public class SpecService(
     ISpecRepository specRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher
@@ -22,17 +24,30 @@ public class SpecService(
     private readonly ISpecRepository _specRepo = specRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private sealed record SpecAuditSnapshot(string Title, string? Description, string Content);
+
+    private static SpecAuditSnapshot BuildSnapshot(Spec spec) =>
+        new(spec.Title, spec.Description, spec.Content);
 
     public async Task<Result<SpecDto>> CreateAsync(
         CreateSpecCommand cmd,
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -117,12 +132,12 @@ public class SpecService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Created, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
@@ -134,8 +149,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -156,8 +170,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -175,8 +188,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -191,8 +203,15 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -211,6 +230,7 @@ public class SpecService(
                 )
             );
 
+        var oldSnapshot = BuildSnapshot(spec);
         spec.Title = cmd.Title;
         spec.Description = cmd.Description;
         spec.Content = cmd.Content;
@@ -242,13 +262,13 @@ public class SpecService(
                 spec.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Updated, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
@@ -260,8 +280,7 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<SpecVersionDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -273,20 +292,18 @@ public class SpecService(
             );
 
         var versions = await _specRepo.ListVersionsAsync(specId, ct);
-        return Result<IReadOnlyList<SpecVersionDto>>.Success(
-            versions
-                .Select(v => new SpecVersionDto(
-                    v.Id,
-                    v.SpecId,
-                    v.Version,
-                    v.Title,
-                    v.Description,
-                    v.Content,
-                    v.CreatedAt,
-                    v.CreatedByUserId
-                ))
-                .ToList()
-        );
+        return Result<IReadOnlyList<SpecVersionDto>>.Success([
+            .. versions.Select(v => new SpecVersionDto(
+                v.Id,
+                v.SpecId,
+                v.Version,
+                v.Title,
+                v.Description,
+                v.Content,
+                v.CreatedAt,
+                v.CreatedByUserId
+            )),
+        ]);
     }
 
     public async Task<Result<SpecDto>> RestoreVersionAsync(
@@ -294,8 +311,15 @@ public class SpecService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<SpecDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -312,6 +336,7 @@ public class SpecService(
                 new Error(DomainErrorCodes.Specs.DocumentVersionNotFound, "Spec version not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(spec);
         spec.Title = oldVersion.Title;
         spec.Description = oldVersion.Description;
         spec.Content = oldVersion.Content;
@@ -343,18 +368,24 @@ public class SpecService(
                 spec.Id,
                 "Restored",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(spec))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, spec.Id, BoardAction.Restored, ct);
+        await PublishAsync(cmd.ProjectId, spec.Id, spec.CardId, BoardAction.Restored, ct);
 
         return Result<SpecDto>.Success(MapToDto(spec));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid specId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid specId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -364,7 +395,8 @@ public class SpecService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

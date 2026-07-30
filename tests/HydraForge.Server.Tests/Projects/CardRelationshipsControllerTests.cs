@@ -5,11 +5,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using HydraForge.Application.Cards;
-using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 public class CardRelationshipsControllerTests
@@ -19,15 +17,39 @@ public class CardRelationshipsControllerTests
     {
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
-        var token = factory.IssueToken(Guid.NewGuid(), "user", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "user",
+            isAdmin: false
+        );
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddColumn(new Column { Id = Guid.NewGuid(), ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
+        factory.AddColumn(
+            new Column
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardId}/cardrelationships");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/cards/{cardId}/cardrelationships"
+        );
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await client.SendAsync(request);
@@ -43,29 +65,72 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // Create: cardA blocks cardB
-        var createReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var createResp = await client.SendAsync(createReq);
         Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
 
         // List
-        var listReq = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships");
+        var listReq = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        );
         listReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var listResp = await client.SendAsync(listReq);
 
@@ -80,21 +145,61 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
-        var req = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var req = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
@@ -102,9 +207,16 @@ public class CardRelationshipsControllerTests
         Assert.Equal(HttpStatusCode.Created, resp1.StatusCode);
 
         // New request with same payload (duplicate)
-        var req2 = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var req2 = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var resp2 = await client.SendAsync(req2);
@@ -117,31 +229,78 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // cardA blocks cardB
-        var req1 = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var req1 = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req1.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var resp1 = await client.SendAsync(req1);
         Assert.Equal(HttpStatusCode.Created, resp1.StatusCode);
 
         // cardB blocks cardA → cycle
-        var req2 = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardB}/cardrelationships")
+        var req2 = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardB}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardA.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardA.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var resp2 = await client.SendAsync(req2);
@@ -157,7 +316,7 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var otherProjectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
@@ -166,14 +325,54 @@ public class CardRelationshipsControllerTests
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
         factory.AddProject(new Project { Id = otherProjectId, Name = "Other Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = otherProjectId, ColumnId = colId, CardNumber = 1, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = otherProjectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card B",
+            }
+        );
 
-        var req = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var req = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var resp = await client.SendAsync(req);
@@ -189,21 +388,61 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
-        var req = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var req = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 3 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 3 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var resp = await client.SendAsync(req);
@@ -217,17 +456,44 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardId, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
 
-        var req = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardId}/cardrelationships/{Guid.NewGuid()}");
+        var req = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/projects/{projectId}/cards/{cardId}/cardrelationships/{Guid.NewGuid()}"
+        );
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var resp = await client.SendAsync(req);
@@ -241,22 +507,62 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // Create: cardA blocks cardB
-        var createReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var createResp = await client.SendAsync(createReq);
@@ -267,7 +573,10 @@ public class CardRelationshipsControllerTests
         var relId = doc.RootElement.GetProperty("id").GetString();
 
         // Delete
-        var deleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/{relId}");
+        var deleteReq = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/{relId}"
+        );
         deleteReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var deleteResp = await client.SendAsync(deleteReq);
 
@@ -280,29 +589,72 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // cardA blocks cardB
-        var createReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var createResp = await client.SendAsync(createReq);
         Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
 
         // GET preflight always returns 200 with the dependent card list
-        var impactReq = new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-impact");
+        var impactReq = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-impact"
+        );
         impactReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var impactResp = await client.SendAsync(impactReq);
 
@@ -315,31 +667,78 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // cardA blocks cardB
-        var createReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var createResp = await client.SendAsync(createReq);
         Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
 
         // POST archive-with-relationships without confirm → 409
-        var archiveReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-with-relationships")
+        var archiveReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-with-relationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { confirm = false }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { confirm = false }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         archiveReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var archiveResp = await client.SendAsync(archiveReq);
@@ -353,31 +752,78 @@ public class CardRelationshipsControllerTests
         var factory = new CRTestWebApplicationFactory();
         using var client = factory.CreateClient();
         var userId = Guid.NewGuid();
-        var token = factory.IssueToken(userId, "member", isAdmin: false);
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
         var projectId = Guid.NewGuid();
         var cardA = Guid.NewGuid();
         var cardB = Guid.NewGuid();
         var colId = Guid.NewGuid();
 
         factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
-        factory.AddMember(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        factory.AddColumn(new Column { Id = colId, ProjectId = projectId, Name = "Backlog", Position = 0 });
-        factory.AddCard(new Card { Id = cardA, ProjectId = projectId, ColumnId = colId, CardNumber = 1, Title = "Card A" });
-        factory.AddCard(new Card { Id = cardB, ProjectId = projectId, ColumnId = colId, CardNumber = 2, Title = "Card B" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
 
         // cardA blocks cardB
-        var createReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships")
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { targetCardId = cardB.ToString(), type = 1 }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var createResp = await client.SendAsync(createReq);
         Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
 
         // Archive with relationships
-        var archiveReq = new HttpRequestMessage(HttpMethod.Post, $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-with-relationships")
+        var archiveReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships/archive-with-relationships"
+        )
         {
-            Content = new StringContent(JsonSerializer.Serialize(new { confirm = true }), Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                JsonSerializer.Serialize(new { confirm = true }),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
         archiveReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var archiveResp = await client.SendAsync(archiveReq);
@@ -404,49 +850,129 @@ internal class CRTestWebApplicationFactory : CardsTestWebApplicationFactory
         builder.ConfigureServices(services =>
         {
             // Remove the parent's per-scope relationship repo
-            var existing = services.SingleOrDefault(d => d.ServiceType == typeof(ICardRelationshipRepository));
-            if (existing != null) services.Remove(existing);
+            var existing = services.SingleOrDefault(d =>
+                d.ServiceType == typeof(ICardRelationshipRepository)
+            );
+            if (existing != null)
+                services.Remove(existing);
             // Replace with shared-list version
-            services.AddScoped<ICardRelationshipRepository>(_ => new SharedCardRelationshipRepository(_relationships));
+            services.AddScoped<ICardRelationshipRepository>(
+                _ => new SharedCardRelationshipRepository(_relationships)
+            );
         });
     }
 }
 
-internal class SharedCardRelationshipRepository : ICardRelationshipRepository
+internal class SharedCardRelationshipRepository(List<CardRelationship> relationships)
+    : ICardRelationshipRepository
 {
-    private readonly List<CardRelationship> _relationships;
-    public SharedCardRelationshipRepository(List<CardRelationship> relationships) => _relationships = relationships;
+    public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r =>
+                (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null
+            ),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
-    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.TargetCardId == cardId && r.Type == RelationshipType.BlockedBy && r.ArchivedAt == null).ToList());
-    public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.SourceCardId == cardId && r.Type == RelationshipType.Precedes && r.ArchivedAt == null).ToList());
-    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.Id == id));
-    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(Guid cardId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null).ToList());
-    public Task<CardRelationship?> FindActiveAsync(Guid sourceCardId, Guid targetCardId, RelationshipType type, CancellationToken ct = default)
-        => Task.FromResult<CardRelationship?>(_relationships.FirstOrDefault(r => r.SourceCardId == sourceCardId && r.TargetCardId == targetCardId && r.Type == type && r.ArchivedAt == null));
-    public Task AddAsync(CardRelationship relationship, CancellationToken ct = default) { _relationships.Add(relationship); return Task.CompletedTask; }
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r =>
+                r.TargetCardId == cardId
+                && r.Type == RelationshipType.BlockedBy
+                && r.ArchivedAt == null
+            ),
+        ]);
+
+    public Task<IReadOnlyList<CardRelationship>> ListPredecessorsAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r =>
+                r.SourceCardId == cardId
+                && r.Type == RelationshipType.Precedes
+                && r.ArchivedAt == null
+            ),
+        ]);
+
+    public Task<IReadOnlyList<CardRelationship>> ListBlockersForCardsAsync(
+        IReadOnlyList<Guid> cardIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r =>
+                cardIds.Contains(r.TargetCardId)
+                && r.Type == RelationshipType.BlockedBy
+                && r.ArchivedAt == null
+            ),
+        ]);
+
+    public Task<CardRelationship?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(relationships.FirstOrDefault(r => r.Id == id));
+
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r =>
+                (r.SourceCardId == cardId || r.TargetCardId == cardId) && r.ArchivedAt == null
+            ),
+        ]);
+
+    public Task<CardRelationship?> FindActiveAsync(
+        Guid sourceCardId,
+        Guid targetCardId,
+        RelationshipType type,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            relationships.FirstOrDefault(r =>
+                r.SourceCardId == sourceCardId
+                && r.TargetCardId == targetCardId
+                && r.Type == type
+                && r.ArchivedAt == null
+            )
+        );
+
+    public Task AddAsync(CardRelationship relationship, CancellationToken ct = default)
+    {
+        relationships.Add(relationship);
+        return Task.CompletedTask;
+    }
+
     public Task ArchiveAsync(Guid id, CancellationToken ct = default)
     {
-        var rel = _relationships.FirstOrDefault(r => r.Id == id);
-        if (rel != null) rel.ArchivedAt = DateTime.UtcNow;
+        var rel = relationships.FirstOrDefault(r => r.Id == id);
+        rel?.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 
     public Task ArchiveRangeAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
     {
-        foreach (var rel in _relationships.Where(r => ids.Contains(r.Id)))
+        foreach (var rel in relationships.Where(r => ids.Contains(r.Id)))
             rel.ArchivedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r => r.ArchivedAt == null),
+        ]);
 
-    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<CardRelationship>>(_relationships.Where(r => r.ArchivedAt == null).ToList());
+    public Task<IReadOnlyList<CardRelationship>> ListActiveByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<CardRelationship>>([
+            .. relationships.Where(r => r.ArchivedAt == null),
+        ]);
 }

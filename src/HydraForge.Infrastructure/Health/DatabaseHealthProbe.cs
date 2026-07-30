@@ -25,4 +25,3 @@ public class DatabaseHealthProbe(HydraForgeDbContext db) : IHealthProbe
         }
     }
 }
-

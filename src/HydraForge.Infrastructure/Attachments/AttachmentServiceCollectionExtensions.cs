@@ -2,7 +2,6 @@ using Amazon;
 using Amazon.S3;
 using HydraForge.Application.Attachments;
 using HydraForge.Application.ProjectSnapshots;
-using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.FileStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,26 +10,39 @@ namespace HydraForge.Infrastructure.Attachments;
 
 public static class AttachmentServiceCollectionExtensions
 {
-    public static IServiceCollection AddAttachmentServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAttachmentServices(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
     {
-        var provider = Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
+        var provider =
+            Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
             ?? configuration["FileStorage:Provider"]
             ?? "Local";
-        var maxBytes = long.TryParse(configuration["FileStorage:MaxBytes"], out var mb) ? mb : 10_000_000L;
+        var maxBytes = long.TryParse(configuration["FileStorage:MaxBytes"], out var mb)
+            ? mb
+            : 10_000_000L;
         var allowedTypes = AttachmentContentTypes.Allowed;
 
         if (provider.Equals("S3", StringComparison.OrdinalIgnoreCase))
         {
-            var bucketName = configuration["FileStorage:S3:BucketName"]
-                ?? throw new InvalidOperationException("FileStorage:S3:BucketName is required when FileStorage:Provider=S3");
-            var region = configuration["FileStorage:S3:Region"]
+            var bucketName =
+                configuration["FileStorage:S3:BucketName"]
+                ?? throw new InvalidOperationException(
+                    "FileStorage:S3:BucketName is required when FileStorage:Provider=S3"
+                );
+            var region =
+                configuration["FileStorage:S3:Region"]
                 ?? throw new InvalidOperationException("FileStorage:S3:Region is required");
-            var accessKey = configuration["FileStorage:S3:AccessKey"]
+            var accessKey =
+                configuration["FileStorage:S3:AccessKey"]
                 ?? throw new InvalidOperationException("FileStorage:S3:AccessKey is required");
-            var secretKey = configuration["FileStorage:S3:SecretKey"]
+            var secretKey =
+                configuration["FileStorage:S3:SecretKey"]
                 ?? throw new InvalidOperationException("FileStorage:S3:SecretKey is required");
             var endpoint = configuration["FileStorage:S3:Endpoint"];
-            var forcePathStyle = bool.TryParse(configuration["FileStorage:S3:ForcePathStyle"], out var fps) && fps;
+            var forcePathStyle =
+                bool.TryParse(configuration["FileStorage:S3:ForcePathStyle"], out var fps) && fps;
 
             services.AddSingleton<IAmazonS3>(sp =>
             {
@@ -44,21 +56,22 @@ public static class AttachmentServiceCollectionExtensions
 
                 return new AmazonS3Client(accessKey, secretKey, config);
             });
-            services.AddSingleton<IFileStore>(sp =>
-                new S3FileStore(
-                    sp.GetRequiredService<IAmazonS3>(),
-                    bucketName,
-                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<S3FileStore>>()));
+            services.AddSingleton<IFileStore>(sp => new S3FileStore(
+                sp.GetRequiredService<IAmazonS3>(),
+                bucketName,
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<S3FileStore>>()
+            ));
         }
         else
         {
-            var localPath = Environment.GetEnvironmentVariable("FILE_STORAGE_PATH")
+            var localPath =
+                Environment.GetEnvironmentVariable("FILE_STORAGE_PATH")
                 ?? configuration["FileStorage:LocalPath"]
                 ?? Path.Combine(AppContext.BaseDirectory, "App_Data", "attachments");
-            services.AddSingleton<IFileStore>(sp =>
-                new LocalFileStore(
-                    localPath,
-                    sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LocalFileStore>>()));
+            services.AddSingleton<IFileStore>(sp => new LocalFileStore(
+                localPath,
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LocalFileStore>>()
+            ));
         }
 
         services.AddScoped<IAttachmentRepository, EfAttachmentRepository>();
@@ -66,12 +79,25 @@ public static class AttachmentServiceCollectionExtensions
         {
             var fileStore = sp.GetRequiredService<IFileStore>();
             var attachmentRepo = sp.GetRequiredService<IAttachmentRepository>();
-            var cardRepo = sp.GetRequiredService<HydraForge.Application.Cards.ICardRepository>();
-            var memberRepo = sp.GetRequiredService<HydraForge.Application.Projects.IProjectMemberRepository>();
-            var auditWriter = sp.GetRequiredService<HydraForge.Application.Audit.IAuditLogWriter>();
+            var cardRepo = sp.GetRequiredService<Application.Cards.ICardRepository>();
+            var memberRepo = sp.GetRequiredService<Application.Projects.IProjectMemberRepository>();
+            var auditWriter = sp.GetRequiredService<Application.Audit.IAuditLogWriter>();
             var snapshotRefresher = sp.GetRequiredService<IProjectSnapshotRefresher>();
-            var publisher = sp.GetRequiredService<HydraForge.Application.Realtime.IProjectBoardEventPublisher>();
-            return new AttachmentService(attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
+            var publisher =
+                sp.GetRequiredService<Application.Realtime.IProjectBoardEventPublisher>();
+            var userRepo = sp.GetRequiredService<Application.Auth.IUserRepository>();
+            return new AttachmentService(
+                attachmentRepo,
+                cardRepo,
+                memberRepo,
+                userRepo,
+                fileStore,
+                auditWriter,
+                snapshotRefresher,
+                publisher,
+                maxBytes,
+                allowedTypes
+            );
         });
 
         return services;

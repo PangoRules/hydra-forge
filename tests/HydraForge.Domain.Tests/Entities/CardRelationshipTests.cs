@@ -40,7 +40,7 @@ public class CardRelationshipTests
             Type = RelationshipType.BlockedBy,
             CreatedAt = createdAt,
             CreatedByUserId = userId,
-            ArchivedAt = archivedAt
+            ArchivedAt = archivedAt,
         };
 
         Assert.Equal(id, rel.Id);
@@ -60,7 +60,7 @@ public class CardRelationshipTests
             Id = Guid.NewGuid(),
             SourceCardId = Guid.NewGuid(),
             TargetCardId = Guid.NewGuid(),
-            Type = RelationshipType.Precedes
+            Type = RelationshipType.Precedes,
         };
 
         Assert.Null(rel.ArchivedAt);
@@ -72,7 +72,7 @@ public class CardRelationshipTests
         var rel = new CardRelationship();
 
         Assert.NotEqual(Guid.Empty, rel.Id);
-        Assert.Equal(default(RelationshipType), rel.Type); // 0 = invalid enum, expected since no explicit default
+        Assert.Equal(default, rel.Type); // 0 = invalid enum, expected since no explicit default
         Assert.Null(rel.ArchivedAt);
     }
 }

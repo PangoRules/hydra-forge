@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -12,7 +11,11 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.8" />
+    <PackageReference
+      Include="Microsoft.Extensions.Configuration.EnvironmentVariables"
+      Version="10.0.8"
+    />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
@@ -23,5 +26,4 @@
     <ProjectReference Include="..\HydraForge.Domain\HydraForge.Domain.csproj" />
     <ProjectReference Include="..\HydraForge.Application\HydraForge.Application.csproj" />
   </ItemGroup>
-
 </Project>

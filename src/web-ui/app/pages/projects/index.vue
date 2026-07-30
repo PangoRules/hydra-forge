@@ -24,7 +24,6 @@ const sortDescending = ref(true)
 const page = ref(1)
 const isMobile = useMediaQuery('(max-width: 767px)')
 const pageSize = ref(isMobile.value ? 5 : 10)
-const pageSizeOptions = [5, 10, 15]
 
 const api = useApi()
 const toast = useAppToast()
@@ -50,7 +49,11 @@ async function fetchProjects() {
     const params = new URLSearchParams()
     if (showArchived.value) params.set('includeArchived', 'true')
     if (search.value) params.set('search', search.value)
-    if (role.value && role.value !== 'all') params.set('role', role.value)
+    if (role.value === 'notmember') {
+      params.set('excludeMembership', 'true')
+    } else if (role.value && role.value !== 'all') {
+      params.set('role', role.value)
+    }
     params.set('sortBy', sortBy.value)
     params.set('sortDescending', String(sortDescending.value))
     params.set('skip', String((page.value - 1) * pageSize.value))
@@ -138,23 +141,20 @@ function onProjectCreated() {
 }
 
 onMounted(() => fetchProjects())
-
-const rangeStart = computed(() => totalCount.value === 0 ? 0 : (page.value - 1) * pageSize.value + 1)
-const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount.value))
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <div class="p-4 sm:p-6 lg:p-8 pb-0 w-full flex-1 flex flex-col">
-      <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 class="text-2xl font-bold">
-          Projects
-        </h1>
-        <UButton @click="showCreateModal = true">
-          New Project
-        </UButton>
-      </div>
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="shrink-0 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">
+        Projects
+      </h1>
+      <UButton @click="showCreateModal = true">
+        New Project
+      </UButton>
+    </div>
 
+    <div class="shrink-0 px-4 sm:px-6 lg:px-8">
       <ProjectFilterBar
         v-model:search="search"
         v-model:role="role"
@@ -163,51 +163,22 @@ const rangeEnd = computed(() => Math.min(page.value * pageSize.value, totalCount
         v-model:show-archived="showArchived"
         class="mb-6"
       />
+    </div>
 
-      <div class="flex-1">
-        <ProjectListTable
-          class="hidden md:block"
-          :projects="projects"
-          :loading="loading"
-          @select="onProjectSelect"
-          @toggle-archive="handleToggleArchive"
-          @edit="handleEditProject"
-        />
-        <ProjectList
-          class="md:hidden"
-          :projects="projects"
-          :loading="loading"
-          @select="onProjectSelect"
-          @toggle-archive="handleToggleArchive"
-          @edit="handleEditProject"
-        />
-
-        <div
-          v-if="totalCount > 0"
-          class="flex flex-col gap-3 py-4 sm:py-6 border-t border-gray-200 dark:border-gray-700"
-        >
-          <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Rows per page:</span>
-              <USelect
-                :model-value="pageSize"
-                :items="pageSizeOptions.map(v => ({ label: String(v), value: v }))"
-                class="w-16 sm:w-20"
-                @update:model-value="pageSize = Number($event)"
-              />
-              <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {{ rangeStart }}-{{ rangeEnd }} of {{ totalCount }}
-              </span>
-            </div>
-            <UPagination
-              v-model:page="page"
-              :total="totalCount"
-              :items-per-page="pageSize"
-              size="sm"
-            />
-          </div>
-        </div>
-      </div>
+    <div class="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+      <ProjectListTable
+        :projects="projects"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        fill-height
+        @update:page="page = $event"
+        @update:page-size="pageSize = $event"
+        @select="onProjectSelect"
+        @toggle-archive="handleToggleArchive"
+        @edit="handleEditProject"
+      />
     </div>
 
     <ProjectCreateModal

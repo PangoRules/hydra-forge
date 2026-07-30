@@ -1,5 +1,5 @@
-using HydraForge.Application.Plans;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Plans;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -256,7 +256,10 @@ public class PlansController(PlanService planService) : ControllerBase
     )
     {
         var actorId = User.GetRequiredUserId();
-        var result = await planService.SetStatusAsync(new SetPlanStatusCommand(projectId, planId, actorId, request.Status), ct);
+        var result = await planService.SetStatusAsync(
+            new SetPlanStatusCommand(projectId, planId, actorId, request.Status),
+            ct
+        );
         if (!result.IsSuccess)
             return this.ToProblemResult(result.Error);
         var response = new PlanResponse(
@@ -276,5 +279,4 @@ public class PlansController(PlanService planService) : ControllerBase
         );
         return Ok(response);
     }
-
 }

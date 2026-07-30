@@ -14,28 +14,45 @@ public class EfSpecRepository(HydraForgeDbContext context) : ISpecRepository
         return await _context.Specs.FirstOrDefaultAsync(s => s.Id == specId, ct);
     }
 
-    public async Task<IReadOnlyList<Spec>> ListByProjectAsync(Guid projectId, SpecListFilter filter, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Spec>> ListByProjectAsync(
+        Guid projectId,
+        SpecListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = _context.Specs.Where(s => s.ProjectId == projectId);
         return await query.OrderBy(s => s.CreatedAt).ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<Spec>> ListByCardAsync(Guid cardId, SpecListFilter filter, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Spec>> ListByCardAsync(
+        Guid cardId,
+        SpecListFilter filter,
+        CancellationToken ct = default
+    )
     {
         var query = _context.Specs.Where(s => s.CardId == cardId);
         return await query.OrderBy(s => s.CreatedAt).ToListAsync(ct);
     }
 
-    public async Task<SpecVersion?> GetVersionAsync(Guid specId, int version, CancellationToken ct = default)
+    public async Task<SpecVersion?> GetVersionAsync(
+        Guid specId,
+        int version,
+        CancellationToken ct = default
+    )
     {
-        return await _context.SpecVersions
-            .FirstOrDefaultAsync(v => v.SpecId == specId && v.Version == version, ct);
+        return await _context.SpecVersions.FirstOrDefaultAsync(
+            v => v.SpecId == specId && v.Version == version,
+            ct
+        );
     }
 
-    public async Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(Guid specId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(
+        Guid specId,
+        CancellationToken ct = default
+    )
     {
-        return await _context.SpecVersions
-            .Where(v => v.SpecId == specId)
+        return await _context
+            .SpecVersions.Where(v => v.SpecId == specId)
             .OrderBy(v => v.Version)
             .ToListAsync(ct);
     }

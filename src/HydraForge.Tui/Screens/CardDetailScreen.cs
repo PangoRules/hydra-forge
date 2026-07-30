@@ -11,13 +11,17 @@ public class CardDetailScreen(
     ApiClientFactory apiClientFactory,
     AppState appState,
     ErrorCollector errorCollector,
-    ConnectionManager connectionManager
+    ConnectionManager connectionManager,
+    SignalRConnectionManager signalRConnectionManager,
+    NotificationCenter notificationCenter
 ) : IScreen
 {
     private readonly ApiClientFactory _apiClientFactory = apiClientFactory;
     private readonly AppState _appState = appState;
     private readonly ErrorCollector _errorCollector = errorCollector;
     private readonly ConnectionManager _connectionManager = connectionManager;
+    private readonly SignalRConnectionManager _signalRConnectionManager = signalRConnectionManager;
+    private readonly NotificationCenter _notificationCenter = notificationCenter;
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
     private readonly EditorLauncher _editorLauncher = new();
 
@@ -30,51 +34,104 @@ public class CardDetailScreen(
     private int _sectionIndex;
     private int _checklistIndex;
     private int _dependencyIndex;
+    private bool _signalRSubscribed;
+
+    // A key-triggered render and a SignalR-event-triggered render (HandleBoardEvent,
+    // HandleCardFocused/Unfocused) can land concurrently — without this, overlapping
+    // Clear()+Write() calls interleave into duplicate/garbled frames. Same pattern
+    // BoardScreen already uses for the identical reason.
+    private readonly SemaphoreSlim _renderLock = new(1, 1);
 
     public async Task OnEnterAsync()
     {
         _projectId = _appState.SelectedProjectId ?? Guid.Empty;
         _cardId = _appState.SelectedCardId ?? Guid.Empty;
         await LoadCardAsync();
+
+        // BoardScreen tears its own subscriptions + the underlying hub connections down
+        // in its OnExitAsync (see that screen's comment) — reconnect and re-subscribe
+        // fresh here, symmetric to that pattern, so this screen gets live updates too.
+        if (!_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
+            _signalRConnectionManager.OnCardFocused += HandleCardFocused;
+            _signalRConnectionManager.OnCardUnfocused += HandleCardUnfocused;
+            _signalRSubscribed = true;
+        }
+
+        try
+        {
+            await _signalRConnectionManager.ConnectAsync(_projectId);
+            await _signalRConnectionManager.FocusCardAsync(_projectId, _cardId);
+        }
+        catch (Exception ex)
+        {
+            _errorCollector.Add("N/A", $"Real-time connection failed: {ex.Message}");
+        }
     }
 
-    public Task OnExitAsync() => Task.CompletedTask;
+    public async Task OnExitAsync()
+    {
+        if (_signalRSubscribed)
+        {
+            _signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
+            _signalRConnectionManager.OnCardFocused -= HandleCardFocused;
+            _signalRConnectionManager.OnCardUnfocused -= HandleCardUnfocused;
+            _signalRSubscribed = false;
+        }
+        await _signalRConnectionManager.UnfocusCardAsync(_projectId);
+        await _signalRConnectionManager.DisconnectAsync();
+    }
 
     public async Task RenderAsync()
     {
         if (_card == null)
             return;
 
-        AnsiConsole.Clear();
-
-        // Header
-        var typeColor = GetTypeColor(_card.Type);
-        AnsiConsole.Write(
-            new Rule(
-                $"[{typeColor}]#{_card.CardNumber}[/] [blue bold]{Markup.Escape(_card.Title)}[/]"
-            )
-        );
-
-        // Sections — build content first, then wrap in panels
-        var content = new List<IRenderable>
+        await _renderLock.WaitAsync();
+        try
         {
-            BuildMetadataPanel(),
-            BuildDescriptionPanel(),
-            BuildChecklistPanel(),
-            BuildCommentsPanel(),
-            BuildDependenciesPanel(),
-        };
+            AnsiConsole.Clear();
 
-        // Highlight active section
-        if (_sectionIndex < content.Count)
-        {
-            var active = BuildSectionPanel(_sectionIndex, isActive: true);
-            content[_sectionIndex] = active;
+            // Header
+            var typeColor = GetTypeColor(_card.Type);
+            AnsiConsole.Write(
+                new Rule(
+                    $"[{typeColor}]#{_card.CardNumber}[/] [blue bold]{Markup.Escape(_card.Title)}[/]"
+                )
+            );
+
+            var otherViewers = GetOtherViewers();
+            if (otherViewers.Count > 0)
+                AnsiConsole.MarkupLine(
+                    $"[grey italic]{Markup.Escape(string.Join(", ", otherViewers))} {(otherViewers.Count == 1 ? "is" : "are")} viewing[/]"
+                );
+
+            // Sections — build content first, then wrap in panels
+            var content = new List<IRenderable>
+            {
+                BuildMetadataPanel(),
+                BuildDescriptionPanel(),
+                BuildChecklistPanel(),
+                BuildCommentsPanel(),
+                BuildDependenciesPanel(),
+            };
+
+            // Highlight active section
+            if (_sectionIndex < content.Count)
+            {
+                var active = BuildSectionPanel(_sectionIndex, isActive: true);
+                content[_sectionIndex] = active;
+            }
+
+            AnsiConsole.Write(new Rows(content));
+            AnsiConsole.WriteLine();
+            KeyHintBar.Render(BuildHints());
         }
-
-        AnsiConsole.Write(new Rows(content));
-        AnsiConsole.WriteLine();
-        KeyHintBar.Render(BuildHints());
+        finally
+        {
+            _renderLock.Release();
+        }
     }
 
     // Hints reflect what the current section actually does — e.g. [j/k] only
@@ -116,10 +173,12 @@ public class CardDetailScreen(
     // Task has Plans only, Goal/Issue have both.
     private string SpecsPlansHintLabel()
     {
-        if (_card == null) return "Specs/Plans";
+        if (_card == null)
+            return "Specs/Plans";
         var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
         var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
-        if (allowsSpec && allowsPlan) return "Specs/Plans";
+        if (allowsSpec && allowsPlan)
+            return "Specs/Plans";
         return allowsSpec ? "Specs" : "Plans";
     }
 
@@ -156,7 +215,7 @@ public class CardDetailScreen(
         {
             Header = new PanelHeader(header),
             Border = isActive ? BoxBorder.Double : BoxBorder.Rounded,
-            BorderStyle = isActive ? new Style(foreground: Color.Blue) : null,
+            BorderStyle = isActive ? new Style(foreground: Color.Blue) : new Style(),
             Expand = true,
         };
     }
@@ -189,12 +248,15 @@ public class CardDetailScreen(
                 ? string.Join(", ", _card.Assignees.Select(a => Markup.Escape(a.Username)))
                 : "[grey]Unassigned[/]";
 
+        var watchingText = IsCurrentUserWatching() ? "[green]Yes[/]" : "[grey]No[/]";
+
         return new Rows(
             new Markup(
                 $"Type: [{GetTypeColor(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"
             ),
             new Markup($"Due: {dueText}"),
             new Markup($"Assignees: {assignees}"),
+            new Markup($"Watching: {watchingText}"),
             new Markup($"Version: [grey]{_card.Version}[/]"),
             new Markup($"Created: [grey]{_card.CreatedAt:yyyy-MM-dd HH:mm}[/]")
         );
@@ -365,6 +427,11 @@ public class CardDetailScreen(
                 await OpenSpecsPlansAsync();
                 break;
 
+            case ConsoleKey.W:
+                await ToggleWatchAsync();
+                await RenderAsync();
+                break;
+
             case ConsoleKey.D:
                 _appState.PreviousScreen = this;
                 var depPanel = new DependencyPanel(
@@ -390,7 +457,9 @@ public class CardDetailScreen(
                         _apiClientFactory,
                         _appState,
                         _errorCollector,
-                        _connectionManager
+                        _connectionManager,
+                        _signalRConnectionManager,
+                        _notificationCenter
                     );
                     _appState.CurrentScreen = detailScreen;
                     await detailScreen.OnEnterAsync();
@@ -410,7 +479,9 @@ public class CardDetailScreen(
                     _apiClientFactory,
                     _appState,
                     _errorCollector,
-                    _connectionManager
+                    _connectionManager,
+                    _signalRConnectionManager,
+                    _notificationCenter
                 );
                 _appState.CurrentScreen = boardScreen;
                 _appState.SelectedCardId = null;
@@ -438,6 +509,7 @@ public class CardDetailScreen(
                 ("Space", "Toggle checklist item"),
                 ("n", "New checklist item (Checklist section only)"),
                 ("a", "Add comment (Comments section only)"),
+                ("w", "Toggle watching this card"),
                 ("Enter", "Open dependency card (Dependencies section only)"),
                 ("Esc", "Back to board"),
                 ("q", "Quit"),
@@ -449,7 +521,8 @@ public class CardDetailScreen(
     // is Specs-only, Task is Plans-only, Goal/Issue get both and pick via the prompt.
     private async Task OpenSpecsPlansAsync()
     {
-        if (_card == null) return;
+        if (_card == null)
+            return;
 
         var allowsSpec = CardTypeMapper.AllowsSpec(_card.Type);
         var allowsPlan = CardTypeMapper.AllowsPlan(_card.Type);
@@ -457,14 +530,14 @@ public class CardDetailScreen(
         string mode;
         if (allowsSpec && allowsPlan)
         {
-            var choice = await ListPrompt.Show(
+            var viewIdx = await ListPrompt.Show(
                 "View:",
                 ["Specs", "Plans"],
                 renderBackdrop: RenderAsync
             );
-            if (choice == null)
+            if (!viewIdx.HasValue)
                 return;
-            mode = choice == "Specs" ? "spec" : "plan";
+            mode = viewIdx == 0 ? "spec" : "plan";
         }
         else if (allowsSpec)
         {
@@ -476,8 +549,15 @@ public class CardDetailScreen(
         }
 
         var specScreen = new SpecViewerScreen(
-            _apiClientFactory, _appState, _errorCollector,
-            _projectId, _cardId, _card.Type, mode);
+            _apiClientFactory,
+            _appState,
+            _errorCollector,
+            _signalRConnectionManager,
+            _projectId,
+            _cardId,
+            _card.Type,
+            mode
+        );
         _appState.PreviousScreen = this;
         _appState.CurrentScreen = specScreen;
         await specScreen.OnEnterAsync();
@@ -493,14 +573,14 @@ public class CardDetailScreen(
         switch (_sectionIndex)
         {
             case 0:
-                var field = await ListPrompt.Show(
+                var fieldIdx = await ListPrompt.Show(
                     "Edit field:",
                     ["Title", "Due Date", "Assignees"],
                     renderBackdrop: RenderAsync
                 );
-                switch (field)
+                switch (fieldIdx)
                 {
-                    case "Title":
+                    case 0: // Title
                         var newTitle = AnsiConsole.Prompt(
                             new TextPrompt<string>(
                                 "Title ([grey]Enter unchanged to cancel[/]):"
@@ -510,11 +590,11 @@ public class CardDetailScreen(
                             await UpdateCardAsync(title: newTitle);
                         break;
 
-                    case "Due Date":
+                    case 1: // Due Date
                         await EditDueDateAsync();
                         break;
 
-                    case "Assignees":
+                    case 2: // Assignees
                         await EditAssigneesAsync();
                         break;
                 }
@@ -590,16 +670,15 @@ public class CardDetailScreen(
                 )
                 .ToList();
 
-            var picked = await ListPrompt.Show(
+            var pickedIdx = await ListPrompt.Show(
                 "Toggle assignee (Enter to select):",
                 labels,
                 renderBackdrop: RenderAsync
             );
-            if (picked == null)
+            if (!pickedIdx.HasValue)
                 return;
 
-            var pickedIndex = labels.IndexOf(picked);
-            var member = members[pickedIndex];
+            var member = members[pickedIdx.Value];
 
             var updated = assignedIds.Contains(member.UserId)
                 ? await Client.AssigneesDELETEAsync(_projectId, _cardId, member.UserId)
@@ -615,6 +694,29 @@ public class CardDetailScreen(
         {
             _errorCollector.Add("N/A", $"Assign failed: {ex.Message}");
             AnsiConsole.MarkupLine($"[red]Assign failed: {Markup.Escape(ex.Message)}[/]");
+        }
+    }
+
+    private bool IsCurrentUserWatching()
+    {
+        var userId = CurrentUser.GetId();
+        return userId.HasValue && (_card?.Watchers?.Any(w => w.UserId == userId.Value) ?? false);
+    }
+
+    private async Task ToggleWatchAsync()
+    {
+        if (_card == null)
+            return;
+
+        try
+        {
+            _card = IsCurrentUserWatching()
+                ? await Client.WatchDELETEAsync(_projectId, _cardId)
+                : await Client.WatchPOSTAsync(_projectId, _cardId);
+        }
+        catch (ApiException ex)
+        {
+            _errorCollector.Add("N/A", $"Toggle watch failed: {ex.Message}");
         }
     }
 
@@ -765,6 +867,54 @@ public class CardDetailScreen(
         {
             _errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
+    }
+
+    // Description/spec/plan editing happens out-of-process via $EDITOR (see
+    // EditorLauncher) rather than an inline text buffer, so unlike the web UI's
+    // CardModal there's no in-progress draft this could clobber — a full reload
+    // on any matching event is safe.
+    //
+    // SpecViewerScreen (and other overlays pushed from here) are entered by directly
+    // assigning _appState.CurrentScreen, bypassing OnExitAsync — so this screen's
+    // handlers stay subscribed the whole time it's not actually the foreground screen.
+    // Only RenderAsync() if we're still what's actually on screen, or a background event
+    // stomps whatever overlay the user is really looking at (data still refreshes either
+    // way — LoadCardAsync always runs — this only guards the visual redraw).
+    private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
+    {
+        if (evt.ProjectId != _projectId)
+            return;
+        if (evt.CardId != _cardId && !(evt.EntityType == "Card" && evt.EntityId == _cardId))
+            return;
+
+        await LoadCardAsync();
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleCardFocused(Guid userId, Guid cardId)
+    {
+        _appState.FocusedCards[userId] = cardId;
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private async void HandleCardUnfocused(Guid userId)
+    {
+        _appState.FocusedCards.Remove(userId);
+        if (_appState.CurrentScreen == this)
+            await RenderAsync();
+    }
+
+    private List<string> GetOtherViewers()
+    {
+        var currentUserId = CurrentUser.GetId();
+        return
+        [
+            .. _appState
+                .FocusedCards.Where(f => f.Value == _cardId && f.Key != currentUserId)
+                .Select(f => _appState.OnlineUsers.GetValueOrDefault(f.Key, "Someone")),
+        ];
     }
 
     private async Task LoadChecklistAsync()

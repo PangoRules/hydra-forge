@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { components } from '~/types/api'
+import DataTable from '~/components/shared/DataTable.vue'
+import ProjectCard from '~/components/project/ProjectCard.vue'
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 
 defineProps<{
   projects: ProjectListResponse[]
   loading: boolean
+  page: number
+  pageSize: number
+  totalCount: number
+  fillHeight?: boolean
 }>()
 
 const emit = defineEmits<{
   'select': [projectId: string]
   'edit': [projectId: string]
   'toggle-archive': [project: { id: string, name: string, archivedAt: string | null }]
+  'update:page': [number]
+  'update:pageSize': [number]
 }>()
 
 const columns: TableColumn<ProjectListResponse>[] = [
@@ -27,7 +35,8 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
-function displayRole(role: number | string): string {
+function displayRole(role: number | string | null): string {
+  if (role === null) return '—'
   if (typeof role === 'string') return role
   // MemberRole enum: Owner=0, Member=1 — but check the actual enum values
   const roles: Record<number, string> = { 0: 'Owner', 1: 'Member' }
@@ -36,13 +45,20 @@ function displayRole(role: number | string): string {
 </script>
 
 <template>
-  <UTable
+  <DataTable
     :data="projects"
     :columns="columns"
     :loading="loading"
-    class="w-full"
-    :meta="{ class: { tr: 'cursor-pointer' } }"
-    @select="(_e, row) => emit('select', row.original.id)"
+    :page="page"
+    :page-size="pageSize"
+    :total-count="totalCount"
+    :page-size-options="[5, 10, 15]"
+    :row-key="(item: ProjectListResponse) => item.id"
+    :fill-height="fillHeight"
+    selectable
+    @update:page="emit('update:page', $event)"
+    @update:page-size="emit('update:pageSize', $event)"
+    @select="(item) => emit('select', item.id)"
   >
     <template #name-cell="{ row }">
       <div class="flex items-center gap-2">
@@ -84,5 +100,14 @@ function displayRole(role: number | string): string {
         />
       </div>
     </template>
-  </UTable>
+
+    <template #card="{ item }">
+      <ProjectCard
+        :project="item"
+        @select="emit('select', $event)"
+        @toggle-archive="emit('toggle-archive', $event)"
+        @edit="emit('edit', $event)"
+      />
+    </template>
+  </DataTable>
 </template>

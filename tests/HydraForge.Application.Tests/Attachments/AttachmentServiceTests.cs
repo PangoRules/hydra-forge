@@ -1,5 +1,6 @@
-using HydraForge.Application.Audit;
 using HydraForge.Application.Attachments;
+using HydraForge.Application.Audit;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
@@ -25,8 +26,17 @@ public class AttachmentServiceTests
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
         fileStore.NextStoreResult = Result<string>.Success("project/x/card/y/date/2026-01-01/guid");
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 3, stream));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                stream
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("test.png", result.Value.FileName);
@@ -39,23 +49,101 @@ public class AttachmentServiceTests
     public async Task CreateAsync_NonMember_ReturnsMembershipDenied()
     {
         var (service, _, _, _, _, _) = CreateService();
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            NewId(), NewId(), NewId(), "test.png", "image/png", 3, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                NewId(),
+                NewId(),
+                NewId(),
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
     }
 
     [Fact]
+    public async Task CreateAsync_AdminNonMember_Succeeds()
+    {
+        var attachmentRepo = new InMemoryAttachmentRepository();
+        var cardRepo = new InMemoryCardRepository();
+        var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepoAdmin();
+        var fileStore = new FakeFileStore();
+        var auditWriter = new InMemoryAuditLogWriter();
+        var snapshotRefresher = new NullSnapshotRefresher();
+        var publisher = new FakeProjectBoardEventPublisher();
+        var service = new AttachmentService(
+            attachmentRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            fileStore,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            10_000_000,
+            AttachmentContentTypes.Allowed
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
+        fileStore.NextStoreResult = Result<string>.Success("key");
+
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
     public async Task CreateAsync_MissingCard_ReturnsCardNotFound()
     {
-        var (service, _, _, cardRepo, memberRepo, _) = CreateService();
+        var (service, _, _, _, memberRepo, _) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, NewId(), actorId, "test.png", "image/png", 3, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                NewId(),
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Cards.NotFound, result.Error.Code);
@@ -70,8 +158,17 @@ public class AttachmentServiceTests
         var actorId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 100, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                100,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Attachments.FileTooLarge, result.Error.Code);
@@ -86,8 +183,17 @@ public class AttachmentServiceTests
         var actorId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.exe", "application/x-executable", 3, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.exe",
+                "application/x-executable",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Attachments.UnsupportedContentType, result.Error.Code);
@@ -96,21 +202,41 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_FileStoreFails_ReturnsFileStoreUnavailable()
     {
-        var (service, fileStore, _, _, _, _) = CreateService();
+        var (_, fileStore, _, _, _, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
-        fileStore.NextStoreResult = Result<string>.Failure(new Error("STORE_ERROR", "Store failed"));
+        fileStore.NextStoreResult = Result<string>.Failure(
+            new Error("STORE_ERROR", "Store failed")
+        );
 
         var service2 = new AttachmentService(
-            new InMemoryAttachmentRepository(), cardRepo, memberRepo, fileStore, new InMemoryAuditLogWriter(),
-            new NullSnapshotRefresher(), new FakeProjectBoardEventPublisher(), 10_000_000, AttachmentContentTypes.Allowed);
+            new InMemoryAttachmentRepository(),
+            cardRepo,
+            memberRepo,
+            new FakeUserRepo(),
+            fileStore,
+            new InMemoryAuditLogWriter(),
+            new NullSnapshotRefresher(),
+            new FakeProjectBoardEventPublisher(),
+            10_000_000,
+            AttachmentContentTypes.Allowed
+        );
 
-        var result = await service2.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+        var result = await service2.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Attachments.FileStoreUnavailable, result.Error.Code);
@@ -119,14 +245,23 @@ public class AttachmentServiceTests
     [Fact]
     public async Task CreateAsync_SanitizesDisplayFileName()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, _) = CreateService();
+        var (service, _, _, cardRepo, memberRepo, _) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "../../../etc/passwd", "image/png", 3, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "../../../etc/passwd",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.DoesNotContain("..", result.Value.FileName);
@@ -145,8 +280,17 @@ public class AttachmentServiceTests
         string? capturedKey = null;
         fileStore.CaptureStoreKey = key => capturedKey = key;
 
-        await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+        await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.NotNull(capturedKey);
         Assert.StartsWith($"{actorId}/cards/{cardId}/", capturedKey);
@@ -164,8 +308,17 @@ public class AttachmentServiceTests
         var actorId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
 
-        await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+        await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.Single(attachmentRepo.Attachments);
         Assert.Equal("test.png", attachmentRepo.Attachments[0].FileName);
@@ -180,15 +333,17 @@ public class AttachmentServiceTests
         var actorId = NewId();
         var attachmentId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
-        attachmentRepo.Attachments.Add(new Attachment
-        {
-            Id = attachmentId,
-            CardId = cardId,
-            FileName = "test.png",
-            ContentType = "image/png",
-            Size = 3,
-            StoragePath = "some/path/key"
-        });
+        attachmentRepo.Attachments.Add(
+            new Attachment
+            {
+                Id = attachmentId,
+                CardId = cardId,
+                FileName = "test.png",
+                ContentType = "image/png",
+                Size = 3,
+                StoragePath = "some/path/key",
+            }
+        );
         var deleteCalled = false;
         fileStore.DeleteCapture = () => deleteCalled = true;
 
@@ -208,15 +363,17 @@ public class AttachmentServiceTests
         var actorId = NewId();
         var attachmentId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
-        attachmentRepo.Attachments.Add(new Attachment
-        {
-            Id = attachmentId,
-            CardId = cardId,
-            FileName = "test.png",
-            ContentType = "image/png",
-            Size = 3,
-            StoragePath = "some/path/key"
-        });
+        attachmentRepo.Attachments.Add(
+            new Attachment
+            {
+                Id = attachmentId,
+                CardId = cardId,
+                FileName = "test.png",
+                ContentType = "image/png",
+                Size = 3,
+                StoragePath = "some/path/key",
+            }
+        );
         fileStore.DeleteThrow = new Exception("delete failed");
 
         var result = await service.DeleteAsync(projectId, cardId, attachmentId, actorId);
@@ -241,7 +398,14 @@ public class AttachmentServiceTests
         var (service, _, _, _, memberRepo, _) = CreateService();
         var projectId = NewId();
         var actorId = NewId();
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var result = await service.ListAsync(projectId, NewId(), actorId);
 
@@ -276,8 +440,17 @@ public class AttachmentServiceTests
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
         fileStore.NextStoreResult = Result<string>.Success("project/x/card/y/date/2026-01-01/guid");
 
-        var result = await service.CreateAsync(new CreateAttachmentCommand(
-            projectId, cardId, actorId, "test.png", "image/png", 3, new MemoryStream()));
+        var result = await service.CreateAsync(
+            new CreateAttachmentCommand(
+                projectId,
+                cardId,
+                actorId,
+                "test.png",
+                "image/png",
+                3,
+                new MemoryStream()
+            )
+        );
 
         Assert.True(result.IsSuccess);
         var req = Assert.Single(auditWriter.Writes);
@@ -292,21 +465,23 @@ public class AttachmentServiceTests
     [Fact]
     public async Task DeleteAsync_WritesAuditLog()
     {
-        var (service, fileStore, attachmentRepo, cardRepo, memberRepo, auditWriter) = CreateService();
+        var (service, _, attachmentRepo, cardRepo, memberRepo, auditWriter) = CreateService();
         var projectId = NewId();
         var cardId = NewId();
         var actorId = NewId();
         var attachmentId = NewId();
         SetupMemberAndCard(projectId, cardId, actorId, cardRepo, memberRepo);
-        attachmentRepo.Attachments.Add(new Attachment
-        {
-            Id = attachmentId,
-            CardId = cardId,
-            FileName = "test.png",
-            ContentType = "image/png",
-            Size = 3,
-            StoragePath = "some/path/key"
-        });
+        attachmentRepo.Attachments.Add(
+            new Attachment
+            {
+                Id = attachmentId,
+                CardId = cardId,
+                FileName = "test.png",
+                ContentType = "image/png",
+                Size = 3,
+                StoragePath = "some/path/key",
+            }
+        );
 
         var result = await service.DeleteAsync(projectId, cardId, attachmentId, actorId);
 
@@ -320,12 +495,19 @@ public class AttachmentServiceTests
         Assert.Equal(projectId, req.ProjectId);
     }
 
-    private static (AttachmentService service, FakeFileStore fileStore, InMemoryAttachmentRepository attachmentRepo, InMemoryCardRepository cardRepo, InMemoryProjectMemberRepository memberRepo, InMemoryAuditLogWriter auditWriter) CreateService(
-        long maxBytes = 10_000_000)
+    private static (
+        AttachmentService service,
+        FakeFileStore fileStore,
+        InMemoryAttachmentRepository attachmentRepo,
+        InMemoryCardRepository cardRepo,
+        InMemoryProjectMemberRepository memberRepo,
+        InMemoryAuditLogWriter auditWriter
+    ) CreateService(long maxBytes = 10_000_000)
     {
         var attachmentRepo = new InMemoryAttachmentRepository();
         var cardRepo = new InMemoryCardRepository();
         var memberRepo = new InMemoryProjectMemberRepository();
+        var userRepo = new FakeUserRepo();
         var fileStore = new FakeFileStore();
         var auditWriter = new InMemoryAuditLogWriter();
         var snapshotRefresher = new NullSnapshotRefresher();
@@ -333,15 +515,47 @@ public class AttachmentServiceTests
         var allowedTypes = AttachmentContentTypes.Allowed;
 
         var service = new AttachmentService(
-            attachmentRepo, cardRepo, memberRepo, fileStore, auditWriter, snapshotRefresher, publisher, maxBytes, allowedTypes);
+            attachmentRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            fileStore,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            maxBytes,
+            allowedTypes
+        );
 
         return (service, fileStore, attachmentRepo, cardRepo, memberRepo, auditWriter);
     }
 
-    private static void SetupMemberAndCard(Guid projectId, Guid cardId, Guid userId, InMemoryCardRepository cardRepo, InMemoryProjectMemberRepository memberRepo)
+    private static void SetupMemberAndCard(
+        Guid projectId,
+        Guid cardId,
+        Guid userId,
+        InMemoryCardRepository cardRepo,
+        InMemoryProjectMemberRepository memberRepo
+    )
     {
-        memberRepo.Members.Add(new ProjectMember { ProjectId = projectId, UserId = userId, Role = MemberRole.Member });
-        cardRepo.Cards.Add(new Card { Id = cardId, ProjectId = projectId, ColumnId = Guid.NewGuid(), CardNumber = 1, Title = "Card" });
+        memberRepo.Members.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                CardNumber = 1,
+                Title = "Card",
+            }
+        );
     }
 
     private sealed class FakeFileStore : IFileStore
@@ -351,7 +565,12 @@ public class AttachmentServiceTests
         public Exception? DeleteThrow;
         public Action? DeleteCapture;
 
-        public Task<Result<string>> StoreAsync(Stream content, string contentType, string storageKey, CancellationToken ct = default)
+        public Task<Result<string>> StoreAsync(
+            Stream content,
+            string contentType,
+            string storageKey,
+            CancellationToken ct = default
+        )
         {
             if (NextStoreResult != null)
                 return Task.FromResult(NextStoreResult);
@@ -359,8 +578,10 @@ public class AttachmentServiceTests
             return Task.FromResult(Result<string>.Success(storageKey));
         }
 
-        public Task<Result<Stream>> OpenReadAsync(string storageKey, CancellationToken ct = default)
-            => Task.FromResult(Result<Stream>.Success(new MemoryStream([1, 2, 3])));
+        public Task<Result<Stream>> OpenReadAsync(
+            string storageKey,
+            CancellationToken ct = default
+        ) => Task.FromResult(Result<Stream>.Success(new MemoryStream([1, 2, 3])));
 
         public Task<Result> DeleteAsync(string storageKey, CancellationToken ct = default)
         {
@@ -375,11 +596,16 @@ public class AttachmentServiceTests
     {
         public List<Attachment> Attachments { get; } = [];
 
-        public Task<Attachment?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Attachments.FirstOrDefault(a => a.Id == id));
+        public Task<Attachment?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Attachments.FirstOrDefault(a => a.Id == id));
 
-        public Task<IReadOnlyList<Attachment>> ListByCardAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<Attachment>>(Attachments.Where(a => a.CardId == cardId).ToList());
+        public Task<IReadOnlyList<Attachment>> ListByCardAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<Attachment>>([
+                .. Attachments.Where(a => a.CardId == cardId),
+            ]);
 
         public Task AddAsync(Attachment attachment, CancellationToken ct = default)
         {
@@ -398,81 +624,151 @@ public class AttachmentServiceTests
     {
         public List<Card> Cards { get; } = [];
 
-        public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default)
-            => Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
+        public Task<Card?> GetByIdAsync(Guid cardId, CancellationToken ct = default) =>
+            Task.FromResult(Cards.FirstOrDefault(c => c.Id == cardId));
 
-        public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(IReadOnlyList<Guid> cardIds, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id));
+        public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
+            IReadOnlyList<Guid> cardIds,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+                Cards.Where(c => cardIds.Contains(c.Id)).ToDictionary(c => c.Id)
+            );
 
-        public Task<Card?> GetByProjectAndNumberAsync(Guid projectId, int cardNumber, CancellationToken ct = default)
-            => Task.FromResult(Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber));
+        public Task<Card?> GetByProjectAndNumberAsync(
+            Guid projectId,
+            int cardNumber,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Cards.FirstOrDefault(c => c.ProjectId == projectId && c.CardNumber == cardNumber)
+            );
 
-        public Task<IReadOnlyList<Card>> ListByProjectAsync(Guid projectId, CardListFilter filter, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<Card>>(Cards.Where(c => c.ProjectId == projectId).ToList());
+        public Task<IReadOnlyList<Card>> ListByProjectAsync(
+            Guid projectId,
+            CardListFilter filter,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<Card>>([.. Cards.Where(c => c.ProjectId == projectId)]);
 
-        public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult(Cards.Where(c => c.ProjectId == projectId).Select(c => c.CardNumber).DefaultIfEmpty(0).Max());
+        public Task<int> GetMaxCardNumberAsync(Guid projectId, CancellationToken ct = default) =>
+            Task.FromResult(
+                Cards
+                    .Where(c => c.ProjectId == projectId)
+                    .Select(c => c.CardNumber)
+                    .DefaultIfEmpty(0)
+                    .Max()
+            );
 
-        public Task AddAsync(Card card, CancellationToken ct = default) { Cards.Add(card); return Task.CompletedTask; }
+        public Task AddAsync(Card card, CancellationToken ct = default)
+        {
+            Cards.Add(card);
+            return Task.CompletedTask;
+        }
+
         public Task UpdateAsync(Card card, CancellationToken ct = default)
         {
             var idx = Cards.FindIndex(c => c.Id == card.Id);
-            if (idx >= 0) Cards[idx] = card;
+            if (idx >= 0)
+                Cards[idx] = card;
             return Task.CompletedTask;
         }
+
         public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default)
         {
             foreach (var c in cards)
             {
                 var idx = Cards.FindIndex(x => x.Id == c.Id);
-                if (idx >= 0) Cards[idx] = c;
+                if (idx >= 0)
+                    Cards[idx] = c;
             }
             return Task.CompletedTask;
         }
-        public Task DeleteAsync(Guid cardId, CancellationToken ct = default) { Cards.RemoveAll(c => c.Id == cardId); return Task.CompletedTask; }
-        public Task CompactColumnPositionsAsync(Guid columnId, int exceptPosition, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default)
-            => Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+        public Task DeleteAsync(Guid cardId, CancellationToken ct = default)
+        {
+            Cards.RemoveAll(c => c.Id == cardId);
+            return Task.CompletedTask;
+        }
+
+        public Task CompactColumnPositionsAsync(
+            Guid columnId,
+            int exceptPosition,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
+
+        public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
+            Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
     }
 
     private sealed class InMemoryProjectMemberRepository : IProjectMemberRepository
     {
         public List<ProjectMember> Members { get; } = [];
 
-        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
+        public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
 
-        public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default)
-            => Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
+        public Task<ProjectMember?> GetByProjectAndUserAsync(
+            Guid projectId,
+            Guid userId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+            );
 
-        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(m => m.ProjectId == projectId).ToList());
+        public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+            Guid projectId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<ProjectMember>>([
+                .. Members.Where(m => m.ProjectId == projectId),
+            ]);
 
-        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+        public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken ct = default
+        )
         {
             var idList = projectIds.ToList();
-            var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+            var counts = Members
+                .Where(m => idList.Contains(m.ProjectId))
+                .GroupBy(m => m.ProjectId)
+                .ToDictionary(g => g.Key, g => g.Count());
             return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
         }
 
         public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
             IEnumerable<Guid> projectIds,
             Guid userId,
-            CancellationToken ct = default)
+            CancellationToken ct = default
+        )
         {
             var idList = projectIds.ToList();
-            var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+            var roles = Members
+                .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+                .ToDictionary(m => m.ProjectId, m => m.Role);
             return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
         }
 
-        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
+        public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
+        {
+            Members.Add(member);
+            return Task.CompletedTask;
+        }
+
         public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
         {
             var idx = Members.FindIndex(m => m.Id == member.Id);
-            if (idx >= 0) Members[idx] = member;
+            if (idx >= 0)
+                Members[idx] = member;
             return Task.CompletedTask;
         }
-        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) { Members.RemoveAll(m => m.Id == id); return Task.CompletedTask; }
+
+        public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
+        {
+            Members.RemoveAll(m => m.Id == id);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class InMemoryAuditLogWriter : IAuditLogWriter
@@ -486,5 +782,93 @@ public class AttachmentServiceTests
         }
 
         public void Clear() => Writes.Clear();
+    }
+
+    private sealed class FakeUserRepo : IUserRepository
+    {
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<User?> FindByUsernameAsync(string username) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+            IReadOnlyList<string> usernames,
+            string? searchTerm = null,
+            int maxResults = 10,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) =>
+            throw new NotImplementedException();
+
+        public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
+
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(false);
+
+        public Task CreateAsync(User user, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyList<User>> ListAsync(
+            int skip,
+            int take,
+            string? search,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeUserRepoAdmin : IUserRepository
+    {
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
+            IReadOnlyList<Guid> ids,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task<User?> FindByUsernameAsync(string username) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
+            IReadOnlyList<string> usernames,
+            string? searchTerm = null,
+            int maxResults = 10,
+            CancellationToken ct = default
+        ) => throw new NotImplementedException();
+
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) =>
+            throw new NotImplementedException();
+
+        public Task<bool> AnyAdminExistsAsync() => throw new NotImplementedException();
+
+        public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(true);
+
+        public Task CreateAsync(User user, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IReadOnlyList<User>> ListAsync(
+            int skip,
+            int take,
+            string? search,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<User>>([]);
+
+        public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

@@ -1,8 +1,8 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -28,7 +28,23 @@ public class ChecklistService(
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private sealed record ChecklistItemAuditSnapshot(
+        string Text,
+        bool IsCompleted,
+        int Position,
+        Guid? AssignedTo
+    );
+
+    private static ChecklistItemAuditSnapshot BuildSnapshot(ChecklistItem item) =>
+        new(item.Text, item.IsCompleted, item.Position, item.AssignedTo);
+
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid entityId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -38,7 +54,8 @@ public class ChecklistService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }
@@ -48,8 +65,15 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ChecklistItemDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -131,11 +155,11 @@ public class ChecklistService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
-        await PublishAsync(cmd.ProjectId, item.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Created, ct);
 
         string? assigneeUsername = null;
         if (cmd.AssignedTo.HasValue)
@@ -152,8 +176,15 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ChecklistItemDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -195,6 +226,7 @@ public class ChecklistService(
                 );
         }
 
+        var oldSnapshot = BuildSnapshot(item);
         item.Text = cmd.Text;
         item.AssignedTo = cmd.AssignedTo;
         await _checklistRepo.UpdateAsync(item, ct);
@@ -208,11 +240,12 @@ public class ChecklistService(
                 item.Id,
                 "Updated",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -229,8 +262,15 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ChecklistItemDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -247,6 +287,7 @@ public class ChecklistService(
                 new Error(DomainErrorCodes.Checklist.ItemNotFound, "Checklist item not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(item);
         item.IsCompleted = !item.IsCompleted;
         await _checklistRepo.UpdateAsync(item, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
@@ -259,11 +300,12 @@ public class ChecklistService(
                 item.Id,
                 item.IsCompleted ? "Completed" : "Uncompleted",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -280,8 +322,15 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ChecklistItemDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -309,6 +358,7 @@ public class ChecklistService(
 
         var oldPosition = item.Position;
         var newPosition = cmd.NewPosition;
+        var oldSnapshot = BuildSnapshot(item);
 
         if (oldPosition == newPosition)
         {
@@ -352,11 +402,12 @@ public class ChecklistService(
                 item.Id,
                 "Reordered",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(item))
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Updated, ct);
 
         string? assigneeUsername = null;
         if (item.AssignedTo.HasValue)
@@ -373,8 +424,15 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -390,6 +448,7 @@ public class ChecklistService(
             );
 
         var deletedPosition = item.Position;
+        var oldSnapshot = BuildSnapshot(item);
         await _checklistRepo.DeleteAsync(cmd.ItemId, ct);
         await _checklistRepo.CompactPositionsAsync(cmd.CardId, deletedPosition, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
@@ -402,11 +461,12 @@ public class ChecklistService(
                 item.Id,
                 "Deleted",
                 cmd.ProjectId,
-                null,
+                AuditSnapshot.Serialize(oldSnapshot),
                 null
             ),
             ct
         );
+        await PublishAsync(cmd.ProjectId, item.Id, item.CardId, BoardAction.Deleted, ct);
 
         return Result.Success();
     }
@@ -418,8 +478,7 @@ public class ChecklistService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<ChecklistItemDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -443,7 +502,7 @@ public class ChecklistService(
         var assigneeUsers =
             assigneeIds.Count > 0
                 ? await _userRepo.FindByIdsAsync(assigneeIds, ct)
-                : new Dictionary<Guid, HydraForge.Domain.Entities.Auth.User>();
+                : new Dictionary<Guid, Domain.Entities.Auth.User>();
 
         var dtos = items
             .OrderBy(i => i.Position)

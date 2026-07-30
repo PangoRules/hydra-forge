@@ -24,12 +24,7 @@ public record UpdatePlanCommand(
     string Content
 );
 
-public record RestorePlanVersionCommand(
-    Guid ProjectId,
-    Guid PlanId,
-    int Version,
-    Guid ActorId
-);
+public record RestorePlanVersionCommand(Guid ProjectId, Guid PlanId, int Version, Guid ActorId);
 
 public record PlanDto(
     Guid Id,
@@ -68,19 +63,11 @@ public record CreatePlanRequest(
     int Position = 0
 );
 
-public record UpdatePlanRequest(
-    string Title,
-    string? Description,
-    string Content
-);
+public record UpdatePlanRequest(string Title, string? Description, string Content);
 
-public record RestorePlanVersionRequest(
-    int Version
-);
+public record RestorePlanVersionRequest(int Version);
 
-public record SetPlanStatusRequest(
-    PlanStatus Status
-);
+public record SetPlanStatusRequest(PlanStatus Status);
 
 public record PlanResponse(
     Guid Id,

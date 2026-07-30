@@ -4,5 +4,5 @@ public enum AuditLogScope
 {
     Project = 1,
     System = 2,
-    Personal = 3
+    Personal = 3,
 }

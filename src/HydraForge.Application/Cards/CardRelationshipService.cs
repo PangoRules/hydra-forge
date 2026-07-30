@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
-using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -12,6 +13,7 @@ public class CardRelationshipService(
     ICardRelationshipRepository relationshipRepo,
     ICardRepository cardRepo,
     IProjectMemberRepository memberRepo,
+    IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
     IProjectBoardEventPublisher publisher
@@ -20,9 +22,25 @@ public class CardRelationshipService(
     private readonly ICardRelationshipRepository _relationshipRepo = relationshipRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+
+    private sealed record CardRelationshipAuditSnapshot(
+        Guid SourceCardId,
+        Guid TargetCardId,
+        RelationshipType Type,
+        DateTime? ArchivedAt
+    );
+
+    private static CardRelationshipAuditSnapshot BuildSnapshot(CardRelationship relationship) =>
+        new(
+            relationship.SourceCardId,
+            relationship.TargetCardId,
+            relationship.Type,
+            relationship.ArchivedAt
+        );
 
     public async Task<Result<CardRelationshipListResponse>> ListAsync(
         Guid projectId,
@@ -31,8 +49,7 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, actorId, ct);
-        if (membership == null)
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<CardRelationshipListResponse>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -59,8 +76,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<CardRelationshipDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -163,12 +187,18 @@ public class CardRelationshipService(
                 "Created",
                 cmd.ProjectId,
                 null,
-                null
+                AuditSnapshot.Serialize(BuildSnapshot(relationship))
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Created, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            relationship.Id,
+            relationship.SourceCardId,
+            BoardAction.Created,
+            ct
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
         cardsById.TryGetValue(relationship.SourceCardId, out var s);
@@ -181,8 +211,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -205,6 +242,9 @@ public class CardRelationshipService(
                 new Error(DomainErrorCodes.Cards.NotFound, "Source card not found.")
             );
 
+        var oldSnapshot = BuildSnapshot(relationship);
+        var archivedAt = DateTime.UtcNow;
+
         await _relationshipRepo.ArchiveAsync(cmd.RelationshipId, ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
@@ -216,13 +256,19 @@ public class CardRelationshipService(
                 relationship.Id,
                 "Deleted",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(oldSnapshot with { ArchivedAt = archivedAt })
             ),
             ct
         );
 
-        await PublishAsync(cmd.ProjectId, relationship.Id, BoardAction.Deleted, ct);
+        await PublishAsync(
+            cmd.ProjectId,
+            relationship.Id,
+            relationship.SourceCardId,
+            BoardAction.Deleted,
+            ct
+        );
 
         return Result.Success();
     }
@@ -232,8 +278,15 @@ public class CardRelationshipService(
         CancellationToken ct = default
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(cmd.ProjectId, cmd.ActorId, ct);
-        if (membership == null)
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ArchiveImpactResponse>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -311,6 +364,7 @@ public class CardRelationshipService(
             );
 
         var card = await _cardRepo.GetByIdAsync(cmd.CardId, ct);
+        DateTime? oldArchivedAt = card?.ArchivedAt;
         if (card != null)
         {
             card.Archive();
@@ -331,8 +385,10 @@ public class CardRelationshipService(
                 cmd.CardId,
                 "ArchivedWithRelationships",
                 cmd.ProjectId,
-                null,
-                null
+                AuditSnapshot.Serialize(new { ArchivedAt = oldArchivedAt }),
+                AuditSnapshot.Serialize(
+                    new { card?.ArchivedAt, RelationshipsArchived = relationshipIds.Count }
+                )
             ),
             ct
         );
@@ -346,7 +402,13 @@ public class CardRelationshipService(
         );
     }
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid entityId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -356,7 +418,8 @@ public class CardRelationshipService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }

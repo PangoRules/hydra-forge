@@ -12,7 +12,10 @@ public class ConfigStoreTests : IDisposable
 
     public ConfigStoreTests()
     {
-        _configDir = Path.Combine(Path.GetTempPath(), "hydraforge-configstore-tests-" + Guid.NewGuid());
+        _configDir = Path.Combine(
+            Path.GetTempPath(),
+            "hydraforge-configstore-tests-" + Guid.NewGuid()
+        );
         _configPath = Path.Combine(_configDir, "config.json");
         _store = new ConfigStore(_configDir);
     }
@@ -74,7 +77,7 @@ public class ConfigStoreTests : IDisposable
             ServerUrl = "https://hydraforge.example.com",
             JwtToken = "eyJhbGciOiJIUzI1NiJ9.test.token",
             ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
-            RefreshToken = "refresh-abc-123"
+            RefreshToken = "refresh-abc-123",
         };
 
         _store.Save(original);
@@ -152,6 +155,8 @@ public class ConfigStoreTests : IDisposable
                 return dir.FullName;
             dir = dir.Parent;
         }
-        throw new InvalidOperationException("HydraForge.slnx not found above test assembly — repo layout assumption broken.");
+        throw new InvalidOperationException(
+            "HydraForge.slnx not found above test assembly — repo layout assumption broken."
+        );
     }
 }

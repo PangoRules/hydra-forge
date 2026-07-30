@@ -47,7 +47,8 @@
 │  │  - ModelRouter                 │        │
 │  │  - ContextCompressor           │        │
 │  │  - AuditService                │        │
-│  │  - NotificationService         │        │
+│  │  - NotificationService         │
+│  │  - INotificationHubBus (port)  │        │
 │  └──────────────┬─────────────────┘        │
 ├─────────────────┼──────────────────────────┤
 │  ┌──────────────▼─────────────────┐        │
@@ -63,7 +64,9 @@
 │  │  - LLM client (OpenAI/etc)     │        │
 │  │  - SignalR messaging           │        │
 │  │    + BoardHub, PresenceHub     │        │
+│  │    + NotificationHub            │
 │  │    + SignalRProjectBoardEventPublisher│        │
+│  │    + SignalRNotificationHubBus  │
 │  │    + RealtimeServiceCollectionExtensions│
 │  │  - File storage (IFileStore:   │        │
 │  │    LocalFileStore / S3FileStore)│        │
@@ -158,12 +161,13 @@ TUI / Web UI
 
 ### SignalR Hubs
 
-Two hubs handle real-time communication:
+Three hubs handle real-time communication:
 
 | Hub | Route | Purpose | Events |
 |---|---|---|---|
 | `BoardHub` | `/hubs/board` | Board mutation broadcasts | `OnBoardEvent(ProjectBoardEventEnvelope)` |
 | `PresenceHub` | `/hubs/presence` | Ephemeral presence | `UserJoined`, `UserLeft`, `CardFocused` |
+| `NotificationHub` | `/hubs/notifications` | In-app notification push | `OnNotificationReceived(NotificationReceivedEvent)` |
 
 **Board mutation flow:**
 1. HTTP mutation request → controller → Application service
@@ -178,7 +182,15 @@ Two hubs handle real-time communication:
 - `LeaveProject(projectId)` or disconnect → removes from group, broadcasts `UserLeft`
 - All presence state is in-memory `ConcurrentDictionary` — no DB writes
 
-**DI wiring:** `RealtimeServiceCollectionExtensions.AddRealtimeServices()` in Infrastructure registers `IProjectBoardEventPublisher → SignalRProjectBoardEventPublisher`.
+**Notification push flow:**
+1. Application service completes a mutating operation (e.g. card move, assignment, comment)
+2. Service calls `INotificationService.NotifyAsync(request)` — single enforcement point, self-notification excluded internally
+3. `NotificationService` writes `Notification` row to DB
+4. `NotificationService` calls `INotificationHubBus.SendNotificationAsync(userId, notification, ct)`
+5. `SignalRNotificationHubBus` sends `OnNotificationReceived(NotificationReceivedEvent)` to the `user-{userId}` SignalR group
+6. Connected clients receive the typed event and update unread count / notification panel
+
+**DI wiring:** `RealtimeServiceCollectionExtensions.AddRealtimeServices()` in Infrastructure registers `IProjectBoardEventPublisher → SignalRProjectBoardEventPublisher` and `INotificationHubBus → SignalRNotificationHubBus`.
 
 ---
 
@@ -363,6 +375,7 @@ Failures in these services must never bring down the core board:
 | **Web search** | SearXNG | Open-source, self-hosted metasearch. Bundled as optional Docker service. |
 | **Push notifications** | ntfy | Open-source push. No email infrastructure. Per-user topic. |
 | **Package manager (web)** | pnpm | Fast, efficient disk use. |
+| **Scheduled jobs** | Hangfire + `Hangfire.PostgreSql` | Persistent recurring jobs on storage we already run. Survives restarts, auto-retries, admin-visible dashboard/history (see D-57). |
 
 ---
 

@@ -1151,11 +1151,23 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<int>("AuditLogRetentionDays")
                         .HasColumnType("integer");
 
+                    b.Property<string>("BrandLogoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BrandName")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("NotificationRetentionDays")
                         .HasColumnType("integer");
+
+                    b.Property<string>("NtfyServerUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SearXngUrl")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

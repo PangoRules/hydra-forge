@@ -21,12 +21,7 @@ public record UpdateSpecCommand(
     string Content
 );
 
-public record RestoreSpecVersionCommand(
-    Guid ProjectId,
-    Guid SpecId,
-    int Version,
-    Guid ActorId
-);
+public record RestoreSpecVersionCommand(Guid ProjectId, Guid SpecId, int Version, Guid ActorId);
 
 public record SpecDto(
     Guid Id,
@@ -55,22 +50,11 @@ public record SpecVersionDto(
 
 public record SpecListFilter(bool IncludeArchived = false);
 
-public record CreateSpecRequest(
-    DocType DocType,
-    string Title,
-    string? Description,
-    string Content
-);
+public record CreateSpecRequest(DocType DocType, string Title, string? Description, string Content);
 
-public record UpdateSpecRequest(
-    string Title,
-    string? Description,
-    string Content
-);
+public record UpdateSpecRequest(string Title, string? Description, string Content);
 
-public record RestoreSpecVersionRequest(
-    int Version
-);
+public record RestoreSpecVersionRequest(int Version);
 
 public record SpecResponse(
     Guid Id,

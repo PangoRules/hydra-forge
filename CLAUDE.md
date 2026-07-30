@@ -25,6 +25,13 @@ dotnet build
 # Run all tests
 dotnet test
 
+# Format C# code (CSharpier — same formatter/version as the nvim setup's format-on-save,
+# pinned via .config/dotnet-tools.json so CI and any clone stay in sync)
+dotnet csharpier format .
+
+# Check formatting without writing (what CI runs)
+dotnet csharpier check .
+
 # Run server (from repo root)
 dotnet run --project src/HydraForge.Server
 
@@ -66,6 +73,13 @@ docker compose up
 docker compose up -d postgres minio
 
 # MinIO console: http://localhost:9001 (user: minioadmin / pass: minioadmin)
+
+# Docker `server`/`web` services COPY source at image build time (no volume mount).
+# A code change is invisible in the running container until rebuilt:
+docker compose up -d --build server web
+# `pnpm dev` (Web UI) and `dotnet run` (Server) hot-reload as normal — this only
+# bites the Docker Compose path. If a feature "isn't showing up" in Docker but
+# the code is clearly there, rebuild before debugging further.
 
 # File storage toggle (Local ↔ S3):
 #   Set FILE_STORAGE_PROVIDER=S3 in .env to use MinIO instead of local FS
@@ -118,7 +132,26 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - All errors have a typed error code (e.g. `CARD_NOT_FOUND`, `DEPENDENCY_CYCLE_DETECTED`)
 - Controllers map expected `Result<T, Error>` failures to ProblemDetails RFC 7807 with `correlationId` and named `code`; global exception middleware catches everything else
 - Stack traces never reach clients
-- External service failures (LLM, Git, ntfy) must never crash the board
+### Notification trigger patterns (Plan 7 lessons)
+
+- **`NotifyAsync` calls must be wrapped in `try/catch`** — a notification failure must not block the business operation (card move, comment, project update). Each trigger call site wraps `await _notifService.NotifyAsync(...)` in try/catch. The `IWarnLogger` abstraction (`IWarnLogger.LogWarning`) logs failures instead of letting them propagate — optional constructor param with `NullWarnLogger` default so existing DI registrations don't break. `ConsoleWarnLogger` writes to `stderr`. External service failures (LLM, Git, ntfy, notification) must never crash the board.
+- **Test fakes shared across test files** — `FakeNotificationRepository` and `FakeNotificationHubBus` in `NotificationServiceTests` changed from `private` to `public` (with `[assembly: InternalsVisibleTo]`) so `NotificationTriggerTests` can reuse them. When a new test file needs the same fake, make it `public` instead of duplicating.
+- **Dependency resolution notification fires on archive, not move:** Plan 7 originally placed `NotifyResolvedDependenciesAsync` in `MoveAsync`, but the implementation moved it to `ArchiveAsync` — moving a card never sets `ArchivedAt`, so a blocker only stops counting as active when archived. The `CardRelationship.ArchivedAt` check in the notification helper requires `ArchivedAt != null` to consider a blocker resolved. Notify on the action that actually changes archive state, not on a move that doesn't.
+
+### SignalR conventions
+
+- **SignalR `AddJsonProtocol` + `JsonStringEnumConverter` is required.** Without `options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())` on `builder.Services.AddSignalR()`, hub payload enums (`BoardEntityType`, `BoardAction`, etc.) serialize as ints. The TUI client deserializes these fields as strings, so a mismatched int throws inside the client's message handler and is silently swallowed by the SignalR client — making board-event pushes a silent no-op. MVC's `JsonStringEnumConverter` (via `builder.Services.ConfigureHttpJsonOptions`) only covers REST responses, not the SignalR hub protocol. This was fixed in `9b26412` (commit message details the root cause).
+- **`ProjectBoardEventEnvelope` has a `CardId` field** (`Guid?`, default `null`) — populated for card-scoped sub-entities (Comment, ChecklistItem, Attachment, Spec, Plan, CardRelationship) so a client with a specific card open can tell "does this event belong to what I'm looking at" without relying on `EntityId` alone (which is always the sub-entity's own id, not the card it's on). Null for entity types that don't hang off a single card (Project, Column) or where `EntityId` already IS the card id (Card itself). Added in `72afc95`.
+- **Web UI `useRealtime.ts` routes by entity type for targeted patching:**
+  - `Card` / `Column` → `board.applyRealtimeCardEvent` / `applyRealtimeColumnEvent` (single-entity re-fetch, no full board blink)
+  - `CardRelationship` → full `board.fetchBoard` (affects badges on both source and target card — neither is the relationship's own entityId; this event is rare enough that full refresh is fine)
+  - `Comment` / `ChecklistItem` / `Attachment` / `Spec` / `Plan` → `board.signalCardContentEvent` (CardModal picks it up if open for that card; nothing to patch on the board tile itself)
+  - This was added in `72afc95` as part of realtime UX polish — the previous code did a full `fetchBoard` on every event, causing board flicker.
+
+### Web UI NotificationHub
+
+- **`useNotificationHub.ts`** composable connects to the NotificationHub (user-scoped, not project-scoped — unlike `useRealtime`'s BoardHub). Connected once per session from `layouts/default.vue` on mount. Uses `useAuthToken().getToken()` for the JWT access token factory. Disconnects on unmount. Falls back silently if the connection fails — the notification bell already fetches the live list on click regardless of realtime state.
+- **`useRealtime.ts`** (BoardHub) connects per-project from `board.vue` — the NotificationHub is separate and persists across project navigation.
 
 **Domain entity patterns — non-negotiable:**
 - Domain entities encapsulate state transitions via instance methods — services orchestrate but NEVER set entity properties directly
@@ -143,6 +176,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - > 90% coverage on Application and Domain layers
 - Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, ...)` — they inspect `context.Model` and do not need a database
 - Never mock the database — use a real test PostgreSQL instance once that infrastructure exists (not in place yet)
+- **`ISettingsProvider` in endpoint tests:** When a controller injects `ISettingsProvider` but the test registers a fake `ISettingsRepository`, the real `CachedSettingsProvider` wraps `IMemoryCache` — the cache TTL means writes via the fake repo are invisible on subsequent reads. Register a `TestCachedSettingsProvider` that delegates directly to the fake repo without caching (same pattern as `TestCachedSettingsProvider` in `AdminControllerTests`).
 
 **Database:**
 - PostgreSQL only — no SQLite fallback
@@ -150,6 +184,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - pgvector extension required (`CREATE EXTENSION IF NOT EXISTS vector`, declared via `modelBuilder.HasPostgresExtension("vector")`)
 - Card numbers are sequential per project (`CardNumber int`, unique per ProjectId) — never expose raw GUIDs to users
 - Archive is `ArchivedAt: DateTime?`, not `IsArchived: bool`. Default query filters use `.Where(x => x.ArchivedAt == null)` manually — no global query filter, so admin/audit views see archived rows by default
+- **EF Core 10 `HasSentinel()` for enum defaults:** When using `HasConversion<int>().HasDefaultValue(SomeEnum.Value)` on an enum property, also chain `.HasSentinel(default(SomeEnum))`. EF 10 treats the 0-value sentinel as the default unless explicitly overridden — without `HasSentinel`, the default value is silently overwritten by the sentinel. This bit `DocType` and `PlanStatus` in `HydraForgeDbContext` (fixed in `12f1f2a`).
 
 **Code style:**
 - Readable like a newspaper — method names explain intent, no clever tricks
@@ -164,11 +199,13 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Never write inline API path strings in components, stores, or composables. If a route is not in `routes.ts`, add it there first.
 - `useApi()` wraps openapi-fetch with auth middleware (attaches JWT, handles 401 redirect). Always use `useApi()` instead of importing openapi-fetch directly.
 - **`useApi()` throws — it never resolves with a populated `error` field.** Every call site MUST wrap `await api.X(...)` in try/catch. `const { error } = await api.X(...); if (error) { ... }` with no surrounding try/catch is a bug: the `await` itself throws first, the destructuring never runs, and the function's promise rejects unhandled — silently skipping whatever the `if (error)` branch was supposed to do (see D-40). This broke archive/restore/create error toasts in three components before being caught. **PATCH support added to `useApi.ts` composable.**
+- **`useApi()` must NOT use a module-level singleton.** The app is SSR (no `ssr: false` in nuxt.config), and a cached client + store at module scope freezes onto whichever request's Pinia store happens to call it first — every subsequent user's request silently reuses that stale store's token for the lifetime of the server process. `useAuthStore()` and `createClient()` are both cheap; build a fresh client per call (fixed in `12f1f2a`).
 
 **Auth:**
 - JWT — admin seeded on first boot
 - No SSO, no OAuth, no external auth providers
 - Admin cannot access user personal data (chats, memory, notes, calendar, gallery)
+- **BroadcastChannel cross-tab auth sync:** `useAuth.ts` posts `{ type: 'login' | 'logout' }` to a `BroadcastChannel('hydraforge-auth')` so other tabs on the same origin sync immediately. `listenForAuthChanges()` is called once per tab from `layouts/default.vue`. Module-level `BroadcastChannel` is fine (per-tab, holds no per-request/user state) — unlike the old `useApi.ts` singleton which was removed for the same pattern (fixed in `12f1f2a`).
 
 **LLM:**
 - Server is the only component that calls LLMs — TUI and Web UI never call LLMs directly
@@ -187,6 +224,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - `Card.CardNumber` is sequential per project — assigned at creation, never reused after deletion
 - Blocked card move: returns `409 Conflict` with warning payload when `confirmBlockedMove=false`. `confirmBlockedMove=true` is a capability of the API contract, available to any client — it is not a requirement that every client exposes an override. The Web UI deliberately does not: on `409` it toasts and stops, full stop (D-46) — the intended path is to resolve the actual blocking card, not force past it. 200 OK is wrong — the move was not executed.
 - `CardRelationship` forms a DAG — `CardDependencyService.ValidateAcyclic()` must be called on every insert
+- **`CardRelationshipBadge` model** replaces `IsBlocked`/`PrimaryRelatedCard` on `CardDto`. Each badge has `Type` + `IsSource` so both clients derive the same directional verb ("blocks"/"blocked by", "precedes"/"preceded by", "spawned"/"spawned from", "relates"). Ordering: `BlockedBy` first, `Relates` last. Capped at 5 per card (`MaxRelationshipBadges`). `RelationshipCount` on the parent DTO carries the true total for "+N more" overflow. Built by `CardService.BuildRelationshipBadges()`; `ListAsync` fetches all project relationships once and maps via `ILookup` instead of per-card queries. Added in `8193745`.
 - `ProjectContextSnapshot.TemplateContent` regenerated on every board mutation (instant, no LLM)
 - `ProjectContextSnapshot.AiNarrative` generated by nightly scheduled job only (never on mutation)
 - AI proposes board mutations — human confirms — never mutate board state from AI without explicit user approval
@@ -198,18 +236,24 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 5: Multi-User, Notifications & Admin (not started)
+## Current Phase — Phase 5 complete, Phase 6 not yet started
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
 Phase 4 (TUI) is **complete** — see `docs/functional-spec.md` §25 Phase 4 checklist (all items checked), `docs/archive/specs/2026-07-24-phase-4-tui-design.md` for the full task history, and `docs/archive/manual-validation/2026-07-24-phase-4-tui-matrix.md` for the consolidated validation matrix. All 17 tasks shipped: Spectre.Console scaffolding + NSwag codegen, `ConfigStore` (JWT at `.hydraforge/config.json` in the repo root, 0600 — see D-49), `ApiClientFactory` (NSwag client + token refresh), login screen + startup auth flow, connection handling (`LockScreen` + `ConnectionManager`, auto-retry backoff `[5s,10s,30s,60s]`), project list view (search/sort/role-filter/pagination), board view (column/card layout + keyboard nav), SignalR integration (BoardHub + PresenceHub), card detail view (sections, `$EDITOR`, checklist, comments), create/edit/move cards via keyboard, dependency panel, blocked card indicator, spec/plan viewer/editor, comments, checklists, keyboard shortcut reference (`?` — `Rendering/HelpOverlay.cs`, per-screen `ShowHelp()` binding tables), and status bar (connection/online/error counts, `ErrorPanelScreen` on `X`). Unread-notification count in the status bar is deferred to Phase 5 — no notification API surface exists in the generated client until ntfy integration lands. Infra pre-phase decisions (API client strategy, SignalR client wiring, JWT config storage) are resolved — see D-48/D-49 in `docs/DECISIONS.md`.
 
-Phase 5 (Multi-User, Notifications & Admin) has **not started** — see `docs/functional-spec.md` §25 Phase 5 for the checklist: ntfy integration, notification rules, in-app bell icon + TUI status-bar unread count, admin dashboard, audit log viewer.
+Phase 5 (Multi-User, Notifications & Admin) is **complete** (2026-07-29) — see `docs/functional-spec.md` §25 Phase 5 checklist (all items checked except self-service change-password and PR-created notifications, both explicitly deferred), `docs/archive/specs/phase-5-multi-user-notifications-admin.md` for the full design spec, and `docs/archive/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md` for the consolidated validation matrix. All 13 plans shipped: JWT role claim + `Roles.Admin` (Plan 1), notification domain/app/infra (Plan 2), `NotificationHub` + SignalR push (Plan 3), Web UI bell icon + panel (Plan 4), TUI status-bar unread count + `U` key list (Plan 5), ntfy integration (Plan 6 — initial close-out was incomplete, see D-52's 2026-07-27 correction), notification triggers wiring 7 triggers across 4 services (Plan 7 — see D-55/D-56 for the `IWarnLogger`/try-catch pattern and the dependency-resolved-on-Archive-not-Move fix), admin all-projects bypass (Plan 8), admin controller + user management (Plan 9), system settings API + cache + Web UI (Plan 10), audit log reader + controller (Plan 11), audit log Web UI page (Plan 12), and admin dashboard home page (Plan 13). Out of scope, correctly deferred: self-service `POST /api/Auth/change-password` (admin-initiated reset-password shipped instead) and "PR created → all members" (no Git/PR event source exists yet).
+
+Phase 6 (LLM Infrastructure) has not started. Its pre-phase blocking decision is resolved: nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (D-57), chosen for restart-persistence/retry/admin-visible history over `BackgroundService`, and over Quartz.NET for not needing full cron flexibility. `AiNarrative` display was also a spec gap (generated, but nowhere to view it) — closed by D-58: Web UI gets a "View Narrative" button next to the project title opening a modal; TUI gets a narrative viewer screen using the same overlay pattern as the spec/plan viewer, launched from the Board screen (bound to the `?` help overlay if the status bar has no room for a new key hint).
 
 ### Nuxt UI v4 patterns
 
 - **UModal:** `v-model:open` for two-way binding. Content in named slots (`#body`, `#header`, `#footer`). Default slot is `DialogTrigger`, not modal content. No `UOverlay` component — overlay built into `UModal` via `overlay` prop (default `true`).
 - **USelect:** No `clearable` prop. Wrap in relative container with absolute ghost `UButton` (X icon) to clear. Additionally, USelect v4's internal `SelectItem` component rejects empty-string values — never use `value: ''` in items. Use a non-empty sentinel (e.g. `'all'`) and translate to `''`/`null` at the emit site.
+- **UTable v4:** Use `:data` (array of row objects) + `:columns` (array of `TableColumn` with `accessorKey`/`header`) — NOT `:rows` (v3 API). Slot names: `#field-cell` (not `#field-data`). Expandable rows: `v-model:expanded` (Map of rowId → boolean), `:get-row-id` function, `row.toggleExpanded()` in cell template. Expanded content goes in `#expanded` slot. Example: `src/web-ui/app/pages/admin/audit-log.vue`.
+- **DataTable (shared wrapper):** Wraps `UTable` + pagination + loading/empty states + optional `#card` slot (mobile card grid). Two props added for the audit log page:
+  - `fillHeight` — boolean. When `true`, table scrolls rows internally with a sticky header and fixed pagination footer. Use in full-height dashboard layouts.
+  - `expanded` / `update:expanded` — `Record<string, boolean>` for expandable rows. Passed through to UTable's native expandable-row API. Example: `src/web-ui/app/pages/admin/audit-log.vue`.
 - **openapi-typescript enum typing:** `openapi-typescript` may type string-valued enum fields (serialized by `JsonStringEnumConverter`) as `number` in `api.d.ts`. Handle both types in cell templates (`displayRole` function checking `typeof`). Cast test fixtures with `as any` to satisfy typecheck; the actual API response at runtime is the string name.
 - **vue-draggable-plus** removed — SSR-incompatible with Nuxt 4. Use plain `v-for`; native HTML5 drag-and-drop planned.
 - **`import.meta.client`** not usable in Vue template expressions — define as `const isClient = import.meta.client` in `<script>`.

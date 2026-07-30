@@ -7,7 +7,8 @@ public static class ClaimsPrincipalExtensions
 {
     public static bool TryGetUserId(this ClaimsPrincipal user, out Guid userId)
     {
-        var claim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        var claim =
+            user.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
             ?? user.FindFirst("sub")?.Value;
 
@@ -18,6 +19,8 @@ public static class ClaimsPrincipalExtensions
     {
         return user.TryGetUserId(out var userId)
             ? userId
-            : throw new InvalidOperationException("Authenticated user is missing a valid user id claim.");
+            : throw new InvalidOperationException(
+                "Authenticated user is missing a valid user id claim."
+            );
     }
 }

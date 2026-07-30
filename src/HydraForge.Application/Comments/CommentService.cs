@@ -1,8 +1,10 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
-using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Logging;
+using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -19,7 +21,9 @@ public class CommentService(
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
     IProjectSnapshotRefresher snapshotRefresher,
-    IProjectBoardEventPublisher publisher
+    IProjectBoardEventPublisher publisher,
+    INotificationService notifService,
+    IWarnLogger warnLogger = null!
 )
 {
     private readonly ICommentRepository _commentRepo = commentRepo;
@@ -30,8 +34,16 @@ public class CommentService(
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
     private readonly IProjectSnapshotRefresher _snapshotRefresher = snapshotRefresher;
     private readonly IProjectBoardEventPublisher _publisher = publisher;
+    private readonly INotificationService _notifService = notifService;
+    private readonly IWarnLogger _warnLogger = warnLogger ?? new NullWarnLogger();
 
-    private async Task PublishAsync(Guid projectId, Guid entityId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid entityId,
+        Guid cardId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
             Guid.NewGuid(),
@@ -41,30 +53,33 @@ public class CommentService(
             action,
             1,
             DateTime.UtcNow,
-            null!
+            null!,
+            cardId
         );
         await _publisher.PublishAsync(envelope, ct);
     }
 
     // ── Shared helpers ──────────────────────────────────────
 
-    private async Task<Result<(ProjectMember, Card)>> ValidateMembershipAndCardAsync(
-        Guid projectId, Guid userId, Guid cardId, CancellationToken ct
+    private async Task<Result<Card>> ValidateMembershipAndCardAsync(
+        Guid projectId,
+        Guid userId,
+        Guid cardId,
+        CancellationToken ct
     )
     {
-        var membership = await _memberRepo.GetByProjectAndUserAsync(projectId, userId, ct);
-        if (membership == null)
-            return Result<(ProjectMember, Card)>.Failure(
+        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, userId, ct))
+            return Result<Card>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
 
         var card = await _cardRepo.GetByIdAsync(cardId, ct);
         if (card == null || card.ProjectId != projectId)
-            return Result<(ProjectMember, Card)>.Failure(
+            return Result<Card>.Failure(
                 new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
             );
 
-        return Result<(ProjectMember, Card)>.Success((membership, card));
+        return Result<Card>.Success(card);
     }
 
     /// Batches mention resolution into 2 queries total:
@@ -72,15 +87,17 @@ public class CommentService(
     ///   2. ListMembersAsync — all project members in 1 query
     ///   Cross-references in memory to filter disabled/non-member.
     private async Task<List<Guid>> ResolveMentionsAsync(
-        Guid projectId, IReadOnlyList<string> usernames, CancellationToken ct
+        Guid projectId,
+        IReadOnlyList<string> usernames,
+        CancellationToken ct
     )
     {
         if (usernames.Count == 0)
             return [];
 
         var usersByUsername = await _userRepo.FindByUsernamesAsync(usernames, ct: ct);
-        var candidateIds = usersByUsername.Values
-            .Where(u => !u.IsDisabled)
+        var candidateIds = usersByUsername
+            .Values.Where(u => !u.IsDisabled)
             .Select(u => u.Id)
             .ToList();
 
@@ -90,25 +107,30 @@ public class CommentService(
         var members = await _memberRepo.ListMembersAsync(projectId, ct);
         var memberUserIds = members.Select(m => m.UserId).ToHashSet();
 
-        return candidateIds.Where(id => memberUserIds.Contains(id)).ToList();
+        return [.. candidateIds.Where(memberUserIds.Contains)];
     }
 
     private async Task<Result<CommentDto>> BuildCommentDtoResultAsync(
-        Comment comment, Guid authorId, List<Guid> mentionedUserIds, CancellationToken ct
+        Comment comment,
+        Guid authorId,
+        List<Guid> mentionedUserIds,
+        CancellationToken ct
     )
     {
         var authorUser = await _userRepo.FindByIdAsync(authorId, ct);
-        return Result<CommentDto>.Success(new CommentDto(
-            comment.Id,
-            comment.CardId,
-            comment.AuthorId,
-            authorUser?.Username ?? string.Empty,
-            comment.Content,
-            comment.CreatedAt,
-            comment.UpdatedAt,
-            comment.ArchivedAt,
-            mentionedUserIds
-        ));
+        return Result<CommentDto>.Success(
+            new CommentDto(
+                comment.Id,
+                comment.CardId,
+                comment.AuthorId,
+                authorUser?.Username ?? string.Empty,
+                comment.Content,
+                comment.CreatedAt,
+                comment.UpdatedAt,
+                comment.ArchivedAt,
+                mentionedUserIds
+            )
+        );
     }
 
     private async Task EnsureWatcherAsync(Guid cardId, Guid userId, CancellationToken ct)
@@ -116,19 +138,44 @@ public class CommentService(
         var existing = await _watcherRepo.GetByCardAndUserAsync(cardId, userId, ct);
         if (existing == null)
         {
-            await _watcherRepo.AddAsync(new CardWatcher
-            {
-                CardId = cardId,
-                UserId = userId,
-                AddedAt = DateTime.UtcNow,
-            }, ct);
+            await _watcherRepo.AddAsync(
+                new CardWatcher
+                {
+                    CardId = cardId,
+                    UserId = userId,
+                    AddedAt = DateTime.UtcNow,
+                },
+                ct
+            );
         }
     }
 
-    private async Task WriteAuditAsync(Guid actorId, Guid commentId, Guid projectId, string action, CancellationToken ct)
+    private sealed record CommentAuditSnapshot(string Content, DateTime? ArchivedAt);
+
+    private static CommentAuditSnapshot BuildSnapshot(Comment comment) =>
+        new(comment.Content, comment.ArchivedAt);
+
+    private async Task WriteAuditAsync(
+        Guid actorId,
+        Guid commentId,
+        Guid projectId,
+        string action,
+        CancellationToken ct,
+        string? oldValueJson = null,
+        string? newValueJson = null
+    )
     {
         await _auditLogWriter.WriteAsync(
-            new AuditLogRequest(actorId, AuditLogScope.Project, "Comment", commentId, action, projectId, null, null),
+            new AuditLogRequest(
+                actorId,
+                AuditLogScope.Project,
+                "Comment",
+                commentId,
+                action,
+                projectId,
+                oldValueJson,
+                newValueJson
+            ),
             ct
         );
     }
@@ -140,7 +187,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -159,9 +211,75 @@ public class CommentService(
 
         await _commentRepo.AddAsync(comment, ct);
         await EnsureWatcherAsync(cmd.CardId, cmd.ActorId, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Created", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Created",
+            ct,
+            null,
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Created, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Created, ct);
+
+        // Notify card watchers about new comment
+        var card = validation.Value;
+        var watchers = await _watcherRepo.ListByCardAsync(card.Id, ct);
+        var actorName = (await _userRepo.FindByIdAsync(cmd.ActorId, ct))?.Username ?? "Someone";
+
+        var watcherRequests = watchers
+            .Where(w => w.UserId != cmd.ActorId)
+            .Select(w => new NotifyRequest(
+                w.UserId,
+                cmd.ActorId,
+                $"{actorName} commented on #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        if (watcherRequests.Count > 0)
+        {
+            try
+            {
+                await _notifService.NotifyBatchAsync(watcherRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send comment notifications: {ex.Message}");
+            }
+        }
+
+        // Notify @mentioned users
+        var mentionRequests = mentionedUserIds
+            .Where(id => id != cmd.ActorId)
+            .Select(id => new NotifyRequest(
+                id,
+                cmd.ActorId,
+                $"{actorName} mentioned you in #{card.CardNumber}",
+                cmd.Content.Length > 100 ? cmd.Content[..100] + "..." : cmd.Content,
+                null,
+                card.Id,
+                cmd.ProjectId,
+                $"/projects/{cmd.ProjectId}/board?card={card.Id}"
+            ))
+            .ToList();
+
+        if (mentionRequests.Count > 0)
+        {
+            try
+            {
+                await _notifService.NotifyBatchAsync(mentionRequests, ct);
+            }
+            catch (Exception ex)
+            {
+                _warnLogger.LogWarning($"Failed to send mention notifications: {ex.Message}");
+            }
+        }
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -171,7 +289,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -189,12 +312,21 @@ public class CommentService(
         var mentionedUsernames = MentionExtractor.Extract(cmd.Content);
         var mentionedUserIds = await ResolveMentionsAsync(cmd.ProjectId, mentionedUsernames, ct);
 
+        var oldSnapshot = BuildSnapshot(comment);
         comment.Content = cmd.Content;
         comment.UpdatedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Updated", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Updated",
+            ct,
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Updated, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Updated, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, mentionedUserIds, ct);
     }
@@ -204,7 +336,12 @@ public class CommentService(
         CancellationToken ct = default
     )
     {
-        var validation = await ValidateMembershipAndCardAsync(cmd.ProjectId, cmd.ActorId, cmd.CardId, ct);
+        var validation = await ValidateMembershipAndCardAsync(
+            cmd.ProjectId,
+            cmd.ActorId,
+            cmd.CardId,
+            ct
+        );
         if (validation.IsFailure)
             return Result<CommentDto>.Failure(validation.Error);
 
@@ -219,11 +356,20 @@ public class CommentService(
                 new Error(DomainErrorCodes.Comments.Archived, "Comment is already archived.")
             );
 
+        var oldSnapshot = BuildSnapshot(comment);
         comment.ArchivedAt = DateTime.UtcNow;
         await _commentRepo.UpdateAsync(comment, ct);
-        await WriteAuditAsync(cmd.ActorId, comment.Id, cmd.ProjectId, "Archived", ct);
+        await WriteAuditAsync(
+            cmd.ActorId,
+            comment.Id,
+            cmd.ProjectId,
+            "Archived",
+            ct,
+            AuditSnapshot.Serialize(oldSnapshot),
+            AuditSnapshot.Serialize(BuildSnapshot(comment))
+        );
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
-        await PublishAsync(cmd.ProjectId, comment.Id, BoardAction.Archived, ct);
+        await PublishAsync(cmd.ProjectId, comment.Id, comment.CardId, BoardAction.Archived, ct);
 
         return await BuildCommentDtoResultAsync(comment, cmd.ActorId, [], ct);
     }
@@ -255,9 +401,10 @@ public class CommentService(
             .Distinct()
             .ToList();
 
-        var usersByUsername = allMentioned.Count > 0
-            ? await _userRepo.FindByUsernamesAsync(allMentioned, ct: ct)
-            : (IReadOnlyDictionary<string, User>)new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase);
+        var usersByUsername =
+            allMentioned.Count > 0
+                ? await _userRepo.FindByUsernamesAsync(allMentioned, ct: ct)
+                : new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase);
 
         var dtos = new List<CommentDto>(comments.Count);
         foreach (var comment in comments)
@@ -266,26 +413,30 @@ public class CommentService(
             var mentionedIds = new List<Guid>(mentioned.Count);
             foreach (var username in mentioned)
             {
-                if (usersByUsername.TryGetValue(username, out var user)
+                if (
+                    usersByUsername.TryGetValue(username, out var user)
                     && !user.IsDisabled
-                    && memberUserIds.Contains(user.Id))
+                    && memberUserIds.Contains(user.Id)
+                )
                 {
                     mentionedIds.Add(user.Id);
                 }
             }
 
             authorsById.TryGetValue(comment.AuthorId, out var author);
-            dtos.Add(new CommentDto(
-                comment.Id,
-                comment.CardId,
-                comment.AuthorId,
-                author?.Username ?? string.Empty,
-                comment.Content,
-                comment.CreatedAt,
-                comment.UpdatedAt,
-                comment.ArchivedAt,
-                mentionedIds
-            ));
+            dtos.Add(
+                new CommentDto(
+                    comment.Id,
+                    comment.CardId,
+                    comment.AuthorId,
+                    author?.Username ?? string.Empty,
+                    comment.Content,
+                    comment.CreatedAt,
+                    comment.UpdatedAt,
+                    comment.ArchivedAt,
+                    mentionedIds
+                )
+            );
         }
 
         return Result<IReadOnlyList<CommentDto>>.Success(dtos);

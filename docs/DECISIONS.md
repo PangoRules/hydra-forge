@@ -235,6 +235,28 @@ Each entry has:
 | D-34 | File storage architecture | `IFileStore` abstraction (Local fallback + MinIO/AWS S3), `{userId}/{sourceType}/{sourceId}/{guid}` key hierarchy, `InitializeAsync` for bucket creation | ✅ |
 | D-35 | ProjectContextSnapshot implementation | Pure deterministic renderer (`ProjectContextSnapshotRenderer`) — no LLM, no side effects; `IProjectSnapshotRefresher` port injected into 9 mutation services; `ProjectSnapshotRefresher` EF impl in Infrastructure; `GET /api/projects/{projectId}/ProjectSnapshot` members-only endpoint | ✅ |
 | D-36 | Board event publishing | `IProjectBoardEventPublisher` port in Application layer; `SignalRProjectBoardEventPublisher` impl; `BoardHub` (/hubs/board) fans out to project groups; `ProjectBoardEventEnvelope` with `BoardEntityType` + `BoardAction`; `RealtimeServiceCollectionExtensions.AddRealtimeServices()` wires DI | ✅ |
+| D-37 | vue-draggable-plus removal | Removed SortableJS wrapper; plain `v-for` for board lists; native HTML5 drag planned | ✅ |
+| D-38 | Nuxt UI v4 UModal usage | `v-model:open`, named slots (`#body`/`#header`/`#footer`), no `UOverlay` | ✅ |
+| D-39 | USelect clearable workaround | Wrap `USelect` in `relative` container with ghost `UButton` (X icon) | ✅ |
+| D-40 | `useApi()` throws | `try/catch` required on every call site; `{ error }` destructuring without try/catch is dead code | ✅ |
+| D-41 | Card detail panel version ownership | `CardModal.vue` owns `card` ref + `version`; panels emit `update:card` on save, never cache their own copy | ✅ |
+| D-42 | Playwright E2E testing | `@playwright/test` adopted; specs seed their own data via API; run serially (`workers: 1`) | ✅ |
+| D-43 | Shared filter state via composables | Extract to `useBoardFilters.ts`; desktop + mobile both read/write Pinia store directly | ✅ |
+| D-44 | Doc model redesign | DocType on Spec; PlanStatus on Plan; multi-plan; Idea→Goal `SpawnedFrom` | ✅ |
+| D-45 | Plan SetStatus endpoint | Single `PATCH` replaces Activate/Complete/Reactivate; UI shows status dropdown | ✅ |
+| D-46 | Blocked card move UI | Web UI never sends `confirmBlockedMove=true`; 409 → rollback + toast, no confirm modal | ✅ |
+| D-47 | Keyboard nav composable split | `useRovingFocus` + `useBoardKeyboardNav`; `activate()`/`deactivate()` pattern for composable lifecycle | ✅ |
+| D-48 | TUI API client + SignalR + credential storage | NSwag codegen; `Microsoft.AspNetCore.SignalR.Client`; plain JSON file at `.hydraforge/config.json` | ✅ |
+| D-49 | Credential storage location | Repo-root `.hydraforge/config.json` (found via `HydraForge.slnx` walk), not `~/.config` | ✅ |
+| D-50 | OpenAPI enum schemas | EnumSchemaTransformer corrects `type: integer` → `type: string` in schema; NSwag generates real C# enums | ✅ |
+| D-51 | Web UI NotificationHub deferred | `useNotifications.ts` has `onNotificationReceived` handler; wired to a live SignalR connection via `useNotificationHub.ts`, connected from `layouts/default.vue` on mount (D-51 follow-up, 2026-07-27) | ✅ |
+| D-52 | ntfy client implementation | `INtfyClient` port in Application; `NtfyClient` + `NtfyOptions` in Infrastructure; `SystemSettings.NtfyServerUrl`; docker-compose `ntfy` service; best-effort push (null URL = no-op) | ✅ |
+| D-53 | SignalR JsonStringEnumConverter | Hub payload enums must serialize as strings, not ints — TUI silently drops int-encoded board events | ✅ |
+| D-54 | Targeted realtime board patching | `useRealtime.ts` routes by entity type for per-entity re-fetch instead of full board refresh; `CardId` on envelope for card-scoped sub-entities | ✅ |
+| D-55 | Notification triggers never block business op | `try/catch` + `IWarnLogger` at every `NotifyAsync` call site | ✅ |
+| D-56 | Dependency-resolved notification fires on Archive | Moved from `MoveAsync` to `ArchiveAsync` — only place `ArchivedAt` is set | ✅ |
+| D-57 | Nightly job scheduler | Hangfire + `Hangfire.PostgreSql`, not `BackgroundService` or Quartz.NET | ✅ |
+| D-58 | AiNarrative display surface | Web UI: "View Narrative" button next to project title → modal. TUI: same viewer pattern as spec/plan, bound to board screen's help overlay if bar has no room | ✅ |
 
 ---
 
@@ -802,4 +824,110 @@ Chats
 | **Decision** | Added `HydraForge.Server.OpenApi.EnumSchemaTransformer` (`IOpenApiSchemaTransformer`), registered via `builder.Services.AddOpenApi(options => options.AddSchemaTransformer<EnumSchemaTransformer>())` in `Program.cs`. For any enum-typed schema it rewrites `type` to `string`, sets `enum` to the C# member names, and fixes up any stale numeric `default`. Confirmed via `/openapi/v1.json`: all 7 affected enums (`CardType`, `ColumnTemplate`, `DocType`, `MemberRole`, `PlanStatus`, `ProjectSortField`, `RelationshipType`) now correctly show `type: string`. |
 | **Rationale** | The bug is in the schema generator, not the runtime — `AddOpenApi()` has no built-in awareness of custom `JsonSerializerOptions` converters. Fixing it here (once, server-side) is correct for every current and future NSwag/openapi-typescript consumer, versus patching each generated client's DTOs by hand per field, which is exactly the hand-drift risk D-48 chose codegen to avoid in the first place. This is also the same root cause behind the Web UI's pre-existing "openapi-typescript enum typing" workaround (CLAUDE.md) — that workaround stays defensively in place but is no longer strictly necessary once the Web UI regenerates its types. |
 | **Alternatives considered** | 1. Patch each generated TUI DTO field to the correct type by hand after every NSwag regen (rejected — codegen is regenerated on every build, hand-patches would be silently overwritten). 2. Change `ProjectListScreen.cs` to parse the raw string manually, bypassing the typed field (rejected — treats a schema bug as a client-side problem, doesn't fix the other 6 enums or future screens touching them). |
-| **Impact** | Zero runtime change — `JsonStringEnumConverter` already controlled the actual wire format; this only corrects what the schema *documents*. Web UI unaffected: its `api.d.ts` is generated by a manual `pnpm generate:api-types` script, not run automatically, so nothing regenerates unless someone runs it — and when they do, it becomes more accurate, not less. TUI's NSwag client now generates real C# enums (`MemberRole`, `ColumnTemplate`, etc.) instead of raw `int`, which is what let `ProjectListScreen.cs` drop its hand-rolled int↔string mapping entirely. |
+| **Impact** | Zero runtime change — `JsonStringEnumConverter` already controlled the actual wire format; this only corrects what the schema *documents*. Web UI unaffected: its `api.d.ts` is generated by a manual `pnpm generate:api-types` script, not run automatically, so nothing regenerates unless someone runs it — and when they do, it becomes more accurate, not less. TUI's NSwag client now generates real C# enums (`MemberRole`, `ColumnTemplate`, etc.) instead of raw `int`, which is what let `ProjectListScreen.cs` drop its hand-rolled int↔string mapping entirely.
+
+---
+
+## D-51: Web UI NotificationHub Connection Deferred
+
+| Field | Value |
+|---|---|
+| **Topic** | Why the Web UI notification bell shows a static count instead of real-time updates |
+| **Date** | 2026-07-25 |
+| **Status** | 🔜 Future |
+| **Decision** | **`useNotifications.ts` has an `onNotificationReceived` handler but no live SignalR `NotificationHub` connection. The bell count is fetched via REST (`GET /api/notifications/unread-count`) and periodically refreshed — it is not pushed in real-time.** |
+| **Rationale** | `NotificationHub` in the server is fully implemented and used by the TUI (`SignalRConnectionManager.ConnectAsync` wires the NotificationHub alongside BoardHub and PresenceHub). The Web UI's `useNotifications.ts` composable was scaffolded with the `onNotificationReceived` handler placeholder but the SignalR connection establishment (`new HubConnectionBuilder().WithUrl(...)...StartAsync()`) was not wired into the composable or the app startup. Completing this requires `HubConnection` lifecycle management in the composable (connect on app init, reconnect logic, cleanup on unmount) and is a Phase 5 follow-up task. |
+| **Alternatives considered** | 1. Keep Web UI polling-only indefinitely (rejected — Phase 5 follow-up exists specifically to complete real-time notifications in Web UI). 2. Use `EventSource` instead of SignalR (rejected — `NotificationHub` uses SignalR's bidirectional channel, not server-sent events). |
+| **Impact** | Web UI notification bell does not update in real-time. TUI does receive real-time updates via `SignalRConnectionManager`. The TUI implementation is the reference for what the Web UI will eventually replicate. |
+
+## D-52: ntfy Client Implementation
+
+| Field | Value |
+|---|---|
+| **Topic** | ntfy push client — INtfyClient port, NtfyClient impl, NtfyOptions, SystemSettings.NtfyServerUrl, docker-compose service |
+| **Date** | 2026-07-25, corrected 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `INtfyClient` port in Application layer; `NtfyClient` in Infrastructure; `NtfyOptions` for priority/defaults; `SystemSettings.NtfyServerUrl` field stores admin-configured URL; URL wired via `CachedSettingsProvider` (Task 10 — not yet built, so `NtfyClient`'s `serverUrl` ctor param currently resolves to `null` through the DI container with no explicit factory needed); docker-compose `ntfy` service with `profiles: ["notifications"]`; `.env.example` has `NTFY_BASE_URL`. |
+| **Rationale** | Decouples push logic from Application layer — `NotificationService` holds `INtfyClient?` and calls `PublishAsync` after DB write. Null client = graceful no-op. Makes ntfy fully opt-in: no URL configured = no push, in-app SignalR still works. Best-effort: HTTP failures are caught and swallowed, never propagate. |
+| **Topic naming** | Per-user topic: `hydraforge-{userId}` — deterministic, no per-notification topic creation. |
+| **Alternatives considered** | 1. Topic-per-notification (rejected — creates topics dynamically on ntfy server, harder to manage ACLs). 2. Throw on ntfy failure (rejected — push is best-effort, server/ntfy down must not crash board). |
+| **Impact** | `NotificationService` now optionally pushes to ntfy after every `NotifyAsync` call. `AddSystemSettingsFields` EF migration adds `NtfyServerUrl`, `SearXngUrl`, `BrandName`, `BrandLogoUrl` as nullable text columns. `SystemSettingsSingletonId` moved from `HydraForgeDbContext` to `SystemSettings.SingletonId`. `NtfyClient` registered via `AddHttpClient<INtfyClient, NtfyClient>()` with `NtfyOptions` configured. |
+| **2026-07-27 correction** | The original 2026-07-25 close-out marked this ✅ without the branch ever building — `INtfyClient.cs` and `NtfyOptions.cs` were referenced but never committed (CS0246 on `dotnet build`), and Step 1 (`SystemSettings` fields, `UpdateSettings()`, singleton-id move, migration) was never written at all. `docker-compose.yml`'s `ntfy` service also had no `command`, so the container exited immediately instead of serving (fixed: added `command: serve`). All gaps closed on `task/ntfy-integration` 2026-07-27; see the corrected Plan 6 section in `docs/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md` for what was actually re-verified. |
+
+---
+
+## D-53: SignalR Hub Protocol Must Use JsonStringEnumConverter
+
+| Field | Value |
+|---|---|
+| **Topic** | Hub payload enums must serialize as strings, not ints |
+| **Date** | 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `builder.Services.AddSignalR().AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))` in `Program.cs`. |
+| **Rationale** | Without this, hub payload enums (`BoardEntityType`, `BoardAction`, etc.) serialize as ints. MVC's `JsonStringEnumConverter` (via `builder.Services.ConfigureHttpJsonOptions`) only covers REST responses, not the SignalR hub protocol. The TUI `SignalRConnectionManager` deserializes these fields as strings (from the NSwag-generated contracts), so a mismatched int throws inside the client's message handler and is silently swallowed by the `HubConnection` — making board-event pushes a silent no-op. The TUI sees no board updates, no error, no reconnect. |
+| **Impact** | `Program.cs` now has `AddJsonProtocol` with `JsonStringEnumConverter`. All future SignalR hubs inherit this serializer. Found and fixed in `9b26412`. |
+
+## D-54: Targeted Realtime Board Patching
+
+| Field | Value |
+|---|---|
+| **Topic** | Per-entity-type realtime event routing instead of full board refresh |
+| **Date** | 2026-07-27 |
+| **Status** | ✅ Settled |
+| **Decision** | `useRealtime.ts` routes `BoardEntityEvent` by `envelope.entityType` to targeted handlers: `Card`/`Column` → single-entity re-fetch via `applyRealtimeCardEvent`/`applyRealtimeColumnEvent`; `CardRelationship` → full `board.fetchBoard`; others → `signalCardContentEvent` for open CardModals. `ProjectBoardEventEnvelope` gains `Guid? CardId` for card-scoped sub-entities. |
+| **Rationale** | The original code called `board.fetchBoard(projectId)` on every `BoardEntityEvent` — a full board re-fetch that flickers the UI and wastes bandwidth, especially during rapid edits (checklist toggles, comment posts). Per-entity patching: no board blink, lower latency, no wasted data. `CardRelationship` still does full refresh because the event affects badges on both the source and target card (neither is the relationship's own `entityId`), and this event is rare enough that full refresh is acceptable. The `CardId` field lets the client route card-scoped sub-entity events (comment posted, checklist toggled) to the right open CardModal without guessing. |
+| **Impact** | `useRealtime.ts` event handler restructured; `BoardStore` gains `applyRealtimeCardEvent`, `applyRealtimeColumnEvent`, `signalCardContentEvent`; `ProjectBoardEventEnvelope` has new `CardId` field (all sub-entity services now pass it). Added in `72afc95`.
+
+---
+
+## D-55: Notification Triggers Must Never Block the Business Operation They're Attached To
+
+| Field | Value |
+|---|---|
+| **Topic** | `NotifyAsync` call sites at every trigger point (card move/assign/comment/@mention/dependency-resolved/project archive/update) |
+| **Date** | 2026-07-28 |
+| **Status** | ✅ Settled |
+| **Decision** | Every trigger call site wraps `await _notifService.NotifyAsync(...)` in `try/catch`. A new `IWarnLogger` abstraction (`LogWarning(string)`) logs the failure instead of letting it propagate — optional constructor param defaulting to `NullWarnLogger` so existing DI registrations keep working unchanged. `ConsoleWarnLogger` (writes to `stderr`) is the real implementation registered in `Program.cs`. |
+| **Rationale** | A card move, comment, or project update must succeed even if the notification pipeline (DB write, SignalR push, ntfy publish) fails for any reason — a transient DB hiccup or a downed ntfy server must never turn a routine board action into a 500. This generalizes the existing "external services are best-effort" pattern (ntfy failures already swallowed inside `NtfyClient`, D-52) up one level, to the trigger call sites themselves. |
+| **Alternatives considered** | 1. Let `NotifyAsync` failures propagate and rely on global exception middleware (rejected — turns a notification hiccup into a failed card move, which the user experiences as data loss). 2. Fire-and-forget (`_ = NotifyAsync(...)` without awaiting) (rejected — loses the ability to log failures at all, and risks the notification running after the request/DbContext scope is disposed). |
+| **Impact** | New `IWarnLogger`/`NullWarnLogger`/`ConsoleWarnLogger` in Application/Infrastructure. Every notification trigger call site in `CardService`, `CommentService`, `ProjectService` follows this pattern — any new trigger must too. |
+
+---
+
+## D-56: Dependency-Resolved Notification Fires on Card Archive, Not Card Move
+
+| Field | Value |
+|---|---|
+| **Topic** | `NotifyResolvedDependenciesAsync` placement in `CardService` |
+| **Date** | 2026-07-28 |
+| **Status** | ✅ Settled |
+| **Decision** | The "blocker resolved" notification call lives in `CardService.ArchiveAsync`, not `MoveAsync`. `CardRelationship`'s "is this blocker still active" check requires `ArchivedAt != null`. |
+| **Rationale** | Plan 7 originally placed the call in `MoveAsync` on the assumption that moving a blocking card to a terminal column resolves it. But this codebase has no "Archived" pseudo-column — `ArchivedAt` is the only signal a card is done, and only `ArchiveAsync` sets it. With the call in `MoveAsync`, the "last active blocker" check always saw the just-moved card as still active (since `ArchivedAt` was still null) and the notification never fired, regardless of which column the card moved to. Caught during Plan 7's manual validation pass — zero automated coverage existed for this path beforehand, which is why the wiring bug shipped unnoticed. |
+| **Impact** | `NotifyResolvedDependenciesAsync` call moved to `ArchiveAsync`. Two regression tests added: `ArchiveAsync_ArchivingLastActiveBlocker_NotifiesBlockedCardAssignees`, `ArchiveAsync_OtherActiveBlockerRemains_DoesNotNotify`. See `CLAUDE.md` "Notification trigger patterns (Plan 7 lessons)". |
+
+---
+
+## D-57: Nightly Job Scheduler — Hangfire + PostgreSQL
+
+| Field | Value |
+|---|---|
+| **Topic** | Pre-phase decision blocking Phase 6 — how `ProjectContextSnapshot.AiNarrative` and any future scheduled work actually run |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled — supersedes the `BackgroundService`-for-MVP recommendation in `docs/functional-spec.md` §Phase 6 (that line was a suggestion, never a ratified decision) |
+| **Decision** | **Hangfire, with `Hangfire.PostgreSql` as the job store** (same Postgres instance the app already runs — no new infra service). One recurring job (`RecurringJob.AddOrUpdate`) calls `ProjectContextSnapshotService.GenerateAiNarrative()` for every active project, on the admin-configurable time from D-52-adjacent settings (default midnight server time, per D-32/570s). Hangfire's built-in dashboard mounted admin-only in the admin space, alongside the existing audit-log/settings/users pages (Phase 5). |
+| **Rationale** | User explicitly asked for **robust**. `BackgroundService` is an in-memory timer — a server restart mid-run silently drops the job, no retry, no history, no visibility. LLM calls are already known-flaky (Phase 6's own `ModelRouter` spec calls out rate-limit/5xx fallback) — narrative generation needs the same resilience, not less. Hangfire gives persistent job storage (survives restarts), automatic retry on failure, and run history/dashboard — for free, on infra we already run. Quartz.NET was rejected as solving a problem this app doesn't have: multiple cron schedules, misfire policies, per-job triggers. HydraForge needs exactly one global recurring job with one configurable time — Quartz's flexibility is pure overhead here. |
+| **Alternatives considered** | 1. `BackgroundService` (rejected — no persistence/retry/visibility, wrong tradeoff given "robust" requirement). 2. Quartz.NET (rejected — cron-engine flexibility unused, heavier setup for zero benefit over Hangfire here). |
+| **Impact** | New NuGet deps: `Hangfire.AspNetCore`, `Hangfire.PostgreSql`. `Program.cs` registers `AddHangfire(...).UsePostgreSqlStorage(...)` + `AddHangfireServer()`, mounts `/hangfire` dashboard behind admin auth filter. `docs/architecture.md` Technology Stack table updated. `docs/functional-spec.md` §Phase 6 pre-phase note marked resolved, points here. |
+
+---
+
+## D-58: AiNarrative Display Surface — Web UI Modal + TUI Viewer
+
+| Field | Value |
+|---|---|
+| **Topic** | Where a user actually reads the nightly `AiNarrative` digest (D-32/D-570s settled that it's generated and stored, but no UI task existed anywhere in the spec to display it — gap found while reviewing Phase 6 readiness) |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **Web UI:** a "View Narrative" button next to the project title (board view header) opens a modal (`UModal`) showing `AiNarrative` + `AiNarrativeGeneratedAt` (fetched via existing `GET /api/projects/{projectId}/ProjectSnapshot`). **TUI:** same pattern as the existing spec/plan viewer screen (overlay push/pop, per D-4x TUI conventions) — a keybinding on the board screen opens a read-only narrative view. If the board status bar has no room for a new binding hint (it's already carrying connection/online/error-count per Phase 4), the binding lives in that screen's `?` help overlay only, not forced onto the bar. |
+| **Rationale** | Directly requested. Closes a real spec gap: `AiNarrative` had a producer (nightly job) and an API (`ProjectSnapshotController`) but zero consumer task in either client — it would have shipped generated and unreadable. Reusing the spec/plan viewer overlay pattern on TUI and the modal pattern already established for card details on Web UI avoids inventing a new UI primitive for a read-only text panel. |
+| **Impact** | Web UI: new button in board header component, new modal component (or reuse `AppModal` per its `#body` slot convention), no new store needed beyond the existing snapshot fetch. TUI: new `NarrativeViewerScreen` (or extends existing spec/plan viewer), overlay-launched from Board screen per the `PreviousScreen`/`CurrentScreen` pattern, help-table entry added to Board's `ShowHelp()` binding list. `docs/functional-spec.md` Phase 7 checklist gets an explicit display task (previously only had "generate," never "display"). |

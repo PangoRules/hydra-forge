@@ -15,9 +15,16 @@
 export const UiRoutes = {
   Login: '/login',
   Setup: '/setup',
+  Chats: '/chats',
   Projects: {
     List: '/projects',
     Board: (projectId: string) => `/projects/${projectId}/board`
+  },
+  Admin: {
+    Home: '/admin',
+    Users: '/admin/users',
+    Settings: '/admin/settings',
+    AuditLog: '/admin/audit-log'
   }
 } as const
 
@@ -62,7 +69,8 @@ export const ApiRoutes = {
       `/api/projects/${projectId}/Cards/${cardId}/assignees/${assigneeUserId}`,
     archive: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/archive`,
     restore: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/restore`,
-    delete: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}`
+    delete: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}`,
+    watch: (projectId: string, cardId: string) => `/api/projects/${projectId}/Cards/${cardId}/watch`
   },
 
   Checklist: {
@@ -120,5 +128,29 @@ export const ApiRoutes = {
 
   ProjectSnapshot: {
     get: (projectId: string) => `/api/projects/${projectId}/ProjectSnapshot`
+  },
+
+  Notifications: {
+    list: (skip = 0, take = 20) => `/api/Notifications?skip=${skip}&take=${take}`,
+    unreadCount: () => '/api/Notifications/unread-count',
+    markRead: (id: string) => `/api/Notifications/${id}/read`,
+    markAllRead: () => '/api/Notifications/read-all'
+  },
+
+  Admin: {
+    usersList: (skip = 0, take = 20, search?: string) =>
+      `/api/admin/users?skip=${skip}&take=${take}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+    userGet: (userId: string) => `/api/admin/users/${userId}`,
+    userCreate: () => '/api/admin/users',
+    userDisable: (userId: string) => `/api/admin/users/${userId}/disable`,
+    userEnable: (userId: string) => `/api/admin/users/${userId}/enable`,
+    userResetPassword: (userId: string) => `/api/admin/users/${userId}/reset-password`,
+    userRole: (userId: string) => `/api/admin/users/${userId}/role`,
+    projectsList: (skip = 0, take = 20, search?: string) =>
+      `/api/admin/projects?skip=${skip}&take=${take}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+    projectGet: (projectId: string) => `/api/admin/projects/${projectId}`,
+    settingsGet: () => '/api/admin/settings',
+    settingsUpdate: () => '/api/admin/settings',
+    auditLog: () => '/api/admin/audit-log'
   }
 } as const

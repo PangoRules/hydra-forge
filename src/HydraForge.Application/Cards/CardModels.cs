@@ -36,39 +36,19 @@ public record MoveCardCommand(
     int Version
 );
 
-public record AssignCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid AssigneeUserId,
-    Guid ActorId
-);
+public record AssignCardCommand(Guid ProjectId, Guid CardId, Guid AssigneeUserId, Guid ActorId);
 
-public record UnassignCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid AssigneeUserId,
-    Guid ActorId
-);
+public record UnassignCardCommand(Guid ProjectId, Guid CardId, Guid AssigneeUserId, Guid ActorId);
 
-public record ArchiveCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId,
-    int Version
-);
+public record ArchiveCardCommand(Guid ProjectId, Guid CardId, Guid ActorId, int Version);
 
-public record RestoreCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId,
-    int Version
-);
+public record RestoreCardCommand(Guid ProjectId, Guid CardId, Guid ActorId, int Version);
 
-public record DeleteCardCommand(
-    Guid ProjectId,
-    Guid CardId,
-    Guid ActorId
-);
+public record DeleteCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
+
+public record WatchCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
+
+public record UnwatchCardCommand(Guid ProjectId, Guid CardId, Guid ActorId);
 
 public record CardDto(
     Guid Id,
@@ -87,21 +67,27 @@ public record CardDto(
     DateTime? ArchivedAt,
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeDto> Assignees,
-    IReadOnlyList<CardWatcherDto> Watchers
+    IReadOnlyList<CardWatcherDto> Watchers,
+    IReadOnlyList<CardRelationshipBadgeDto> RelationshipBadges,
+    int RelationshipCount
 );
 
-public record CardAssigneeDto(
-    Guid Id,
-    Guid UserId,
-    string Username,
-    DateTime AssignedAt
+// Mirrors the TUI's CardRelationshipIndicatorHelper.RelationBadge / BoardRenderer.FormatBadgeLine —
+// same Type + IsSource + other-card-number shape, so both clients derive the same verb
+// ("blocks"/"blocked by", "precedes"/"preceded by", "spawned"/"spawned from", "relates").
+// Capped to a handful per card (matches TUI's MaxBadgesPerCard); RelationshipCount on the
+// parent CardDto is the true total, for a "+N more" overflow indicator.
+public record CardRelationshipBadgeDto(
+    Guid RelatedCardId,
+    int RelatedCardNumber,
+    string RelatedCardTitle,
+    RelationshipType Type,
+    bool IsSource
 );
 
-public record CardWatcherDto(
-    Guid UserId,
-    string Username,
-    DateTime AddedAt
-);
+public record CardAssigneeDto(Guid Id, Guid UserId, string Username, DateTime AssignedAt);
+
+public record CardWatcherDto(Guid UserId, string Username, DateTime AddedAt);
 
 public record CardListFilter(
     Guid? ColumnId = null,
@@ -112,10 +98,7 @@ public record CardListFilter(
     int? ArchivedLimit = 200
 );
 
-public record BlockedMoveWarningDto(
-    Guid CardId,
-    IReadOnlyList<BlockerDto> Blockers
-);
+public record BlockedMoveWarningDto(Guid CardId, IReadOnlyList<BlockerDto> Blockers);
 
 public record BlockerDto(
     Guid CardId,
@@ -127,7 +110,7 @@ public record BlockerDto(
 public enum RelationshipBlockerType
 {
     BlockedBy,
-    Precedes
+    Precedes,
 }
 
 public record CreateCardRequest(
@@ -156,17 +139,11 @@ public record MoveCardRequest(
     int Version
 );
 
-public record AssignCardRequest(
-    Guid AssigneeUserId
-);
+public record AssignCardRequest(Guid AssigneeUserId);
 
-public record ArchiveCardRequest(
-    int Version
-);
+public record ArchiveCardRequest(int Version);
 
-public record RestoreCardRequest(
-    int Version
-);
+public record RestoreCardRequest(int Version);
 
 public record CardResponse(
     Guid Id,
@@ -185,34 +162,25 @@ public record CardResponse(
     DateTime? ArchivedAt,
     Guid? ParentCardId,
     IReadOnlyList<CardAssigneeResponse> Assignees,
-    IReadOnlyList<CardWatcherResponse> Watchers
+    IReadOnlyList<CardWatcherResponse> Watchers,
+    IReadOnlyList<CardRelationshipBadgeResponse> RelationshipBadges,
+    int RelationshipCount
 );
 
-public record CardAssigneeResponse(
-    Guid Id,
-    Guid UserId,
-    string Username,
-    DateTime AssignedAt
+public record CardRelationshipBadgeResponse(
+    Guid RelatedCardId,
+    int RelatedCardNumber,
+    string RelatedCardTitle,
+    RelationshipType Type,
+    bool IsSource
 );
 
-public record CardWatcherResponse(
-    Guid UserId,
-    string Username,
-    DateTime AddedAt
-);
+public record CardAssigneeResponse(Guid Id, Guid UserId, string Username, DateTime AssignedAt);
 
-public record CardListResponse(
-    IReadOnlyList<CardResponse> Cards
-);
+public record CardWatcherResponse(Guid UserId, string Username, DateTime AddedAt);
 
-public record BlockedMoveWarningResponse(
-    Guid CardId,
-    IReadOnlyList<BlockerResponse> Blockers
-);
+public record CardListResponse(IReadOnlyList<CardResponse> Cards);
 
-public record BlockerResponse(
-    Guid CardId,
-    int CardNumber,
-    string Title,
-    string BlockerType
-);
+public record BlockedMoveWarningResponse(Guid CardId, IReadOnlyList<BlockerResponse> Blockers);
+
+public record BlockerResponse(Guid CardId, int CardNumber, string Title, string BlockerType);
