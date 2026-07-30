@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Constants;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Enums;
 
@@ -52,8 +53,10 @@ public class AdminService(
         CancellationToken ct = default
     )
     {
+        // AdminService is only ever called from AdminController — admin-only, so it's safe
+        // to clamp to the admin ceiling rather than the user-facing one.
         skip = Math.Max(0, skip);
-        take = Math.Clamp(take, 1, 100);
+        take = Math.Clamp(take, 1, PaginationConstants.MaxAdminPageSize);
         var users = await userRepo.ListAsync(skip, take, search, ct);
         var totalCount = await userRepo.CountAsync(search, ct);
         return Result<UserListPageDto>.Success(

@@ -1,6 +1,7 @@
 using HydraForge.Application.Audit;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Constants;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 
@@ -800,6 +801,55 @@ public class ProjectServiceTests
         Assert.Equal(100, repo.LastTake);
     }
 
+    [Fact]
+    public async Task GetAllAsync_AdminCallerWithMaxTakeOverride_ClampsToFiveHundredNotOneHundred()
+    {
+        // ProjectService.GetAllAsync is shared between the member-facing project list
+        // (default maxTake=100) and the admin project list, which must be able to pass a
+        // wider ceiling without loosening the default for everyone else.
+        var (
+            repo,
+            columnRepo,
+            memberRepo,
+            snapshotRepo,
+            chatService,
+            snapshotRefresher,
+            publisher,
+            auditWriter,
+            userRepo,
+            notifService
+        ) = CreateAdminMocks();
+        var handler = new ProjectService(
+            repo,
+            columnRepo,
+            memberRepo,
+            snapshotRepo,
+            chatService,
+            snapshotRefresher,
+            publisher,
+            auditWriter,
+            userRepo,
+            notifService
+        );
+        var adminId = Guid.NewGuid();
+
+        var result = await handler.GetAllAsync(
+            adminId,
+            includeArchived: false,
+            search: null,
+            sortBy: ProjectSortField.Name,
+            sortDescending: false,
+            role: null,
+            skip: 0,
+            take: 9999,
+            isAdmin: true,
+            maxTake: PaginationConstants.MaxAdminPageSize
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(500, repo.LastTake);
+    }
+
     private static (
         InMemoryProjectRepository repo,
         InMemoryColumnRepository columnRepo,
@@ -947,6 +997,7 @@ internal class InMemoryProjectRepository : IProjectRepository
         CancellationToken ct = default
     )
     {
+        LastTake = take;
         ListAllAsyncCallCount++;
 
         var filtered = Projects.AsEnumerable();

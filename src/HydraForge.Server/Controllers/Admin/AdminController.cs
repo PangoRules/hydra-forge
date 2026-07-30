@@ -139,7 +139,8 @@ public class AdminController(
             take,
             isAdmin: true,
             excludeMembership: false,
-            ct
+            ct,
+            maxTake: PaginationConstants.MaxAdminPageSize
         );
         return result.IsFailure ? this.ToProblemResult(result.Error) : Ok(result.Value);
     }
@@ -218,7 +219,7 @@ public class AdminController(
             from,
             to,
             skip,
-            Math.Min(take, 500)
+            Math.Min(take, PaginationConstants.MaxAdminPageSize)
         );
         var result = await auditLogReader.QueryAsync(query, ct);
         return Ok(result);
