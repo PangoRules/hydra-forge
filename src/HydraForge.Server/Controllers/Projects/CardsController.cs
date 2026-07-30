@@ -1,6 +1,7 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Constants;
 using HydraForge.Domain.Enums;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
@@ -28,6 +29,10 @@ public class CardsController(CardService cardService) : ControllerBase
     )
     {
         var userId = User.GetRequiredUserId();
+
+        archivedLimit = archivedLimit.HasValue
+            ? Math.Min(archivedLimit.Value, PaginationConstants.MaxPageSize)
+            : null;
 
         var filter = new CardListFilter(
             columnId,

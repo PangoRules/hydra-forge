@@ -3,6 +3,7 @@ using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Settings;
+using HydraForge.Domain.Constants;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +32,8 @@ public class AdminController(
         CancellationToken ct = default
     )
     {
+        take = Math.Min(take, PaginationConstants.MaxAdminPageSize);
+
         var result = await adminService.ListUsersAsync(skip, take, search, ct);
         return result.IsFailure ? this.ToProblemResult(result.Error) : Ok(result.Value);
     }
@@ -122,6 +125,8 @@ public class AdminController(
         CancellationToken ct = default
     )
     {
+        take = Math.Min(take, PaginationConstants.MaxAdminPageSize);
+
         var actorId = User.GetRequiredUserId();
         var result = await projectService.GetAllAsync(
             actorId,
