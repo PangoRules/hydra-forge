@@ -873,3 +873,30 @@ Chats
 | **Decision** | `useRealtime.ts` routes `BoardEntityEvent` by `envelope.entityType` to targeted handlers: `Card`/`Column` → single-entity re-fetch via `applyRealtimeCardEvent`/`applyRealtimeColumnEvent`; `CardRelationship` → full `board.fetchBoard`; others → `signalCardContentEvent` for open CardModals. `ProjectBoardEventEnvelope` gains `Guid? CardId` for card-scoped sub-entities. |
 | **Rationale** | The original code called `board.fetchBoard(projectId)` on every `BoardEntityEvent` — a full board re-fetch that flickers the UI and wastes bandwidth, especially during rapid edits (checklist toggles, comment posts). Per-entity patching: no board blink, lower latency, no wasted data. `CardRelationship` still does full refresh because the event affects badges on both the source and target card (neither is the relationship's own `entityId`), and this event is rare enough that full refresh is acceptable. The `CardId` field lets the client route card-scoped sub-entity events (comment posted, checklist toggled) to the right open CardModal without guessing. |
 | **Impact** | `useRealtime.ts` event handler restructured; `BoardStore` gains `applyRealtimeCardEvent`, `applyRealtimeColumnEvent`, `signalCardContentEvent`; `ProjectBoardEventEnvelope` has new `CardId` field (all sub-entity services now pass it). Added in `72afc95`.
+
+---
+
+## D-55: Notification Triggers Must Never Block the Business Operation They're Attached To
+
+| Field | Value |
+|---|---|
+| **Topic** | `NotifyAsync` call sites at every trigger point (card move/assign/comment/@mention/dependency-resolved/project archive/update) |
+| **Date** | 2026-07-28 |
+| **Status** | ✅ Settled |
+| **Decision** | Every trigger call site wraps `await _notifService.NotifyAsync(...)` in `try/catch`. A new `IWarnLogger` abstraction (`LogWarning(string)`) logs the failure instead of letting it propagate — optional constructor param defaulting to `NullWarnLogger` so existing DI registrations keep working unchanged. `ConsoleWarnLogger` (writes to `stderr`) is the real implementation registered in `Program.cs`. |
+| **Rationale** | A card move, comment, or project update must succeed even if the notification pipeline (DB write, SignalR push, ntfy publish) fails for any reason — a transient DB hiccup or a downed ntfy server must never turn a routine board action into a 500. This generalizes the existing "external services are best-effort" pattern (ntfy failures already swallowed inside `NtfyClient`, D-52) up one level, to the trigger call sites themselves. |
+| **Alternatives considered** | 1. Let `NotifyAsync` failures propagate and rely on global exception middleware (rejected — turns a notification hiccup into a failed card move, which the user experiences as data loss). 2. Fire-and-forget (`_ = NotifyAsync(...)` without awaiting) (rejected — loses the ability to log failures at all, and risks the notification running after the request/DbContext scope is disposed). |
+| **Impact** | New `IWarnLogger`/`NullWarnLogger`/`ConsoleWarnLogger` in Application/Infrastructure. Every notification trigger call site in `CardService`, `CommentService`, `ProjectService` follows this pattern — any new trigger must too. |
+
+---
+
+## D-56: Dependency-Resolved Notification Fires on Card Archive, Not Card Move
+
+| Field | Value |
+|---|---|
+| **Topic** | `NotifyResolvedDependenciesAsync` placement in `CardService` |
+| **Date** | 2026-07-28 |
+| **Status** | ✅ Settled |
+| **Decision** | The "blocker resolved" notification call lives in `CardService.ArchiveAsync`, not `MoveAsync`. `CardRelationship`'s "is this blocker still active" check requires `ArchivedAt != null`. |
+| **Rationale** | Plan 7 originally placed the call in `MoveAsync` on the assumption that moving a blocking card to a terminal column resolves it. But this codebase has no "Archived" pseudo-column — `ArchivedAt` is the only signal a card is done, and only `ArchiveAsync` sets it. With the call in `MoveAsync`, the "last active blocker" check always saw the just-moved card as still active (since `ArchivedAt` was still null) and the notification never fired, regardless of which column the card moved to. Caught during Plan 7's manual validation pass — zero automated coverage existed for this path beforehand, which is why the wiring bug shipped unnoticed. |
+| **Impact** | `NotifyResolvedDependenciesAsync` call moved to `ArchiveAsync`. Two regression tests added: `ArchiveAsync_ArchivingLastActiveBlocker_NotifiesBlockedCardAssignees`, `ArchiveAsync_OtherActiveBlockerRemains_DoesNotNotify`. See `CLAUDE.md` "Notification trigger patterns (Plan 7 lessons)". |

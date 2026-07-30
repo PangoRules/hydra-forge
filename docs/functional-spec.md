@@ -481,7 +481,7 @@
 
 - [x] Backend: `[ProducesResponseType]` attributes on `ProjectsController`, `CardsController`, `ColumnsController` — response types now accurate in OpenAPI spec
 - [x] Auth pages: login, first-run admin setup
-- [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page) — Not implemented — deferred to Phase 5 (Admin) or later.
+- [ ] Backend: POST /api/Auth/change-password endpoint (needed by setup page) — Not implemented. Phase 5 shipped admin-initiated `POST /api/admin/users/{id}/reset-password` only (no self-service change-password) — deferred to Phase 6+.
 - [x] Project list + create project flow (`app/pages/projects/index.vue`, `ProjectList.vue`, `ProjectCreateModal.vue`) — includes optional git remote URL + provider fields in advanced expander
 - [x] Board view: columns + cards, drag-and-drop move, column reorder (`BoardView.vue`, `BoardColumn.vue`, `BoardCard.vue`, `ColumnHeader.vue`)
 - [x] Board mobile list view: `BoardMobileList.vue` with `md:` Tailwind breakpoint switching (desktop: columns, mobile: single-column list)
@@ -538,19 +538,22 @@
 - [x] Status bar: sync status, online presence count (unread notification count deferred to Phase 5 — no notification API surface yet, see below)
 - [x] Error panel in status bar: surfaced errors with correlationId, dismissible
 
-### Phase 5: Multi-User, Notifications & Admin 🔔
+### Phase 5: Multi-User, Notifications & Admin 🔔 — **COMPLETE** (2026-07-29)
 > Goal: team collaboration working end-to-end. Admin can manage the install.
 
-- [ ] ntfy integration: per-user topic `hydraforge-{userId}`, configurable ntfy server URL
-- [ ] Notification rules: card move → assignees, card assigned → user, comment → watchers, @mention → user, dependency resolved → unblocked assignees, project archived/edited → all members, PR created → all members
-- [x] In-app bell icon (Web UI) — see `docs/manual-validation/2026-07-25-phase-5-notifications-admin-plan-4-web-ui-bell-matrix.md` (partial pass — happy path done, some edge cases/regressions still pending)
-- [ ] Unread count in TUI status bar
-- [ ] Admin dashboard: users list, all projects overview, system health
-- [ ] Admin: create user, disable user, reset password, assign admin role
-- [ ] Admin: system settings (ntfy URL, SearXNG URL, platform branding)
-- [ ] Admin UI: edit `SystemSettings` retention knobs at runtime (`ArchivedItemRetentionDays`, `AuditLogRetentionDays`, `NotificationRetentionDays`) without redeploy; reflects on next housekeeping run (5-min settings cache TTL)
-- [ ] Admin: see and manage all projects regardless of membership
-- [ ] Audit log viewer: filter by project, user, entity type, date range
+All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-multi-user-notifications-admin.md`, consolidated validation matrix at `docs/archive/manual-validation/2026-07-25-phase-5-notifications-admin-matrix.md`.
+
+- [x] ntfy integration: per-user topic `hydraforge-{userId}`, configurable ntfy server URL (Plan 6 — see D-52/D-53, initial close-out was incomplete, corrected 2026-07-27)
+- [x] Notification rules: card move → assignees, card assigned → user, comment → watchers, @mention → user, dependency resolved → unblocked assignees, project archived/edited → all members (Plan 7, 7 triggers across 4 services)
+- [ ] PR created → all members — **deferred**, not implemented. Git/PR integration was flagged out-of-scope for Phase 5 in the original design spec §Scope Boundaries; no PR event source exists yet to trigger from.
+- [x] In-app bell icon (Web UI) — Plan 4 (#55)
+- [x] Unread count in TUI status bar — Plan 5, `U` key notifications list (#56)
+- [x] Admin dashboard: users list, all projects overview, system health — Plan 13 (#64)
+- [x] Admin: create user, disable user, reset password, assign admin role — Plan 9 (#60)
+- [x] Admin: system settings (ntfy URL, SearXNG URL, platform branding) — Plan 10 (#61)
+- [x] Admin UI: edit `SystemSettings` retention knobs at runtime (`ArchivedItemRetentionDays`, `AuditLogRetentionDays`, `NotificationRetentionDays`) without redeploy; reflects on next housekeeping run (5-min settings cache TTL) — Plan 10 (#61)
+- [x] Admin: see and manage all projects regardless of membership — Plan 8 (#59)
+- [x] Audit log viewer: filter by project, user, entity type, date range — Plan 11 reader (#62) + Plan 12 web UI (#63)
 
 ### Phase 6: LLM Infrastructure 🔧
 > Goal: all AI plumbing in place before any chat or AI feature is built on top.
