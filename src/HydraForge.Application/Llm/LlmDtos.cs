@@ -9,32 +9,28 @@ public sealed record ChatRequest(
     IReadOnlyList<CacheBlock> CacheBlocks,
     IReadOnlyList<ToolDefinition> Tools,
     int? MaxOutputTokens,
-    decimal? Temperature);
+    decimal? Temperature
+);
 
 public sealed record ChatMessage(ChatRole Role, string Content);
 
 public sealed record ToolDefinition(
     string Name,
     string Description,
-    IReadOnlyList<ToolParameter> Parameters);
+    IReadOnlyList<ToolParameter> Parameters
+);
 
-public sealed record ToolParameter(
-    string Name,
-    string Type,
-    string Description,
-    bool IsRequired);
+public sealed record ToolParameter(string Name, string Type, string Description, bool IsRequired);
 
 public sealed record CacheBlock(string Content, CacheBlockType Type);
 
 public sealed record ChatChunk(
     string? Delta,
     ChatChunkFinishReason? FinishReason,
-    UsageSnapshot? Usage);
+    UsageSnapshot? Usage
+);
 
-public sealed record UsageSnapshot(
-    int InputTokens,
-    int OutputTokens,
-    int CachedTokens);
+public sealed record UsageSnapshot(int InputTokens, int OutputTokens, int CachedTokens);
 
 // Image
 
@@ -43,7 +39,8 @@ public sealed record ImageRequest(
     string ModelId,
     string Prompt,
     ImageSize Size,
-    int Count);
+    int Count
+);
 
 public sealed record GeneratedImage(IReadOnlyList<string> ImageDataUrlsOrKeys, string Resolution);
 
@@ -51,7 +48,7 @@ public enum ImageSize
 {
     Square1024,
     Landscape1792,
-    Portrait1024
+    Portrait1024,
 }
 
 public sealed record InpaintRequest(
@@ -60,14 +57,16 @@ public sealed record InpaintRequest(
     string Prompt,
     string ImageKey,
     string MaskKey,
-    ImageSize Size);
+    ImageSize Size
+);
 
 // Embedding
 
 public sealed record EmbeddingRequest(
     Guid ProviderModelConfigId,
     string ModelId,
-    IReadOnlyList<string> Inputs);
+    IReadOnlyList<string> Inputs
+);
 
 public sealed record EmbeddingResult(IReadOnlyList<ReadOnlyMemory<float>> Vectors);
 
@@ -76,18 +75,18 @@ public sealed record EmbeddingResult(IReadOnlyList<ReadOnlyMemory<float>> Vector
 public sealed record RouteDecision(
     ProviderModelConfigDto Primary,
     ProviderDto PrimaryProvider,
-    IReadOnlyList<FallbackProvider> Fallbacks);
+    IReadOnlyList<FallbackProvider> Fallbacks
+);
 
-public sealed record FallbackProvider(
-    ProviderModelConfigDto Model,
-    ProviderDto Provider);
+public sealed record FallbackProvider(ProviderModelConfigDto Model, ProviderDto Provider);
 
 // Context compression
 
 public sealed record CompressedContext(
     IReadOnlyList<CacheBlock> Blocks,
     int EstimatedTokens,
-    bool WasCompressed);
+    bool WasCompressed
+);
 
 // Usage recording
 
@@ -103,7 +102,8 @@ public sealed record TokenUsageRecordInput(
     int OutputTokens,
     int CachedTokens,
     Guid? PipelineRunId,
-    decimal Cost);
+    decimal Cost
+);
 
 public sealed record ImageUsageRecordInput(
     Guid UserId,
@@ -115,7 +115,8 @@ public sealed record ImageUsageRecordInput(
     string ModelName,
     int ImageCount,
     string Resolution,
-    decimal Cost);
+    decimal Cost
+);
 
 // Enums
 
@@ -124,7 +125,7 @@ public enum ChatChunkFinishReason
     Stop,
     Length,
     ContentFilter,
-    ToolCalls
+    ToolCalls,
 }
 
 public enum ChatRole
@@ -132,14 +133,12 @@ public enum ChatRole
     System,
     User,
     Assistant,
-    Tool
+    Tool,
 }
 
 public enum CacheBlockType
 {
     SystemContext,
     ProjectSnapshot,
-    Memory
+    Memory,
 }
-
-

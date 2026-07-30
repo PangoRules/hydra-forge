@@ -4,5 +4,8 @@ namespace HydraForge.Application.Llm;
 
 public interface IEmbeddingClient
 {
-    Task<Result<EmbeddingResult>> EmbedAsync(EmbeddingRequest request, CancellationToken ct = default);
+    Task<Result<EmbeddingResult>> EmbedAsync(
+        EmbeddingRequest request,
+        CancellationToken ct = default
+    );
 }

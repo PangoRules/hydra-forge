@@ -12,7 +12,8 @@ public sealed record ProviderDto(
     Guid? FallbackProviderId,
     bool IsEnabled,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt
+);
 
 public sealed record ProviderPageDto(IReadOnlyList<ProviderDto> Items, int TotalCount);
 
@@ -23,7 +24,8 @@ public sealed record CreateProviderInput(
     string AdapterType,
     string ProviderType,
     string Tier,
-    Guid? FallbackProviderId);
+    Guid? FallbackProviderId
+);
 
 public sealed record UpdateProviderInput(
     string? Name,
@@ -31,7 +33,8 @@ public sealed record UpdateProviderInput(
     string? ApiKey,
     string? Tier,
     Guid? FallbackProviderId,
-    bool? IsEnabled);
+    bool? IsEnabled
+);
 
 // Model DTOs
 
@@ -39,7 +42,8 @@ public sealed record ProviderModelDto(
     string ModelId,
     string Name,
     string? Description,
-    IReadOnlyDictionary<string, string>? Metadata);
+    IReadOnlyDictionary<string, string>? Metadata
+);
 
 public sealed record ProviderModelConfigDto(
     Guid Id,
@@ -49,7 +53,8 @@ public sealed record ProviderModelConfigDto(
     string Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool IsEnabled);
+    bool IsEnabled
+);
 
 public sealed record CreateModelInput(
     string ModelId,
@@ -57,14 +62,16 @@ public sealed record CreateModelInput(
     string Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool IsEnabled);
+    bool IsEnabled
+);
 
 public sealed record UpdateModelInput(
     string? Name,
     string? Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool? IsEnabled);
+    bool? IsEnabled
+);
 
 // Routing DTOs
 
@@ -74,11 +81,10 @@ public sealed record FeatureRoutingDto(
     string DefaultTier,
     string? MaxUserTier,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt
+);
 
-public sealed record UpdateRoutingInput(
-    string DefaultTier,
-    string? MaxUserTier);
+public sealed record UpdateRoutingInput(string DefaultTier, string? MaxUserTier);
 
 // Usage DTOs
 
@@ -87,7 +93,8 @@ public sealed record TokenUsagePageDto(
     int TotalCount,
     int TotalInputTokens,
     int TotalOutputTokens,
-    decimal TotalCost);
+    decimal TotalCost
+);
 
 public sealed record TokenUsageDto(
     Guid Id,
@@ -99,13 +106,15 @@ public sealed record TokenUsageDto(
     int OutputTokens,
     int CachedTokens,
     decimal Cost,
-    DateTime CreatedAt);
+    DateTime CreatedAt
+);
 
 public sealed record ImageUsagePageDto(
     IReadOnlyList<ImageUsageDto> Items,
     int TotalCount,
     int TotalImageCount,
-    decimal TotalCost);
+    decimal TotalCost
+);
 
 public sealed record ImageUsageDto(
     Guid Id,
@@ -116,7 +125,8 @@ public sealed record ImageUsageDto(
     int ImageCount,
     string Resolution,
     decimal Cost,
-    DateTime CreatedAt);
+    DateTime CreatedAt
+);
 
 // Budget DTOs
 
@@ -129,10 +139,12 @@ public sealed record UserBudgetDto(
     int MonthlyImageBudget,
     int MonthlyImageUsed,
     DateTime PeriodStart,
-    DateTime PeriodEnd);
+    DateTime PeriodEnd
+);
 
 public sealed record UpdateBudgetInput(
     int? DailyLimit,
     int? MonthlyLimit,
     int? MonthlyTokenBudget,
-    int? MonthlyImageBudget);
+    int? MonthlyImageBudget
+);

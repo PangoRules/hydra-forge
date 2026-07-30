@@ -10,5 +10,6 @@ public interface IModelRouter
         Guid userId,
         Guid? projectId,
         int estimatedTokens,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 }
