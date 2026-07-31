@@ -67,7 +67,16 @@ public class CardRelationshipService(
             .ToList();
         var cardsById = await _cardRepo.GetByIdsAsync(cardIds, ct);
 
-        var dtos = relationships.Select(r => MapToDto(r, cardsById)).ToList();
+        // An archived blocker/predecessor no longer applies (matches CardService's
+        // relationshipBadges) — drop it here too instead of leaving it listed as if
+        // still active.
+        var activeRelationships = relationships.Where(r =>
+        {
+            var otherId = r.SourceCardId == cardId ? r.TargetCardId : r.SourceCardId;
+            return cardsById.TryGetValue(otherId, out var other) && other.ArchivedAt == null;
+        });
+
+        var dtos = activeRelationships.Select(r => MapToDto(r, cardsById)).ToList();
         return Result<CardRelationshipListResponse>.Success(new CardRelationshipListResponse(dtos));
     }
 
