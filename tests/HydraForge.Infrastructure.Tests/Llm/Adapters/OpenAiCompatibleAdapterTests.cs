@@ -377,7 +377,7 @@ public class OpenAiCompatibleAdapterTests
             data = new[]
             {
                 new { id = "gpt-4o", name = "GPT-4o", description = "Fast model" },
-                new { id = "gpt-4o-mini", name = "GPT-4o Mini", description = (string?)null },
+                new { id = "gpt-4o-mini", name = "GPT-4o Mini", description = "Mini model" },
             }
         }, JsonOptions);
 
@@ -395,6 +395,7 @@ public class OpenAiCompatibleAdapterTests
         Assert.Equal("Fast model", result.Value[0].Description);
         Assert.Equal("gpt-4o-mini", result.Value[1].ModelId);
         Assert.Equal("GPT-4o Mini", result.Value[1].Name);
+        Assert.Equal("Mini model", result.Value[1].Description);
     }
 
     [Fact]

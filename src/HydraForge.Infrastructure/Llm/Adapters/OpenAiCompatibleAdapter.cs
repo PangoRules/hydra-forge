@@ -84,7 +84,11 @@ public sealed class OpenAiCompatibleAdapter : ILlmClient
         }
 
         using var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            yield return new ChatChunk(null, ChatChunkFinishReason.Error, null);
+            yield break;
+        }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
@@ -92,10 +96,10 @@ public sealed class OpenAiCompatibleAdapter : ILlmClient
         UsageSnapshot? usage = null;
         ChatChunkFinishReason? finishReason = null;
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) is not null)
         {
-            var line = await reader.ReadLineAsync(ct);
-            if (line is null or "") continue;
+            if (line == "") continue;
             if (!line.StartsWith("data: ")) continue;
 
             var data = line["data: ".Length..].Trim();
