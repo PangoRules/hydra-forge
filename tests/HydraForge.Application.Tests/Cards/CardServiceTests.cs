@@ -1874,7 +1874,7 @@ public class CardServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_RelationshipBadges_SkipsUnresolvableRelatedCardButKeepsCount()
+    public async Task ListAsync_RelationshipBadges_SkipsArchivedBlockerAndExcludesFromCount()
     {
         var (
             cardRepo,
@@ -1950,7 +1950,270 @@ public class CardServiceTests
         Assert.True(result.IsSuccess);
         var blocked = result.Value.Single(c => c.Id == blockedCardId);
         Assert.Empty(blocked.RelationshipBadges);
-        Assert.Equal(1, blocked.RelationshipCount);
+        Assert.Equal(0, blocked.RelationshipCount);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RelationshipBadges_SkipsArchivedBlockerSameAsListAsync()
+    {
+        var (
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CardService(
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            new FakeProjectBoardEventPublisher(),
+            notifService
+        );
+        var projectId = NewId();
+        var actorId = NewId();
+        var blockedCardId = NewId();
+        var blockerCardId = NewId();
+
+        cardRepo.Add(
+            new Card
+            {
+                Id = blockedCardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Blocked",
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = blockerCardId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 2,
+                Title = "Blocker",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        relationshipRepo.Relationships.Add(
+            new CardRelationship
+            {
+                SourceCardId = blockerCardId,
+                TargetCardId = blockedCardId,
+                Type = RelationshipType.BlockedBy,
+            }
+        );
+
+        // GetByIdAsync (the card-detail path) must agree with ListAsync (the board
+        // path) — an archived blocker's relationship must not appear via either, or
+        // the badge flickers depending on which endpoint last refreshed the card.
+        var result = await service.GetByIdAsync(projectId, blockedCardId, actorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value.RelationshipBadges);
+        Assert.Equal(0, result.Value.RelationshipCount);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ResolvesParentSummaryAndChildCount()
+    {
+        var (
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CardService(
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            new FakeProjectBoardEventPublisher(),
+            notifService
+        );
+        var projectId = NewId();
+        var actorId = NewId();
+        var parentId = NewId();
+        var childId = NewId();
+        var grandchildId = NewId();
+        var archivedChildId = NewId();
+
+        cardRepo.Add(
+            new Card
+            {
+                Id = parentId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Parent",
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = childId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 2,
+                Title = "Child",
+                ParentCardId = parentId,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = grandchildId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 3,
+                Title = "Grandchild",
+                ParentCardId = parentId,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = archivedChildId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 4,
+                Title = "Archived child",
+                ParentCardId = parentId,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+
+        var childResult = await service.GetByIdAsync(projectId, childId, actorId);
+        Assert.True(childResult.IsSuccess);
+        Assert.NotNull(childResult.Value.ParentCard);
+        Assert.Equal(parentId, childResult.Value.ParentCard!.Id);
+        Assert.Equal(1, childResult.Value.ParentCard.CardNumber);
+        Assert.Equal("Parent", childResult.Value.ParentCard.Title);
+        Assert.Equal(0, childResult.Value.ChildCount);
+
+        // Only active (non-archived) children count.
+        var parentResult = await service.GetByIdAsync(projectId, parentId, actorId);
+        Assert.True(parentResult.IsSuccess);
+        Assert.Null(parentResult.Value.ParentCard);
+        Assert.Equal(2, parentResult.Value.ChildCount);
+    }
+
+    [Fact]
+    public async Task ListAsync_ResolvesParentSummaryAndChildCount()
+    {
+        var (
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher,
+            notifService
+        ) = CreateMocks();
+        var service = new CardService(
+            cardRepo,
+            assigneeRepo,
+            watcherRepo,
+            relationshipRepo,
+            columnRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            new FakeProjectBoardEventPublisher(),
+            notifService
+        );
+        var projectId = NewId();
+        var actorId = NewId();
+        var parentId = NewId();
+        var childId = NewId();
+
+        cardRepo.Add(
+            new Card
+            {
+                Id = parentId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 1,
+                Title = "Parent",
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = childId,
+                ProjectId = projectId,
+                ColumnId = NewId(),
+                CardNumber = 2,
+                Title = "Child",
+                ParentCardId = parentId,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+
+        var result = await service.ListAsync(projectId, new CardListFilter(), actorId);
+
+        Assert.True(result.IsSuccess);
+        var parentDto = result.Value.Single(c => c.Id == parentId);
+        var childDto = result.Value.Single(c => c.Id == childId);
+        Assert.Equal(1, parentDto.ChildCount);
+        Assert.Null(parentDto.ParentCard);
+        Assert.NotNull(childDto.ParentCard);
+        Assert.Equal(parentId, childDto.ParentCard!.Id);
+        Assert.Equal("Parent", childDto.ParentCard.Title);
+        Assert.Equal(0, childDto.ChildCount);
     }
 
     [Fact]
@@ -3237,6 +3500,9 @@ internal class InMemoryCardRepository : ICardRepository
 
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
         Task.FromResult(Cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
+        Task.FromResult(Cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null));
 }
 
 internal class InMemoryCardAssigneeRepository : ICardAssigneeRepository

@@ -31,6 +31,7 @@ public interface ICardRepository
         CancellationToken ct = default
     );
     Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default);
+    Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default);
 }
 
 public interface ICardAssigneeRepository
