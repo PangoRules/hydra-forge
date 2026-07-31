@@ -4,10 +4,9 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using HydraForge.Application.Llm;
-using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
-using HydraForge.Infrastructure.Llm;
+using HydraForge.Infrastructure.Llm.Adapters;
 
 public class OpenAiCompatibleAdapterTests
 {
@@ -16,7 +15,10 @@ public class OpenAiCompatibleAdapterTests
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
-    private static LlmProvider CreateProvider(string baseUrl = "https://api.example.com", string? apiKeyEncrypted = null)
+    private static LlmProvider CreateProvider(
+        string baseUrl = "https://api.example.com",
+        string? apiKeyEncrypted = null
+    )
     {
         return new LlmProvider
         {
@@ -34,24 +36,20 @@ public class OpenAiCompatibleAdapterTests
     private class FakeKeyVault(string? apiKey = null) : IKeyVault
     {
         public string Decrypt(string _) => apiKey ?? "decrypted-fake-key";
+
         public string Encrypt(string plaintext) => plaintext;
     }
 
-    private static Stream SseStream(string sseContent)
+    private static MemoryStream SseStream(string sseContent)
     {
         return new MemoryStream(Encoding.UTF8.GetBytes(sseContent));
     }
 
-    private class SseStreamHandler : HttpMessageHandler
+    private class SseStreamHandler(string sseContent) : HttpMessageHandler
     {
-        private readonly string _sseContent;
+        private readonly string _sseContent = sseContent;
 
         public HttpRequestMessage? LastRequest { get; private set; }
-
-        public SseStreamHandler(string sseContent)
-        {
-            _sseContent = sseContent;
-        }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -68,18 +66,12 @@ public class OpenAiCompatibleAdapterTests
         }
     }
 
-    private class JsonBodyHandler : HttpMessageHandler
+    private class JsonBodyHandler(HttpStatusCode statusCode, string jsonBody) : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
         public string? LastBody { get; private set; }
-        private readonly HttpStatusCode _statusCode;
-        private readonly string _jsonBody;
-
-        public JsonBodyHandler(HttpStatusCode statusCode, string jsonBody)
-        {
-            _statusCode = statusCode;
-            _jsonBody = jsonBody;
-        }
+        private readonly HttpStatusCode _statusCode = statusCode;
+        private readonly string _jsonBody = jsonBody;
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -89,7 +81,7 @@ public class OpenAiCompatibleAdapterTests
             LastRequest = request;
             if (request.Content is not null)
             {
-                LastBody = request.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                LastBody = request.Content.ReadAsStringAsync(ct).GetAwaiter().GetResult();
             }
             var response = new HttpResponseMessage(_statusCode)
             {
@@ -117,7 +109,16 @@ public class OpenAiCompatibleAdapterTests
         var adapter = new OpenAiCompatibleAdapter(http, new FakeKeyVault(), provider);
 
         var result = adapter.SupportsToolCalling(
-            new ProviderModelConfigDto(Guid.NewGuid(), Guid.NewGuid(), "gpt-4o", "GPT-4o", "standard", null, null, true)
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4o",
+                "GPT-4o",
+                "standard",
+                null,
+                null,
+                true
+            )
         );
 
         Assert.True(result);
@@ -150,8 +151,14 @@ public class OpenAiCompatibleAdapterTests
         Assert.Equal(1024, doc.RootElement.GetProperty("max_tokens").GetInt32());
         Assert.Equal(0.7m, doc.RootElement.GetProperty("temperature").GetDecimal());
         Assert.Single(doc.RootElement.GetProperty("messages").EnumerateArray());
-        Assert.Equal("user", doc.RootElement.GetProperty("messages")[0].GetProperty("role").GetString());
-        Assert.Equal("Hello", doc.RootElement.GetProperty("messages")[0].GetProperty("content").GetString());
+        Assert.Equal(
+            "user",
+            doc.RootElement.GetProperty("messages")[0].GetProperty("role").GetString()
+        );
+        Assert.Equal(
+            "Hello",
+            doc.RootElement.GetProperty("messages")[0].GetProperty("content").GetString()
+        );
     }
 
     [Fact]
@@ -220,10 +227,16 @@ public class OpenAiCompatibleAdapterTests
 
         await foreach (var _ in adapter2.StreamChatAsync(request2)) { }
 
-        var content1 = JsonDocument.Parse(bodyHandler1.LastBody!)
-            .RootElement.GetProperty("messages")[0].GetProperty("content").GetString();
-        var content2 = JsonDocument.Parse(bodyHandler2.LastBody!)
-            .RootElement.GetProperty("messages")[0].GetProperty("content").GetString();
+        var content1 = JsonDocument
+            .Parse(bodyHandler1.LastBody!)
+            .RootElement.GetProperty("messages")[0]
+            .GetProperty("content")
+            .GetString();
+        var content2 = JsonDocument
+            .Parse(bodyHandler2.LastBody!)
+            .RootElement.GetProperty("messages")[0]
+            .GetProperty("content")
+            .GetString();
         Assert.Equal(content1, content2);
     }
 
@@ -231,10 +244,10 @@ public class OpenAiCompatibleAdapterTests
     public async Task StreamChatAsync_YieldsContentDeltas()
     {
         var sse =
-            "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n" +
-            "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n" +
-            "data: {\"id\":\"1\",\"choices\":[{\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2,\"total_tokens\":12}}\n\n" +
-            "data: [DONE]\n\n";
+            "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n"
+            + "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n"
+            + "data: {\"id\":\"1\",\"choices\":[{\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2,\"total_tokens\":12}}\n\n"
+            + "data: [DONE]\n\n";
 
         using var http = new HttpClient(new SseStreamHandler(sse));
         var provider = CreateProvider();
@@ -271,8 +284,8 @@ public class OpenAiCompatibleAdapterTests
     public async Task StreamChatAsync_WithCachedTokens_SetsCachedTokens()
     {
         var sse =
-            "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\"Hi\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":1,\"total_tokens\":11,\"cached_tokens\":5}}\n\n" +
-            "data: [DONE]\n\n";
+            "data: {\"id\":\"1\",\"choices\":[{\"delta\":{\"content\":\"Hi\"}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":1,\"total_tokens\":11,\"cached_tokens\":5}}\n\n"
+            + "data: [DONE]\n\n";
 
         using var http = new HttpClient(new SseStreamHandler(sse));
         var provider = CreateProvider();
@@ -295,7 +308,7 @@ public class OpenAiCompatibleAdapterTests
         }
 
         Assert.NotNull(lastChunk?.Usage);
-        Assert.Equal(5, lastChunk!.Usage!.CachedTokens);
+        Assert.Equal(5, lastChunk.Usage.CachedTokens);
     }
 
     [Fact]
@@ -329,7 +342,11 @@ public class OpenAiCompatibleAdapterTests
         var authHandler = new AuthCaptureHandler("data: [DONE]\n\n");
         using var http = new HttpClient(authHandler);
         var provider = CreateProvider("https://api.example.com", "encrypted-cipher-text");
-        var adapter = new OpenAiCompatibleAdapter(http, new FakeKeyVault("decrypted-key"), provider);
+        var adapter = new OpenAiCompatibleAdapter(
+            http,
+            new FakeKeyVault("decrypted-key"),
+            provider
+        );
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -372,14 +389,27 @@ public class OpenAiCompatibleAdapterTests
     [Fact]
     public async Task GetModelsAsync_ParsesModelList()
     {
-        var json = JsonSerializer.Serialize(new
-        {
-            data = new[]
+        var json = JsonSerializer.Serialize(
+            new
             {
-                new { id = "gpt-4o", name = "GPT-4o", description = "Fast model" },
-                new { id = "gpt-4o-mini", name = "GPT-4o Mini", description = "Mini model" },
-            }
-        }, JsonOptions);
+                data = new[]
+                {
+                    new
+                    {
+                        id = "gpt-4o",
+                        name = "GPT-4o",
+                        description = "Fast model",
+                    },
+                    new
+                    {
+                        id = "gpt-4o-mini",
+                        name = "GPT-4o Mini",
+                        description = "Mini model",
+                    },
+                },
+            },
+            JsonOptions
+        );
 
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
@@ -444,23 +474,20 @@ public class OpenAiCompatibleAdapterTests
         var authHandler = new AuthCaptureHandler("{\"data\":[]}");
         using var http = new HttpClient(authHandler);
         var provider = CreateProvider("https://api.example.com", "encrypted-cipher");
-        var adapter = new OpenAiCompatibleAdapter(http, new FakeKeyVault("decrypted-api-key"), provider);
+        var adapter = new OpenAiCompatibleAdapter(
+            http,
+            new FakeKeyVault("decrypted-api-key"),
+            provider
+        );
 
         await adapter.GetModelsAsync();
 
         Assert.Equal("Bearer decrypted-api-key", authHandler.CapturedAuth);
     }
 
-    private class AuthCaptureHandler : HttpMessageHandler
+    private class AuthCaptureHandler(string jsonBody) : HttpMessageHandler
     {
-        private readonly string _jsonBody;
-
         public string? CapturedAuth { get; private set; }
-
-        public AuthCaptureHandler(string jsonBody)
-        {
-            _jsonBody = jsonBody;
-        }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -470,7 +497,7 @@ public class OpenAiCompatibleAdapterTests
             CapturedAuth = request.Headers.Authorization?.ToString();
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(_jsonBody, Encoding.UTF8, "application/json"),
+                Content = new StringContent(jsonBody, Encoding.UTF8, "application/json"),
             };
             return Task.FromResult(response);
         }
