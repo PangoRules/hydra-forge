@@ -33,37 +33,54 @@ public sealed class AnthropicAdapter(
     {
         var baseUrl = provider.BaseUrl.TrimEnd('/');
 
-        string? systemContent = null;
-        var messages = new List<AnthropicMessage>(request.Messages.Count);
+        // System blocks: SystemContext → array with cache_control; Memory → array without cache_control
+        var systemBlocks = new List<AnthropicSystemBlock>();
 
-        // System cache blocks go into the system field with cache_control
-        foreach (var block in request.CacheBlocks.Where(b => b.Type == CacheBlockType.SystemContext))
+        var systemContextBlock = request.CacheBlocks.FirstOrDefault(b => b.Type == CacheBlockType.SystemContext);
+        if (systemContextBlock is not null)
         {
-            systemContent = block.Content;
+            systemBlocks.Add(new AnthropicSystemBlock(systemContextBlock.Content, new AnthropicCacheControl()));
         }
 
+        foreach (var block in request.CacheBlocks.Where(b => b.Type == CacheBlockType.Memory))
+        {
+            logger.LogDebug("Memory cache block attached to system array (no cache_control): {Content}", block.Content);
+            systemBlocks.Add(new AnthropicSystemBlock(block.Content, null));
+        }
+
+        // Also include ChatRole.System messages in the system array (without cache_control)
+        foreach (var msg in request.Messages.Where(m => m.Role == ChatRole.System))
+        {
+            systemBlocks.Add(new AnthropicSystemBlock(msg.Content, null));
+        }
+
+        var messages = new List<AnthropicMessage>(request.Messages.Count);
+        var snapshotInjected = false;
+
         // Build messages — user messages in Anthropic format
-        foreach (var msg in request.Messages)
+        foreach (var msg in request.Messages.Where(m => m.Role != ChatRole.System))
         {
             var role = msg.Role switch
             {
                 ChatRole.User => "user",
                 ChatRole.Assistant => "assistant",
-                ChatRole.System => "user", // Anthropic doesn't have system messages in array
                 _ => "user",
             };
 
-            // Project snapshot cache blocks prepended to first user message
-            if (msg.Role == ChatRole.User && request.CacheBlocks.Any(b => b.Type == CacheBlockType.ProjectSnapshot))
+            // Project snapshot cache blocks prepended to first user message only
+            if (msg.Role == ChatRole.User && !snapshotInjected)
             {
-                var snapshotBlocks = request.CacheBlocks.Where(b => b.Type == CacheBlockType.ProjectSnapshot);
-                var snapshotContent = string.Join("\n", snapshotBlocks.Select(b => b.Content));
-                messages.Add(new AnthropicMessage("user", $"[project_snapshot]\n{snapshotContent}\n\n{msg.Content}", true));
+                snapshotInjected = true;
+                var snapshotBlocks = request.CacheBlocks.Where(b => b.Type == CacheBlockType.ProjectSnapshot).ToList();
+                if (snapshotBlocks.Count > 0)
+                {
+                    var snapshotContent = string.Join("\n", snapshotBlocks.Select(b => b.Content));
+                    messages.Add(new AnthropicMessage("user", $"[project_snapshot]\n{snapshotContent}\n\n{msg.Content}", true));
+                    continue;
+                }
             }
-            else
-            {
-                messages.Add(new AnthropicMessage(role, msg.Content, false));
-            }
+
+            messages.Add(new AnthropicMessage(role, msg.Content, false));
         }
 
         var body = new AnthropicChatRequest
@@ -72,14 +89,9 @@ public sealed class AnthropicAdapter(
             MaxTokens = request.MaxOutputTokens ?? 4096,
             Messages = messages,
             Stream = true,
-            System = systemContent,
+            System = systemBlocks.Count > 0 ? systemBlocks : null,
             Tools = request.Tools.Count > 0
-                ? request.Tools.Select(t => new AnthropicTool
-                {
-                    Name = t.Name,
-                    Description = t.Description,
-                    Input_ = t.Parameters,
-                }).ToList()
+                ? request.Tools.Select(t => AnthropicTool.FromDefinition(t)).ToList()
                 : null,
         };
 
@@ -88,7 +100,10 @@ public sealed class AnthropicAdapter(
             Content = JsonContent.Create(body, options: JsonOptions),
         };
 
-        httpRequest.Headers.Add("x-api-key", keyVault.Decrypt(provider.ApiKeyEncrypted ?? ""));
+        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEncrypted))
+        {
+            httpRequest.Headers.Add("x-api-key", keyVault.Decrypt(provider.ApiKeyEncrypted));
+        }
         httpRequest.Headers.Add("anthropic-version", "2023-06-01");
 
         using var response = await http.SendAsync(
@@ -99,6 +114,9 @@ public sealed class AnthropicAdapter(
 
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = response.StatusCode;
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            logger.LogError("Anthropic API error {StatusCode}: {ResponseBody}", statusCode, responseBody);
             yield return new ChatChunk(null, ChatChunkFinishReason.Error, null);
             yield break;
         }
@@ -139,6 +157,11 @@ public sealed class AnthropicAdapter(
             {
                 yield return new ChatChunk(text, null, null);
             }
+
+            // Note: delta.partial_json (tool-use streaming) is not currently handled.
+            // Anthropic streams tool_use content blocks as content_block_delta with type "input_json_delta".
+            // Supporting this requires parsing those deltas and yielding ChatChunk with ToolCall delta,
+            // which is outside the current plan scope.
 
             // message_delta — final usage + stop reason
             if (chunkEvent.MessageDelta is { } msgDelta)
@@ -192,11 +215,31 @@ public sealed class AnthropicAdapter(
         [JsonPropertyName("stream")]
         public bool Stream { get; set; }
 
+        // System is an array of blocks when any system content exists, otherwise omitted
         [JsonPropertyName("system")]
-        public string? System { get; set; }
+        public List<AnthropicSystemBlock>? System { get; set; }
 
         [JsonPropertyName("tools")]
         public List<AnthropicTool>? Tools { get; set; }
+    }
+
+    private sealed class AnthropicSystemBlock
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; } = "text";
+
+        [JsonPropertyName("text")]
+        public string Text { get; set; } = "";
+
+        [JsonPropertyName("cache_control")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public AnthropicCacheControl? CacheControl { get; set; }
+
+        public AnthropicSystemBlock(string text, AnthropicCacheControl? cacheControl)
+        {
+            Text = text;
+            CacheControl = cacheControl;
+        }
     }
 
     private sealed class AnthropicMessage
@@ -235,8 +278,57 @@ public sealed class AnthropicAdapter(
         [JsonPropertyName("description")]
         public string Description { get; set; } = "";
 
-        [JsonPropertyName("input")]
-        public IReadOnlyList<ToolParameter> Input_ { get; set; } = [];
+        [JsonPropertyName("input_schema")]
+        public AnthropicInputSchema InputSchema { get; set; } = null!;
+
+        public static AnthropicTool FromDefinition(ToolDefinition def)
+        {
+            return new AnthropicTool
+            {
+                Name = def.Name,
+                Description = def.Description,
+                InputSchema = AnthropicInputSchema.FromParameters(def.Parameters),
+            };
+        }
+    }
+
+    private sealed class AnthropicInputSchema
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = "object";
+
+        [JsonPropertyName("properties")]
+        public Dictionary<string, AnthropicToolProperty> Properties { get; set; } = [];
+
+        [JsonPropertyName("required")]
+        public List<string> Required { get; set; } = [];
+
+        public static AnthropicInputSchema FromParameters(IReadOnlyList<ToolParameter> parameters)
+        {
+            var schema = new AnthropicInputSchema();
+            foreach (var param in parameters)
+            {
+                schema.Properties[param.Name] = new AnthropicToolProperty
+                {
+                    Type = param.Type,
+                    Description = param.Description,
+                };
+                if (param.IsRequired)
+                {
+                    schema.Required.Add(param.Name);
+                }
+            }
+            return schema;
+        }
+    }
+
+    private sealed class AnthropicToolProperty
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = "";
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = "";
     }
 
     private sealed class AnthropicChunkEvent

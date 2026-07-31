@@ -42,7 +42,7 @@ function relatedTitle(rel: CardRelationshipDto): string {
 function badgeLabel(rel: CardRelationshipDto): string {
   const isSource = rel.sourceCardId === props.cardId
   switch (rel.type) {
-    case 'BlockedBy': return isSource ? 'Blocked by' : 'Blocks'
+    case 'BlockedBy': return isSource ? 'Blocks' : 'Blocked by'
     case 'Precedes': return isSource ? 'Precedes' : 'Follows'
     case 'Relates': return 'Relates to'
     default: return rel.type
@@ -69,7 +69,7 @@ const linking = ref(false)
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
 
 const relationshipTypeOptions = [
-  { label: 'Blocked by', value: 'BlockedBy' },
+  { label: 'Blocks', value: 'BlockedBy' },
   { label: 'Precedes', value: 'Precedes' },
   { label: 'Relates to', value: 'Relates' }
 ]

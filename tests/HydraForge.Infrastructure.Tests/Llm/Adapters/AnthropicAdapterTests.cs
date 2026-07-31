@@ -1,6 +1,7 @@
 namespace HydraForge.Infrastructure.Tests.Llm.Adapters;
 
 using System.Net;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using HydraForge.Application.Llm;
@@ -157,7 +158,7 @@ public class AnthropicAdapterTests
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
         using var http = new HttpClient(bodyHandler);
-        var provider = CreateProvider();
+        var provider = CreateProvider("https://api.anthropic.com", "encrypted-key");
         var logger = new FakeLogger();
         var adapter = new AnthropicAdapter(http, new FakeKeyVault("test-key"), provider, logger);
 
@@ -219,7 +220,11 @@ public class AnthropicAdapterTests
         Assert.NotNull(bodyHandler.LastBody);
         var doc = JsonDocument.Parse(bodyHandler.LastBody);
         Assert.True(doc.RootElement.TryGetProperty("system", out var systemEl));
-        Assert.Equal("system context content", systemEl.GetString());
+        var blocks = systemEl.EnumerateArray().ToList();
+        Assert.Single(blocks);
+        Assert.Equal("text", blocks[0].GetProperty("type").GetString());
+        Assert.Equal("system context content", blocks[0].GetProperty("text").GetString());
+        Assert.Equal("ephemeral", blocks[0].GetProperty("cache_control").GetProperty("type").GetString());
         // System block should NOT appear in messages array
         Assert.Single(doc.RootElement.GetProperty("messages").EnumerateArray());
     }
@@ -415,10 +420,8 @@ public class AnthropicAdapterTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_EmptyApiKey_StillSendsDecryptedValue()
+    public async Task StreamChatAsync_EmptyApiKey_NoApiKeyHeader()
     {
-        // FakeKeyVault returns "decrypted-fake-key" for any input including empty string.
-        // This tests that when ApiKeyEncrypted is empty, we still call keyVault.Decrypt.
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
         using var http = new HttpClient(bodyHandler);
         var provider = CreateProvider("https://api.anthropic.com", "");
@@ -438,8 +441,8 @@ public class AnthropicAdapterTests
         await foreach (var _ in adapter.StreamChatAsync(request)) { }
 
         Assert.NotNull(bodyHandler.LastRequest);
-        // FakeKeyVault returns "decrypted-fake-key" for any input
-        Assert.Equal("decrypted-fake-key", bodyHandler.LastRequest.Headers.GetValues("x-api-key").First());
+        Assert.False(bodyHandler.LastRequest.Headers.Contains("x-api-key"));
+        Assert.Equal("2023-06-01", bodyHandler.LastRequest.Headers.GetValues("anthropic-version").First());
     }
 
     [Fact]
@@ -469,7 +472,119 @@ public class AnthropicAdapterTests
         Assert.NotNull(bodyHandler.LastBody);
         var doc = JsonDocument.Parse(bodyHandler.LastBody);
         Assert.True(doc.RootElement.TryGetProperty("system", out var systemEl));
-        Assert.Equal("system prompt", systemEl.GetString());
-        Assert.Single(doc.RootElement.GetProperty("messages").EnumerateArray());
+        var blocks = systemEl.EnumerateArray().ToList();
+        Assert.Single(blocks);
+        Assert.Equal("system prompt", blocks[0].GetProperty("text").GetString());
+        Assert.Equal("ephemeral", blocks[0].GetProperty("cache_control").GetProperty("type").GetString());
+        var messages = doc.RootElement.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Single(messages);
+        Assert.Contains("[project_snapshot]", messages[0].GetProperty("content").GetString());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_SnapshotOnlyInjectedInFirstUserMessage()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault(), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-sonnet-4-20250514",
+            [
+                new ChatMessage(ChatRole.User, "First question"),
+                new ChatMessage(ChatRole.Assistant, "First answer"),
+                new ChatMessage(ChatRole.User, "Second question"),
+            ],
+            [new CacheBlock("snapshot", CacheBlockType.ProjectSnapshot)],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var messages = doc.RootElement.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Equal(3, messages.Count);
+        Assert.Contains("[project_snapshot]", messages[0].GetProperty("content").GetString());
+        Assert.True(messages[0].TryGetProperty("cache_control", out _));
+        Assert.DoesNotContain("[project_snapshot]", messages[2].GetProperty("content").GetString());
+        Assert.False(messages[2].TryGetProperty("cache_control", out _));
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_Tools_EmitInputSchemaObject()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault(), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-sonnet-4-20250514",
+            [new ChatMessage(ChatRole.User, "Hi")],
+            [],
+            [
+                new ToolDefinition(
+                    "get_weather",
+                    "Get weather for a city",
+                    [
+                        new ToolParameter("city", "string", "City name", true),
+                        new ToolParameter("unit", "string", "Temperature unit", false),
+                    ]
+                ),
+            ],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var tools = doc.RootElement.GetProperty("tools").EnumerateArray().ToList();
+        Assert.Single(tools);
+        Assert.Equal("get_weather", tools[0].GetProperty("name").GetString());
+        Assert.Equal("object", tools[0].GetProperty("input_schema").GetProperty("type").GetString());
+        Assert.True(tools[0].GetProperty("input_schema").GetProperty("properties").TryGetProperty("city", out var cityProp));
+        Assert.Equal("string", cityProp.GetProperty("type").GetString());
+        var required = tools[0].GetProperty("input_schema").GetProperty("required").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Contains("city", required);
+        Assert.DoesNotContain("unit", required);
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_MemoryBlock_GoesToSystemArray_WithoutCacheControl()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault(), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-sonnet-4-20250514",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [new CacheBlock("memory facts", CacheBlockType.Memory)],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var blocks = doc.RootElement.GetProperty("system").EnumerateArray().ToList();
+        Assert.Single(blocks);
+        Assert.Equal("memory facts", blocks[0].GetProperty("text").GetString());
+        Assert.False(blocks[0].TryGetProperty("cache_control", out _));
     }
 }
