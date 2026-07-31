@@ -19,6 +19,14 @@ public static class LlmServiceCollectionExtensions
         ValidateEncryptionKey(configuration);
         services.AddSingleton<IKeyVault, AesGcmKeyVault>();
 
+        services.AddHttpClient(
+            "openai-compatible",
+            client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(120);
+            }
+        );
+
         return services;
     }
 

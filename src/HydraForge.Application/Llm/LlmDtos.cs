@@ -126,6 +126,7 @@ public enum ChatChunkFinishReason
     Length,
     ContentFilter,
     ToolCalls,
+    Error,
 }
 
 public enum ChatRole

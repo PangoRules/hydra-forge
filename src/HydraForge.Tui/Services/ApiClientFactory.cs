@@ -101,6 +101,12 @@ public class ApiClientFactory(
 
             return true;
         }
+        catch (ApiException ex) when (ex.StatusCode == 401)
+        {
+            // Refresh token itself has expired/is invalid — the caller already
+            // falls back to the login screen for this. Not a live error.
+            return false;
+        }
         catch (Exception ex)
         {
             errorCollector.Add("N/A", $"Token refresh failed: {ex.Message}");

@@ -101,7 +101,11 @@ public class ProjectListScreen(
         const int columnCount = 6;
         const int cellPadding = 2; // left+right padding per cell
         var chrome = columnCount * cellPadding + columnCount + 1; // padding + border/separator chars
-        var nameWidth = Math.Max(20, AnsiConsole.Profile.Width - otherColumnsWidth - chrome);
+        // Floor at 1, not a "readable" minimum like 20 — the fixed columns (59 cols
+        // incl. chrome) are non-negotiable, so on a narrower terminal the table must
+        // still fit within Profile.Width or Spectre wraps/corrupts the redraw instead
+        // of just showing a squeezed Name column.
+        var nameWidth = Math.Max(1, AnsiConsole.Profile.Width - otherColumnsWidth - chrome);
 
         var table = new Table()
             .Border(TableBorder.Rounded)
