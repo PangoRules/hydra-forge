@@ -191,22 +191,29 @@ export const useBoardStore = defineStore('board', () => {
       return
     }
 
-    const { data, error } = await api.GET(ApiRoutes.Cards.detail(projectId, cardId))
-    if (error || !data) return
-    const card = data as CardResponse
+    // Best-effort background sync — on failure, leave the board as-is rather than
+    // throwing unhandled out of a SignalR event handler (matches fetchBoard's own
+    // try/catch; a single-card patch isn't worth a user-facing toast).
+    try {
+      const { data } = await api.GET(ApiRoutes.Cards.detail(projectId, cardId))
+      if (!data) return
+      const card = data as CardResponse
 
-    for (const [, cards] of cardsByColumn.value) {
-      const idx = cards.findIndex((c: CardResponse) => c.id === card.id)
-      if (idx !== -1) {
-        cards.splice(idx, 1)
-        break
+      for (const [, cards] of cardsByColumn.value) {
+        const idx = cards.findIndex((c: CardResponse) => c.id === card.id)
+        if (idx !== -1) {
+          cards.splice(idx, 1)
+          break
+        }
       }
-    }
 
-    const targetCards = cardsByColumn.value.get(card.columnId) ?? []
-    const insertAt = Math.min(Number(card.position), targetCards.length)
-    targetCards.splice(insertAt, 0, card)
-    cardsByColumn.value.set(card.columnId, targetCards)
+      const targetCards = cardsByColumn.value.get(card.columnId) ?? []
+      const insertAt = Math.min(Number(card.position), targetCards.length)
+      targetCards.splice(insertAt, 0, card)
+      cardsByColumn.value.set(card.columnId, targetCards)
+    } catch {
+      // stale board state until the next successful sync — no user-facing toast
+    }
   }
 
   async function applyRealtimeColumnEvent(projectId: string, columnId: string, action: string) {
@@ -215,21 +222,27 @@ export const useBoardStore = defineStore('board', () => {
       return
     }
 
-    if (action === 'Moved') {
-      const { data, error } = await api.GET(ApiRoutes.Columns.list(projectId))
-      if (!error && data) columns.value = (data as ColumnResponse[]) ?? []
-      return
-    }
+    try {
+      if (action === 'Moved') {
+        const { data } = await api.GET(ApiRoutes.Columns.list(projectId))
+        if (data) columns.value = (data as ColumnResponse[]) ?? []
+        return
+      }
 
-    const { data, error } = await api.GET(ApiRoutes.Columns.detail(projectId, columnId))
-    if (error || !data) return
-    updateColumnInStore(columnId, data as ColumnResponse)
+      const { data } = await api.GET(ApiRoutes.Columns.detail(projectId, columnId))
+      if (!data) return
+      updateColumnInStore(columnId, data as ColumnResponse)
+    } catch {
+      // stale board state until the next successful sync — no user-facing toast
+    }
   }
 
   async function fetchMembers(projectId: string) {
-    const { data, error } = await api.GET(ApiRoutes.Projects.members(projectId))
-    if (!error && data) {
-      members.value = (data as MemberResponse[]) ?? []
+    try {
+      const { data } = await api.GET(ApiRoutes.Projects.members(projectId))
+      if (data) members.value = (data as MemberResponse[]) ?? []
+    } catch {
+      // members list stays as-is; not critical enough for a user-facing toast
     }
   }
 

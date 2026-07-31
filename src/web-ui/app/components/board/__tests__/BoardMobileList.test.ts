@@ -30,6 +30,8 @@ const makeCard = (id: string, columnId: string, title: string, type: CardType = 
   watchers: [],
   relationshipBadges: [],
   relationshipCount: 0,
+  parentCard: null,
+  childCount: 0,
 })
 
 describe('BoardMobileList', () => {

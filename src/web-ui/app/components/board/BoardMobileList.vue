@@ -221,14 +221,14 @@ const filteredColumns = computed(() => {
 async function confirmArchive() {
   const card = archiveTargetCard.value
   if (!card) return
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.id), {
-    body: { version: card.version }
-  })
-  if (error) {
-    toast.error('Failed to archive card')
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.archive(props.projectId, card.id), {
+      body: { version: card.version }
+    })
     board.removeCard(card.id)
     toast.success('Card archived')
+  } catch {
+    toast.error('Failed to archive card')
   }
   archiveTargetCard.value = null
   menuOpenFor.value = null
@@ -236,14 +236,14 @@ async function confirmArchive() {
 
 async function handleRestore(card: CardResponse) {
   menuOpenFor.value = null
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.id), {
-    body: { version: card.version }
-  })
-  if (error) {
-    toast.error('Failed to restore card')
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.restore(props.projectId, card.id), {
+      body: { version: card.version }
+    })
     board.fetchBoard(props.projectId)
     toast.success('Card restored')
+  } catch {
+    toast.error('Failed to restore card')
   }
 }
 
@@ -273,23 +273,6 @@ async function toggleWatch(card: CardResponse) {
   }
 }
 
-function getParentCard(card: CardResponse): CardResponse | null {
-  if (!card.parentCardId) return null
-  for (const cards of props.cardsByColumn.values()) {
-    const found = cards.find(c => c.id === card.parentCardId)
-    if (found) return found
-  }
-  return null
-}
-
-function getChildCount(card: CardResponse): number {
-  let count = 0
-  for (const cards of props.cardsByColumn.values()) {
-    count += cards.filter(c => c.parentCardId === card.id).length
-  }
-  return count
-}
-
 function getRelationshipBadges(card: CardResponse) {
   return (card.relationshipBadges ?? []).map((b) => {
     const style = formatRelationshipBadge(b.type, b.isSource)
@@ -304,6 +287,10 @@ function getRelationshipBadges(card: CardResponse) {
 
 function getRelationshipOverflow(card: CardResponse): number {
   return Math.max(0, Number(card.relationshipCount) - getRelationshipBadges(card).length)
+}
+
+function getChildCount(card: CardResponse): number {
+  return Number(card.childCount)
 }
 </script>
 
@@ -736,23 +723,23 @@ function getRelationshipOverflow(card: CardResponse): number {
 
                 <!-- Row 4: parent + children -->
                 <div
-                  v-if="getParentCard(card) || getChildCount(card) > 0"
+                  v-if="card.parentCard || getChildCount(card) > 0"
                   class="flex items-center gap-3 mt-1"
                 >
                   <div
-                    v-if="getParentCard(card)"
+                    v-if="card.parentCard"
                     class="flex flex-col"
                   >
                     <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
                     <p
                       class="text-xs text-primary flex items-center gap-1"
-                      :title="getParentCard(card)!.title"
+                      :title="card.parentCard.title"
                     >
                       <UIcon
-                        :name="cardTypeOption(getParentCard(card)!.type).icon"
+                        :name="cardTypeOption(card.parentCard.type).icon"
                         class="size-3"
                       />
-                      {{ cardTypeOption(getParentCard(card)!.type).label }} #{{ getParentCard(card)!.cardNumber }}
+                      {{ cardTypeOption(card.parentCard.type).label }} #{{ card.parentCard.cardNumber }}
                     </p>
                   </div>
                   <div

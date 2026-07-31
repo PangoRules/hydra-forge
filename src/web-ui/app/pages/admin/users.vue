@@ -23,7 +23,7 @@ if (!user?.isAdmin) {
 }
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 
 const users = ref<UserRow[]>([])
 const totalCount = ref(0)
@@ -59,7 +59,7 @@ async function loadUsers() {
     users.value = data!.items
     totalCount.value = data!.totalCount
   } catch (e) {
-    toast.add({ title: (e as Error).message || 'Failed to load users', color: 'error' })
+    toast.error((e as Error).message || 'Failed to load users')
   } finally {
     loading.value = false
   }
@@ -73,9 +73,9 @@ async function toggleDisable(userId: string, currentlyDisabled: boolean) {
       await api.PATCH(ApiRoutes.Admin.userDisable(userId))
     }
     await loadUsers()
-    toast.add({ title: `User ${currentlyDisabled ? 'enabled' : 'disabled'}`, color: 'success' })
+    toast.success(`User ${currentlyDisabled ? 'enabled' : 'disabled'}`)
   } catch (e) {
-    toast.add({ title: (e as Error).message || 'Action failed', color: 'error' })
+    toast.error((e as Error).message || 'Action failed')
   }
 }
 
@@ -83,9 +83,9 @@ async function toggleAdmin(userId: string) {
   try {
     await api.PATCH(ApiRoutes.Admin.userRole(userId))
     await loadUsers()
-    toast.add({ title: 'Admin role toggled', color: 'success' })
+    toast.success('Admin role toggled')
   } catch (e) {
-    toast.add({ title: (e as Error).message || 'Action failed', color: 'error' })
+    toast.error((e as Error).message || 'Action failed')
   }
 }
 
@@ -98,12 +98,12 @@ function openResetPassword(userId: string) {
 
 function onUserCreated() {
   loadUsers()
-  toast.add({ title: 'User created', color: 'success' })
+  toast.success('User created')
 }
 
 function onPasswordReset() {
   resetPasswordTarget.value = null
-  toast.add({ title: 'Password reset', color: 'success' })
+  toast.success('Password reset')
 }
 
 onMounted(() => loadUsers())

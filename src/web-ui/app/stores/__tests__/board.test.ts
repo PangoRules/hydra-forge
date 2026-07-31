@@ -41,6 +41,8 @@ const makeCard = (id: string, columnId: string, title: string, type: CardType = 
   watchers: [],
   relationshipBadges: [],
   relationshipCount: 0,
+  parentCard: null,
+  childCount: 0,
 })
 
 describe('useBoardStore', () => {
@@ -223,7 +225,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0, parentCard: null, childCount: 0 }]],
       ['c2', []]
     ])
     expect(store.visibleColumns.length).toBe(2)
@@ -236,7 +238,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0, parentCard: null, childCount: 0 }]],
       ['c2', []]
     ])
     store.boardFilters.hideEmptyColumns = true
@@ -252,7 +254,7 @@ describe('BoardStore filters', () => {
       { id: 'c2', name: 'Done', position: 1, wipLimit: null, color: null }
     ]
     store.cardsByColumn = new Map([
-      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0 }]],
+      ['c1', [{ id: 'card1', columnId: 'c1', title: 'Task', type: 'Task', cardNumber: 1, position: 0, version: 1, dueAt: null, parentCardId: null, projectId: 'p1', archivedAt: null, assignees: [], watchers: [], createdAt: '', updatedAt: '', movedAt: '', description: '', relationshipBadges: [], relationshipCount: 0, parentCard: null, childCount: 0 }]],
       ['c2', []]
     ])
     store.boardFilters.visibleColumnIds = ['c2']
