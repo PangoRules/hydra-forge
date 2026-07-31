@@ -1,4 +1,6 @@
-## Validate: Phase 6 Plan 4 — OpenAiCompatibleAdapter (SSE streaming + cache prefix + GetModels)
+# E2E Regression Matrix — Phase 6 LLM Infrastructure
+
+## Plan 4: OpenAiCompatibleAdapter (SSE streaming + cache prefix + GetModels)
 
 ### Setup
 - [ ] Postgres up (`docker compose up -d postgres`)

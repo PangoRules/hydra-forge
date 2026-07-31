@@ -148,7 +148,12 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
   - `Comment` / `ChecklistItem` / `Attachment` / `Spec` / `Plan` → `board.signalCardContentEvent` (CardModal picks it up if open for that card; nothing to patch on the board tile itself)
   - This was added in `72afc95` as part of realtime UX polish — the previous code did a full `fetchBoard` on every event, causing board flicker.
 
-### Web UI NotificationHub
+### LLM adapter conventions
+
+- **SSE stream reading: use `ReadLineAsync` null-check, not `EndOfStream`.** .NET 10 analyzer CA2024 flags `StreamReader.EndOfStream` as inefficient. Read lines in a loop: `while ((line = await reader.ReadLineAsync()) != null)`.
+- **Non-2xx HTTP on streaming endpoints: yield error chunk, don't throw.** `HttpResponseMessage.EnsureSuccessStatusCode()` throws, which breaks the `IAsyncEnumerable<ChatChunk>` streaming contract. Instead, check `IsSuccessStatusCode` and yield a single `ChatChunk(null, ChatChunkFinishReason.Error, null)` then stop.
+- **`ChatChunkFinishReason.Error` enum value** — added for SSE error chunks. Must be present on the enum for adapters to signal transport-level failures mid-stream.
+- **Cache block prefix hashing:** OpenAI-compatible adapters render cache blocks as system messages with `[cache:{hex}]` prefix where hex is a stable 16-char lowercase SHA256 prefix. This enables OpenAI's automatic prompt caching by prefix match.
 
 - **`useNotificationHub.ts`** composable connects to the NotificationHub (user-scoped, not project-scoped — unlike `useRealtime`'s BoardHub). Connected once per session from `layouts/default.vue` on mount. Uses `useAuthToken().getToken()` for the JWT access token factory. Disconnects on unmount. Falls back silently if the connection fails — the notification bell already fetches the live list on click regardless of realtime state.
 - **`useRealtime.ts`** (BoardHub) connects per-project from `board.vue` — the NotificationHub is separate and persists across project navigation.
