@@ -403,13 +403,6 @@ public class BoardScreen(
                 // Non-fatal: board renders without relationship indicators
             }
 
-            // Parent lookup + child count are derived client-side from the already-loaded
-            // card list, same as the web UI does — there's no dedicated endpoint for either.
-            var cardsById = cards.ToDictionary(c => c.Id);
-            var childCounts = cards
-                .Where(c => c.ParentCardId.HasValue)
-                .GroupBy(c => c.ParentCardId!.Value)
-                .ToDictionary(g => g.Key, g => g.Count());
             var currentUserId = CurrentUser.GetId();
 
             // Build column data
@@ -429,10 +422,6 @@ public class BoardScreen(
                                 .OrderBy(c => c.Position)
                                 .Select(c =>
                                 {
-                                    var parent = c.ParentCardId.HasValue
-                                        ? cardsById.GetValueOrDefault(c.ParentCardId.Value)
-                                        : null;
-
                                     return new BoardRenderer.CardData(
                                         c.Id,
                                         c.CardNumber,
@@ -442,11 +431,11 @@ public class BoardScreen(
                                         c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
                                             ?? [],
                                         c.Version,
-                                        parent?.CardNumber,
-                                        parent != null
-                                            ? CardTypeMapper.ToDisplayString(parent.Type)
+                                        c.ParentCard?.CardNumber,
+                                        c.ParentCard != null
+                                            ? CardTypeMapper.ToDisplayString(c.ParentCard.Type)
                                             : null,
-                                        childCounts.GetValueOrDefault(c.Id, 0),
+                                        c.ChildCount,
                                         c.DueAt,
                                         currentUserId.HasValue
                                             && (

@@ -22,17 +22,23 @@ public class DependencyPanel(
     private HydraForgeApiClient Client => _apiClientFactory.GetClient();
 
     private string _searchText = "";
-    private string _selectedType = "BlockedBy";
+    private string _selectedDirection = "Blocks";
     private int _focusIndex; // 0=search, 1=type, 2=confirm
     private int _resultCursor; // highlighted search result index
     private List<CardSearchResult> _searchResults = [];
 
-    private static readonly string[] RelationshipTypes =
+    // Label shown in the panel vs. the (RelationshipType, Reverse) pair sent to the
+    // API. Reverse=true swaps which card becomes SourceCardId — "Blocked by"/"Follows"
+    // let the current card declare itself as the blocked/successor party instead of
+    // always being forced into the blocker/predecessor role.
+    private static readonly (string Label, RelationshipType Type, bool Reverse)[] Directions =
     [
-        "BlockedBy",
-        "Precedes",
-        "Relates",
-        "SpawnedFrom",
+        ("Blocks", RelationshipType.BlockedBy, false),
+        ("Blocked by", RelationshipType.BlockedBy, true),
+        ("Precedes", RelationshipType.Precedes, false),
+        ("Follows", RelationshipType.Precedes, true),
+        ("Relates", RelationshipType.Relates, false),
+        ("SpawnedFrom", RelationshipType.SpawnedFrom, false),
     ];
 
     public Task OnEnterAsync() => Task.CompletedTask;
@@ -101,11 +107,11 @@ public class DependencyPanel(
     private Panel BuildTypeSection()
     {
         var borderColor = _focusIndex == 1 ? Color.Blue : Color.Grey;
-        var items = RelationshipTypes.Select(t =>
+        var items = Directions.Select(d =>
         {
-            var isSelected = t == _selectedType;
+            var isSelected = d.Label == _selectedDirection;
             var prefix = isSelected ? "[blue]>[/]" : " ";
-            return new Markup($"{prefix} {t}");
+            return new Markup($"{prefix} {d.Label}");
         });
 
         return new Panel(new Rows(items.Cast<IRenderable>().ToList()))
@@ -181,9 +187,9 @@ public class DependencyPanel(
                 }
                 else if (_focusIndex == 1)
                 {
-                    var idx = Array.IndexOf(RelationshipTypes, _selectedType);
-                    idx = (idx + 1) % RelationshipTypes.Length;
-                    _selectedType = RelationshipTypes[idx];
+                    var idx = Array.FindIndex(Directions, d => d.Label == _selectedDirection);
+                    idx = (idx + 1) % Directions.Length;
+                    _selectedDirection = Directions[idx].Label;
                     await RenderAsync();
                 }
                 break;
@@ -198,9 +204,9 @@ public class DependencyPanel(
                 }
                 else if (_focusIndex == 1)
                 {
-                    var idx = Array.IndexOf(RelationshipTypes, _selectedType);
-                    idx = (idx + RelationshipTypes.Length - 1) % RelationshipTypes.Length;
-                    _selectedType = RelationshipTypes[idx];
+                    var idx = Array.FindIndex(Directions, d => d.Label == _selectedDirection);
+                    idx = (idx + Directions.Length - 1) % Directions.Length;
+                    _selectedDirection = Directions[idx].Label;
                     await RenderAsync();
                 }
                 break;
@@ -260,16 +266,21 @@ public class DependencyPanel(
 
         try
         {
-            var relType = Enum.Parse<RelationshipType>(_selectedType);
+            var direction = Directions.First(d => d.Label == _selectedDirection);
 
             await Client.CardRelationshipsPOSTAsync(
                 _projectId,
                 _sourceCardId,
-                new CreateRelationshipRequest { TargetCardId = targetCard.Id, Type = relType }
+                new CreateRelationshipRequest
+                {
+                    TargetCardId = targetCard.Id,
+                    Type = direction.Type,
+                    Reverse = direction.Reverse,
+                }
             );
 
             AnsiConsole.MarkupLine(
-                $"[green]Dependency added: {_selectedType} #{targetCard.CardNumber}[/]"
+                $"[green]Dependency added: {_selectedDirection} #{targetCard.CardNumber}[/]"
             );
             _appState.CurrentScreen = null;
         }
