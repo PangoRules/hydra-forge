@@ -1,4 +1,4 @@
-# E2E Manual Validation Matrix — Phase 6 LLM Infrastructure
+# E2E Regression Matrix — Phase 6 — LLM Infrastructure
 
 ## Plan 7: DallEAdapter (image generation + inpainting)
 
