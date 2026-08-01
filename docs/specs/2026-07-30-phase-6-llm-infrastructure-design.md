@@ -491,7 +491,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
 - [x] Task 11: `ModelRouter` service (feature config lookup, tier ceiling, context-window auto-bump, fallback chain walk + cycle guard) + unit tests.
 - [x] Task 12: `ContextCompressor` service (threshold check, pinned-block preservation, Economy-tier summarize call) + unit tests; wire DI to avoid router cycle.
-- [ ] Task 13: `IUsageRecorder` EF impl: write `TokenUsageRecord`/`ImageUsageRecord`, accrue `UserTokenBudget` counters, lazy period rollover + unit tests.
+- [x] Task 13: `IUsageRecorder` EF impl: write `TokenUsageRecord`/`ImageUsageRecord`, accrue `UserTokenBudget` counters, lazy period rollover + unit tests.
 - [ ] Task 14: Budget pre-check + `TOKEN_BUDGET_EXCEEDED`/`IMAGE_BUDGET_EXCEEDED` enforcement in call-path service contract (router or a `LlmCallGuard` helper) + tests.
 - [ ] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).
 - [ ] Task 16: `ILlmAdminService` + controller endpoints (providers CRUD, model config CRUD, live probe, routing CRUD, usage queries, budget get/set) + server tests (with `TestILlmClient`/`TestIKeyVault` stubs wired in every factory).
