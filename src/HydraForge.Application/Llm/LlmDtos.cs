@@ -55,9 +55,10 @@ public sealed record InpaintRequest(
     Guid ProviderModelConfigId,
     string ModelId,
     string Prompt,
-    string ImageKey,
-    string MaskKey,
-    ImageSize Size
+    byte[] ImageBytes,
+    byte[] MaskBytes,
+    ImageSize Size,
+    int Count = 1
 );
 
 // Embedding

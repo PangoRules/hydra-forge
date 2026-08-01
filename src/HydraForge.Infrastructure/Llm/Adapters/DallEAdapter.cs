@@ -80,19 +80,13 @@ public sealed class DallEAdapter(
 
         var multipart = new MultipartFormDataContent();
 
-        if (request.ImageBytes is not null && request.ImageBytes.Length > 0)
-        {
-            var imageContent = new ByteArrayContent(request.ImageBytes);
-            imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-            multipart.Add(imageContent, "image", "image.png");
-        }
+        var imageContent = new ByteArrayContent(request.ImageBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        multipart.Add(imageContent, "image", "image.png");
 
-        if (request.MaskBytes is not null && request.MaskBytes.Length > 0)
-        {
-            var maskContent = new ByteArrayContent(request.MaskBytes);
-            maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-            multipart.Add(maskContent, "mask", "mask.png");
-        }
+        var maskContent = new ByteArrayContent(request.MaskBytes);
+        maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        multipart.Add(maskContent, "mask", "mask.png");
 
         multipart.Add(new StringContent(request.Prompt), "prompt");
         multipart.Add(new StringContent(request.ModelId), "model");
