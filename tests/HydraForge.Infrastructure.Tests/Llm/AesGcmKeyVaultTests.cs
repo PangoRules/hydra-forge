@@ -1,6 +1,7 @@
 namespace HydraForge.Infrastructure.Tests.Llm;
 
 using System.Security.Cryptography;
+using HydraForge.Application.Llm;
 using HydraForge.Infrastructure.Llm;
 using Microsoft.Extensions.Options;
 

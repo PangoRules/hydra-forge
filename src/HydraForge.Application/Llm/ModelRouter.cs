@@ -83,7 +83,7 @@ public sealed class ModelRouter : IModelRouter
             .ToList();
 
         return Result<RouteDecision>.Success(
-            new RouteDecision(primaryModelDto, primaryProviderDto, fallbackDtos)
+            new RouteDecision(primaryModelDto, primaryProviderDto, fallbackDtos, primaryProvider)
         );
     }
 

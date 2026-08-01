@@ -4,6 +4,7 @@ using HydraForge.Application.Llm;
 using HydraForge.Application.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 public static class LlmServiceCollectionExtensions
 {
@@ -12,10 +13,7 @@ public static class LlmServiceCollectionExtensions
         IConfiguration configuration
     )
     {
-        services.Configure<LlmOptions>(
-            LlmOptions.SectionName,
-            configuration.GetSection(LlmOptions.SectionName)
-        );
+        services.AddOptions<LlmOptions>().Bind(configuration.GetSection(LlmOptions.SectionName));
 
         ValidateEncryptionKey(configuration);
         services.AddSingleton<IKeyVault, AesGcmKeyVault>();
@@ -73,6 +71,7 @@ public static class LlmServiceCollectionExtensions
         services.AddSingleton<IWarnLogger, NullWarnLogger>();
         services.AddScoped<IRoutingConfigProvider, DbContextRoutingConfigProvider>();
         services.AddScoped<IModelRouter, ModelRouter>();
+        services.AddScoped<IContextCompressor, ContextCompressor>();
 
         return services;
     }

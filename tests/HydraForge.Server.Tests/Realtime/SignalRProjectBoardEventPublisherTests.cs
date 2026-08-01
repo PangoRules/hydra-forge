@@ -3,20 +3,20 @@ namespace HydraForge.Server.Tests.Realtime;
 using HydraForge.Application.Realtime;
 using HydraForge.Infrastructure.Realtime;
 using Microsoft.AspNetCore.SignalR;
-using Moq;
+using NSubstitute;
 
 public class SignalRProjectBoardEventPublisherTests
 {
     [Fact]
     public async Task PublishAsync_SendsToProjectGroup()
     {
-        var hubContext = new Mock<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
-        var clients = new Mock<IHubClients<Infrastructure.Realtime.IBoardHub>>();
-        var group = new Mock<Infrastructure.Realtime.IBoardHub>();
-        clients.Setup(c => c.Group(It.IsAny<string>())).Returns(group.Object);
-        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        var hubContext = Substitute.For<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
+        var clients = Substitute.For<IHubClients<Infrastructure.Realtime.IBoardHub>>();
+        var group = Substitute.For<Infrastructure.Realtime.IBoardHub>();
+        clients.Group(Arg.Any<string>()).Returns(group);
+        hubContext.Clients.Returns(clients);
 
-        var publisher = new SignalRProjectBoardEventPublisher(hubContext.Object);
+        var publisher = new SignalRProjectBoardEventPublisher(hubContext);
 
         var envelope = new ProjectBoardEventEnvelope(
             EventId: Guid.NewGuid(),
@@ -31,20 +31,20 @@ public class SignalRProjectBoardEventPublisherTests
 
         await publisher.PublishAsync(envelope);
 
-        group.Verify(g => g.OnBoardEvent(envelope), Times.Once);
+        await group.Received(1).OnBoardEvent(envelope);
     }
 
     [Fact]
     public async Task PublishAsync_UsesCorrectProjectGroup()
     {
         var projectId = Guid.NewGuid();
-        var hubContext = new Mock<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
-        var clients = new Mock<IHubClients<Infrastructure.Realtime.IBoardHub>>();
-        var group = new Mock<Infrastructure.Realtime.IBoardHub>();
-        clients.Setup(c => c.Group($"project-{projectId}")).Returns(group.Object);
-        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        var hubContext = Substitute.For<IHubContext<BoardHub, Infrastructure.Realtime.IBoardHub>>();
+        var clients = Substitute.For<IHubClients<Infrastructure.Realtime.IBoardHub>>();
+        var group = Substitute.For<Infrastructure.Realtime.IBoardHub>();
+        clients.Group($"project-{projectId}").Returns(group);
+        hubContext.Clients.Returns(clients);
 
-        var publisher = new SignalRProjectBoardEventPublisher(hubContext.Object);
+        var publisher = new SignalRProjectBoardEventPublisher(hubContext);
 
         var envelope = new ProjectBoardEventEnvelope(
             EventId: Guid.NewGuid(),
@@ -59,6 +59,6 @@ public class SignalRProjectBoardEventPublisherTests
 
         await publisher.PublishAsync(envelope);
 
-        group.Verify(g => g.OnBoardEvent(It.IsAny<ProjectBoardEventEnvelope>()), Times.Once);
+        await group.Received(1).OnBoardEvent(Arg.Any<ProjectBoardEventEnvelope>());
     }
 }

@@ -183,6 +183,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 
 **Testing:**
 - `xUnit` only — no FluentAssertions (deprecation risk), use plain `Assert.*`
+- **NSubstitute, not Moq** — `Moq` was dropped repo-wide (see D-60): `Substitute.For<T>()` instead of `new Mock<T>()` (no `.Object` — the substitute *is* the instance), `sub.Method(args).Returns(val)` instead of `.Setup(...).Returns(...)`/`.ReturnsAsync(...)`, `Arg.Any<T>()`/`Arg.Is<T>(predicate)` instead of `It.IsAny<T>()`/`It.Is<T>(...)`, `sub.Received(1).Method(args)` instead of `.Verify(...)`.
 - > 90% coverage on Application and Domain layers
 - Infrastructure tests assert the EF model contract via `AssertProperties(IEntityType, ...)` — they inspect `context.Model` and do not need a database
 - Never mock the database — use a real test PostgreSQL instance once that infrastructure exists (not in place yet)

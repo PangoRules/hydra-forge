@@ -169,7 +169,7 @@ public sealed record ChatRequest(
 
 public sealed record ChatMessage(ChatRole Role, string Content);
 
-public sealed record CacheBlock(string Content, CacheBlockType Type);
+public sealed record CacheBlock(string Content, CacheBlockType Type, bool IsPinned = false);
 
 public enum ChatRole { System, User, Assistant, Tool }
 public enum CacheBlockType { SystemContext, ProjectSnapshot, Memory }
@@ -229,7 +229,8 @@ public interface IModelRouter
 public sealed record RouteDecision(
     ProviderModelConfig Primary,
     LlmProvider PrimaryProvider,
-    IReadOnlyList<FallbackProvider> Fallbacks);
+    IReadOnlyList<FallbackProvider> Fallbacks,
+    LlmProvider? Provider = null);
 
 public sealed record FallbackProvider(ProviderModelConfig Model, LlmProvider Provider);
 ```
@@ -489,7 +490,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 9: `ComfyUiAdapter` (workflow API; serves both `ComfyUi` + `Diffusers` adapter types via factory mapping).
 - [x] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
 - [x] Task 11: `ModelRouter` service (feature config lookup, tier ceiling, context-window auto-bump, fallback chain walk + cycle guard) + unit tests.
-- [ ] Task 12: `ContextCompressor` service (threshold check, pinned-block preservation, Economy-tier summarize call) + unit tests; wire DI to avoid router cycle.
+- [x] Task 12: `ContextCompressor` service (threshold check, pinned-block preservation, Economy-tier summarize call) + unit tests; wire DI to avoid router cycle.
 - [ ] Task 13: `IUsageRecorder` EF impl: write `TokenUsageRecord`/`ImageUsageRecord`, accrue `UserTokenBudget` counters, lazy period rollover + unit tests.
 - [ ] Task 14: Budget pre-check + `TOKEN_BUDGET_EXCEEDED`/`IMAGE_BUDGET_EXCEEDED` enforcement in call-path service contract (router or a `LlmCallGuard` helper) + tests.
 - [ ] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).

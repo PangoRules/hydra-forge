@@ -4,12 +4,6 @@ using System.Security.Cryptography;
 using HydraForge.Application.Llm;
 using Microsoft.Extensions.Options;
 
-public class LlmOptions
-{
-    public const string SectionName = "Llm";
-    public string? EncryptionKey { get; set; }
-}
-
 public class AesGcmKeyVault : IKeyVault
 {
     private const int KeySizeBytes = 32;

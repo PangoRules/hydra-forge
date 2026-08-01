@@ -1,3 +1,5 @@
+using HydraForge.Domain.Entities.Admin;
+
 namespace HydraForge.Application.Llm;
 
 // Chat
@@ -22,7 +24,7 @@ public sealed record ToolDefinition(
 
 public sealed record ToolParameter(string Name, string Type, string Description, bool IsRequired);
 
-public sealed record CacheBlock(string Content, CacheBlockType Type);
+public sealed record CacheBlock(string Content, CacheBlockType Type, bool IsPinned = false);
 
 public sealed record ChatChunk(
     string? Delta,
@@ -76,7 +78,8 @@ public sealed record EmbeddingResult(IReadOnlyList<ReadOnlyMemory<float>> Vector
 public sealed record RouteDecision(
     ProviderModelConfigDto Primary,
     ProviderDto PrimaryProvider,
-    IReadOnlyList<FallbackProvider> Fallbacks
+    IReadOnlyList<FallbackProvider> Fallbacks,
+    LlmProvider? Provider = null
 );
 
 public sealed record FallbackProvider(ProviderModelConfigDto Model, ProviderDto Provider);
