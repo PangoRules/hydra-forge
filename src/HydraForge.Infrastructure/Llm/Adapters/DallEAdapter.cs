@@ -9,11 +9,8 @@ using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 
-public sealed class DallEAdapter(
-    HttpClient http,
-    IKeyVault keyVault,
-    LlmProvider provider
-) : IImageClient
+public sealed class DallEAdapter(HttpClient http, IKeyVault keyVault, LlmProvider provider)
+    : IImageClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -50,7 +47,10 @@ public sealed class DallEAdapter(
         if (!response.IsSuccessStatusCode)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("DALLE_GENERATE_FAILED", $"DallE image generation failed: {response.StatusCode}")
+                new Error(
+                    "DALLE_GENERATE_FAILED",
+                    $"DallE image generation failed: {response.StatusCode}"
+                )
             );
         }
 
@@ -173,7 +173,10 @@ public sealed class DallEAdapter(
         if (urls.Count == 0)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("DALLE_NO_IMAGE_DATA", "DallE response contained no b64_json or url fields.")
+                new Error(
+                    "DALLE_NO_IMAGE_DATA",
+                    "DallE response contained no b64_json or url fields."
+                )
             );
         }
 

@@ -36,6 +36,7 @@ public class DallEAdapterTests
     private class FakeKeyVault(string? apiKey = null) : IKeyVault
     {
         public string Decrypt(string _) => apiKey ?? "decrypted-fake-key";
+
         public string Encrypt(string plaintext) => plaintext;
     }
 
@@ -56,13 +57,18 @@ public class DallEAdapterTests
             }
             var response = new HttpResponseMessage(statusCode)
             {
-                Content = new StringContent(jsonBody, Encoding.UTF8, System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json")),
+                Content = new StringContent(
+                    jsonBody,
+                    Encoding.UTF8,
+                    System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json")
+                ),
             };
             return Task.FromResult(response);
         }
     }
 
-    private class MultipartBodyHandler(HttpStatusCode statusCode, string jsonBody) : HttpMessageHandler
+    private class MultipartBodyHandler(HttpStatusCode statusCode, string jsonBody)
+        : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
         public string? LastContentType { get; private set; }
@@ -90,7 +96,11 @@ public class DallEAdapterTests
 
             var response = new HttpResponseMessage(statusCode)
             {
-                Content = new StringContent(jsonBody, Encoding.UTF8, System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json")),
+                Content = new StringContent(
+                    jsonBody,
+                    Encoding.UTF8,
+                    System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json")
+                ),
             };
             return response;
         }
@@ -226,9 +236,7 @@ public class DallEAdapterTests
     [Fact]
     public async Task GenerateImageAsync_NonSuccessStatus_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new JsonBodyHandler(HttpStatusCode.TooManyRequests, "")
-        );
+        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.TooManyRequests, ""));
         var provider = CreateProvider();
         var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
 
@@ -270,9 +278,7 @@ public class DallEAdapterTests
     [Fact]
     public async Task GenerateImageAsync_EmptyData_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new JsonBodyHandler(HttpStatusCode.OK, """{"data":[]}""")
-        );
+        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, """{"data":[]}"""));
         var provider = CreateProvider();
         var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
 
@@ -419,9 +425,7 @@ public class DallEAdapterTests
     [Fact]
     public async Task InpaintAsync_NonSuccessStatus_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new JsonBodyHandler(HttpStatusCode.BadRequest, "")
-        );
+        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.BadRequest, ""));
         var provider = CreateProvider();
         var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
 
