@@ -67,14 +67,6 @@ public static class LlmServiceCollectionExtensions
             }
         );
 
-        services.AddHttpClient(
-            "diffusers",
-            client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(300);
-            }
-        );
-
         return services;
     }
 
