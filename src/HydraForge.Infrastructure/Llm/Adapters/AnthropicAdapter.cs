@@ -36,15 +36,22 @@ public sealed class AnthropicAdapter(
         // System blocks: SystemContext → array with cache_control; Memory → array without cache_control
         var systemBlocks = new List<AnthropicSystemBlock>();
 
-        var systemContextBlock = request.CacheBlocks.FirstOrDefault(b => b.Type == CacheBlockType.SystemContext);
+        var systemContextBlock = request.CacheBlocks.FirstOrDefault(b =>
+            b.Type == CacheBlockType.SystemContext
+        );
         if (systemContextBlock is not null)
         {
-            systemBlocks.Add(new AnthropicSystemBlock(systemContextBlock.Content, new AnthropicCacheControl()));
+            systemBlocks.Add(
+                new AnthropicSystemBlock(systemContextBlock.Content, new AnthropicCacheControl())
+            );
         }
 
         foreach (var block in request.CacheBlocks.Where(b => b.Type == CacheBlockType.Memory))
         {
-            logger.LogDebug("Memory cache block attached to system array (no cache_control): {Content}", block.Content);
+            logger.LogDebug(
+                "Memory cache block attached to system array (no cache_control): {Content}",
+                block.Content
+            );
             systemBlocks.Add(new AnthropicSystemBlock(block.Content, null));
         }
 
@@ -71,11 +78,19 @@ public sealed class AnthropicAdapter(
             if (msg.Role == ChatRole.User && !snapshotInjected)
             {
                 snapshotInjected = true;
-                var snapshotBlocks = request.CacheBlocks.Where(b => b.Type == CacheBlockType.ProjectSnapshot).ToList();
+                var snapshotBlocks = request
+                    .CacheBlocks.Where(b => b.Type == CacheBlockType.ProjectSnapshot)
+                    .ToList();
                 if (snapshotBlocks.Count > 0)
                 {
                     var snapshotContent = string.Join("\n", snapshotBlocks.Select(b => b.Content));
-                    messages.Add(new AnthropicMessage("user", $"[project_snapshot]\n{snapshotContent}\n\n{msg.Content}", true));
+                    messages.Add(
+                        new AnthropicMessage(
+                            "user",
+                            $"[project_snapshot]\n{snapshotContent}\n\n{msg.Content}",
+                            true
+                        )
+                    );
                     continue;
                 }
             }
@@ -90,9 +105,10 @@ public sealed class AnthropicAdapter(
             Messages = messages,
             Stream = true,
             System = systemBlocks.Count > 0 ? systemBlocks : null,
-            Tools = request.Tools.Count > 0
-                ? request.Tools.Select(t => AnthropicTool.FromDefinition(t)).ToList()
-                : null,
+            Tools =
+                request.Tools.Count > 0
+                    ? request.Tools.Select(t => AnthropicTool.FromDefinition(t)).ToList()
+                    : null,
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/v1/messages")
@@ -116,7 +132,11 @@ public sealed class AnthropicAdapter(
         {
             var statusCode = response.StatusCode;
             var responseBody = await response.Content.ReadAsStringAsync(ct);
-            logger.LogError("Anthropic API error {StatusCode}: {ResponseBody}", statusCode, responseBody);
+            logger.LogError(
+                "Anthropic API error {StatusCode}: {ResponseBody}",
+                statusCode,
+                responseBody
+            );
             yield return new ChatChunk(null, ChatChunkFinishReason.Error, null);
             yield break;
         }
@@ -171,7 +191,8 @@ public sealed class AnthropicAdapter(
                     usage = new UsageSnapshot(
                         msgUsage.InputTokens,
                         msgUsage.OutputTokens,
-                        (msgUsage.CacheCreationInputTokens ?? 0) + (msgUsage.CacheReadInputTokens ?? 0)
+                        (msgUsage.CacheCreationInputTokens ?? 0)
+                            + (msgUsage.CacheReadInputTokens ?? 0)
                     );
                 }
 
@@ -192,11 +213,16 @@ public sealed class AnthropicAdapter(
         yield return new ChatChunk(null, finishReason, usage);
     }
 
-    public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(CancellationToken ct = default)
+    public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(
+        CancellationToken ct = default
+    )
     {
-        logger.LogWarning("Anthropic adapter does not support listing models via API. Returning empty list.");
-        return Task.FromResult(Result<IReadOnlyList<ProviderModelDto>>.Success(
-            Array.Empty<ProviderModelDto>()));
+        logger.LogWarning(
+            "Anthropic adapter does not support listing models via API. Returning empty list."
+        );
+        return Task.FromResult(
+            Result<IReadOnlyList<ProviderModelDto>>.Success(Array.Empty<ProviderModelDto>())
+        );
     }
 
     public bool SupportsToolCalling(ProviderModelConfigDto model) => true;
