@@ -250,10 +250,7 @@ public sealed class OpenAiCompatibleAdapter(
         if (!response.IsSuccessStatusCode)
         {
             return Result<EmbeddingResult>.Failure(
-                new Error(
-                    "EMBEDDING_FAILED",
-                    $"Embedding request failed: {response.StatusCode}"
-                )
+                new Error("EMBEDDING_FAILED", $"Embedding request failed: {response.StatusCode}")
             );
         }
 
@@ -283,7 +280,9 @@ public sealed class OpenAiCompatibleAdapter(
         }
 
         var vectors = embeddingResponse
-            .Data.Select(d => new ReadOnlyMemory<float>(d.Embedding.Select(v => (float)v).ToArray()))
+            .Data.Select(d => new ReadOnlyMemory<float>(
+                d.Embedding.Select(v => (float)v).ToArray()
+            ))
             .ToList();
 
         return Result<EmbeddingResult>.Success(new EmbeddingResult(vectors));

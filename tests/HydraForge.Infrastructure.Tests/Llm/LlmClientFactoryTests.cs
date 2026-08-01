@@ -31,26 +31,39 @@ public class LlmClientFactoryTests
     private class FakeKeyVault : IKeyVault
     {
         public string Decrypt(string _) => "decrypted-key";
+
         public string Encrypt(string plaintext) => plaintext;
     }
 
     private class NullLogger : ILogger
     {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
         public bool IsEnabled(LogLevel logLevel) => false;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter
+        ) { }
     }
 
     private class FakeLoggerFactory : ILoggerFactory
     {
         public void AddProvider(ILoggerProvider provider) { }
+
         public ILogger CreateLogger(string categoryName) => new NullLogger();
+
         public void Dispose() { }
     }
 
     private class RecordingHttpClientFactory : IHttpClientFactory
     {
         public string? LastClientName { get; private set; }
+
         public HttpClient CreateClient(string name)
         {
             LastClientName = name;
@@ -125,7 +138,11 @@ public class LlmClientFactoryTests
     public void For_SameProviderId_ReturnsCachedInstance()
     {
         var httpFactory = new RecordingHttpClientFactory();
-        var factory = new LlmClientFactory(httpFactory, new FakeKeyVault(), new FakeLoggerFactory());
+        var factory = new LlmClientFactory(
+            httpFactory,
+            new FakeKeyVault(),
+            new FakeLoggerFactory()
+        );
         var providerId = Guid.NewGuid();
         var provider = CreateProvider(id: providerId, adapterType: AdapterType.OpenAiCompatible);
 
@@ -143,7 +160,10 @@ public class LlmClientFactoryTests
             new FakeKeyVault(),
             new FakeLoggerFactory()
         );
-        var provider1 = CreateProvider(id: Guid.NewGuid(), adapterType: AdapterType.OpenAiCompatible);
+        var provider1 = CreateProvider(
+            id: Guid.NewGuid(),
+            adapterType: AdapterType.OpenAiCompatible
+        );
         var provider2 = CreateProvider(id: Guid.NewGuid(), adapterType: AdapterType.Anthropic);
 
         var client1 = factory.For(provider1);
@@ -279,6 +299,54 @@ public class LlmClientFactoryTests
 
         Assert.IsType<OpenAiCompatibleAdapter>(client);
         Assert.IsAssignableFrom<IEmbeddingClient>(client);
+    }
+
+    [Fact]
+    public void Invalidate_EvictsCachedClient_NextForCallReturnsNewInstance()
+    {
+        var factory = new LlmClientFactory(
+            new RecordingHttpClientFactory(),
+            new FakeKeyVault(),
+            new FakeLoggerFactory()
+        );
+        var providerId = Guid.NewGuid();
+        var provider = CreateProvider(id: providerId, adapterType: AdapterType.OpenAiCompatible);
+
+        var client1 = factory.For(provider);
+        factory.Invalidate(providerId);
+        var client2 = factory.For(provider);
+
+        Assert.NotSame(client1, client2);
+    }
+
+    [Fact]
+    public void Invalidate_EvictsCachedImageClient_NextImageForCallReturnsNewInstance()
+    {
+        var factory = new LlmClientFactory(
+            new RecordingHttpClientFactory(),
+            new FakeKeyVault(),
+            new FakeLoggerFactory()
+        );
+        var providerId = Guid.NewGuid();
+        var provider = CreateProvider(id: providerId, adapterType: AdapterType.DallE);
+
+        var client1 = factory.ImageFor(provider);
+        factory.Invalidate(providerId);
+        var client2 = factory.ImageFor(provider);
+
+        Assert.NotSame(client1, client2);
+    }
+
+    [Fact]
+    public void Invalidate_UnknownProviderId_DoesNotThrow()
+    {
+        var factory = new LlmClientFactory(
+            new RecordingHttpClientFactory(),
+            new FakeKeyVault(),
+            new FakeLoggerFactory()
+        );
+
+        factory.Invalidate(Guid.NewGuid());
     }
 
     [Fact]

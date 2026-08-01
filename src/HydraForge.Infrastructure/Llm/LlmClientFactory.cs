@@ -15,24 +15,33 @@ public sealed class LlmClientFactory(
 {
     private readonly ConcurrentDictionary<Guid, ILlmClient> _clients = new();
     private readonly ConcurrentDictionary<Guid, IImageClient> _imageClients = new();
-    private readonly ILogger<LlmClientFactory> _logger = loggerFactory.CreateLogger<LlmClientFactory>();
+    private readonly ILogger<LlmClientFactory> _logger =
+        loggerFactory.CreateLogger<LlmClientFactory>();
 
     public ILlmClient For(LlmProvider provider)
     {
-        return _clients.GetOrAdd(provider.Id, id =>
-        {
-            var http = httpClientFactory.CreateClient(NamedHttpClientFor(provider.AdapterType));
-            return CreateClient(http, provider);
-        });
+        return _clients.GetOrAdd(
+            provider.Id,
+            id =>
+            {
+                var http = httpClientFactory.CreateClient(NamedHttpClientFor(provider.AdapterType));
+                return CreateClient(http, provider);
+            }
+        );
     }
 
     public IImageClient ImageFor(LlmProvider provider)
     {
-        return _imageClients.GetOrAdd(provider.Id, id =>
-        {
-            var http = httpClientFactory.CreateClient(NamedHttpClientForImage(provider.AdapterType));
-            return CreateImageClient(http, provider);
-        });
+        return _imageClients.GetOrAdd(
+            provider.Id,
+            id =>
+            {
+                var http = httpClientFactory.CreateClient(
+                    NamedHttpClientForImage(provider.AdapterType)
+                );
+                return CreateImageClient(http, provider);
+            }
+        );
     }
 
     public IEmbeddingClient EmbeddingFor(LlmProvider provider)
@@ -52,20 +61,31 @@ public sealed class LlmClientFactory(
         return client;
     }
 
+    public void Invalidate(Guid providerId)
+    {
+        _clients.TryRemove(providerId, out _);
+        _imageClients.TryRemove(providerId, out _);
+    }
+
     private ILlmClient CreateClient(HttpClient http, LlmProvider provider)
     {
         return provider.AdapterType switch
         {
-            AdapterType.OpenAiCompatible =>
-                new OpenAiCompatibleAdapter(http, keyVault, provider),
-            AdapterType.Anthropic =>
-                new AnthropicAdapter(http, keyVault, provider, loggerFactory.CreateLogger<AnthropicAdapter>()),
-            AdapterType.Ollama =>
-                new OllamaAdapter(http, provider, loggerFactory.CreateLogger<OllamaAdapter>()),
-            _ =>
-                throw new NotSupportedException(
-                    $"No LLM client adapter for provider type: {provider.AdapterType}"
-                ),
+            AdapterType.OpenAiCompatible => new OpenAiCompatibleAdapter(http, keyVault, provider),
+            AdapterType.Anthropic => new AnthropicAdapter(
+                http,
+                keyVault,
+                provider,
+                loggerFactory.CreateLogger<AnthropicAdapter>()
+            ),
+            AdapterType.Ollama => new OllamaAdapter(
+                http,
+                provider,
+                loggerFactory.CreateLogger<OllamaAdapter>()
+            ),
+            _ => throw new NotSupportedException(
+                $"No LLM client adapter for provider type: {provider.AdapterType}"
+            ),
         };
     }
 
@@ -73,16 +93,27 @@ public sealed class LlmClientFactory(
     {
         return provider.AdapterType switch
         {
-            AdapterType.DallE =>
-                new DallEAdapter(http, keyVault, provider, loggerFactory.CreateLogger<DallEAdapter>()),
-            AdapterType.StabilityAi =>
-                new StabilityAiAdapter(http, keyVault, provider, loggerFactory.CreateLogger<StabilityAiAdapter>()),
-            AdapterType.ComfyUi or AdapterType.Diffusers =>
-                new ComfyUiAdapter(http, keyVault, provider, loggerFactory.CreateLogger<ComfyUiAdapter>()),
-            _ =>
-                throw new NotSupportedException(
-                    $"No image client adapter for provider type: {provider.AdapterType}"
-                ),
+            AdapterType.DallE => new DallEAdapter(
+                http,
+                keyVault,
+                provider,
+                loggerFactory.CreateLogger<DallEAdapter>()
+            ),
+            AdapterType.StabilityAi => new StabilityAiAdapter(
+                http,
+                keyVault,
+                provider,
+                loggerFactory.CreateLogger<StabilityAiAdapter>()
+            ),
+            AdapterType.ComfyUi or AdapterType.Diffusers => new ComfyUiAdapter(
+                http,
+                keyVault,
+                provider,
+                loggerFactory.CreateLogger<ComfyUiAdapter>()
+            ),
+            _ => throw new NotSupportedException(
+                $"No image client adapter for provider type: {provider.AdapterType}"
+            ),
         };
     }
 
@@ -101,6 +132,8 @@ public sealed class LlmClientFactory(
             AdapterType.DallE => "dalle",
             AdapterType.StabilityAi => "stability-ai",
             AdapterType.ComfyUi or AdapterType.Diffusers => "comfyui",
-            _ => throw new NotSupportedException($"No HTTP client name for image adapter type: {type}"),
+            _ => throw new NotSupportedException(
+                $"No HTTP client name for image adapter type: {type}"
+            ),
         };
 }

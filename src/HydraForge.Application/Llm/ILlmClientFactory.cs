@@ -9,4 +9,6 @@ public interface ILlmClientFactory
     IImageClient ImageFor(LlmProvider provider);
 
     IEmbeddingClient EmbeddingFor(LlmProvider provider);
+
+    void Invalidate(Guid providerId);
 }
