@@ -59,6 +59,22 @@ public static class LlmServiceCollectionExtensions
             }
         );
 
+        services.AddHttpClient(
+            "comfyui",
+            client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(300);
+            }
+        );
+
+        services.AddHttpClient(
+            "diffusers",
+            client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(300);
+            }
+        );
+
         return services;
     }
 
