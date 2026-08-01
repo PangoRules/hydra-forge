@@ -211,8 +211,8 @@ Web UI User: ◀─────────────────────�
 - Server is the **only** component that calls LLMs. TUI and Web UI never call LLMs directly.
 - Admin configures API keys centrally. Users never touch credentials.
 - **API keys encrypted at rest** via `IKeyVault`/`AesGcmKeyVault` (AES-256-GCM, key from `Llm:EncryptionKey` config). Migration `20260731000000_ReencryptLlmProviderApiKeys` backfills existing placeholder rows. Decrypted at call time in `ILlmClientFactory` — never cached in adapter state.
-- All LLM calls go through `ModelRouter`, which selects provider based on feature tier.
-- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IKeyVault`.
+- All LLM calls go through `ModelRouter`, which resolves feature + user context → provider/model selection. Router returns `RouteDecision`; the calling service executes the call and handles fallback/retry.
+- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IKeyVault`, `IRoutingConfigProvider`.
 
 ### ModelRouter
 
@@ -220,22 +220,33 @@ Web UI User: ◀─────────────────────�
 Feature Request (e.g. ProjectChat)
   │
   ▼
-┌─────────────────────────────────────────┐
-│  ModelRouter                            │
-│  1. Look up FeatureRoutingConfig        │
-│     → Default tier for this AiFeature  │
-│  2. Apply user tier ceiling             │
-│     → Can user go higher? Cap if not.  │
-│  3. Check context window               │
-│     → Too big for Economy? Auto-bump.  │
-│  4. Select ProviderModelConfig          │
-│     → Active provider at resolved tier │
-│  5. Route request                       │
-│     → ILlmClient.StreamChatAsync()     │
-│  6. On rate-limit / 5xx:               │
-│     → Retry with fallback provider     │
-│  7. Log TokenUsageRecord               │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  ModelRouter                                 │
+│  ┌────────────────────────────────────────┐  │
+│  │  IRoutingConfigProvider                │  │
+│  │  (Application port, EF-backed)        │  │
+│  └────────────────────────────────────────┘  │
+│  1. Look up FeatureRoutingConfig             │
+│     → Default tier for this AiFeature       │
+│  2. Apply user tier ceiling                  │
+│     → Cap to MaxUserTier if exceeded.       │
+│     null = locked to default.                │
+│  3. Find model at resolved tier              │
+│     → GetEnabledModelsAtTierAsync()          │
+│  4. Context-window guard                     │
+│     → estimatedTokens > MaxTokens?          │
+│     → Auto-bump tier (Economy→Standard→Premium)│
+│  5. Build fallback chain                     │
+│     → Walk LlmProvider.FallbackProviderId    │
+│     → Cycle detection via HashSet<Guid>      │
+│  6. Return RouteDecision                     │
+│     (Primary + Fallbacks)                    │
+│  ════════════════════════════════════════    │
+│  Calling service handles:                    │
+│  → ILlmClient.StreamChatAsync()              │
+│  → Retry fallback on rate-limit / 5xx       │
+│  → Log TokenUsageRecord                      │
+└──────────────────────────────────────────────┘
 ```
 
 ### Prompt Caching Strategy
