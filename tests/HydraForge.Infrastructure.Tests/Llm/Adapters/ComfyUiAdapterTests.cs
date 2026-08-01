@@ -601,7 +601,6 @@ public class ComfyUiAdapterTests
         var ksamplerLatent = ksampler.GetProperty("inputs").GetProperty("latent");
         Assert.Equal(JsonValueKind.Array, ksamplerLatent.ValueKind);
         Assert.Equal("7", ksamplerLatent[0].GetString());
-
     }
 
     [Fact]

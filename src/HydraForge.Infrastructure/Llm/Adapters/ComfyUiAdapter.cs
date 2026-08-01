@@ -33,7 +33,13 @@ public sealed class ComfyUiAdapter(
         var baseUrl = provider.BaseUrl.TrimEnd('/');
         var (width, height) = MapSize(request.Size);
 
-        var workflow = BuildTextToImageWorkflow(request.ModelId, request.Prompt, width, height, request.Count);
+        var workflow = BuildTextToImageWorkflow(
+            request.ModelId,
+            request.Prompt,
+            width,
+            height,
+            request.Count
+        );
 
         var submitResult = await SubmitPromptAsync(baseUrl, workflow, ct);
         if (submitResult.IsFailure)
