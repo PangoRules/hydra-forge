@@ -91,13 +91,10 @@ public sealed class ComfyUiAdapter(
         var workflow = BuildInpaintWorkflow(
             request.ModelId,
             request.Prompt,
-            width,
-            height,
             imageUpload.Value.Name,
             imageUpload.Value.Subfolder,
             maskUpload.Value.Name,
-            maskUpload.Value.Subfolder,
-            request.Count
+            maskUpload.Value.Subfolder
         );
 
         var submitResult = await SubmitPromptAsync(baseUrl, workflow, ct);
@@ -436,78 +433,79 @@ public sealed class ComfyUiAdapter(
         int batchSize
     )
     {
-        var workflow = new Dictionary<string, object>();
-
-        workflow["3"] = new Dictionary<string, object>
+        var workflow = new Dictionary<string, object>
         {
-            ["class_type"] = "CheckpointLoaderSimple",
-            ["inputs"] = new Dictionary<string, object> { ["ckpt_name"] = modelId },
-        };
-
-        workflow["4"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "CLIPTextEncode",
-            ["inputs"] = new Dictionary<string, object>
+            ["3"] = new Dictionary<string, object>
             {
-                ["text"] = prompt,
-                ["clip"] = new object[] { "3", 0 },
+                ["class_type"] = "CheckpointLoaderSimple",
+                ["inputs"] = new Dictionary<string, object> { ["ckpt_name"] = modelId },
             },
-        };
 
-        workflow["5"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "CLIPTextEncode",
-            ["inputs"] = new Dictionary<string, object>
+            ["4"] = new Dictionary<string, object>
             {
-                ["text"] = "bad quality",
-                ["clip"] = new object[] { "3", 0 },
+                ["class_type"] = "CLIPTextEncode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["text"] = prompt,
+                    ["clip"] = new object[] { "3", 0 },
+                },
             },
-        };
 
-        workflow["6"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "EmptyLatentImage",
-            ["inputs"] = new Dictionary<string, object>
+            ["5"] = new Dictionary<string, object>
             {
-                ["batch_size"] = batchSize,
-                ["height"] = height,
-                ["width"] = width,
+                ["class_type"] = "CLIPTextEncode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["text"] = "bad quality",
+                    ["clip"] = new object[] { "3", 0 },
+                },
             },
-        };
 
-        workflow["7"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "KSampler",
-            ["inputs"] = new Dictionary<string, object>
+            ["6"] = new Dictionary<string, object>
             {
-                ["cfg"] = 8.0,
-                ["denoise"] = 1.0,
-                ["model"] = new object[] { "3", 0 },
-                ["negative"] = new object[] { "5", 0 },
-                ["positive"] = new object[] { "4", 0 },
-                ["seed"] = 0,
-                ["steps"] = 20,
-                ["sampler_name"] = "euler",
+                ["class_type"] = "EmptyLatentImage",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["batch_size"] = batchSize,
+                    ["height"] = height,
+                    ["width"] = width,
+                },
             },
-        };
 
-        workflow["8"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "VAEDecode",
-            ["inputs"] = new Dictionary<string, object>
+            ["7"] = new Dictionary<string, object>
             {
-                ["samples"] = new object[] { "7", 0 },
-                ["vae"] = new object[] { "3", 0 },
+                ["class_type"] = "KSampler",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["cfg"] = 8.0,
+                    ["denoise"] = 1.0,
+                    ["model"] = new object[] { "3", 0 },
+                    ["negative"] = new object[] { "5", 0 },
+                    ["positive"] = new object[] { "4", 0 },
+                    ["seed"] = 0,
+                    ["steps"] = 20,
+                    ["sampler_name"] = "euler",
+                },
             },
-        };
 
-        workflow["9"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "SaveImage",
-            ["inputs"] = new Dictionary<string, object>
+            ["8"] = new Dictionary<string, object>
             {
-                ["filename_prefix"] = "hydraforge",
-                ["images"] = new object[] { "8", 0 },
+                ["class_type"] = "VAEDecode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["samples"] = new object[] { "7", 0 },
+                    ["vae"] = new object[] { "3", 0 },
+                },
+            },
+
+            ["9"] = new Dictionary<string, object>
+            {
+                ["class_type"] = "SaveImage",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["filename_prefix"] = "hydraforge",
+                    ["images"] = new object[] { "8", 0 },
+                },
             },
         };
 
@@ -517,106 +515,113 @@ public sealed class ComfyUiAdapter(
     private static Dictionary<string, object> BuildInpaintWorkflow(
         string modelId,
         string prompt,
-        int width,
-        int height,
         string imageName,
         string imageSubfolder,
         string maskName,
-        string maskSubfolder,
-        int batchSize
+        string maskSubfolder
     )
     {
-        var workflow = new Dictionary<string, object>();
-
-        workflow["3"] = new Dictionary<string, object>
+        var workflow = new Dictionary<string, object>
         {
-            ["class_type"] = "CheckpointLoaderSimple",
-            ["inputs"] = new Dictionary<string, object> { ["ckpt_name"] = modelId },
-        };
-
-        workflow["4"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "LoadImage",
-            ["inputs"] = new Dictionary<string, object> { ["image"] = imageName },
-        };
-
-        workflow["5"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "CLIPTextEncode",
-            ["inputs"] = new Dictionary<string, object>
+            ["3"] = new Dictionary<string, object>
             {
-                ["text"] = prompt,
-                ["clip"] = new object[] { "3", 0 },
+                ["class_type"] = "CheckpointLoaderSimple",
+                ["inputs"] = new Dictionary<string, object> { ["ckpt_name"] = modelId },
             },
-        };
 
-        workflow["6"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "CLIPTextEncode",
-            ["inputs"] = new Dictionary<string, object>
+            ["4"] = new Dictionary<string, object>
             {
-                ["text"] = "bad quality",
-                ["clip"] = new object[] { "3", 0 },
+                ["class_type"] = "LoadImage",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["image"] = BuildImageRef(imageName, imageSubfolder),
+                },
             },
-        };
 
-        workflow["7"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "VAEEncodeForInpaint",
-            ["inputs"] = new Dictionary<string, object>
+            ["5"] = new Dictionary<string, object>
             {
-                ["pixels"] = new object[] { "4", 0 },
-                ["vae"] = new object[] { "3", 0 },
-                ["mask"] = new object[] { "14", 0 },
-                ["grow_mask_by"] = 6,
+                ["class_type"] = "CLIPTextEncode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["text"] = prompt,
+                    ["clip"] = new object[] { "3", 0 },
+                },
             },
-        };
 
-        workflow["11"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "KSampler",
-            ["inputs"] = new Dictionary<string, object>
+            ["6"] = new Dictionary<string, object>
             {
-                ["cfg"] = 8.0,
-                ["denoise"] = 0.9,
-                ["latent"] = new object[] { "7", 0 },
-                ["model"] = new object[] { "3", 0 },
-                ["negative"] = new object[] { "6", 0 },
-                ["positive"] = new object[] { "5", 0 },
-                ["seed"] = 0,
-                ["steps"] = 20,
-                ["sampler_name"] = "euler",
+                ["class_type"] = "CLIPTextEncode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["text"] = "bad quality",
+                    ["clip"] = new object[] { "3", 0 },
+                },
             },
-        };
 
-        workflow["12"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "VAEDecode",
-            ["inputs"] = new Dictionary<string, object>
+            ["7"] = new Dictionary<string, object>
             {
-                ["samples"] = new object[] { "11", 0 },
-                ["vae"] = new object[] { "3", 0 },
+                ["class_type"] = "VAEEncodeForInpaint",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["pixels"] = new object[] { "4", 0 },
+                    ["vae"] = new object[] { "3", 0 },
+                    ["mask"] = new object[] { "14", 0 },
+                    ["grow_mask_by"] = 6,
+                },
             },
-        };
 
-        workflow["13"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "SaveImage",
-            ["inputs"] = new Dictionary<string, object>
+            ["11"] = new Dictionary<string, object>
             {
-                ["filename_prefix"] = "hydraforge_inpaint",
-                ["images"] = new object[] { "12", 0 },
+                ["class_type"] = "KSampler",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["cfg"] = 8.0,
+                    ["denoise"] = 0.9,
+                    ["latent"] = new object[] { "7", 0 },
+                    ["model"] = new object[] { "3", 0 },
+                    ["negative"] = new object[] { "6", 0 },
+                    ["positive"] = new object[] { "5", 0 },
+                    ["seed"] = 0,
+                    ["steps"] = 20,
+                    ["sampler_name"] = "euler",
+                },
             },
-        };
 
-        workflow["14"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "LoadImage",
-            ["inputs"] = new Dictionary<string, object> { ["image"] = maskName },
+            ["12"] = new Dictionary<string, object>
+            {
+                ["class_type"] = "VAEDecode",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["samples"] = new object[] { "11", 0 },
+                    ["vae"] = new object[] { "3", 0 },
+                },
+            },
+
+            ["13"] = new Dictionary<string, object>
+            {
+                ["class_type"] = "SaveImage",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["filename_prefix"] = "hydraforge_inpaint",
+                    ["images"] = new object[] { "12", 0 },
+                },
+            },
+
+            ["14"] = new Dictionary<string, object>
+            {
+                ["class_type"] = "LoadImage",
+                ["inputs"] = new Dictionary<string, object>
+                {
+                    ["image"] = BuildImageRef(maskName, maskSubfolder),
+                },
+            },
         };
 
         return workflow;
     }
+
+    private static string BuildImageRef(string name, string subfolder) =>
+        string.IsNullOrEmpty(subfolder) ? name : $"{subfolder}/{name}";
 
     private sealed class ComfyUiPromptResponse
     {
@@ -632,7 +637,7 @@ public sealed class ComfyUiAdapter(
         public ComfyUiStatus? Status { get; set; }
 
         [JsonPropertyName("outputs")]
-        public Dictionary<string, ComfyUiNodeOutput> Outputs { get; set; } = new();
+        public Dictionary<string, ComfyUiNodeOutput> Outputs { get; set; } = [];
     }
 
     private sealed class ComfyUiStatus
@@ -653,7 +658,7 @@ public sealed class ComfyUiAdapter(
     private sealed class ComfyUiNodeOutput
     {
         [JsonPropertyName("images")]
-        public List<ComfyUiImageInfo> Images { get; set; } = new();
+        public List<ComfyUiImageInfo> Images { get; set; } = [];
     }
 
     private sealed class ComfyUiImageInfo

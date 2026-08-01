@@ -45,13 +45,14 @@ public sealed class StabilityAiAdapter(
 
         for (var i = 0; i < request.Count; i++)
         {
-            var multipart = new MultipartFormDataContent();
-
-            multipart.Add(new StringContent(request.Prompt), "prompt");
-            multipart.Add(new StringContent(string.Empty), "negative_prompt");
-            multipart.Add(new StringContent(MapAspectRatio(request.Size)), "aspect_ratio");
-            multipart.Add(new StringContent("png"), "output_format");
-            multipart.Add(new StringContent("0"), "seed");
+            var multipart = new MultipartFormDataContent
+            {
+                { new StringContent(request.Prompt), "prompt" },
+                { new StringContent(string.Empty), "negative_prompt" },
+                { new StringContent(MapAspectRatio(request.Size)), "aspect_ratio" },
+                { new StringContent("png"), "output_format" },
+                { new StringContent("0"), "seed" },
+            };
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = multipart };
 
