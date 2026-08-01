@@ -573,7 +573,7 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [ ] Admin image provider management UI (same panel, filtered by ProviderType: Image)
 - [ ] `FeatureRoutingConfig`: admin assigns default tier per `AiFeature`, sets user override ceiling per feature
 - [x] `ModelRouter` service: feature + user context → correct provider, context window guard, auto-bump tier, fallback on rate-limit/5xx
-- [ ] `ContextCompressor` service: auto-summarize injected context when threshold exceeded
+- [x] `ContextCompressor` service: auto-summarize injected context when threshold exceeded
 - [ ] `TokenUsageRecord`: log every text LLM call
 - [ ] `ImageUsageRecord`: log every image generation call
 - [ ] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error

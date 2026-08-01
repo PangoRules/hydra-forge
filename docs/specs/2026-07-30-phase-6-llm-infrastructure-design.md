@@ -169,7 +169,7 @@ public sealed record ChatRequest(
 
 public sealed record ChatMessage(ChatRole Role, string Content);
 
-public sealed record CacheBlock(string Content, CacheBlockType Type);
+public sealed record CacheBlock(string Content, CacheBlockType Type, bool IsPinned = false);
 
 public enum ChatRole { System, User, Assistant, Tool }
 public enum CacheBlockType { SystemContext, ProjectSnapshot, Memory }
@@ -229,7 +229,8 @@ public interface IModelRouter
 public sealed record RouteDecision(
     ProviderModelConfig Primary,
     LlmProvider PrimaryProvider,
-    IReadOnlyList<FallbackProvider> Fallbacks);
+    IReadOnlyList<FallbackProvider> Fallbacks,
+    LlmProvider? Provider = null);
 
 public sealed record FallbackProvider(ProviderModelConfig Model, LlmProvider Provider);
 ```
