@@ -295,6 +295,10 @@ public interface ILlmClientFactory
     ILlmClient For(LlmProvider provider);
     IImageClient ImageFor(LlmProvider provider);
     IEmbeddingClient EmbeddingFor(LlmProvider provider);
+
+    /// <summary>Evicts cached client instances for a provider (e.g. after config update/deletion).
+    /// Next For/ImageFor/EmbeddingFor call creates a fresh instance.</summary>
+    void Invalidate(Guid providerId);
 }
 ```
 
@@ -483,7 +487,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 7: `DallEAdapter` (`/images/generations` + `/images/edits` inpaint).
 - [x] Task 8: `StabilityAiAdapter` (generate + inpaint endpoints).
 - [x] Task 9: `ComfyUiAdapter` (workflow API; serves both `ComfyUi` + `Diffusers` adapter types via factory mapping).
-- [ ] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
+- [x] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
 - [ ] Task 11: `ModelRouter` service (feature config lookup, tier ceiling, context-window auto-bump, fallback chain walk + cycle guard) + unit tests.
 - [ ] Task 12: `ContextCompressor` service (threshold check, pinned-block preservation, Economy-tier summarize call) + unit tests; wire DI to avoid router cycle.
 - [ ] Task 13: `IUsageRecorder` EF impl: write `TokenUsageRecord`/`ImageUsageRecord`, accrue `UserTokenBudget` counters, lazy period rollover + unit tests.

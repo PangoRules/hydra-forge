@@ -15,7 +15,7 @@ public sealed class OpenAiCompatibleAdapter(
     HttpClient http,
     IKeyVault keyVault,
     LlmProvider provider
-) : ILlmClient
+) : ILlmClient, IEmbeddingClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -221,6 +221,73 @@ public sealed class OpenAiCompatibleAdapter(
 
     public bool SupportsToolCalling(ProviderModelConfigDto model) => true;
 
+    public async Task<Result<EmbeddingResult>> EmbedAsync(
+        EmbeddingRequest request,
+        CancellationToken ct = default
+    )
+    {
+        var baseUrl = provider.BaseUrl.TrimEnd('/');
+
+        var body = new OpenAiEmbeddingRequest
+        {
+            Model = request.ModelId,
+            Input = request.Inputs.ToList(),
+        };
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/embeddings")
+        {
+            Content = JsonContent.Create(body, options: JsonOptions),
+        };
+
+        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEncrypted))
+        {
+            var apiKey = keyVault.Decrypt(provider.ApiKeyEncrypted);
+            httpRequest.Headers.Add("Authorization", $"Bearer {apiKey}");
+        }
+
+        using var response = await http.SendAsync(httpRequest, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return Result<EmbeddingResult>.Failure(
+                new Error("EMBEDDING_FAILED", $"Embedding request failed: {response.StatusCode}")
+            );
+        }
+
+        OpenAiEmbeddingResponse? embeddingResponse;
+        try
+        {
+            embeddingResponse = await response.Content.ReadFromJsonAsync<OpenAiEmbeddingResponse>(
+                JsonOptions,
+                ct
+            );
+        }
+        catch (JsonException ex)
+        {
+            return Result<EmbeddingResult>.Failure(
+                new Error(
+                    "EMBEDDING_PARSE_FAILED",
+                    $"Failed to parse embedding response: {ex.Message}"
+                )
+            );
+        }
+
+        if (embeddingResponse?.Data is null || embeddingResponse.Data.Count == 0)
+        {
+            return Result<EmbeddingResult>.Failure(
+                new Error("EMBEDDING_EMPTY", "Empty embedding response.")
+            );
+        }
+
+        var vectors = embeddingResponse
+            .Data.Select(d => new ReadOnlyMemory<float>(
+                d.Embedding.Select(v => (float)v).ToArray()
+            ))
+            .ToList();
+
+        return Result<EmbeddingResult>.Success(new EmbeddingResult(vectors));
+    }
+
     private static string ComputeCachePrefix(CacheBlock block)
     {
         var hashInput = $"cache:{block.Type}:{block.Content}";
@@ -341,5 +408,26 @@ public sealed class OpenAiCompatibleAdapter(
 
         [JsonPropertyName("metadata")]
         public Dictionary<string, string>? Metadata { get; set; }
+    }
+
+    private sealed class OpenAiEmbeddingRequest
+    {
+        [JsonPropertyName("model")]
+        public string Model { get; set; } = "";
+
+        [JsonPropertyName("input")]
+        public List<string> Input { get; set; } = [];
+    }
+
+    private sealed class OpenAiEmbeddingResponse
+    {
+        [JsonPropertyName("data")]
+        public List<OpenAiEmbedding> Data { get; set; } = [];
+    }
+
+    private sealed class OpenAiEmbedding
+    {
+        [JsonPropertyName("embedding")]
+        public List<double> Embedding { get; set; } = [];
     }
 }
