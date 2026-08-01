@@ -481,7 +481,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 5: `AnthropicAdapter` (`cache_control` ephemeral blocks, `/v1/messages` stream, `message_delta` usage mapping).
 - [x] Task 6: `OllamaAdapter` (`/api/chat` NDJSON stream, no caching, usage from final message).
 - [x] Task 7: `DallEAdapter` (`/images/generations` + `/images/edits` inpaint).
-- [ ] Task 8: `StabilityAiAdapter` (generate + inpaint endpoints).
+- [x] Task 8: `StabilityAiAdapter` (generate + inpaint endpoints).
 - [ ] Task 9: `ComfyUiAdapter` (workflow API; serves both `ComfyUi` + `Diffusers` adapter types via factory mapping).
 - [ ] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
 - [ ] Task 11: `ModelRouter` service (feature config lookup, tier ceiling, context-window auto-bump, fallback chain walk + cycle guard) + unit tests.
