@@ -92,6 +92,7 @@ public class CardDetailScreen(
         try
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             // Header
             var typeColor = CardTypeMapper.ToColorName(_card.Type);

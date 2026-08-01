@@ -26,6 +26,7 @@ public class LockScreen(AppState appState, Func<Task<bool>> healthCheck) : IScre
     public Task RenderAsync()
     {
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
 
         var panel = new Panel(
             Align.Center(

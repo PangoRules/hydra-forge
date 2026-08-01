@@ -13,8 +13,19 @@ public static class KeyHintBar
 
     public static void Render(IEnumerable<string> hints)
     {
-        var width = Math.Max(20, AnsiConsole.Profile.Width);
+        foreach (var line in WrapLines(hints, AnsiConsole.Profile.Width))
+            AnsiConsole.MarkupLine(line);
+    }
 
+    // Split out from Render so full-screen Spectre.Console.Layout consumers (BoardRenderer)
+    // can fold the hint bar into a sized Layout region instead of printing it as trailing
+    // lines below an already screen-height Layout — extra lines below a full-height Layout
+    // push the whole frame up and off the top of the terminal (D-?? / height overflow bug).
+    public static List<string> WrapLines(IEnumerable<string> hints, int width)
+    {
+        width = Math.Max(20, width);
+
+        var lines = new List<string>();
         var line = new List<string>();
         var length = 0;
 
@@ -25,7 +36,7 @@ public static class KeyHintBar
 
             if (line.Count > 0 && candidateLength > width)
             {
-                Flush(line);
+                lines.Add(Join(line));
                 line = [];
                 candidateLength = hint.Length;
             }
@@ -35,9 +46,11 @@ public static class KeyHintBar
         }
 
         if (line.Count > 0)
-            Flush(line);
+            lines.Add(Join(line));
+
+        return lines;
     }
 
-    private static void Flush(List<string> items) =>
-        AnsiConsole.MarkupLine($"[grey]{string.Join(Separator, items.Select(Markup.Escape))}[/]");
+    private static string Join(List<string> items) =>
+        $"[grey]{string.Join(Separator, items.Select(Markup.Escape))}[/]";
 }

@@ -77,6 +77,7 @@ public class SpecViewerScreen(
         try
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             var title = mode == "spec" ? "Specifications" : "Plans";
             AnsiConsole.Write(new Rule($"[blue]{title}[/]"));
@@ -324,6 +325,7 @@ public class SpecViewerScreen(
         while (true)
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
             AnsiConsole.Write(new Rule($"[blue]{Markup.Escape(doc.Title)}[/]"));
 
             var visible = string.Join("\n", lines.Skip(scroll).Take(pageSize));

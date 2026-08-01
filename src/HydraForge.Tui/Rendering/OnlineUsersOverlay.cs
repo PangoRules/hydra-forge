@@ -35,6 +35,7 @@ public static class OnlineUsersOverlay
         };
 
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
         AnsiConsole.Write(panel);
         AnsiConsole.MarkupLine("[grey]Press [[o]] or [[Esc]] to close[/]");
 

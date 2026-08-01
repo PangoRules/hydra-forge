@@ -1,5 +1,6 @@
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using HydraForge.Tui.Services;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -48,6 +49,7 @@ public class DependencyPanel(
     public async Task RenderAsync()
     {
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
 
         var panel = new Panel(
             new Rows(

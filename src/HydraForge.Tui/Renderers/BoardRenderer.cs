@@ -1,5 +1,6 @@
 using HydraForge.Tui.Generated;
 using HydraForge.Tui.Models;
+using HydraForge.Tui.Rendering;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -41,13 +42,37 @@ public class BoardRenderer
         int onlineCount = 0,
         int errorCount = 0,
         Guid? reorderCardId = null,
-        int unreadCount = 0
+        int unreadCount = 0,
+        bool reorderMode = false,
+        IEnumerable<string>? hints = null
     )
     {
+        // Status region folds the connection line + reorder banner + key hints all into
+        // ONE sized Layout slot instead of the caller printing them as trailing lines below
+        // this (already screen-height) Layout — extra lines below a full-height Layout push
+        // the whole frame up and off the top of the terminal, forcing the user to scroll to
+        // see the title bar. Everything the screen shows must live inside this Layout.
+        var hintLines = KeyHintBar.WrapLines(hints ?? [], AnsiConsole.Profile.Width);
+        var statusContentLines = 1 + (reorderMode ? 1 : 0) + hintLines.Count;
+        var statusHeight = statusContentLines + 2; // + panel border top/bottom
+
+        // When Title(3) + Status leave less than MinBoardRows for the board itself, or the
+        // terminal is narrower than any board layout is usable at, Spectre's own Panel/Table
+        // renderer throws ArgumentOutOfRangeException deep inside Segment.SplitLines instead
+        // of clamping — a negative/zero render region isn't handled upstream. Bail out to a
+        // plain "too small" message before that ever happens, rather than crashing the TUI.
+        const int minBoardRows = 6;
+        const int minWidth = 40;
+        if (
+            AnsiConsole.Profile.Width < minWidth
+            || AnsiConsole.Profile.Height < 3 + statusHeight + minBoardRows
+        )
+            return BuildTooSmallLayout(AnsiConsole.Profile.Width, AnsiConsole.Profile.Height);
+
         var layout = new Layout("Root").SplitRows(
             new Layout("Title").Size(3),
             new Layout("Board"),
-            new Layout("Status").Size(3)
+            new Layout("Status").Size(statusHeight)
         );
 
         // Title bar
@@ -61,9 +86,10 @@ public class BoardRenderer
                 ).Expand()
             );
 
-        // Board area is whatever's left after the 3-row title bar and 3-row status bar;
-        // each column eats 2 more for its own border — what remains is the card viewport.
-        var innerHeight = Math.Max(0, AnsiConsole.Profile.Height - 3 - 3 - 2);
+        // Board area is whatever's left after the 3-row title bar and the (variable-height)
+        // status bar; each column eats 2 more for its own border — what remains is the card
+        // viewport.
+        var innerHeight = Math.Max(0, AnsiConsole.Profile.Height - 3 - statusHeight - 2);
 
         // Board area — split into columns
         var columnLayouts = columns
@@ -188,17 +214,35 @@ public class BoardRenderer
             _ => ("red", "Disconnected"),
         };
 
-        layout["Status"]
-            .Update(
-                new Panel(
-                    new Markup(
-                        $"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {unreadCount} unread    |    {errorCount} errors[/]"
-                    )
-                ).Expand()
+        var statusLines = new List<IRenderable>
+        {
+            new Markup(
+                $"[{dotColor}]●[/] [grey]{statusText}    |    {onlineCount} online    |    {unreadCount} unread    |    {errorCount} errors[/]"
+            ),
+        };
+        if (reorderMode)
+            statusLines.Add(
+                new Markup(
+                    "[yellow]Reorder mode: j/k to place the highlighted card, Enter to confirm, Esc to cancel[/]"
+                )
             );
+        statusLines.AddRange(hintLines.Select(l => new Markup(l)));
+
+        layout["Status"].Update(new Panel(new Rows(statusLines)).Expand());
 
         return layout;
     }
+
+    // A single unsized Layout region — deliberately as simple as possible, since this is
+    // the fallback for terminal sizes too small to safely render anything richer.
+    private static Layout BuildTooSmallLayout(int width, int height) =>
+        new Layout("Root").Update(
+            new Panel(
+                new Markup(
+                    $"[yellow]Terminal too small ({width}x{height}).[/]\n[grey]Resize wider/taller to view the board.[/]"
+                )
+            ).Expand()
+        );
 
     // Symmetric 1-col left/right margin, no vertical gap — cards stack border-to-border,
     // each box's own frame is what separates it from its neighbor (a terminal row is the

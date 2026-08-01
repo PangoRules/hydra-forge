@@ -116,6 +116,7 @@ public class BoardScreen(
         try
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             var totalCards = _columns.Sum(c => c.Cards.Count);
             var layout = BoardRenderer.BuildLayout(
@@ -128,33 +129,30 @@ public class BoardScreen(
                 _appState.OnlineCount,
                 _errorCollector.Count,
                 _reorderCardId,
-                _appState.UnreadNotifications
+                _appState.UnreadNotifications,
+                _reorderMode,
+                [
+                    "[h/l] Columns",
+                    "[j/k] Cards",
+                    "[Enter] Detail",
+                    "[n] New",
+                    "[e] Edit",
+                    "[m] Move",
+                    "[r] Reorder",
+                    "[u] Notifications",
+                    "[Del] Archive",
+                    "[x] Errors",
+                    "[?] Help",
+                    "[Esc] Back",
+                    "[q] Quit",
+                ]
             );
 
+            // Nothing gets printed after this — the Layout above is sized to exactly fill
+            // the terminal (Profile.Height), so any trailing AnsiConsole.Write/MarkupLine
+            // call pushes the whole frame up and off the top, forcing a scroll to see the
+            // title bar. Everything the screen shows must be folded into BuildLayout.
             AnsiConsole.Write(layout);
-
-            if (_reorderMode)
-            {
-                AnsiConsole.MarkupLine(
-                    "[yellow]Reorder mode: j/k to place the highlighted card, Enter to confirm, Esc to cancel[/]"
-                );
-            }
-
-            KeyHintBar.Render([
-                "[h/l] Columns",
-                "[j/k] Cards",
-                "[Enter] Detail",
-                "[n] New",
-                "[e] Edit",
-                "[m] Move",
-                "[r] Reorder",
-                "[u] Notifications",
-                "[Del] Archive",
-                "[x] Errors",
-                "[?] Help",
-                "[Esc] Back",
-                "[q] Quit",
-            ]);
         }
         finally
         {
