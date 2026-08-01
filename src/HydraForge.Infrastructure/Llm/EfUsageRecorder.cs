@@ -18,8 +18,8 @@ public sealed class EfUsageRecorder : IUsageRecorder
     {
         var cost = input.Cost;
 
-        var config = await _db.ProviderModelConfigs
-            .AsNoTracking()
+        var config = await _db
+            .ProviderModelConfigs.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == input.ProviderModelConfigId, ct);
 
         if (config?.PricePerToken is { } pricePerToken)
@@ -68,7 +68,11 @@ public sealed class EfUsageRecorder : IUsageRecorder
         await _db.SaveChangesAsync(ct);
     }
 
-    public async Task<int> AccrueTokenUsageAsync(Guid userId, int tokens, CancellationToken ct = default)
+    public async Task<int> AccrueTokenUsageAsync(
+        Guid userId,
+        int tokens,
+        CancellationToken ct = default
+    )
     {
         var budget = await LoadOrCreateBudgetAsync(userId, ct);
 
@@ -78,7 +82,11 @@ public sealed class EfUsageRecorder : IUsageRecorder
         return budget.MonthlyTokenUsed;
     }
 
-    public async Task<int> AccrueImageUsageAsync(Guid userId, int count, CancellationToken ct = default)
+    public async Task<int> AccrueImageUsageAsync(
+        Guid userId,
+        int count,
+        CancellationToken ct = default
+    )
     {
         var budget = await LoadOrCreateBudgetAsync(userId, ct);
 

@@ -23,7 +23,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task RecordTokenAsync_PersistsRecordWithCorrectFields()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -64,7 +66,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task RecordImageAsync_PersistsRecordWithCorrectFields()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -100,7 +104,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task AccrueTokenUsageAsync_IncrementsMonthlyTokenUsed()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -108,28 +114,35 @@ public class EfUsageRecorderTests
         using var context = new HydraForgeDbContext(options);
         var userId = Guid.NewGuid();
 
-        context.UserTokenBudgets.Add(new UserTokenBudget
-        {
-            UserId = userId,
-            MonthlyTokenBudget = 10000,
-            MonthlyTokenUsed = 100,
-            MonthlyImageUsed = 0,
-            PeriodStart = DateTime.UtcNow,
-            PeriodEnd = DateTime.UtcNow.AddMonths(1),
-        });
+        context.UserTokenBudgets.Add(
+            new UserTokenBudget
+            {
+                UserId = userId,
+                MonthlyTokenBudget = 10000,
+                MonthlyTokenUsed = 100,
+                MonthlyImageUsed = 0,
+                PeriodStart = DateTime.UtcNow,
+                PeriodEnd = DateTime.UtcNow.AddMonths(1),
+            }
+        );
         await context.SaveChangesAsync();
 
         var recorder = new EfUsageRecorder(context);
         var result = await recorder.AccrueTokenUsageAsync(userId, 50);
 
         Assert.Equal(150, result);
-        Assert.Equal(150, context.UserTokenBudgets.Single(b => b.UserId == userId).MonthlyTokenUsed);
+        Assert.Equal(
+            150,
+            context.UserTokenBudgets.Single(b => b.UserId == userId).MonthlyTokenUsed
+        );
     }
 
     [Fact]
     public async Task AccrueImageUsageAsync_IncrementsMonthlyImageUsed()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -137,15 +150,17 @@ public class EfUsageRecorderTests
         using var context = new HydraForgeDbContext(options);
         var userId = Guid.NewGuid();
 
-        context.UserTokenBudgets.Add(new UserTokenBudget
-        {
-            UserId = userId,
-            MonthlyTokenBudget = 10000,
-            MonthlyTokenUsed = 0,
-            MonthlyImageUsed = 5,
-            PeriodStart = DateTime.UtcNow,
-            PeriodEnd = DateTime.UtcNow.AddMonths(1),
-        });
+        context.UserTokenBudgets.Add(
+            new UserTokenBudget
+            {
+                UserId = userId,
+                MonthlyTokenBudget = 10000,
+                MonthlyTokenUsed = 0,
+                MonthlyImageUsed = 5,
+                PeriodStart = DateTime.UtcNow,
+                PeriodEnd = DateTime.UtcNow.AddMonths(1),
+            }
+        );
         await context.SaveChangesAsync();
 
         var recorder = new EfUsageRecorder(context);
@@ -158,7 +173,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task AccrueTokenUsageAsync_LazyRollover_ResetsCountersAndAdvancesPeriod()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -167,15 +184,17 @@ public class EfUsageRecorderTests
         var userId = Guid.NewGuid();
         var oldPeriodEnd = DateTime.UtcNow.AddDays(-1);
 
-        context.UserTokenBudgets.Add(new UserTokenBudget
-        {
-            UserId = userId,
-            MonthlyTokenBudget = 10000,
-            MonthlyTokenUsed = 500,
-            MonthlyImageUsed = 10,
-            PeriodStart = oldPeriodEnd.AddMonths(-1),
-            PeriodEnd = oldPeriodEnd,
-        });
+        context.UserTokenBudgets.Add(
+            new UserTokenBudget
+            {
+                UserId = userId,
+                MonthlyTokenBudget = 10000,
+                MonthlyTokenUsed = 500,
+                MonthlyImageUsed = 10,
+                PeriodStart = oldPeriodEnd.AddMonths(-1),
+                PeriodEnd = oldPeriodEnd,
+            }
+        );
         await context.SaveChangesAsync();
 
         var recorder = new EfUsageRecorder(context);
@@ -191,7 +210,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task AccrueTokenUsageAsync_AutoCreatesBudget_WhenNotExists()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -214,7 +235,9 @@ public class EfUsageRecorderTests
     [Fact]
     public async Task RecordTokenAsync_ComputesCostFromPricePerToken()
     {
-        string? connectionString = Environment.GetEnvironmentVariable("HYDRAFORGE_TEST_CONNECTION_STRING");
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
         if (string.IsNullOrWhiteSpace(connectionString))
             return;
 
@@ -222,14 +245,16 @@ public class EfUsageRecorderTests
         using var context = new HydraForgeDbContext(options);
         var configId = Guid.NewGuid();
 
-        context.ProviderModelConfigs.Add(new ProviderModelConfig
-        {
-            Id = configId,
-            ProviderId = Guid.NewGuid(),
-            ModelId = "gpt-4o",
-            Name = "GPT-4o",
-            PricePerToken = 0.00001m,
-        });
+        context.ProviderModelConfigs.Add(
+            new ProviderModelConfig
+            {
+                Id = configId,
+                ProviderId = Guid.NewGuid(),
+                ModelId = "gpt-4o",
+                Name = "GPT-4o",
+                PricePerToken = 0.00001m,
+            }
+        );
         await context.SaveChangesAsync();
 
         var recorder = new EfUsageRecorder(context);
