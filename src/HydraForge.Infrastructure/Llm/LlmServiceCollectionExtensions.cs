@@ -23,7 +23,7 @@ public static class LlmServiceCollectionExtensions
             "openai-compatible",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(120);
+                client.Timeout = TimeSpan.FromSeconds(60);
             }
         );
 
@@ -31,7 +31,7 @@ public static class LlmServiceCollectionExtensions
             "anthropic",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(120);
+                client.Timeout = TimeSpan.FromSeconds(60);
             }
         );
 
@@ -39,7 +39,7 @@ public static class LlmServiceCollectionExtensions
             "ollama",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(120);
+                client.Timeout = TimeSpan.FromSeconds(60);
             }
         );
 
@@ -66,6 +66,8 @@ public static class LlmServiceCollectionExtensions
                 client.Timeout = TimeSpan.FromSeconds(300);
             }
         );
+
+        services.AddSingleton<ILlmClientFactory, LlmClientFactory>();
 
         return services;
     }
