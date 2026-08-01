@@ -171,11 +171,15 @@ onMounted(async () => {
   board.fetchMembers(projectId)
   realtime.connect(projectId)
   presence.connect(projectId)
-  const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
-  if (data) {
-    const project = data as components['schemas']['ProjectResponse']
-    projectName.value = project.name
-    projectArchived.value = !!project.archivedAt
+  try {
+    const { data } = await api.GET(ApiRoutes.Projects.detail(projectId))
+    if (data) {
+      const project = data as components['schemas']['ProjectResponse']
+      projectName.value = project.name
+      projectArchived.value = !!project.archivedAt
+    }
+  } catch {
+    toast.error('Failed to load project details')
   }
   nav.activate()
 })

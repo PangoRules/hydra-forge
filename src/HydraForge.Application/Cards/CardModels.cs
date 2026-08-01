@@ -69,8 +69,15 @@ public record CardDto(
     IReadOnlyList<CardAssigneeDto> Assignees,
     IReadOnlyList<CardWatcherDto> Watchers,
     IReadOnlyList<CardRelationshipBadgeDto> RelationshipBadges,
-    int RelationshipCount
+    int RelationshipCount,
+    ParentCardSummaryDto? ParentCard,
+    int ChildCount
 );
+
+// Resolved once, server-side (mirrors RelationshipBadges) so clients never need to
+// scan the whole board to find a card's parent or count its children. Type is
+// included so the client can render the parent's type icon without a second lookup.
+public record ParentCardSummaryDto(Guid Id, int CardNumber, string Title, CardType Type);
 
 // Mirrors the TUI's CardRelationshipIndicatorHelper.RelationBadge / BoardRenderer.FormatBadgeLine —
 // same Type + IsSource + other-card-number shape, so both clients derive the same verb
@@ -164,8 +171,12 @@ public record CardResponse(
     IReadOnlyList<CardAssigneeResponse> Assignees,
     IReadOnlyList<CardWatcherResponse> Watchers,
     IReadOnlyList<CardRelationshipBadgeResponse> RelationshipBadges,
-    int RelationshipCount
+    int RelationshipCount,
+    ParentCardSummaryResponse? ParentCard,
+    int ChildCount
 );
+
+public record ParentCardSummaryResponse(Guid Id, int CardNumber, string Title, CardType Type);
 
 public record CardRelationshipBadgeResponse(
     Guid RelatedCardId,

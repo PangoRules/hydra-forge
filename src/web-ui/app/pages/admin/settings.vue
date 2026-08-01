@@ -10,7 +10,7 @@ if (!user?.isAdmin) {
 }
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 const loading = ref(false)
 
 const settings = reactive({
@@ -46,7 +46,7 @@ async function loadSettings() {
     const { data } = await api.GET<SettingsResponse>(ApiRoutes.Admin.settingsGet())
     if (data) Object.assign(settings, data)
   } catch (e: unknown) {
-    toast.add({ title: e instanceof Error ? e.message : 'Failed to load settings', color: 'error' })
+    toast.error(e instanceof Error ? e.message : 'Failed to load settings')
   } finally {
     loading.value = false
   }
@@ -111,9 +111,9 @@ async function saveSettings(section: keyof typeof saving) {
       body.brandLogoUrl = settings.brandLogoUrl
     }
     await api.PUT(ApiRoutes.Admin.settingsUpdate(), { body })
-    toast.add({ title: 'Settings saved. Changes apply within 5 minutes (cache TTL) or on next housekeeping run.', color: 'success' })
+    toast.success('Settings saved. Changes apply within 5 minutes (cache TTL) or on next housekeeping run.', 6000)
   } catch (e: unknown) {
-    toast.add({ title: e instanceof Error ? e.message : 'Save failed', color: 'error' })
+    toast.error(e instanceof Error ? e.message : 'Save failed')
   } finally {
     saving[section] = false
   }

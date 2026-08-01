@@ -42,6 +42,8 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
     watchers: [],
     relationshipBadges: [],
     relationshipCount: 0,
+    parentCard: null,
+    childCount: 0,
     ...overrides
   }
 }

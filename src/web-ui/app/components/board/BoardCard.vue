@@ -39,23 +39,7 @@ const isCardDragOver = ref(false)
 const formattedDue = computed(() => formatDueDate(props.card.dueAt))
 const cardIsOverdue = computed(() => isOverdue(props.card.dueAt))
 const typeOption = computed(() => cardTypeOption(props.card.type))
-
-const parentCard = computed(() => {
-  if (!props.card.parentCardId) return null
-  for (const cards of board.cardsByColumn.values()) {
-    const found = cards.find(c => c.id === props.card.parentCardId)
-    if (found) return found
-  }
-  return null
-})
-
-const childCount = computed(() => {
-  let count = 0
-  for (const cards of board.cardsByColumn.values()) {
-    count += cards.filter(c => c.parentCardId === props.card.id).length
-  }
-  return count
-})
+const childCount = computed(() => Number(props.card.childCount))
 
 const isWatching = computed(() =>
   props.card.watchers?.some(w => w.userId === authStore.user?.userId) ?? false
@@ -337,23 +321,23 @@ function handleCardDrop(event: DragEvent) {
     />
 
     <div
-      v-if="parentCard || childCount > 0"
+      v-if="card.parentCard || childCount > 0"
       class="flex items-center gap-3 mt-2"
     >
       <div
-        v-if="parentCard"
+        v-if="card.parentCard"
         class="flex flex-col"
       >
         <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
         <span
           class="text-xs text-primary flex items-center gap-1"
-          :title="parentCard.title"
+          :title="card.parentCard.title"
         >
           <UIcon
-            :name="cardTypeOption(parentCard.type).icon"
+            :name="cardTypeOption(card.parentCard.type).icon"
             class="size-3"
           />
-          {{ cardTypeOption(parentCard.type).label }} #{{ parentCard.cardNumber }}
+          {{ cardTypeOption(card.parentCard.type).label }} #{{ card.parentCard.cardNumber }}
         </span>
       </div>
       <div

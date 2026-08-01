@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
+import { formatDateTime } from '~/lib/date'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
 
@@ -54,10 +55,6 @@ const columns: TableColumn<AuditEntry>[] = [
   { accessorKey: 'entityType', header: 'Entity Type' },
   { accessorKey: 'action', header: 'Action' }
 ]
-
-function formatDate(ts: string): string {
-  return new Date(ts).toLocaleString()
-}
 
 async function loadDashboard() {
   loading.value = true
@@ -186,7 +183,7 @@ onMounted(() => loadDashboard())
       hide-footer
     >
       <template #timestamp-cell="{ row }">
-        <span class="text-sm">{{ formatDate(row.original.timestamp) }}</span>
+        <span class="text-sm">{{ formatDateTime(row.original.timestamp) }}</span>
       </template>
     </DataTable>
   </div>

@@ -23,6 +23,17 @@
   transition: opacity 100ms ease, transform 100ms ease;
 }
 
+/* Firefox doesn't reliably re-evaluate @keyframes that reference a CSS custom
+   property (var(--transform)) set via inline style — the toast enter/exit
+   animation renders as an instant snap instead of a transition until some
+   unrelated style recalc (e.g. :hover) forces re-evaluation. `will-change`
+   makes Firefox resolve the animated property eagerly. Chromium is
+   unaffected either way. Scoped to the toast list item specifically —
+   data-slot="base" is reused by unrelated components (buttons, progress). */
+[data-slot="viewport"] li[data-slot="base"] {
+  will-change: transform;
+}
+
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 

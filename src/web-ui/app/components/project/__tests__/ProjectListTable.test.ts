@@ -45,4 +45,12 @@ describe('ProjectListTable', () => {
     })
     expect(wrapper.findComponent({ name: 'ProjectCard' }).exists()).toBe(true)
   })
+
+  it('mobile ProjectCard shows the same role and created date as the desktop table', async () => {
+    const wrapper = await mountSuspended(ProjectListTable, {
+      props: { ...baseProps, projects: [makeProject({ myRole: 'Owner' })], loading: false }
+    })
+    const card = wrapper.findComponent({ name: 'ProjectCard' })
+    expect(card.text()).toContain('Owner')
+  })
 })

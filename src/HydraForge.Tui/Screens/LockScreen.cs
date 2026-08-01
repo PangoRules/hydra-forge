@@ -26,6 +26,7 @@ public class LockScreen(AppState appState, Func<Task<bool>> healthCheck) : IScre
     public Task RenderAsync()
     {
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
 
         var panel = new Panel(
             Align.Center(
@@ -53,7 +54,7 @@ public class LockScreen(AppState appState, Func<Task<bool>> healthCheck) : IScre
     {
         if (key.Key == ConsoleKey.Q)
         {
-            var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+            var confirm = QuitConfirm.Show();
             if (confirm)
             {
                 _retryCts?.Cancel();

@@ -352,17 +352,32 @@ public class CardService(
         // simply skipped when building badges, same as the single-card path.
         var relationships = await _relationshipRepo.ListActiveByProjectAsync(projectId, ct);
         var cardsById = cards.ToDictionary(c => c.Id);
-        var relationshipCounts = relationships
-            .SelectMany(r => new[] { r.SourceCardId, r.TargetCardId })
-            .GroupBy(id => id)
-            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Only count a relationship for a card if the *other* side is active — an
+        // archived blocker/predecessor no longer applies, so it must not inflate the
+        // count either (a stray "+1 more" pointing at a badge that will never render).
         var relationshipsByCard = relationships
             .SelectMany(r =>
                 new[] { r.SourceCardId, r.TargetCardId }
                     .Distinct()
-                    .Select(id => (CardId: id, Relationship: r))
+                    .Select(id =>
+                        (
+                            CardId: id,
+                            OtherId: id == r.SourceCardId ? r.TargetCardId : r.SourceCardId,
+                            Relationship: r
+                        )
+                    )
             )
+            .Where(x => cardsById.ContainsKey(x.OtherId))
             .ToLookup(x => x.CardId, x => x.Relationship);
+        var relationshipCounts = relationshipsByCard.ToDictionary(g => g.Key, g => g.Count());
+
+        // Same in-memory-only approach as relationshipsByCard — a child outside this
+        // filtered result set is simply not counted, same caveat as relationship badges.
+        var childCountByParentId = cards
+            .Where(c => c.ParentCardId.HasValue)
+            .GroupBy(c => c.ParentCardId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var dtos = cards
             .Select(card =>
@@ -373,7 +388,8 @@ public class CardService(
                     usersById,
                     cardsById,
                     relationshipCounts,
-                    relationshipsByCard
+                    relationshipsByCard,
+                    childCountByParentId
                 )
             )
             .ToList();
@@ -1183,7 +1199,38 @@ public class CardService(
                 ? await _cardRepo.GetByIdsAsync(relatedCardIds, ct)
                 : new Dictionary<Guid, Card>();
 
-        var relationshipBadges = BuildRelationshipBadges(card.Id, relationships, relatedCardsById);
+        // An archived blocker/predecessor no longer applies — MoveAsync already treats
+        // it as resolved, so the badge and count must agree instead of only reappearing
+        // here (this path fetches related cards unfiltered) while the board list (which
+        // only ever sees active cards) silently drops it.
+        var activeRelationships = relationships
+            .Where(r =>
+            {
+                var otherId = r.SourceCardId == card.Id ? r.TargetCardId : r.SourceCardId;
+                return relatedCardsById.TryGetValue(otherId, out var other)
+                    && other.ArchivedAt == null;
+            })
+            .ToList();
+
+        var relationshipBadges = BuildRelationshipBadges(
+            card.Id,
+            activeRelationships,
+            relatedCardsById
+        );
+
+        ParentCardSummaryDto? parentCard = null;
+        if (card.ParentCardId.HasValue)
+        {
+            var parent = await _cardRepo.GetByIdAsync(card.ParentCardId.Value, ct);
+            if (parent != null)
+                parentCard = new ParentCardSummaryDto(
+                    parent.Id,
+                    parent.CardNumber,
+                    parent.Title,
+                    parent.Type
+                );
+        }
+        var childCount = await _cardRepo.CountActiveChildrenAsync(card.Id, ct);
 
         return new CardDto(
             card.Id,
@@ -1204,7 +1251,9 @@ public class CardService(
             assigneeDtos,
             watcherDtos,
             relationshipBadges,
-            relationships.Count
+            activeRelationships.Count,
+            parentCard,
+            childCount
         );
     }
 
@@ -1257,7 +1306,8 @@ public class CardService(
         IReadOnlyDictionary<Guid, Domain.Entities.Auth.User> usersById,
         IReadOnlyDictionary<Guid, Card> cardsById,
         Dictionary<Guid, int> relationshipCounts,
-        ILookup<Guid, CardRelationship> relationshipsByCard
+        ILookup<Guid, CardRelationship> relationshipsByCard,
+        Dictionary<Guid, int> childCountByParentId
     )
     {
         var assigneeDtos = assigneeLookup[card.Id]
@@ -1284,6 +1334,19 @@ public class CardService(
             cardsById
         );
 
+        ParentCardSummaryDto? parentCard = null;
+        if (
+            card.ParentCardId.HasValue
+            && cardsById.TryGetValue(card.ParentCardId.Value, out var parent)
+        )
+            parentCard = new ParentCardSummaryDto(
+                parent.Id,
+                parent.CardNumber,
+                parent.Title,
+                parent.Type
+            );
+        var childCount = childCountByParentId.TryGetValue(card.Id, out var children) ? children : 0;
+
         return new CardDto(
             card.Id,
             card.ProjectId,
@@ -1303,7 +1366,9 @@ public class CardService(
             assigneeDtos,
             watcherDtos,
             relationshipBadges,
-            relationshipCount
+            relationshipCount,
+            parentCard,
+            childCount
         );
     }
 

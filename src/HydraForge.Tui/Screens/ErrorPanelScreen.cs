@@ -18,6 +18,7 @@ public class ErrorPanelScreen(AppState appState, ErrorCollector errorCollector) 
     public Task RenderAsync()
     {
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
 
         var errors = _errorCollector.GetErrors();
 

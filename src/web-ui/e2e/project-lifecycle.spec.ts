@@ -147,11 +147,14 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   })
   await expect(desktop.getByText('launch-notes.txt', { exact: true })).toBeVisible({ timeout: 15000 })
 
-  // Dependencies: Blocked by -> "Update hero image assets"
+  // Dependencies: this card is blocked by "Update hero image assets"
   await desktop.getByRole('button', { name: 'Link card' }).click()
   await desktop.getByPlaceholder('Search cards...').fill('Update hero image')
   await desktop.getByRole('button', { name: new RegExp(heroTaskTitle) }).click()
-  // Relationship type defaults to "Blocked by" — leave as-is.
+  // Direction defaults to "Blocks" (this card blocks the target) — switch to
+  // "Blocked by" so this card is the one that can't move until the target resolves.
+  await desktop.getByRole('combobox', { name: 'Relationship type' }).click()
+  await page.getByRole('option', { name: 'Blocked by', exact: true }).click()
   await desktop.getByRole('button', { name: 'Link', exact: true }).click()
   await expect(desktop.getByText('Blocked by', { exact: true })).toBeVisible()
   await expect(desktop.getByText(new RegExp(heroTaskTitle))).toBeVisible()

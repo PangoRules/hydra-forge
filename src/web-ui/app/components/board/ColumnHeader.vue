@@ -229,6 +229,9 @@ function handleDrop(event: DragEvent) {
             </div>
           </div>
         </div>
+
+        <!-- Extra trailing control (e.g. mobile's accordion expand/collapse toggle) -->
+        <slot name="trailing" />
       </div>
     </div>
 

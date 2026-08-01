@@ -27,6 +27,14 @@ public static class LlmServiceCollectionExtensions
             }
         );
 
+        services.AddHttpClient(
+            "anthropic",
+            client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(120);
+            }
+        );
+
         return services;
     }
 

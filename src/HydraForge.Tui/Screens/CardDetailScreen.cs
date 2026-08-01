@@ -92,9 +92,10 @@ public class CardDetailScreen(
         try
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             // Header
-            var typeColor = GetTypeColor(_card.Type);
+            var typeColor = CardTypeMapper.ToColorName(_card.Type);
             AnsiConsole.Write(
                 new Rule(
                     $"[{typeColor}]#{_card.CardNumber}[/] [blue bold]{Markup.Escape(_card.Title)}[/]"
@@ -252,7 +253,7 @@ public class CardDetailScreen(
 
         return new Rows(
             new Markup(
-                $"Type: [{GetTypeColor(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"
+                $"Type: [{CardTypeMapper.ToColorName(_card.Type)}]{CardTypeMapper.ToDisplayString(_card.Type)}[/]"
             ),
             new Markup($"Due: {dueText}"),
             new Markup($"Assignees: {assignees}"),
@@ -307,7 +308,7 @@ public class CardDetailScreen(
 
         var items = _comments.Select(c =>
         {
-            var time = c.CreatedAt.ToString("MM-dd HH:mm");
+            var time = DateFormatting.FormatTimestamp(c.CreatedAt);
             var author = Markup.Escape(c.AuthorUsername ?? "Unknown");
             return new Markup($"[bold]{author}[/] [grey]{time}[/]\n  {Markup.Escape(c.Content)}")
                 as IRenderable;
@@ -468,7 +469,7 @@ public class CardDetailScreen(
                 break;
 
             case ConsoleKey.Q:
-                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                var confirm = QuitConfirm.Show();
                 if (confirm)
                     Environment.Exit(0);
                 break;
@@ -974,14 +975,4 @@ public class CardDetailScreen(
             _relationships = [];
         }
     }
-
-    private static string GetTypeColor(CardType type) =>
-        type switch
-        {
-            CardType.Task => "cyan1",
-            CardType.Issue => "red",
-            CardType.Goal => "yellow",
-            CardType.Idea => "green",
-            _ => "grey",
-        };
 }

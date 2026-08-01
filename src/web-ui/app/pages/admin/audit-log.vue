@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import { formatDateTime } from '~/lib/date'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
 
@@ -123,10 +124,6 @@ function formatJson(json: string | null): string {
   } catch {
     return json
   }
-}
-
-function formatDate(ts: string): string {
-  return new Date(ts).toLocaleString()
 }
 
 // filterFrom/filterTo are plain `yyyy-mm-dd` (native <input type="date">, no
@@ -639,7 +636,7 @@ onMounted(() => loadEntries())
         @update:page-size="onPageSizeChange"
       >
         <template #timestamp-cell="{ row }">
-          <span class="text-sm">{{ formatDate(row.original.timestamp) }}</span>
+          <span class="text-sm">{{ formatDateTime(row.original.timestamp) }}</span>
         </template>
         <template #projectName-cell="{ row }">
           <span class="text-sm">{{ row.original.projectName ?? '—' }}</span>

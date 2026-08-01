@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import { formatDateTime } from '~/lib/date'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 const DOC_TYPE_LABELS: Record<string, string> = { Specification: 'Specification', Concept: 'Concept', Report: 'Report' }
@@ -155,15 +156,7 @@ async function toggleHistory() {
   }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString()
-}
-
-const board = useBoardStore()
-
-function shortUser(userId: string) {
-  return board.members.find(m => m.userId === userId)?.username ?? userId.slice(0, 8) + '...'
-}
+const { shortUser } = useMemberDisplay()
 
 onMounted(() => fetchSpec())
 </script>
@@ -245,7 +238,7 @@ onMounted(() => fetchSpec())
         >
           <div class="min-w-0">
             <p class="truncate">
-              v{{ v.version }} · {{ formatDate(v.createdAt) }}
+              v{{ v.version }} · {{ formatDateTime(v.createdAt) }}
             </p>
             <p class="text-muted truncate">
               {{ shortUser(v.createdByUserId) }}

@@ -34,10 +34,13 @@ public class CardRelationshipsController(CardRelationshipService service) : Cont
     )
     {
         var userId = User.GetRequiredUserId();
+        var (sourceCardId, targetCardId) = request.Reverse
+            ? (request.TargetCardId, cardId)
+            : (cardId, request.TargetCardId);
         var cmd = new CreateRelationshipCommand(
             projectId,
-            cardId,
-            request.TargetCardId,
+            sourceCardId,
+            targetCardId,
             request.Type,
             userId
         );

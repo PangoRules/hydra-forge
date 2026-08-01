@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import { formatDateTime } from '~/lib/date'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 const STATUS_LABELS: Record<string, string> = { Pending: 'Pending', Active: 'Active', Done: 'Done' }
@@ -47,7 +48,7 @@ const props = defineProps<{
 
 const toast = useAppToast()
 const api = useApi()
-const board = useBoardStore()
+const { shortUser } = useMemberDisplay()
 
 const plans = ref<PlanResponse[]>([])
 const loading = ref(true)
@@ -237,14 +238,6 @@ async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
   }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString()
-}
-
-function shortUser(userId: string) {
-  return board.members.find(m => m.userId === userId)?.username ?? userId.slice(0, 8) + '...'
-}
-
 onMounted(() => fetchPlans())
 </script>
 
@@ -382,7 +375,7 @@ onMounted(() => fetchPlans())
               >
                 <div class="min-w-0">
                   <p class="truncate">
-                    v{{ v.version }} · {{ formatDate(v.createdAt) }}
+                    v{{ v.version }} · {{ formatDateTime(v.createdAt) }}
                   </p>
                   <p class="text-muted truncate">
                     {{ shortUser(v.createdByUserId) }}

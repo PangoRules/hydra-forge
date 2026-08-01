@@ -857,6 +857,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("relationshipCount", Required = Newtonsoft.Json.Required.Always)]
         public int RelationshipCount { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("parentCard", Required = Newtonsoft.Json.Required.AllowNull)]
+        public ParentCardSummaryResponse? ParentCard { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("childCount", Required = Newtonsoft.Json.Required.Always)]
+        public int ChildCount { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -1247,6 +1253,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public RelationshipType Type { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("reverse", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? Reverse { get; set; } = false;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -1510,6 +1519,34 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
         public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ParentCardSummaryResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cardNumber", Required = Newtonsoft.Json.Required.Always)]
+        public int CardNumber { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public CardType Type { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

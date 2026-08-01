@@ -47,7 +47,7 @@ public class NotificationCenter(
                 .Select(n =>
                 {
                     var prefix = n.IsRead ? "  " : "● ";
-                    var time = n.CreatedAt.ToString("MMM dd HH:mm");
+                    var time = DateFormatting.FormatRecentRelative(n.CreatedAt);
                     return $"{prefix}[bold]{Markup.Escape(n.Title)}[/] [grey]{time}[/]";
                 })
                 .ToList();

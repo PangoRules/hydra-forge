@@ -121,4 +121,15 @@ public class EfCardRepository(HydraForgeDbContext context) : ICardRepository
             ct
         );
     }
+
+    public async Task<int> CountActiveChildrenAsync(
+        Guid parentCardId,
+        CancellationToken ct = default
+    )
+    {
+        return await context.Cards.CountAsync(
+            c => c.ParentCardId == parentCardId && c.ArchivedAt == null,
+            ct
+        );
+    }
 }

@@ -116,6 +116,7 @@ public class BoardScreen(
         try
         {
             AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             var totalCards = _columns.Sum(c => c.Cards.Count);
             var layout = BoardRenderer.BuildLayout(
@@ -128,33 +129,30 @@ public class BoardScreen(
                 _appState.OnlineCount,
                 _errorCollector.Count,
                 _reorderCardId,
-                _appState.UnreadNotifications
+                _appState.UnreadNotifications,
+                _reorderMode,
+                [
+                    "[h/l] Columns",
+                    "[j/k] Cards",
+                    "[Enter] Detail",
+                    "[n] New",
+                    "[e] Edit",
+                    "[m] Move",
+                    "[r] Reorder",
+                    "[u] Notifications",
+                    "[Del] Archive",
+                    "[x] Errors",
+                    "[?] Help",
+                    "[Esc] Back",
+                    "[q] Quit",
+                ]
             );
 
+            // Nothing gets printed after this — the Layout above is sized to exactly fill
+            // the terminal (Profile.Height), so any trailing AnsiConsole.Write/MarkupLine
+            // call pushes the whole frame up and off the top, forcing a scroll to see the
+            // title bar. Everything the screen shows must be folded into BuildLayout.
             AnsiConsole.Write(layout);
-
-            if (_reorderMode)
-            {
-                AnsiConsole.MarkupLine(
-                    "[yellow]Reorder mode: j/k to place the highlighted card, Enter to confirm, Esc to cancel[/]"
-                );
-            }
-
-            KeyHintBar.Render([
-                "[h/l] Columns",
-                "[j/k] Cards",
-                "[Enter] Detail",
-                "[n] New",
-                "[e] Edit",
-                "[m] Move",
-                "[r] Reorder",
-                "[u] Notifications",
-                "[Del] Archive",
-                "[x] Errors",
-                "[?] Help",
-                "[Esc] Back",
-                "[q] Quit",
-            ]);
         }
         finally
         {
@@ -317,7 +315,7 @@ public class BoardScreen(
                 break;
 
             case ConsoleKey.Q:
-                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                var confirm = QuitConfirm.Show();
                 if (confirm)
                     Environment.Exit(0);
                 break;
@@ -403,13 +401,6 @@ public class BoardScreen(
                 // Non-fatal: board renders without relationship indicators
             }
 
-            // Parent lookup + child count are derived client-side from the already-loaded
-            // card list, same as the web UI does — there's no dedicated endpoint for either.
-            var cardsById = cards.ToDictionary(c => c.Id);
-            var childCounts = cards
-                .Where(c => c.ParentCardId.HasValue)
-                .GroupBy(c => c.ParentCardId!.Value)
-                .ToDictionary(g => g.Key, g => g.Count());
             var currentUserId = CurrentUser.GetId();
 
             // Build column data
@@ -429,10 +420,6 @@ public class BoardScreen(
                                 .OrderBy(c => c.Position)
                                 .Select(c =>
                                 {
-                                    var parent = c.ParentCardId.HasValue
-                                        ? cardsById.GetValueOrDefault(c.ParentCardId.Value)
-                                        : null;
-
                                     return new BoardRenderer.CardData(
                                         c.Id,
                                         c.CardNumber,
@@ -442,11 +429,11 @@ public class BoardScreen(
                                         c.Assignees?.Select(a => a.Username[..1].ToUpper()).ToList()
                                             ?? [],
                                         c.Version,
-                                        parent?.CardNumber,
-                                        parent != null
-                                            ? CardTypeMapper.ToDisplayString(parent.Type)
+                                        c.ParentCard?.CardNumber,
+                                        c.ParentCard != null
+                                            ? CardTypeMapper.ToDisplayString(c.ParentCard.Type)
                                             : null,
-                                        childCounts.GetValueOrDefault(c.Id, 0),
+                                        c.ChildCount,
                                         c.DueAt,
                                         currentUserId.HasValue
                                             && (

@@ -975,6 +975,9 @@ internal class CardsTestCardRepository(List<Card> cards) : Application.Cards.ICa
 
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
         Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null));
 }
 
 internal class CardsTestCardAssigneeRepository(List<CardAssignee> assignees)
