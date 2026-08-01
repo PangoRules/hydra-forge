@@ -30,6 +30,13 @@ public sealed class StabilityAiAdapter(
         CancellationToken ct = default
     )
     {
+        if (request.Count < 1)
+        {
+            return Result<GeneratedImage>.Failure(
+                new Error("STABILITY_INVALID_COUNT", "Count must be at least 1.")
+            );
+        }
+
         var baseUrl = provider.BaseUrl.TrimEnd('/');
         var engine = request.ModelId;
         var url = $"{baseUrl}/v2beta/stable-image/generate/{engine}";
@@ -46,10 +53,7 @@ public sealed class StabilityAiAdapter(
             multipart.Add(new StringContent("png"), "output_format");
             multipart.Add(new StringContent("0"), "seed");
 
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = multipart,
-            };
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = multipart };
 
             AddAuthHeader(httpRequest);
             httpRequest.Headers.Accept.ParseAdd("application/json");
@@ -65,7 +69,10 @@ public sealed class StabilityAiAdapter(
                     responseBody
                 );
                 return Result<GeneratedImage>.Failure(
-                    new Error("STABILITY_GENERATE_FAILED", $"StabilityAI image generation failed: {statusCode}")
+                    new Error(
+                        "STABILITY_GENERATE_FAILED",
+                        $"StabilityAI image generation failed: {statusCode}"
+                    )
                 );
             }
 
@@ -89,14 +96,20 @@ public sealed class StabilityAiAdapter(
         if (request.ImageBytes is null || request.ImageBytes.Length == 0)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("STABILITY_INPAINT_MISSING_INPUT", "ImageBytes is required for inpainting.")
+                new Error(
+                    "STABILITY_INPAINT_MISSING_INPUT",
+                    "ImageBytes is required for inpainting."
+                )
             );
         }
 
         if (request.MaskBytes is null || request.MaskBytes.Length == 0)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("STABILITY_INPAINT_MISSING_INPUT", "MaskBytes is required for inpainting.")
+                new Error(
+                    "STABILITY_INPAINT_MISSING_INPUT",
+                    "MaskBytes is required for inpainting."
+                )
             );
         }
 
@@ -116,10 +129,7 @@ public sealed class StabilityAiAdapter(
         multipart.Add(new StringContent(request.Prompt), "prompt");
         multipart.Add(new StringContent("png"), "output_format");
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = multipart,
-        };
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = multipart };
 
         AddAuthHeader(httpRequest);
         httpRequest.Headers.Accept.ParseAdd("application/json");
@@ -167,13 +177,14 @@ public sealed class StabilityAiAdapter(
     {
         var contentType = response.Content.Headers.ContentType?.MediaType;
 
-        if (contentType is not null && contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        if (
+            contentType is not null
+            && contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+        )
         {
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
             var base64 = Convert.ToBase64String(bytes);
-            return Result<GeneratedImage>.Success(
-                new GeneratedImage([base64], "generated")
-            );
+            return Result<GeneratedImage>.Success(new GeneratedImage([base64], "generated"));
         }
 
         StabilityAiImageResponse? imageResponse;
@@ -187,14 +198,20 @@ public sealed class StabilityAiAdapter(
         catch (JsonException ex)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("STABILITY_PARSE_FAILED", $"Failed to parse StabilityAI response: {ex.Message}")
+                new Error(
+                    "STABILITY_PARSE_FAILED",
+                    $"Failed to parse StabilityAI response: {ex.Message}"
+                )
             );
         }
 
         if (imageResponse?.Image is null)
         {
             return Result<GeneratedImage>.Failure(
-                new Error("STABILITY_EMPTY_RESPONSE", "StabilityAI response contained no image data.")
+                new Error(
+                    "STABILITY_EMPTY_RESPONSE",
+                    "StabilityAI response contained no image data."
+                )
             );
         }
 

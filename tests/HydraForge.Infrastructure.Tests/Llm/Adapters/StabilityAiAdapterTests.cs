@@ -124,9 +124,7 @@ public class StabilityAiAdapterTests
     public void AdapterType_ReturnsStabilityAi()
     {
         var provider = CreateProvider();
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         Assert.Equal(AdapterType.StabilityAi, adapter.AdapterType);
@@ -189,7 +187,10 @@ public class StabilityAiAdapterTests
     [InlineData(ImageSize.Square1024, "1:1")]
     [InlineData(ImageSize.Landscape1792, "16:9")]
     [InlineData(ImageSize.Portrait1024, "9:16")]
-    public async Task GenerateImageAsync_MapsAspectRatioCorrectly(ImageSize size, string expectedRatio)
+    public async Task GenerateImageAsync_MapsAspectRatioCorrectly(
+        ImageSize size,
+        string expectedRatio
+    )
     {
         var bodyHandler = new MultipartBodyHandler(
             HttpStatusCode.OK,
@@ -260,7 +261,10 @@ public class StabilityAiAdapterTests
     public async Task GenerateImageAsync_NonSuccessStatus_ReturnsFailure()
     {
         using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.TooManyRequests, """{"error":"Rate limit exceeded"}""")
+            new MultipartBodyHandler(
+                HttpStatusCode.TooManyRequests,
+                """{"error":"Rate limit exceeded"}"""
+            )
         );
         var provider = CreateProvider();
         var logger = new FakeLogger();
@@ -285,9 +289,7 @@ public class StabilityAiAdapterTests
     [Fact]
     public async Task GenerateImageAsync_EmptyJsonResponse_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
@@ -329,6 +331,40 @@ public class StabilityAiAdapterTests
         await adapter.GenerateImageAsync(request);
 
         Assert.Equal("Bearer decrypted-api-key", authHandler.CapturedAuth);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GenerateImageAsync_CountLessThanOne_ReturnsFailure(int count)
+    {
+        var handler = new CountCapturingMultipartHandler(() =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"image":"SGVsbG8gV29ybGQ="}""",
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            }
+        );
+        using var http = new HttpClient(handler);
+        var provider = CreateProvider();
+        var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
+
+        var request = new ImageRequest(
+            Guid.NewGuid(),
+            "sd3.5-large",
+            "A sunset",
+            ImageSize.Square1024,
+            count
+        );
+
+        var result = await adapter.GenerateImageAsync(request);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("STABILITY_INVALID_COUNT", result.Error.Code);
+        Assert.Null(handler.LastRequest);
     }
 
     [Theory]
@@ -506,9 +542,7 @@ public class StabilityAiAdapterTests
     [Fact]
     public async Task InpaintAsync_NullImageBytes_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
@@ -530,9 +564,7 @@ public class StabilityAiAdapterTests
     [Fact]
     public async Task InpaintAsync_EmptyImageBytes_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
@@ -554,9 +586,7 @@ public class StabilityAiAdapterTests
     [Fact]
     public async Task InpaintAsync_NullMaskBytes_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
@@ -578,9 +608,7 @@ public class StabilityAiAdapterTests
     [Fact]
     public async Task InpaintAsync_EmptyMaskBytes_ReturnsFailure()
     {
-        using var http = new HttpClient(
-            new MultipartBodyHandler(HttpStatusCode.OK, "{}")
-        );
+        using var http = new HttpClient(new MultipartBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
         var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
@@ -617,7 +645,8 @@ public class StabilityAiAdapterTests
         }
     }
 
-    private class CountCapturingMultipartHandler(Func<HttpResponseMessage> responseFactory) : HttpMessageHandler
+    private class CountCapturingMultipartHandler(Func<HttpResponseMessage> responseFactory)
+        : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
 
