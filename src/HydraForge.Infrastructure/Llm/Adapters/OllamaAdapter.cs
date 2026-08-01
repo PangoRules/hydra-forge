@@ -8,8 +8,13 @@ using HydraForge.Application.Llm;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
+using Microsoft.Extensions.Logging;
 
-public sealed class OllamaAdapter(HttpClient http, LlmProvider provider) : ILlmClient
+public sealed class OllamaAdapter(
+    HttpClient http,
+    LlmProvider provider,
+    ILogger<OllamaAdapter> logger
+) : ILlmClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -38,11 +43,14 @@ public sealed class OllamaAdapter(HttpClient http, LlmProvider provider) : ILlmC
                 }),
             ],
             Stream = true,
-            Options = new OllamaOptions
-            {
-                Temperature = request.Temperature,
-                NumPredict = request.MaxOutputTokens,
-            },
+            Options =
+                request.Temperature is null && request.MaxOutputTokens is null
+                    ? null
+                    : new OllamaOptions
+                    {
+                        Temperature = request.Temperature,
+                        NumPredict = request.MaxOutputTokens,
+                    },
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/chat")
@@ -57,6 +65,13 @@ public sealed class OllamaAdapter(HttpClient http, LlmProvider provider) : ILlmC
         );
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = response.StatusCode;
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            logger.LogError(
+                "Ollama API error {StatusCode}: {ResponseBody}",
+                statusCode,
+                responseBody
+            );
             yield return new ChatChunk(null, ChatChunkFinishReason.Error, null);
             yield break;
         }
@@ -202,17 +217,11 @@ public sealed class OllamaAdapter(HttpClient http, LlmProvider provider) : ILlmC
 
     private sealed class OllamaChunkEvent
     {
-        [JsonPropertyName("model")]
-        public string Model { get; set; } = "";
-
         [JsonPropertyName("message")]
         public OllamaMessageContent? Message { get; set; }
 
         [JsonPropertyName("done")]
         public bool Done { get; set; }
-
-        [JsonPropertyName("total_duration")]
-        public long? TotalDuration { get; set; }
 
         [JsonPropertyName("prompt_eval_count")]
         public int? PromptEvalCount { get; set; }

@@ -7,6 +7,7 @@ using HydraForge.Application.Llm;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Llm.Adapters;
+using Microsoft.Extensions.Logging;
 
 public class OllamaAdapterTests
 {
@@ -38,6 +39,30 @@ public class OllamaAdapterTests
         public string Decrypt(string _) => apiKey ?? "decrypted-fake-key";
 
         public string Encrypt(string plaintext) => plaintext;
+    }
+
+    private class FakeLogger : ILogger<OllamaAdapter>
+    {
+        public LoggedError? Error { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter
+        )
+        {
+            if (logLevel == LogLevel.Error)
+                Error = new(formatter(state, exception));
+        }
+
+        public record LoggedError(string Message);
     }
 
     private static MemoryStream NdjsonStream(string ndjsonContent)
@@ -96,7 +121,8 @@ public class OllamaAdapterTests
     {
         var provider = CreateProvider();
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         Assert.Equal(AdapterType.Ollama, adapter.AdapterType);
     }
@@ -106,7 +132,8 @@ public class OllamaAdapterTests
     {
         var provider = CreateProvider();
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var result = adapter.SupportsToolCalling(
             new ProviderModelConfigDto(
@@ -130,7 +157,8 @@ public class OllamaAdapterTests
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
         using var http = new HttpClient(bodyHandler);
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -178,7 +206,8 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new NdjsonStreamHandler(ndjson));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -216,7 +245,8 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new NdjsonStreamHandler(ndjson));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -241,9 +271,15 @@ public class OllamaAdapterTests
     [Fact]
     public async Task StreamChatAsync_NonSuccessResponse_YieldsErrorChunk()
     {
-        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.ServiceUnavailable, ""));
+        using var http = new HttpClient(
+            new JsonBodyHandler(
+                HttpStatusCode.ServiceUnavailable,
+                "{\"error\":\"model not found\"}"
+            )
+        );
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -263,6 +299,35 @@ public class OllamaAdapterTests
 
         Assert.Single(chunks);
         Assert.Equal(ChatChunkFinishReason.Error, chunks[0].FinishReason);
+        Assert.NotNull(logger.Error);
+        Assert.Contains("ServiceUnavailable", logger.Error.Message);
+        Assert.Contains("model not found", logger.Error.Message);
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_NoTemperatureOrMaxTokens_OmitsOptions()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "llama3.2",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.False(doc.RootElement.TryGetProperty("options", out _));
     }
 
     [Fact]
@@ -294,7 +359,8 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var result = await adapter.GetModelsAsync();
 
@@ -314,7 +380,8 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.ServiceUnavailable, ""));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var result = await adapter.GetModelsAsync();
 
@@ -327,7 +394,8 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "not json {{{"));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var result = await adapter.GetModelsAsync();
 
@@ -340,7 +408,8 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, provider);
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
 
         var result = await adapter.GetModelsAsync();
 
