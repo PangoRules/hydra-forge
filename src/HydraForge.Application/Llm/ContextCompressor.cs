@@ -88,12 +88,15 @@ public sealed class ContextCompressor : IContextCompressor
             }
         }
 
+        var combinedContent = string.Join("\n\n", accumulated.Select(b => b.Content));
+        var summaryPromptTokens = TokenEstimator.EstimateTokens(combinedContent);
+
         var userId = Guid.Empty;
         var routeResult = await _router.ResolveAsync(
             AiFeature.MemoryExtraction,
             userId,
             projectId: null,
-            estimatedTokens,
+            summaryPromptTokens,
             ct
         );
 
@@ -110,7 +113,6 @@ public sealed class ContextCompressor : IContextCompressor
 
         var route = routeResult.Value;
         var client = _clientFactory.For(route.Provider!);
-        var combinedContent = string.Join("\n\n", accumulated.Select(b => b.Content));
         var summaryPrompt =
             $"Summarize the following memory blocks into a concise narrative that preserves all key information:\n\n{combinedContent}";
 

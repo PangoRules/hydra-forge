@@ -112,6 +112,81 @@ public class ContextCompressorTests
     }
 
     [Fact]
+    public async Task CompressAsync_RoutesOnSummaryPromptTokens_NotFullContextTokens()
+    {
+        // Regression: routing for the summarization call must use the token count of the
+        // accumulated (to-be-summarized) blocks, not the full pre-compression context —
+        // otherwise a large pinned block alone can push the router into an unnecessary
+        // ContextWindowExceeded/tier-bump for a summarization request that's actually tiny.
+        var mockClient = new Mock<ILlmClient>();
+        var summaryChunks = new List<ChatChunk> { new("Summary.", null, null) };
+        mockClient
+            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(AsyncEnumerableChunkList(summaryChunks));
+
+        var mockFactory = new Mock<ILlmClientFactory>();
+        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "economy-model",
+                "economy-model-name",
+                "Economy",
+                0.001m,
+                4096,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "TestProvider",
+                "https://test.com",
+                "OpenAiCompatible",
+                "Text",
+                "Economy",
+                null,
+                true,
+                DateTime.UtcNow,
+                DateTime.UtcNow
+            ),
+            [],
+            Provider: null
+        );
+
+        // Pinned block: 4000 chars -> 1000 tokens, never accumulated.
+        // Two non-pinned blocks: 400 chars each -> 100 tokens each, both get accumulated.
+        // Full-context tokens = 1200. Summary-prompt tokens (accumulated only, joined with
+        // "\n\n") = (400 + 2 + 400) / 4 = 200. These must differ for the assertion to bite.
+        var blocks = new List<CacheBlock>
+        {
+            new(new string('p', 4000), CacheBlockType.Memory, IsPinned: true),
+            new(new string('x', 400), CacheBlockType.Memory),
+            new(new string('y', 400), CacheBlockType.Memory),
+        };
+
+        var mockRouter = new Mock<IModelRouter>();
+        mockRouter
+            .Setup(r =>
+                r.ResolveAsync(
+                    AiFeature.MemoryExtraction,
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid?>(),
+                    It.Is<int>(tokens => tokens == 200),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+
+        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
+
+        var result = await compressor.CompressAsync(blocks, modelMaxTokens: 1000);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.WasCompressed);
+    }
+
+    [Fact]
     public async Task CompressAsync_PinnedBlocks_Preserved()
     {
         var mockClient = new Mock<ILlmClient>();
