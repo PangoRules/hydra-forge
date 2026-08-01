@@ -1,6 +1,7 @@
 namespace HydraForge.Infrastructure.Llm;
 
 using HydraForge.Application.Llm;
+using HydraForge.Application.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -68,6 +69,10 @@ public static class LlmServiceCollectionExtensions
         );
 
         services.AddSingleton<ILlmClientFactory, LlmClientFactory>();
+
+        services.AddSingleton<IWarnLogger, NullWarnLogger>();
+        services.AddScoped<IRoutingConfigProvider, DbContextRoutingConfigProvider>();
+        services.AddScoped<IModelRouter, ModelRouter>();
 
         return services;
     }
