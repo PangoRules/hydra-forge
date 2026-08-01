@@ -116,16 +116,31 @@ public sealed class ContextCompressor : IContextCompressor
             Temperature: 0.3m
         );
 
-        var summaryBuilder = new System.Text.StringBuilder();
-        await foreach (var chunk in client.StreamChatAsync(chatRequest, ct))
+        string summary;
+        try
         {
-            if (chunk.Delta is not null)
+            var summaryBuilder = new System.Text.StringBuilder();
+            await foreach (var chunk in client.StreamChatAsync(chatRequest, ct))
             {
-                summaryBuilder.Append(chunk.Delta);
+                if (chunk.Delta is not null)
+                {
+                    summaryBuilder.Append(chunk.Delta);
+                }
             }
+            summary = summaryBuilder.ToString();
         }
-
-        var summary = summaryBuilder.ToString();
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                "ContextCompressor: summarization failed ({Provider}/{Model}). Returning uncompressed context. Error: {Error}",
+                route.PrimaryProvider,
+                route.Primary.ModelId,
+                ex.Message
+            );
+            return Result<CompressedContext>.Success(
+                new CompressedContext(blocks, estimatedTokens, WasCompressed: false)
+            );
+        }
 
         var newBlocks = blocks
             .Except(nonPinnedMemoryBlocks)
