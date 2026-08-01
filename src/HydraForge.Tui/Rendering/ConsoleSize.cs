@@ -17,9 +17,13 @@ public static class ConsoleSize
             AnsiConsole.Profile.Width = Console.WindowWidth;
             AnsiConsole.Profile.Height = Console.WindowHeight;
         }
-        catch (IOException)
+        catch (Exception)
         {
-            // Output redirected / no real console attached — keep whatever Profile already has.
+            // Output redirected / no real console attached (headless test runners in
+            // particular) — Console.WindowWidth/Height can throw IOException, or return 0,
+            // which Spectre's own Profile.Width/Height setters then reject with
+            // InvalidOperationException("...must be greater than zero"). Either way, best
+            // effort only: keep whatever Profile already has rather than crash the caller.
         }
     }
 }
