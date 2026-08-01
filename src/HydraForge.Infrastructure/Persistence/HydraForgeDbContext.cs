@@ -329,7 +329,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             "user_token_budgets",
             b =>
             {
-                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.UserId).IsUnique();
             }
         );
 

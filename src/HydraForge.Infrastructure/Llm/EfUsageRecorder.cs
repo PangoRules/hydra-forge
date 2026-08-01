@@ -1,6 +1,5 @@
 namespace HydraForge.Infrastructure.Llm;
 
-using System.Data;
 using HydraForge.Application.Llm;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Infrastructure.Persistence;
@@ -71,42 +70,22 @@ public sealed class EfUsageRecorder : IUsageRecorder
 
     public async Task<int> AccrueTokenUsageAsync(Guid userId, int tokens, CancellationToken ct = default)
     {
-        using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
-        try
-        {
-            var budget = await LoadOrCreateBudgetAsync(userId, ct);
+        var budget = await LoadOrCreateBudgetAsync(userId, ct);
 
-            budget.MonthlyTokenUsed += tokens;
-            await _db.SaveChangesAsync(ct);
+        budget.MonthlyTokenUsed += tokens;
+        await _db.SaveChangesAsync(ct);
 
-            await tx.CommitAsync(ct);
-            return budget.MonthlyTokenUsed;
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+        return budget.MonthlyTokenUsed;
     }
 
     public async Task<int> AccrueImageUsageAsync(Guid userId, int count, CancellationToken ct = default)
     {
-        using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
-        try
-        {
-            var budget = await LoadOrCreateBudgetAsync(userId, ct);
+        var budget = await LoadOrCreateBudgetAsync(userId, ct);
 
-            budget.MonthlyImageUsed += count;
-            await _db.SaveChangesAsync(ct);
+        budget.MonthlyImageUsed += count;
+        await _db.SaveChangesAsync(ct);
 
-            await tx.CommitAsync(ct);
-            return budget.MonthlyImageUsed;
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+        return budget.MonthlyImageUsed;
     }
 
     private async Task<UserTokenBudget> LoadOrCreateBudgetAsync(Guid userId, CancellationToken ct)
@@ -115,24 +94,25 @@ public sealed class EfUsageRecorder : IUsageRecorder
 
         if (budget is null)
         {
+            var periodStart = DateTime.UtcNow;
             budget = new UserTokenBudget
             {
                 UserId = userId,
                 MonthlyTokenBudget = 0,
                 MonthlyTokenUsed = 0,
                 MonthlyImageUsed = 0,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                PeriodStart = periodStart,
+                PeriodEnd = periodStart.AddMonths(1),
             };
             _db.UserTokenBudgets.Add(budget);
         }
         else if (DateTime.UtcNow > budget.PeriodEnd)
         {
-            // Period is [PeriodStart, PeriodEnd) — strict > ensures no double-rollover on same tick
+            var periodStart = DateTime.UtcNow;
             budget.MonthlyTokenUsed = 0;
             budget.MonthlyImageUsed = 0;
-            budget.PeriodStart = DateTime.UtcNow;
-            budget.PeriodEnd = DateTime.UtcNow.AddMonths(1);
+            budget.PeriodStart = periodStart;
+            budget.PeriodEnd = periodStart.AddMonths(1);
         }
 
         return budget;

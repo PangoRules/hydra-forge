@@ -47,7 +47,6 @@ public class EfUsageRecorderTests
         );
 
         await recorder.RecordTokenAsync(input);
-        await context.SaveChangesAsync();
 
         var record = context.TokenUsageRecords.Single(r => r.UserId == input.UserId);
         Assert.Equal(input.UserId, record.UserId);
@@ -87,7 +86,6 @@ public class EfUsageRecorderTests
         );
 
         await recorder.RecordImageAsync(input);
-        await context.SaveChangesAsync();
 
         var record = context.ImageUsageRecords.Single(r => r.UserId == input.UserId);
         Assert.Equal(input.UserId, record.UserId);
@@ -251,7 +249,6 @@ public class EfUsageRecorderTests
         );
 
         await recorder.RecordTokenAsync(input);
-        await context.SaveChangesAsync();
 
         var record = context.TokenUsageRecords.Single(r => r.UserId == input.UserId);
         var expectedCost = (1000 + 500 - 200) * 0.00001m;
