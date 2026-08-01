@@ -331,6 +331,52 @@ public class StabilityAiAdapterTests
         Assert.Equal("Bearer decrypted-api-key", authHandler.CapturedAuth);
     }
 
+    [Theory]
+    [InlineData(2)]
+    [InlineData(4)]
+    public async Task GenerateImageAsync_CountGreaterThanOne_ReturnsMultipleImages(int count)
+    {
+        var callCount = 0;
+        var handler = new CountCapturingMultipartHandler(() =>
+        {
+            callCount++;
+            var index = callCount.ToString();
+            var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"image-{index}"));
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"image":"{{base64}}"}""",
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            };
+        });
+        using var http = new HttpClient(handler);
+        var provider = CreateProvider();
+        var adapter = new StabilityAiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
+
+        var request = new ImageRequest(
+            Guid.NewGuid(),
+            "sd3.5-large",
+            "A sunset",
+            ImageSize.Square1024,
+            count
+        );
+
+        var result = await adapter.GenerateImageAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(count, result.Value.ImageDataUrlsOrKeys.Count);
+        Assert.Equal(count, callCount);
+
+        for (var i = 0; i < count; i++)
+        {
+            var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"image-{i + 1}"));
+            Assert.Equal(expectedBase64, result.Value.ImageDataUrlsOrKeys[i]);
+        }
+    }
+
     [Fact]
     public async Task InpaintAsync_SendsMultipartFormWithImageAndMask()
     {
@@ -568,6 +614,20 @@ public class StabilityAiAdapterTests
                 Content = new StringContent(jsonBody, Encoding.UTF8, "application/json"),
             };
             return Task.FromResult(response);
+        }
+    }
+
+    private class CountCapturingMultipartHandler(Func<HttpResponseMessage> responseFactory) : HttpMessageHandler
+    {
+        public HttpRequestMessage? LastRequest { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken ct
+        )
+        {
+            LastRequest = request;
+            return Task.FromResult(responseFactory());
         }
     }
 }

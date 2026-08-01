@@ -2,7 +2,6 @@ namespace HydraForge.Infrastructure.Llm.Adapters;
 
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Llm;
@@ -35,38 +34,51 @@ public sealed class StabilityAiAdapter(
         var engine = request.ModelId;
         var url = $"{baseUrl}/v2beta/stable-image/generate/{engine}";
 
-        var multipart = new MultipartFormDataContent();
+        var images = new List<string>();
 
-        multipart.Add(new StringContent(request.Prompt), "prompt");
-        multipart.Add(new StringContent(string.Empty), "negative_prompt");
-        multipart.Add(new StringContent(MapAspectRatio(request.Size)), "aspect_ratio");
-        multipart.Add(new StringContent("png"), "output_format");
-        multipart.Add(new StringContent("0"), "seed");
-
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
+        for (var i = 0; i < request.Count; i++)
         {
-            Content = multipart,
-        };
+            var multipart = new MultipartFormDataContent();
 
-        AddAuthHeader(httpRequest);
-        httpRequest.Headers.Accept.ParseAdd("application/json");
+            multipart.Add(new StringContent(request.Prompt), "prompt");
+            multipart.Add(new StringContent(string.Empty), "negative_prompt");
+            multipart.Add(new StringContent(MapAspectRatio(request.Size)), "aspect_ratio");
+            multipart.Add(new StringContent("png"), "output_format");
+            multipart.Add(new StringContent("0"), "seed");
 
-        using var response = await http.SendAsync(httpRequest, ct);
-        if (!response.IsSuccessStatusCode)
-        {
-            var statusCode = response.StatusCode;
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
-            logger.LogError(
-                "StabilityAI API error {StatusCode}: {ResponseBody}",
-                statusCode,
-                responseBody
-            );
-            return Result<GeneratedImage>.Failure(
-                new Error("STABILITY_GENERATE_FAILED", $"StabilityAI image generation failed: {statusCode}")
-            );
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = multipart,
+            };
+
+            AddAuthHeader(httpRequest);
+            httpRequest.Headers.Accept.ParseAdd("application/json");
+
+            using var response = await http.SendAsync(httpRequest, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var statusCode = response.StatusCode;
+                var responseBody = await response.Content.ReadAsStringAsync(ct);
+                logger.LogError(
+                    "StabilityAI API error {StatusCode}: {ResponseBody}",
+                    statusCode,
+                    responseBody
+                );
+                return Result<GeneratedImage>.Failure(
+                    new Error("STABILITY_GENERATE_FAILED", $"StabilityAI image generation failed: {statusCode}")
+                );
+            }
+
+            var imageResult = await ParseSingleImageResponseAsync(response, ct);
+            if (!imageResult.IsSuccess)
+            {
+                return imageResult;
+            }
+
+            images.AddRange(imageResult.Value.ImageDataUrlsOrKeys);
         }
 
-        return await ParseImageResponseAsync(response, ct);
+        return Result<GeneratedImage>.Success(new GeneratedImage(images, "generated"));
     }
 
     public async Task<Result<GeneratedImage>> InpaintAsync(
@@ -127,7 +139,7 @@ public sealed class StabilityAiAdapter(
             );
         }
 
-        return await ParseImageResponseAsync(response, ct);
+        return await ParseSingleImageResponseAsync(response, ct);
     }
 
     private void AddAuthHeader(HttpRequestMessage httpRequest)
@@ -148,16 +160,7 @@ public sealed class StabilityAiAdapter(
             _ => "1:1",
         };
 
-    private static string MapResolution(ImageSize size) =>
-        size switch
-        {
-            ImageSize.Square1024 => "1024x1024",
-            ImageSize.Landscape1792 => "1792x1024",
-            ImageSize.Portrait1024 => "1024x1792",
-            _ => "1024x1024",
-        };
-
-    private async Task<Result<GeneratedImage>> ParseImageResponseAsync(
+    private async Task<Result<GeneratedImage>> ParseSingleImageResponseAsync(
         HttpResponseMessage response,
         CancellationToken ct
     )
