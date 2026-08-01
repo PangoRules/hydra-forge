@@ -53,7 +53,7 @@ public class LockScreen(AppState appState, Func<Task<bool>> healthCheck) : IScre
     {
         if (key.Key == ConsoleKey.Q)
         {
-            var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+            var confirm = QuitConfirm.Show();
             if (confirm)
             {
                 _retryCts?.Cancel();

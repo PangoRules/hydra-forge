@@ -317,7 +317,7 @@ public class BoardScreen(
                 break;
 
             case ConsoleKey.Q:
-                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                var confirm = QuitConfirm.Show();
                 if (confirm)
                     Environment.Exit(0);
                 break;

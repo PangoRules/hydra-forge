@@ -143,7 +143,11 @@ public class SpecViewerScreen(
             rows.Add(
                 new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}{statusBadge}")
             );
-            rows.Add(new Markup($"   [grey]v{doc.Version} — {doc.UpdatedAt:yyyy-MM-dd HH:mm}[/]"));
+            rows.Add(
+                new Markup(
+                    $"   [grey]v{doc.Version} — {DateFormatting.FormatTimestamp(doc.UpdatedAt)}[/]"
+                )
+            );
         }
 
         if (window.HasMoreBelow)
@@ -211,7 +215,7 @@ public class SpecViewerScreen(
             .Select(v =>
                 (IRenderable)
                     new Markup(
-                        $"v{v.Version} [grey]{v.CreatedAt:yyyy-MM-dd HH:mm}[/]\n"
+                        $"v{v.Version} [grey]{DateFormatting.FormatTimestamp(v.CreatedAt)}[/]\n"
                             + $"[grey]{Markup.Escape(v.CreatedByUserId.ToString()[..8])}[/]"
                     )
             )
@@ -296,7 +300,7 @@ public class SpecViewerScreen(
                 break;
 
             case ConsoleKey.Q:
-                if (AnsiConsole.Confirm("Quit HydraForge?"))
+                if (QuitConfirm.Show())
                     Environment.Exit(0);
                 break;
 
@@ -556,7 +560,7 @@ public class SpecViewerScreen(
         }
 
         var choices = _versions
-            .Select(v => $"v{v.Version} — {v.CreatedAt:yyyy-MM-dd HH:mm}")
+            .Select(v => $"v{v.Version} — {DateFormatting.FormatTimestamp(v.CreatedAt)}")
             .ToList();
         var idx = await ListPrompt.Show("Restore version:", choices, renderBackdrop: RenderAsync);
         if (!idx.HasValue)

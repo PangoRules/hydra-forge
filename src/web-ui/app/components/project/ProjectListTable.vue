@@ -4,6 +4,7 @@ import type { components } from '~/types/api'
 import DataTable from '~/components/shared/DataTable.vue'
 import ProjectCard from '~/components/project/ProjectCard.vue'
 import { formatDateOnly } from '~/lib/date'
+import { displayRole } from '~/lib/member-role'
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 
@@ -31,14 +32,6 @@ const columns: TableColumn<ProjectListResponse>[] = [
   { accessorKey: 'createdAt', header: 'Created' },
   { id: 'actions', header: '' }
 ]
-
-function displayRole(role: number | string | null): string {
-  if (role === null) return '—'
-  if (typeof role === 'string') return role
-  // MemberRole enum: Owner=0, Member=1 — but check the actual enum values
-  const roles: Record<number, string> = { 0: 'Owner', 1: 'Member' }
-  return roles[role] ?? String(role)
-}
 </script>
 
 <template>

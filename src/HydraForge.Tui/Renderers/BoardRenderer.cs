@@ -210,14 +210,7 @@ public class BoardRenderer
     private static Markup ScrollIndicator(string text) => new($"[grey italic]{text}[/]");
 
     private static string TypeBadge(string type) =>
-        type switch
-        {
-            "Task" => "[cyan1]T[/]",
-            "Issue" => "[red]I[/]",
-            "Goal" => "[yellow]G[/]",
-            "Idea" => "[green]D[/]",
-            _ => "[grey]?[/]",
-        };
+        $"[{CardTypeMapper.ToColorName(type)}]{CardTypeMapper.ToShortDisplayString(type)}[/]";
 
     // Parent/children/due-date lines are conditional — most cards show 0 or 1 of them,
     // keeping the common case cheap. CardBoxHeight must stay in sync with this count.

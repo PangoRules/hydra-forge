@@ -132,7 +132,7 @@ public class ProjectListScreen(
                 $"{nameMarkup}{archivedBadge}",
                 p.MemberCount.ToString(),
                 GetRoleString(p.MyRole),
-                FormatRelative(p.CreatedAt),
+                DateFormatting.FormatLongRelative(p.CreatedAt),
                 p.ArchivedAt != null ? "[grey]Yes[/]" : ""
             );
         }
@@ -348,7 +348,7 @@ public class ProjectListScreen(
                 break;
 
             case ConsoleKey.Q:
-                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                var confirm = QuitConfirm.Show();
                 if (confirm)
                     Environment.Exit(0);
                 break;
@@ -479,20 +479,6 @@ public class ProjectListScreen(
         {
             errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
-    }
-
-    private static string FormatRelative(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt;
-        if (diff.TotalDays > 365)
-            return $"{(int)(diff.TotalDays / 365)}y ago";
-        if (diff.TotalDays > 30)
-            return $"{(int)(diff.TotalDays / 30)}mo ago";
-        if (diff.TotalDays >= 1)
-            return $"{(int)diff.TotalDays}d ago";
-        if (diff.TotalHours >= 1)
-            return $"{(int)diff.TotalHours}h ago";
-        return "just now";
     }
 
     private static string GetRoleString(MemberRole? role) => role?.ToString() ?? "—";

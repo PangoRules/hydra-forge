@@ -31,17 +31,32 @@ public static class CardTypeMapper
         };
     }
 
-    public static string ToShortDisplayString(CardType cardType)
-    {
-        return cardType switch
+    // Single-char badge for tight board-tile space — Idea gets "D" (i-D-ea) since
+    // "I" is already taken by Issue.
+    public static string ToShortDisplayString(string displayString) =>
+        displayString switch
         {
-            CardType.Task => "T",
-            CardType.Issue => "I",
-            CardType.Idea => "ID",
-            CardType.Goal => "G",
-            _ => cardType.ToString()[0].ToString().ToUpper(),
+            "Task" => "T",
+            "Issue" => "I",
+            "Goal" => "G",
+            "Idea" => "D",
+            _ => "?",
         };
-    }
+
+    public static string ToShortDisplayString(CardType cardType) =>
+        ToShortDisplayString(ToDisplayString(cardType));
+
+    public static string ToColorName(string displayString) =>
+        displayString switch
+        {
+            "Task" => "cyan1",
+            "Issue" => "red",
+            "Goal" => "yellow",
+            "Idea" => "green",
+            _ => "grey",
+        };
+
+    public static string ToColorName(CardType cardType) => ToColorName(ToDisplayString(cardType));
 
     // Mirrors CardModal.vue's SPEC_CARD_TYPES/PLAN_CARD_TYPES/CARD_TYPE_TO_DOC_TYPE —
     // keep in sync with that file if the card-type doc rules change (see D-44).
