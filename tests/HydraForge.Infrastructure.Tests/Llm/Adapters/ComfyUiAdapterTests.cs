@@ -114,26 +114,6 @@ public class ComfyUiAdapterTests
         }
     }
 
-    private class AuthCaptureHandler : HttpMessageHandler
-    {
-        public string? CapturedAuth { get; private set; }
-        private readonly HttpResponseMessage _response;
-
-        public AuthCaptureHandler(HttpResponseMessage response)
-        {
-            _response = response;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken ct
-        )
-        {
-            CapturedAuth = request.Headers.Authorization?.ToString();
-            return Task.FromResult(_response);
-        }
-    }
-
     [Fact]
     public void AdapterType_ReturnsProviderAdapterType_ComfyUi()
     {
@@ -244,6 +224,37 @@ public class ComfyUiAdapterTests
 
         Assert.True(prompt.TryGetProperty("7", out var ksamplerNode));
         Assert.Equal("KSampler", ksamplerNode.GetProperty("class_type").GetString());
+
+        Assert.True(prompt.TryGetProperty("4", out var node4));
+        var node4Clip = node4.GetProperty("inputs").GetProperty("clip");
+        Assert.Equal(JsonValueKind.Array, node4Clip.ValueKind);
+        Assert.Equal("3", node4Clip[0].GetString());
+        Assert.Equal(0, node4Clip[1].GetInt32());
+
+        Assert.True(prompt.TryGetProperty("5", out var node5));
+        var node5Clip = node5.GetProperty("inputs").GetProperty("clip");
+        Assert.Equal(JsonValueKind.Array, node5Clip.ValueKind);
+        Assert.Equal("3", node5Clip[0].GetString());
+        Assert.Equal(0, node5Clip[1].GetInt32());
+
+        Assert.True(prompt.TryGetProperty("7", out var node7));
+        var node7Model = node7.GetProperty("inputs").GetProperty("model");
+        Assert.Equal(JsonValueKind.Array, node7Model.ValueKind);
+        Assert.Equal("3", node7Model[0].GetString());
+        var node7Positive = node7.GetProperty("inputs").GetProperty("positive");
+        Assert.Equal(JsonValueKind.Array, node7Positive.ValueKind);
+        Assert.Equal("4", node7Positive[0].GetString());
+        var node7Negative = node7.GetProperty("inputs").GetProperty("negative");
+        Assert.Equal(JsonValueKind.Array, node7Negative.ValueKind);
+        Assert.Equal("5", node7Negative[0].GetString());
+
+        Assert.True(prompt.TryGetProperty("8", out var node8));
+        var node8Samples = node8.GetProperty("inputs").GetProperty("samples");
+        Assert.Equal(JsonValueKind.Array, node8Samples.ValueKind);
+        Assert.Equal("7", node8Samples[0].GetString());
+        var node8Vae = node8.GetProperty("inputs").GetProperty("vae");
+        Assert.Equal(JsonValueKind.Array, node8Vae.ValueKind);
+        Assert.Equal("3", node8Vae[0].GetString());
     }
 
     [Fact]
@@ -539,7 +550,8 @@ public class ComfyUiAdapterTests
             "Remove the background",
             new byte[] { 0x89, 0x50, 0x4E, 0x47 },
             new byte[] { 0x89, 0x50, 0x4E, 0x47 },
-            ImageSize.Square1024
+            ImageSize.Square1024,
+            2
         );
 
         var result = await adapter.InpaintAsync(request);
@@ -549,5 +561,106 @@ public class ComfyUiAdapterTests
         var imageUploadRequest = queue.FirstRequest!;
         Assert.Equal(HttpMethod.Post, imageUploadRequest.Method);
         Assert.Contains("/upload/image", imageUploadRequest.RequestUri?.PathAndQuery);
+
+        var workflowRequest = queue.AllRequests[2];
+        Assert.Equal(HttpMethod.Post, workflowRequest.Method);
+        Assert.Contains("/prompt", workflowRequest.RequestUri?.PathAndQuery);
+
+        var workflowBody = await workflowRequest.Content!.ReadAsStringAsync();
+        var workflowDoc = JsonDocument.Parse(workflowBody);
+        var workflow = workflowDoc.RootElement.GetProperty("prompt");
+
+        Assert.True(workflow.TryGetProperty("3", out var ckpt));
+        Assert.Equal("CheckpointLoaderSimple", ckpt.GetProperty("class_type").GetString());
+
+        Assert.True(workflow.TryGetProperty("4", out var loadImage));
+        Assert.Equal("LoadImage", loadImage.GetProperty("class_type").GetString());
+        Assert.Equal("image.png", loadImage.GetProperty("inputs").GetProperty("image").GetString());
+
+        Assert.True(workflow.TryGetProperty("14", out var loadMask));
+        Assert.Equal("LoadImage", loadMask.GetProperty("class_type").GetString());
+        Assert.Equal("mask.png", loadMask.GetProperty("inputs").GetProperty("image").GetString());
+
+        Assert.True(workflow.TryGetProperty("7", out var vaeEncode));
+        Assert.Equal("VAEEncodeForInpaint", vaeEncode.GetProperty("class_type").GetString());
+        var pixels = vaeEncode.GetProperty("inputs").GetProperty("pixels");
+        Assert.Equal(JsonValueKind.Array, pixels.ValueKind);
+        Assert.Equal("4", pixels[0].GetString());
+        var mask = vaeEncode.GetProperty("inputs").GetProperty("mask");
+        Assert.Equal(JsonValueKind.Array, mask.ValueKind);
+        Assert.Equal("14", mask[0].GetString());
+
+        Assert.True(workflow.TryGetProperty("11", out var ksampler));
+        Assert.Equal("KSampler", ksampler.GetProperty("class_type").GetString());
+        var ksamplerPositive = ksampler.GetProperty("inputs").GetProperty("positive");
+        Assert.Equal(JsonValueKind.Array, ksamplerPositive.ValueKind);
+        Assert.Equal("5", ksamplerPositive[0].GetString());
+        var ksamplerNegative = ksampler.GetProperty("inputs").GetProperty("negative");
+        Assert.Equal(JsonValueKind.Array, ksamplerNegative.ValueKind);
+        Assert.Equal("6", ksamplerNegative[0].GetString());
+        var ksamplerLatent = ksampler.GetProperty("inputs").GetProperty("latent");
+        Assert.Equal(JsonValueKind.Array, ksamplerLatent.ValueKind);
+        Assert.Equal("7", ksamplerLatent[0].GetString());
+
+    }
+
+    [Fact]
+    public async Task GenerateImageAsync_SetsBatchSizeFromCount()
+    {
+        var queue = new QueueHandler();
+
+        queue.Enqueue(_ =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"prompt_id":"batch-prompt-id"}""",
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            };
+        });
+
+        queue.Enqueue(_ =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"batch-prompt-id":{"outputs":{"9":{"images":[{"filename":"test.png","subfolder":"","type":"output"}]}}}}""",
+                    Encoding.UTF8,
+                    "application/json"
+                ),
+            };
+        });
+
+        queue.Enqueue(_ =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(new byte[] { 0x89, 0x50, 0x4E, 0x47 }),
+            };
+        });
+
+        using var http = new HttpClient(queue);
+        var provider = CreateProvider();
+        var adapter = new ComfyUiAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
+
+        var request = new ImageRequest(
+            Guid.NewGuid(),
+            "sd_xl_base.safetensors",
+            "A beautiful sunset",
+            ImageSize.Square1024,
+            4
+        );
+
+        await adapter.GenerateImageAsync(request);
+
+        Assert.NotNull(queue.FirstRequest);
+        var bodyContent = await queue.FirstRequest.Content!.ReadAsStringAsync();
+        var doc = JsonDocument.Parse(bodyContent);
+        var prompt = doc.RootElement.GetProperty("prompt");
+
+        Assert.True(prompt.TryGetProperty("6", out var latentNode));
+        Assert.Equal(4, latentNode.GetProperty("inputs").GetProperty("batch_size").GetInt32());
     }
 }

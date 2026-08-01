@@ -1,9 +1,7 @@
 namespace HydraForge.Infrastructure.Llm.Adapters;
 
-using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Llm;
@@ -35,7 +33,7 @@ public sealed class ComfyUiAdapter(
         var baseUrl = provider.BaseUrl.TrimEnd('/');
         var (width, height) = MapSize(request.Size);
 
-        var workflow = BuildTextToImageWorkflow(request.ModelId, request.Prompt, width, height);
+        var workflow = BuildTextToImageWorkflow(request.ModelId, request.Prompt, width, height, request.Count);
 
         var submitResult = await SubmitPromptAsync(baseUrl, workflow, ct);
         if (submitResult.IsFailure)
@@ -92,7 +90,8 @@ public sealed class ComfyUiAdapter(
             imageUpload.Value.Name,
             imageUpload.Value.Subfolder,
             maskUpload.Value.Name,
-            maskUpload.Value.Subfolder
+            maskUpload.Value.Subfolder,
+            request.Count
         );
 
         var submitResult = await SubmitPromptAsync(baseUrl, workflow, ct);
@@ -209,30 +208,43 @@ public sealed class ComfyUiAdapter(
             );
             AddAuthHeader(historyRequest);
 
-            using var historyResponse = await http.SendAsync(historyRequest, linkedCts.Token);
-            if (!historyResponse.IsSuccessStatusCode)
-            {
-                var body = await historyResponse.Content.ReadAsStringAsync(linkedCts.Token);
-                logger.LogError(
-                    "ComfyUI history request failed {StatusCode}: {Body}",
-                    historyResponse.StatusCode,
-                    body
-                );
-                return Result<ComfyUiHistoryResponse>.Failure(
-                    new Error(
-                        "COMFYUI_HISTORY_FAILED",
-                        $"ComfyUI history request failed: {historyResponse.StatusCode}"
-                    )
-                );
-            }
-
             ComfyUiHistoryResponse? history;
             try
             {
+                using var historyResponse = await http.SendAsync(historyRequest, linkedCts.Token);
+                if (!historyResponse.IsSuccessStatusCode)
+                {
+                    var body = await historyResponse.Content.ReadAsStringAsync(linkedCts.Token);
+                    logger.LogError(
+                        "ComfyUI history request failed {StatusCode}: {Body}",
+                        historyResponse.StatusCode,
+                        body
+                    );
+                    return Result<ComfyUiHistoryResponse>.Failure(
+                        new Error(
+                            "COMFYUI_HISTORY_FAILED",
+                            $"ComfyUI history request failed: {historyResponse.StatusCode}"
+                        )
+                    );
+                }
+
                 history = await historyResponse.Content.ReadFromJsonAsync<ComfyUiHistoryResponse>(
                     JsonOptions,
                     linkedCts.Token
                 );
+            }
+            catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
+            {
+                return Result<ComfyUiHistoryResponse>.Failure(
+                    new Error(
+                        "COMFYUI_HISTORY_TIMEOUT",
+                        "ComfyUI image generation timed out after 5 minutes."
+                    )
+                );
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (JsonException ex)
             {
@@ -264,7 +276,7 @@ public sealed class ComfyUiAdapter(
                 );
             }
 
-            if (promptHistory.Status?.Executed == true || promptHistory.Outputs.Count > 0)
+            if (promptHistory.Status?.Completed == true || promptHistory.Outputs.Count > 0)
             {
                 return Result<ComfyUiHistoryResponse>.Success(history);
             }
@@ -414,7 +426,8 @@ public sealed class ComfyUiAdapter(
         string modelId,
         string prompt,
         int width,
-        int height
+        int height,
+        int batchSize
     )
     {
         var workflow = new Dictionary<string, object>();
@@ -431,7 +444,7 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["text"] = prompt,
-                ["clip"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["clip"] = new object[] { "3", 0 },
             },
         };
 
@@ -441,7 +454,7 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["text"] = "bad quality",
-                ["clip"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["clip"] = new object[] { "3", 0 },
             },
         };
 
@@ -450,7 +463,7 @@ public sealed class ComfyUiAdapter(
             ["class_type"] = "EmptyLatentImage",
             ["inputs"] = new Dictionary<string, object>
             {
-                ["batch_size"] = 1,
+                ["batch_size"] = batchSize,
                 ["height"] = height,
                 ["width"] = width,
             },
@@ -463,9 +476,9 @@ public sealed class ComfyUiAdapter(
             {
                 ["cfg"] = 8.0,
                 ["denoise"] = 1.0,
-                ["model"] = new Dictionary<string, object> { ["node_id"] = "3" },
-                ["negative"] = new Dictionary<string, object> { ["node_id"] = "5" },
-                ["positive"] = new Dictionary<string, object> { ["node_id"] = "4" },
+                ["model"] = new object[] { "3", 0 },
+                ["negative"] = new object[] { "5", 0 },
+                ["positive"] = new object[] { "4", 0 },
                 ["seed"] = 0,
                 ["steps"] = 20,
                 ["sampler_name"] = "euler",
@@ -477,8 +490,8 @@ public sealed class ComfyUiAdapter(
             ["class_type"] = "VAEDecode",
             ["inputs"] = new Dictionary<string, object>
             {
-                ["samples"] = new Dictionary<string, object> { ["node_id"] = "7" },
-                ["vae"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["samples"] = new object[] { "7", 0 },
+                ["vae"] = new object[] { "3", 0 },
             },
         };
 
@@ -488,7 +501,7 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["filename_prefix"] = "hydraforge",
-                ["images"] = new Dictionary<string, object> { ["node_id"] = "8" },
+                ["images"] = new object[] { "8", 0 },
             },
         };
 
@@ -503,7 +516,8 @@ public sealed class ComfyUiAdapter(
         string imageName,
         string imageSubfolder,
         string maskName,
-        string maskSubfolder
+        string maskSubfolder,
+        int batchSize
     )
     {
         var workflow = new Dictionary<string, object>();
@@ -517,7 +531,7 @@ public sealed class ComfyUiAdapter(
         workflow["4"] = new Dictionary<string, object>
         {
             ["class_type"] = "LoadImage",
-            ["inputs"] = new Dictionary<string, object> { ["image"] = $"{imageName}:{maskName}" },
+            ["inputs"] = new Dictionary<string, object> { ["image"] = imageName },
         };
 
         workflow["5"] = new Dictionary<string, object>
@@ -526,7 +540,7 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["text"] = prompt,
-                ["clip"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["clip"] = new object[] { "3", 0 },
             },
         };
 
@@ -536,7 +550,7 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["text"] = "bad quality",
-                ["clip"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["clip"] = new object[] { "3", 0 },
             },
         };
 
@@ -545,22 +559,10 @@ public sealed class ComfyUiAdapter(
             ["class_type"] = "VAEEncodeForInpaint",
             ["inputs"] = new Dictionary<string, object>
             {
-                ["bbox"] = new Dictionary<string, object> { ["node_id"] = "4" },
-                ["conditioning"] = new Dictionary<string, object> { ["node_id"] = "5" },
-                ["latent"] = new Dictionary<string, object> { ["node_id"] = "10" },
-                ["mask"] = new Dictionary<string, object> { ["node_id"] = "4" },
-                ["vae"] = new Dictionary<string, object> { ["node_id"] = "3" },
-            },
-        };
-
-        workflow["10"] = new Dictionary<string, object>
-        {
-            ["class_type"] = "EmptyLatentImage",
-            ["inputs"] = new Dictionary<string, object>
-            {
-                ["batch_size"] = 1,
-                ["height"] = height,
-                ["width"] = width,
+                ["pixels"] = new object[] { "4", 0 },
+                ["vae"] = new object[] { "3", 0 },
+                ["mask"] = new object[] { "14", 0 },
+                ["grow_mask_by"] = 6,
             },
         };
 
@@ -571,9 +573,10 @@ public sealed class ComfyUiAdapter(
             {
                 ["cfg"] = 8.0,
                 ["denoise"] = 0.9,
-                ["model"] = new Dictionary<string, object> { ["node_id"] = "3" },
-                ["negative"] = new Dictionary<string, object> { ["node_id"] = "6" },
-                ["positive"] = new Dictionary<string, object> { ["node_id"] = "7" },
+                ["latent"] = new object[] { "7", 0 },
+                ["model"] = new object[] { "3", 0 },
+                ["negative"] = new object[] { "6", 0 },
+                ["positive"] = new object[] { "5", 0 },
                 ["seed"] = 0,
                 ["steps"] = 20,
                 ["sampler_name"] = "euler",
@@ -585,8 +588,8 @@ public sealed class ComfyUiAdapter(
             ["class_type"] = "VAEDecode",
             ["inputs"] = new Dictionary<string, object>
             {
-                ["samples"] = new Dictionary<string, object> { ["node_id"] = "11" },
-                ["vae"] = new Dictionary<string, object> { ["node_id"] = "3" },
+                ["samples"] = new object[] { "11", 0 },
+                ["vae"] = new object[] { "3", 0 },
             },
         };
 
@@ -596,8 +599,14 @@ public sealed class ComfyUiAdapter(
             ["inputs"] = new Dictionary<string, object>
             {
                 ["filename_prefix"] = "hydraforge_inpaint",
-                ["images"] = new Dictionary<string, object> { ["node_id"] = "12" },
+                ["images"] = new object[] { "12", 0 },
             },
+        };
+
+        workflow["14"] = new Dictionary<string, object>
+        {
+            ["class_type"] = "LoadImage",
+            ["inputs"] = new Dictionary<string, object> { ["image"] = maskName },
         };
 
         return workflow;
@@ -625,8 +634,8 @@ public sealed class ComfyUiAdapter(
         [JsonPropertyName("error")]
         public ComfyUiError? Error { get; set; }
 
-        [JsonPropertyName("executing")]
-        public bool Executed { get; set; }
+        [JsonPropertyName("completed")]
+        public bool Completed { get; set; }
     }
 
     private sealed class ComfyUiError
