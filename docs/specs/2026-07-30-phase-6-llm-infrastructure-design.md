@@ -295,6 +295,10 @@ public interface ILlmClientFactory
     ILlmClient For(LlmProvider provider);
     IImageClient ImageFor(LlmProvider provider);
     IEmbeddingClient EmbeddingFor(LlmProvider provider);
+
+    /// <summary>Evicts cached client instances for a provider (e.g. after config update/deletion).
+    /// Next For/ImageFor/EmbeddingFor call creates a fresh instance.</summary>
+    void Invalidate(Guid providerId);
 }
 ```
 
