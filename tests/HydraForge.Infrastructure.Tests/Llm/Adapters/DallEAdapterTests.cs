@@ -7,6 +7,7 @@ using HydraForge.Application.Llm;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Llm.Adapters;
+using Microsoft.Extensions.Logging;
 
 public class DallEAdapterTests
 {
@@ -38,6 +39,30 @@ public class DallEAdapterTests
         public string Decrypt(string _) => apiKey ?? "decrypted-fake-key";
 
         public string Encrypt(string plaintext) => plaintext;
+    }
+
+    private class FakeLogger : ILogger<DallEAdapter>
+    {
+        public LoggedError? Error { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter
+        )
+        {
+            if (logLevel == LogLevel.Error)
+                Error = new(formatter(state, exception));
+        }
+
+        public record LoggedError(string Message);
     }
 
     private class JsonBodyHandler(HttpStatusCode statusCode, string jsonBody) : HttpMessageHandler
@@ -111,7 +136,7 @@ public class DallEAdapterTests
     {
         var provider = CreateProvider();
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         Assert.Equal(AdapterType.DallE, adapter.AdapterType);
     }
@@ -122,7 +147,12 @@ public class DallEAdapterTests
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, """{"data":[]}""");
         using var http = new HttpClient(bodyHandler);
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault("test-key"), provider);
+        var adapter = new DallEAdapter(
+            http,
+            new FakeKeyVault("test-key"),
+            provider,
+            new FakeLogger()
+        );
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -152,7 +182,7 @@ public class DallEAdapterTests
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, """{"data":[]}""");
         using var http = new HttpClient(bodyHandler);
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(Guid.NewGuid(), "dall-e-3", "prompt", size, 1);
         await adapter.GenerateImageAsync(request);
@@ -178,7 +208,7 @@ public class DallEAdapterTests
 
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -214,7 +244,7 @@ public class DallEAdapterTests
 
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -236,9 +266,13 @@ public class DallEAdapterTests
     [Fact]
     public async Task GenerateImageAsync_NonSuccessStatus_ReturnsFailure()
     {
-        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.TooManyRequests, ""));
+        var errorBody = """{"error":{"message":"Rate limit exceeded"}}""";
+        using var http = new HttpClient(
+            new JsonBodyHandler(HttpStatusCode.TooManyRequests, errorBody)
+        );
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var logger = new FakeLogger();
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, logger);
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -252,6 +286,9 @@ public class DallEAdapterTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("DALLE_GENERATE_FAILED", result.Error.Code);
+        Assert.NotNull(logger.Error);
+        Assert.Contains("TooManyRequests", logger.Error.Message);
+        Assert.Contains("Rate limit exceeded", logger.Error.Message);
     }
 
     [Fact]
@@ -259,7 +296,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "not json {{{"));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -280,7 +317,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, """{"data":[]}"""));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -297,12 +334,39 @@ public class DallEAdapterTests
     }
 
     [Fact]
+    public async Task GenerateImageAsync_DataItemsWithoutUrlOrB64Json_ReturnsFailure()
+    {
+        var json = """{"data":[{"revised_prompt":"A cat, revised"}]}""";
+        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
+        var provider = CreateProvider();
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
+
+        var request = new ImageRequest(
+            Guid.NewGuid(),
+            "dall-e-3",
+            "A cat",
+            ImageSize.Square1024,
+            1
+        );
+
+        var result = await adapter.GenerateImageAsync(request);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("DALLE_NO_IMAGE_DATA", result.Error.Code);
+    }
+
+    [Fact]
     public async Task GenerateImageAsync_ApiKeyDecryptedAndSent()
     {
         var authHandler = new AuthCaptureHandler("""{"data":[]}""");
         using var http = new HttpClient(authHandler);
         var provider = CreateProvider("https://api.openai.com", "encrypted-cipher");
-        var adapter = new DallEAdapter(http, new FakeKeyVault("decrypted-api-key"), provider);
+        var adapter = new DallEAdapter(
+            http,
+            new FakeKeyVault("decrypted-api-key"),
+            provider,
+            new FakeLogger()
+        );
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -323,7 +387,7 @@ public class DallEAdapterTests
         var authHandler = new AuthCaptureHandler("""{"data":[]}""");
         using var http = new HttpClient(authHandler);
         var provider = CreateProvider("https://api.openai.com", null);
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new ImageRequest(
             Guid.NewGuid(),
@@ -348,7 +412,7 @@ public class DallEAdapterTests
         var multipartHandler = new MultipartBodyHandler(HttpStatusCode.OK, jsonResponse);
         using var http = new HttpClient(multipartHandler);
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var imageBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
         var maskBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
@@ -403,7 +467,7 @@ public class DallEAdapterTests
         );
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new InpaintRequest(
             Guid.NewGuid(),
@@ -425,9 +489,11 @@ public class DallEAdapterTests
     [Fact]
     public async Task InpaintAsync_NonSuccessStatus_ReturnsFailure()
     {
-        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.BadRequest, ""));
+        var errorBody = """{"error":{"message":"Invalid mask dimensions"}}""";
+        using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.BadRequest, errorBody));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var logger = new FakeLogger();
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, logger);
 
         var request = new InpaintRequest(
             Guid.NewGuid(),
@@ -442,6 +508,9 @@ public class DallEAdapterTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("DALLE_INPAINT_FAILED", result.Error.Code);
+        Assert.NotNull(logger.Error);
+        Assert.Contains("BadRequest", logger.Error.Message);
+        Assert.Contains("Invalid mask dimensions", logger.Error.Message);
     }
 
     [Fact]
@@ -449,7 +518,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new InpaintRequest(
             Guid.NewGuid(),
@@ -471,7 +540,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new InpaintRequest(
             Guid.NewGuid(),
@@ -493,7 +562,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new InpaintRequest(
             Guid.NewGuid(),
@@ -515,7 +584,7 @@ public class DallEAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new DallEAdapter(http, new FakeKeyVault(), provider, new FakeLogger());
 
         var request = new InpaintRequest(
             Guid.NewGuid(),

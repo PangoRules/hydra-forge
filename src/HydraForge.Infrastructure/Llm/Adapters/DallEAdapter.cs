@@ -8,9 +8,14 @@ using HydraForge.Application.Llm;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
+using Microsoft.Extensions.Logging;
 
-public sealed class DallEAdapter(HttpClient http, IKeyVault keyVault, LlmProvider provider)
-    : IImageClient
+public sealed class DallEAdapter(
+    HttpClient http,
+    IKeyVault keyVault,
+    LlmProvider provider,
+    ILogger<DallEAdapter> logger
+) : IImageClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -46,11 +51,15 @@ public sealed class DallEAdapter(HttpClient http, IKeyVault keyVault, LlmProvide
         using var response = await http.SendAsync(httpRequest, ct);
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = response.StatusCode;
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            logger.LogError(
+                "DallE API error {StatusCode}: {ResponseBody}",
+                statusCode,
+                responseBody
+            );
             return Result<GeneratedImage>.Failure(
-                new Error(
-                    "DALLE_GENERATE_FAILED",
-                    $"DallE image generation failed: {response.StatusCode}"
-                )
+                new Error("DALLE_GENERATE_FAILED", $"DallE image generation failed: {statusCode}")
             );
         }
 
@@ -103,8 +112,15 @@ public sealed class DallEAdapter(HttpClient http, IKeyVault keyVault, LlmProvide
         using var response = await http.SendAsync(httpRequest, ct);
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = response.StatusCode;
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            logger.LogError(
+                "DallE API error {StatusCode}: {ResponseBody}",
+                statusCode,
+                responseBody
+            );
             return Result<GeneratedImage>.Failure(
-                new Error("DALLE_INPAINT_FAILED", $"DallE inpaint failed: {response.StatusCode}")
+                new Error("DALLE_INPAINT_FAILED", $"DallE inpaint failed: {statusCode}")
             );
         }
 
