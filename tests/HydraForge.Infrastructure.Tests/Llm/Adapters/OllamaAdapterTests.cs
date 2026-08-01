@@ -96,7 +96,7 @@ public class OllamaAdapterTests
     {
         var provider = CreateProvider();
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         Assert.Equal(AdapterType.Ollama, adapter.AdapterType);
     }
@@ -106,7 +106,7 @@ public class OllamaAdapterTests
     {
         var provider = CreateProvider();
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var result = adapter.SupportsToolCalling(
             new ProviderModelConfigDto(
@@ -130,7 +130,7 @@ public class OllamaAdapterTests
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
         using var http = new HttpClient(bodyHandler);
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -148,8 +148,14 @@ public class OllamaAdapterTests
         var doc = JsonDocument.Parse(bodyHandler.LastBody);
         Assert.Equal("llama3.2", doc.RootElement.GetProperty("model").GetString());
         Assert.True(doc.RootElement.GetProperty("stream").GetBoolean());
-        Assert.Equal(2048, doc.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
-        Assert.Equal(0.7m, doc.RootElement.GetProperty("options").GetProperty("temperature").GetDecimal());
+        Assert.Equal(
+            2048,
+            doc.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32()
+        );
+        Assert.Equal(
+            0.7m,
+            doc.RootElement.GetProperty("options").GetProperty("temperature").GetDecimal()
+        );
         Assert.Single(doc.RootElement.GetProperty("messages").EnumerateArray());
         Assert.Equal(
             "user",
@@ -172,7 +178,7 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new NdjsonStreamHandler(ndjson));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -210,7 +216,7 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new NdjsonStreamHandler(ndjson));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -229,7 +235,7 @@ public class OllamaAdapterTests
         }
 
         Assert.NotNull(lastChunk?.Usage);
-        Assert.Equal(0, lastChunk.Usage!.CachedTokens);
+        Assert.Equal(0, lastChunk.Usage.CachedTokens);
     }
 
     [Fact]
@@ -237,7 +243,7 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.ServiceUnavailable, ""));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var request = new ChatRequest(
             Guid.NewGuid(),
@@ -288,7 +294,7 @@ public class OllamaAdapterTests
 
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, json));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var result = await adapter.GetModelsAsync();
 
@@ -308,7 +314,7 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.ServiceUnavailable, ""));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var result = await adapter.GetModelsAsync();
 
@@ -321,7 +327,7 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "not json {{{"));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var result = await adapter.GetModelsAsync();
 
@@ -334,7 +340,7 @@ public class OllamaAdapterTests
     {
         using var http = new HttpClient(new JsonBodyHandler(HttpStatusCode.OK, "{}"));
         var provider = CreateProvider();
-        var adapter = new OllamaAdapter(http, new FakeKeyVault(), provider);
+        var adapter = new OllamaAdapter(http, provider);
 
         var result = await adapter.GetModelsAsync();
 

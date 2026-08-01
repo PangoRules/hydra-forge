@@ -9,11 +9,7 @@ using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 
-public sealed class OllamaAdapter(
-    HttpClient http,
-    IKeyVault keyVault,
-    LlmProvider provider
-) : ILlmClient
+public sealed class OllamaAdapter(HttpClient http, LlmProvider provider) : ILlmClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -162,7 +158,7 @@ public sealed class OllamaAdapter(
                 null,
                 string.IsNullOrEmpty(m.ModifiedAt)
                     ? null
-                    : new Dictionary<string, string> { ["modified_at"] = m.ModifiedAt! }
+                    : new Dictionary<string, string> { ["modified_at"] = m.ModifiedAt }
             ))
             .ToList();
 
