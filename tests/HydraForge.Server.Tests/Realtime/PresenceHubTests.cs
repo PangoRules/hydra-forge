@@ -2,15 +2,15 @@ namespace HydraForge.Server.Tests.Realtime;
 
 using HydraForge.Application.Projects;
 using HydraForge.Server.Hubs;
-using Moq;
+using NSubstitute;
 
 public class PresenceHubTests
 {
     [Fact]
     public void PresenceHub_CanBeConstructed()
     {
-        var memberRepo = new Mock<IProjectMemberRepository>();
-        var hub = new PresenceHub(memberRepo.Object);
+        var memberRepo = Substitute.For<IProjectMemberRepository>();
+        var hub = new PresenceHub(memberRepo);
         Assert.NotNull(hub);
     }
 }

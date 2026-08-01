@@ -7,7 +7,7 @@ using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 
 public class ContextCompressorTests
 {
@@ -19,18 +19,18 @@ public class ContextCompressorTests
         LlmOptions? options = null
     )
     {
-        var logger = new Mock<ILogger<ContextCompressor>>();
+        var logger = Substitute.For<ILogger<ContextCompressor>>();
         var opts = Options.Create(options ?? DefaultOptions());
-        var factory = clientFactory ?? new Mock<ILlmClientFactory>().Object;
-        return new ContextCompressor(router, factory, logger.Object, opts);
+        var factory = clientFactory ?? Substitute.For<ILlmClientFactory>();
+        return new ContextCompressor(router, factory, logger, opts);
     }
 
     [Fact]
     public async Task CompressAsync_UnderThreshold_ReturnsUncompressed()
     {
-        var router = new Mock<IModelRouter>();
+        var router = Substitute.For<IModelRouter>();
         var blocks = new List<CacheBlock> { new("short memory content", CacheBlockType.Memory) };
-        var compressor = CreateCompressor(router.Object);
+        var compressor = CreateCompressor(router);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 1000);
 
@@ -42,7 +42,7 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_OverThreshold_TriggersCompression()
     {
-        var mockClient = new Mock<ILlmClient>();
+        var mockClient = Substitute.For<ILlmClient>();
         var summaryChunks = new List<ChatChunk>
         {
             new("Summarized ", null, null),
@@ -50,13 +50,13 @@ public class ContextCompressorTests
             new("here.", null, null),
         };
         mockClient
-            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerableChunkList(summaryChunks));
 
-        var mockFactory = new Mock<ILlmClientFactory>();
-        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+        var mockFactory = Substitute.For<ILlmClientFactory>();
+        mockFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
 
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         var routeDecision = new RouteDecision(
             new ProviderModelConfigDto(
                 Guid.NewGuid(),
@@ -84,23 +84,21 @@ public class ContextCompressorTests
             Provider: null
         );
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.IsAny<int>(),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+            .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var blocks = new List<CacheBlock>
         {
             new(new string('x', 500), CacheBlockType.Memory),
             new(new string('y', 500), CacheBlockType.Memory),
         };
-        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
+        var compressor = CreateCompressor(mockRouter, mockFactory);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
@@ -118,14 +116,14 @@ public class ContextCompressorTests
         // accumulated (to-be-summarized) blocks, not the full pre-compression context —
         // otherwise a large pinned block alone can push the router into an unnecessary
         // ContextWindowExceeded/tier-bump for a summarization request that's actually tiny.
-        var mockClient = new Mock<ILlmClient>();
+        var mockClient = Substitute.For<ILlmClient>();
         var summaryChunks = new List<ChatChunk> { new("Summary.", null, null) };
         mockClient
-            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerableChunkList(summaryChunks));
 
-        var mockFactory = new Mock<ILlmClientFactory>();
-        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+        var mockFactory = Substitute.For<ILlmClientFactory>();
+        mockFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
 
         var routeDecision = new RouteDecision(
             new ProviderModelConfigDto(
@@ -165,20 +163,18 @@ public class ContextCompressorTests
             new(new string('y', 400), CacheBlockType.Memory),
         };
 
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.Is<int>(tokens => tokens == 200),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Is<int>(tokens => tokens == 200),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+            .Returns(Result<RouteDecision>.Success(routeDecision));
 
-        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
+        var compressor = CreateCompressor(mockRouter, mockFactory);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 1000);
 
@@ -189,19 +185,19 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_PinnedBlocks_Preserved()
     {
-        var mockClient = new Mock<ILlmClient>();
+        var mockClient = Substitute.For<ILlmClient>();
         var summaryChunks = new List<ChatChunk>
         {
             new("Summarized pinned test content.", null, null),
         };
         mockClient
-            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerableChunkList(summaryChunks));
 
-        var mockFactory = new Mock<ILlmClientFactory>();
-        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+        var mockFactory = Substitute.For<ILlmClientFactory>();
+        mockFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
 
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         var routeDecision = new RouteDecision(
             new ProviderModelConfigDto(
                 Guid.NewGuid(),
@@ -229,16 +225,14 @@ public class ContextCompressorTests
             Provider: null
         );
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.IsAny<int>(),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+            .Returns(Result<RouteDecision>.Success(routeDecision));
 
         // Pinned block + two large non-pinned blocks that exceed threshold.
         var blocks = new List<CacheBlock>
@@ -247,7 +241,7 @@ public class ContextCompressorTests
             new(new string('a', 500), CacheBlockType.Memory),
             new(new string('b', 500), CacheBlockType.Memory),
         };
-        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
+        var compressor = CreateCompressor(mockRouter, mockFactory);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
@@ -262,25 +256,23 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_NoEconomyModel_ReturnsPassthrough()
     {
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.IsAny<int>(),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(
+            .Returns(
                 Result<RouteDecision>.Failure(
                     new Error(DomainErrorCodes.Llm.NoModelForFeature, "no model")
                 )
             );
 
         var blocks = new List<CacheBlock> { new(new string('x', 500), CacheBlockType.Memory) };
-        var compressor = CreateCompressor(mockRouter.Object);
+        var compressor = CreateCompressor(mockRouter);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
@@ -292,9 +284,9 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_EmptyBlocks_ReturnsNoOp()
     {
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         var blocks = new List<CacheBlock>();
-        var compressor = CreateCompressor(mockRouter.Object);
+        var compressor = CreateCompressor(mockRouter);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
@@ -306,16 +298,16 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_ThresholdRatioConfig_Respected()
     {
-        var mockClient = new Mock<ILlmClient>();
+        var mockClient = Substitute.For<ILlmClient>();
         var summaryChunks = new List<ChatChunk> { new ChatChunk("summary", null, null) };
         mockClient
-            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerableChunkList(summaryChunks));
 
-        var mockFactory = new Mock<ILlmClientFactory>();
-        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+        var mockFactory = Substitute.For<ILlmClientFactory>();
+        mockFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
 
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         var routeDecision = new RouteDecision(
             new ProviderModelConfigDto(
                 Guid.NewGuid(),
@@ -343,21 +335,19 @@ public class ContextCompressorTests
             Provider: null
         );
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.IsAny<int>(),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+            .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var blocks = new List<CacheBlock> { new(new string('x', 500), CacheBlockType.Memory) };
 
         var options = new LlmOptions { ContextCompressionThresholdRatio = 0.01 };
-        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object, options);
+        var compressor = CreateCompressor(mockRouter, mockFactory, options);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 10000);
 
@@ -368,20 +358,20 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_ErrorChunk_ReturnsPassthrough()
     {
-        var mockClient = new Mock<ILlmClient>();
+        var mockClient = Substitute.For<ILlmClient>();
         var errorChunks = new List<ChatChunk>
         {
             new("partial ", null, null),
             new(null, ChatChunkFinishReason.Error, null),
         };
         mockClient
-            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(AsyncEnumerableChunkList(errorChunks));
 
-        var mockFactory = new Mock<ILlmClientFactory>();
-        mockFactory.Setup(f => f.For(It.IsAny<LlmProvider>())).Returns(mockClient.Object);
+        var mockFactory = Substitute.For<ILlmClientFactory>();
+        mockFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
 
-        var mockRouter = new Mock<IModelRouter>();
+        var mockRouter = Substitute.For<IModelRouter>();
         var routeDecision = new RouteDecision(
             new ProviderModelConfigDto(
                 Guid.NewGuid(),
@@ -409,23 +399,21 @@ public class ContextCompressorTests
             Provider: null
         );
         mockRouter
-            .Setup(r =>
-                r.ResolveAsync(
-                    AiFeature.MemoryExtraction,
-                    It.IsAny<Guid>(),
-                    It.IsAny<Guid?>(),
-                    It.IsAny<int>(),
-                    It.IsAny<CancellationToken>()
-                )
+            .ResolveAsync(
+                AiFeature.MemoryExtraction,
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
             )
-            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+            .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var blocks = new List<CacheBlock>
         {
             new(new string('x', 500), CacheBlockType.Memory),
             new(new string('y', 500), CacheBlockType.Memory),
         };
-        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
+        var compressor = CreateCompressor(mockRouter, mockFactory);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
