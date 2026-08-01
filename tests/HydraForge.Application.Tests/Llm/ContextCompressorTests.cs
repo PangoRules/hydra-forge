@@ -88,23 +88,45 @@ public class ContextCompressorTests
     [Fact]
     public async Task CompressAsync_PinnedBlocks_Preserved()
     {
+        var mockClient = new Mock<ILlmClient>();
+        var summaryChunks = new List<ChatChunk>
+        {
+            new("Summarized pinned test content.", null, null),
+        };
+        mockClient
+            .Setup(c => c.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(AsyncEnumerableChunkList(summaryChunks));
+
+        var mockFactory = new Mock<ILlmClientFactory>();
+        mockFactory.Setup(f => f.For(It.IsAny<ProviderDto>())).Returns(mockClient.Object);
+
         var mockRouter = new Mock<IModelRouter>();
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(Guid.NewGuid(), Guid.NewGuid(), "economy-model", "economy-model-name", "Economy", 0.001m, 4096, true),
+            new ProviderDto(Guid.NewGuid(), "TestProvider", "https://test.com", "OpenAiCompatible", "Text", "Economy", null, true, DateTime.UtcNow, DateTime.UtcNow),
+            []
+        );
         mockRouter
             .Setup(r => r.ResolveAsync(AiFeature.MemoryExtraction, It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<RouteDecision>.Failure(new Error(DomainErrorCodes.Llm.NoModelForFeature, "no model")));
+            .ReturnsAsync(Result<RouteDecision>.Success(routeDecision));
+
+        // Pinned block + two large non-pinned blocks that exceed threshold.
         var blocks = new List<CacheBlock>
         {
             new("pinned memory", CacheBlockType.Memory, IsPinned: true),
-            new(new string('x', 500), CacheBlockType.Memory),
+            new(new string('a', 500), CacheBlockType.Memory),
+            new(new string('b', 500), CacheBlockType.Memory),
         };
-        var compressor = CreateCompressor(mockRouter.Object);
+        var compressor = CreateCompressor(mockRouter.Object, mockFactory.Object);
 
         var result = await compressor.CompressAsync(blocks, modelMaxTokens: 100);
 
         Assert.True(result.IsSuccess);
-        Assert.False(result.Value.WasCompressed);
-        Assert.Equal(2, result.Value.Blocks.Count);
-        Assert.True(result.Value.Blocks[0].IsPinned);
+        Assert.True(result.Value.WasCompressed);
+        Assert.Equal(2, result.Value.Blocks.Count); // pinned + summary
+        var pinnedBlock = result.Value.Blocks.FirstOrDefault(b => b.IsPinned);
+        Assert.NotNull(pinnedBlock);
+        Assert.Equal("pinned memory", pinnedBlock.Content);
     }
 
     [Fact]

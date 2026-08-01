@@ -5,7 +5,6 @@ using HydraForge.Application.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
 
 public static class LlmServiceCollectionExtensions
 {

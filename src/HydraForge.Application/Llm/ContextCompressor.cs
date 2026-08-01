@@ -60,6 +60,26 @@ public sealed class ContextCompressor : IContextCompressor
             );
         }
 
+        // Take oldest non-pinned blocks (first in list = oldest) until the remaining
+        // blocks would be under threshold if the accumulated ones were replaced by one summary.
+        var accumulated = new List<CacheBlock>();
+        foreach (var block in nonPinnedMemoryBlocks)
+        {
+            accumulated.Add(block);
+            var remainingBlocks = blocks.Except(accumulated).ToList();
+            var remainingTokens = remainingBlocks.Sum(b => TokenEstimator.EstimateTokens(b.Content));
+            var summaryTokens = TokenEstimator.EstimateTokens(
+                string.Join("\n\n", accumulated.Select(b => b.Content))
+            );
+            // If replacing accumulated blocks with a single summary keeps remaining under threshold, stop.
+            if (remainingTokens + summaryTokens <= threshold)
+            {
+                break;
+            }
+        }
+
+        nonPinnedMemoryBlocks = accumulated;
+
         var userId = Guid.Empty;
         var routeResult = await _router.ResolveAsync(
             AiFeature.MemoryExtraction,
