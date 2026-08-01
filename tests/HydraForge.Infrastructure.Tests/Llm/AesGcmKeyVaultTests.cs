@@ -1,8 +1,8 @@
 namespace HydraForge.Infrastructure.Tests.Llm;
 
 using System.Security.Cryptography;
-using HydraForge.Infrastructure.Llm;
 using HydraForge.Application.Llm;
+using HydraForge.Infrastructure.Llm;
 using Microsoft.Extensions.Options;
 
 public class AesGcmKeyVaultTests

@@ -62,23 +62,31 @@ public sealed class ContextCompressor : IContextCompressor
 
         // Take oldest non-pinned blocks (first in list = oldest) until the remaining
         // blocks would be under threshold if the accumulated ones were replaced by one summary.
+        // Track by index in the original blocks list to avoid record equality issues.
         var accumulated = new List<CacheBlock>();
-        foreach (var block in nonPinnedMemoryBlocks)
+        var accumulatedIndices = new HashSet<int>();
+        var blocksWithIndex = blocks.Select((b, i) => (block: b, index: i)).ToList();
+        var nonPinnedWithIndex = blocksWithIndex
+            .Where(x => x.block.Type == CacheBlockType.Memory && !x.block.IsPinned)
+            .ToList();
+
+        foreach (var (block, index) in nonPinnedWithIndex)
         {
             accumulated.Add(block);
-            var remainingBlocks = blocks.Except(accumulated).ToList();
-            var remainingTokens = remainingBlocks.Sum(b => TokenEstimator.EstimateTokens(b.Content));
-            var summaryTokens = TokenEstimator.EstimateTokens(
-                string.Join("\n\n", accumulated.Select(b => b.Content))
+            accumulatedIndices.Add(index);
+            var remainingBlocks = blocksWithIndex
+                .Where(x => !accumulatedIndices.Contains(x.index))
+                .Select(x => x.block)
+                .ToList();
+            var remainingTokens = remainingBlocks.Sum(b =>
+                TokenEstimator.EstimateTokens(b.Content)
             );
-            // If replacing accumulated blocks with a single summary keeps remaining under threshold, stop.
+            var summaryTokens = accumulated.Sum(b => TokenEstimator.EstimateTokens(b.Content)) / 2;
             if (remainingTokens + summaryTokens <= threshold)
             {
                 break;
             }
         }
-
-        nonPinnedMemoryBlocks = accumulated;
 
         var userId = Guid.Empty;
         var routeResult = await _router.ResolveAsync(
@@ -101,8 +109,8 @@ public sealed class ContextCompressor : IContextCompressor
         }
 
         var route = routeResult.Value;
-        var client = _clientFactory.For(route.PrimaryProvider);
-        var combinedContent = string.Join("\n\n", nonPinnedMemoryBlocks.Select(b => b.Content));
+        var client = _clientFactory.For(route.Provider!);
+        var combinedContent = string.Join("\n\n", accumulated.Select(b => b.Content));
         var summaryPrompt =
             $"Summarize the following memory blocks into a concise narrative that preserves all key information:\n\n{combinedContent}";
 
@@ -126,8 +134,26 @@ public sealed class ContextCompressor : IContextCompressor
                 {
                     summaryBuilder.Append(chunk.Delta);
                 }
+                if (
+                    chunk.FinishReason
+                    is ChatChunkFinishReason.Error
+                        or ChatChunkFinishReason.ContentFilter
+                )
+                {
+                    _logger.LogWarning(
+                        "ContextCompressor: summarization received {FinishReason} chunk. Returning uncompressed context.",
+                        chunk.FinishReason
+                    );
+                    return Result<CompressedContext>.Success(
+                        new CompressedContext(blocks, estimatedTokens, WasCompressed: false)
+                    );
+                }
             }
             summary = summaryBuilder.ToString();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -142,15 +168,19 @@ public sealed class ContextCompressor : IContextCompressor
             );
         }
 
-        var newBlocks = blocks
-            .Except(nonPinnedMemoryBlocks)
-            .Append(new CacheBlock(summary, CacheBlockType.Memory, IsPinned: false))
-            .ToList();
+        var newBlocks = blocks.Select((b, i) => accumulatedIndices.Contains(i) ? null : b).ToList();
+        var firstAccumulatedIndex = accumulatedIndices.Min();
+        newBlocks[firstAccumulatedIndex] = new CacheBlock(
+            summary,
+            CacheBlockType.Memory,
+            IsPinned: false
+        );
+        var cleanedBlocks = newBlocks.Where(b => b is not null).Select(b => b!).ToList();
 
-        var newEstimatedTokens = newBlocks.Sum(b => TokenEstimator.EstimateTokens(b.Content));
+        var newEstimatedTokens = cleanedBlocks.Sum(b => TokenEstimator.EstimateTokens(b.Content));
 
         return Result<CompressedContext>.Success(
-            new CompressedContext(newBlocks, newEstimatedTokens, WasCompressed: true)
+            new CompressedContext(cleanedBlocks, newEstimatedTokens, WasCompressed: true)
         );
     }
 }

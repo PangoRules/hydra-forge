@@ -13,10 +13,7 @@ public static class LlmServiceCollectionExtensions
         IConfiguration configuration
     )
     {
-        services.Configure<LlmOptions>(
-            LlmOptions.SectionName,
-            configuration.GetSection(LlmOptions.SectionName)
-        );
+        services.AddOptions<LlmOptions>().Bind(configuration.GetSection(LlmOptions.SectionName));
 
         ValidateEncryptionKey(configuration);
         services.AddSingleton<IKeyVault, AesGcmKeyVault>();

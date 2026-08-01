@@ -1,3 +1,5 @@
+using HydraForge.Domain.Entities.Admin;
+
 namespace HydraForge.Application.Llm;
 
 // Chat
@@ -76,7 +78,8 @@ public sealed record EmbeddingResult(IReadOnlyList<ReadOnlyMemory<float>> Vector
 public sealed record RouteDecision(
     ProviderModelConfigDto Primary,
     ProviderDto PrimaryProvider,
-    IReadOnlyList<FallbackProvider> Fallbacks
+    IReadOnlyList<FallbackProvider> Fallbacks,
+    LlmProvider? Provider = null
 );
 
 public sealed record FallbackProvider(ProviderModelConfigDto Model, ProviderDto Provider);

@@ -77,8 +77,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.OpenAiCompatible);
 
@@ -94,8 +93,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.Anthropic);
 
@@ -111,8 +109,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.Ollama);
 
@@ -128,8 +125,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.DallE);
 
@@ -145,8 +141,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             httpFactory,
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var providerId = Guid.NewGuid();
         var provider = CreateProvider(id: providerId, adapterType: AdapterType.OpenAiCompatible);
@@ -163,8 +158,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider1 = CreateProvider(
             id: Guid.NewGuid(),
@@ -184,8 +178,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.DallE);
 
@@ -201,8 +194,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.StabilityAi);
 
@@ -218,8 +210,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.ComfyUi);
 
@@ -235,8 +226,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.Diffusers);
 
@@ -252,8 +242,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var providerId = Guid.NewGuid();
         var provider = CreateProvider(id: providerId, adapterType: AdapterType.DallE);
@@ -270,8 +259,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider1 = CreateProvider(id: Guid.NewGuid(), adapterType: AdapterType.DallE);
         var provider2 = CreateProvider(id: Guid.NewGuid(), adapterType: AdapterType.StabilityAi);
@@ -288,8 +276,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.Anthropic);
 
@@ -304,8 +291,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.OpenAiCompatible);
 
@@ -321,8 +307,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var providerId = Guid.NewGuid();
         var provider = CreateProvider(id: providerId, adapterType: AdapterType.OpenAiCompatible);
@@ -340,8 +325,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var providerId = Guid.NewGuid();
         var provider = CreateProvider(id: providerId, adapterType: AdapterType.DallE);
@@ -359,8 +343,7 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
 
         factory.Invalidate(Guid.NewGuid());
@@ -372,18 +355,12 @@ public class LlmClientFactoryTests
         var factory = new LlmClientFactory(
             new RecordingHttpClientFactory(),
             new FakeKeyVault(),
-            new FakeLoggerFactory(),
-            new FakeServiceProvider()
+            new FakeLoggerFactory()
         );
         var provider = CreateProvider(adapterType: AdapterType.Ollama);
 
         var act = () => factory.ImageFor(provider);
 
         Assert.Throws<NotSupportedException>(act);
-    }
-
-    private sealed class FakeServiceProvider : IServiceProvider
-    {
-        public object? GetService(Type serviceType) => null;
     }
 }
