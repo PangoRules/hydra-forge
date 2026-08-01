@@ -119,7 +119,7 @@
 7. `provider.BaseUrl` has trailing slash → request URI is `{baseUrl}/api/chat` and `{baseUrl}/api/tags` (no double slash)
 8. `request.MaxOutputTokens` null and `request.Temperature` null → `options` field is still emitted as `{ temperature:null, num_predict:null }` (acceptable to Ollama; `null` omitted via `WhenWritingNull` if both fields are absent) — verify Ollama accepts the request
 9. `request.Tools` populated → adapter does NOT emit a `tools` field; `SupportsToolCalling` is `false`, so the routing layer should never pass tools for an Ollama provider (regression guard for routing logic)
-10. `provider.ApiKeyEncrypted` populated (non-empty) → outgoing request still has no `Authorization` header (Ollama is local-only; `IKeyVault` is injected but unused)
+10. `provider.ApiKeyEncrypted` populated (non-empty) → outgoing request still has no `Authorization` header (Ollama is local-only; `IKeyVault` is not injected)
 
 ### Regressions
 1. `dotnet ef migrations has-pending-model-changes` → clean (no entity changes in this plan)

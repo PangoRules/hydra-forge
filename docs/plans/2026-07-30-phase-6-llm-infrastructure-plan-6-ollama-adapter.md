@@ -8,7 +8,7 @@
 
 ### 1. Create adapter class
 - File: `src/HydraForge.Infrastructure/Llm/Adapters/OllamaAdapter.cs`
-- Implements `ILlmClient`. Constructor takes `HttpClient` (named `ollama`), `IKeyVault`, `LlmProvider`.
+- Implements `ILlmClient`. Constructor takes `HttpClient` (named `ollama`), `LlmProvider`.
 - `AdapterType` returns `AdapterType.Ollama`.
 
 ### 2. Implement `StreamChatAsync`
