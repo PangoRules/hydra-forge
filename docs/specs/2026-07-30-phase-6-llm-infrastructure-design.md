@@ -476,7 +476,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 3: Define Application ports: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IModelRouter`, `IContextCompressor`, `IUsageRecorder`, `ILlmAdminService`, `ILlmClientFactory` + DTOs (`ChatRequest`/`ChatChunk`/`CacheBlock`/`RouteDecision`/`CompressedContext`/usage inputs).
 - [x] Task 4: `OpenAiCompatibleAdapter` (SSE stream parse, cache-block prefix hashing, `UsageSnapshot` from final chunk, `GetModelsAsync`, `SupportsToolCalling`).
 - [x] Task 5: `AnthropicAdapter` (`cache_control` ephemeral blocks, `/v1/messages` stream, `message_delta` usage mapping).
-- [ ] Task 6: `OllamaAdapter` (`/api/chat` NDJSON stream, no caching, usage from final message).
+- [x] Task 6: `OllamaAdapter` (`/api/chat` NDJSON stream, no caching, usage from final message).
 - [ ] Task 7: `DallEAdapter` (`/images/generations` + `/images/edits` inpaint).
 - [ ] Task 8: `StabilityAiAdapter` (generate + inpaint endpoints).
 - [ ] Task 9: `ComfyUiAdapter` (workflow API; serves both `ComfyUi` + `Diffusers` adapter types via factory mapping).
