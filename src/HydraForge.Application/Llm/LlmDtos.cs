@@ -22,7 +22,7 @@ public sealed record ToolDefinition(
 
 public sealed record ToolParameter(string Name, string Type, string Description, bool IsRequired);
 
-public sealed record CacheBlock(string Content, CacheBlockType Type);
+public sealed record CacheBlock(string Content, CacheBlockType Type, bool IsPinned = false);
 
 public sealed record ChatChunk(
     string? Delta,

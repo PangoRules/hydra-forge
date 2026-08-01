@@ -5,12 +5,14 @@ using HydraForge.Application.Llm;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Llm.Adapters;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 public sealed class LlmClientFactory(
     IHttpClientFactory httpClientFactory,
     IKeyVault keyVault,
-    ILoggerFactory loggerFactory
+    ILoggerFactory loggerFactory,
+    IServiceProvider serviceProvider
 ) : ILlmClientFactory
 {
     private readonly ConcurrentDictionary<Guid, ILlmClient> _clients = new();
@@ -28,6 +30,18 @@ public sealed class LlmClientFactory(
                 return CreateClient(http, provider);
             }
         );
+    }
+
+    public ILlmClient For(ProviderDto provider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var routingConfig = scope.ServiceProvider.GetRequiredService<IRoutingConfigProvider>();
+        var entity = routingConfig.GetProviderAsync(provider.Id, CancellationToken.None).GetAwaiter().GetResult();
+        if (entity is null)
+        {
+            throw new InvalidOperationException($"Provider with ID {provider.Id} not found.");
+        }
+        return For(entity);
     }
 
     public IImageClient ImageFor(LlmProvider provider)
