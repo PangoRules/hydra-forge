@@ -34,7 +34,7 @@
 
 ### 7. Unit tests
 - File: `tests/HydraForge.Infrastructure.Tests/Llm/EfUsageRecorderTests.cs`
-- Use in-memory EF `HydraForgeDbContext`.
+- Use real Npgsql `HydraForgeDbContext` (project convention — EF in-memory provider doesn't exercise SaveChanges path).
 - Test cases:
   - Record token → `TokenUsageRecord` persisted with correct fields.
   - Record image → `ImageUsageRecord` persisted.

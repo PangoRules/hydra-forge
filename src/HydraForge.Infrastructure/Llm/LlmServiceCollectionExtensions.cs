@@ -72,6 +72,7 @@ public static class LlmServiceCollectionExtensions
         services.AddScoped<IRoutingConfigProvider, DbContextRoutingConfigProvider>();
         services.AddScoped<IModelRouter, ModelRouter>();
         services.AddScoped<IContextCompressor, ContextCompressor>();
+        services.AddScoped<IUsageRecorder, EfUsageRecorder>();
 
         return services;
     }

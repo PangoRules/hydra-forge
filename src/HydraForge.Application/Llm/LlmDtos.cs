@@ -1,4 +1,5 @@
 using HydraForge.Domain.Entities.Admin;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Llm;
 
@@ -97,7 +98,7 @@ public sealed record CompressedContext(
 public sealed record TokenUsageRecordInput(
     Guid UserId,
     Guid? ProjectId,
-    Guid Feature,
+    AiFeature Feature,
     Guid ProviderModelConfigId,
     Guid ProviderId,
     string ModelId,
@@ -112,7 +113,7 @@ public sealed record TokenUsageRecordInput(
 public sealed record ImageUsageRecordInput(
     Guid UserId,
     Guid? ProjectId,
-    Guid Feature,
+    AiFeature Feature,
     Guid ProviderModelConfigId,
     Guid ProviderId,
     string ModelId,
