@@ -303,14 +303,18 @@ public class ComfyUiAdapterTests
     }
 
     [Fact]
-    public async Task GenerateImageAsync_HistoryTimeout_ReturnsFailure()
+    public async Task GenerateImageAsync_CallerCancellation_PropagatesOperationCanceled()
     {
+        // Distinct from the internal 5-minute poll timeout (COMFYUI_HISTORY_TIMEOUT, which
+        // returns a Result.Failure): a caller-cancelled token (e.g. HTTP request aborted)
+        // must propagate as a real OperationCanceledException, not get reported as a
+        // business failure — see PollHistoryUntilCompleteAsync's two-catch split.
         var queue = new QueueHandler();
 
         queue.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
-                """{"prompt_id":"timeout-prompt"}""",
+                """{"prompt_id":"cancel-prompt"}""",
                 Encoding.UTF8,
                 "application/json"
             ),
@@ -321,7 +325,7 @@ public class ComfyUiAdapterTests
             queue.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    """{"timeout-prompt":{"outputs":{}}}""",
+                    """{"cancel-prompt":{"outputs":{}}}""",
                     Encoding.UTF8,
                     "application/json"
                 ),
@@ -341,10 +345,9 @@ public class ComfyUiAdapterTests
         );
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var result = await adapter.GenerateImageAsync(request, cts.Token);
-
-        Assert.True(result.IsFailure);
-        Assert.Equal("COMFYUI_HISTORY_TIMEOUT", result.Error.Code);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            adapter.GenerateImageAsync(request, cts.Token)
+        );
     }
 
     [Fact]
