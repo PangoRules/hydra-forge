@@ -43,6 +43,14 @@ public static class LlmServiceCollectionExtensions
             }
         );
 
+        services.AddHttpClient(
+            "dalle",
+            client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(120);
+            }
+        );
+
         return services;
     }
 

@@ -200,6 +200,9 @@ public interface IImageClient
 public sealed record ImageRequest(
     Guid ProviderModelConfigId, string ModelId, string Prompt,
     ImageSize Size, int Count);
+public sealed record InpaintRequest(
+    Guid ProviderModelConfigId, string ModelId, string Prompt,
+    byte[] ImageBytes, byte[] MaskBytes, ImageSize Size, int Count = 1);
 public sealed record GeneratedImage(IReadOnlyList<string> ImageDataUrlsOrKeys, string Resolution);
 public enum ImageSize { Square1024, Landscape1792, Portrait1024 }
 ```
@@ -477,7 +480,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 4: `OpenAiCompatibleAdapter` (SSE stream parse, cache-block prefix hashing, `UsageSnapshot` from final chunk, `GetModelsAsync`, `SupportsToolCalling`).
 - [x] Task 5: `AnthropicAdapter` (`cache_control` ephemeral blocks, `/v1/messages` stream, `message_delta` usage mapping).
 - [x] Task 6: `OllamaAdapter` (`/api/chat` NDJSON stream, no caching, usage from final message).
-- [ ] Task 7: `DallEAdapter` (`/images/generations` + `/images/edits` inpaint).
+- [x] Task 7: `DallEAdapter` (`/images/generations` + `/images/edits` inpaint).
 - [ ] Task 8: `StabilityAiAdapter` (generate + inpaint endpoints).
 - [ ] Task 9: `ComfyUiAdapter` (workflow API; serves both `ComfyUi` + `Diffusers` adapter types via factory mapping).
 - [ ] Task 10: `LlmClientFactory` (resolve `AdapterType` → adapter; `IHttpClientFactory` named clients; decrypt key at call time via `IKeyVault`).
