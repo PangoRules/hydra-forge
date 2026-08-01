@@ -15,25 +15,29 @@ public sealed class DbContextRoutingConfigProvider : IRoutingConfigProvider
         _context = context;
     }
 
-    public async Task<FeatureRoutingConfig?> GetRoutingConfigAsync(AiFeature feature, CancellationToken ct)
+    public async Task<FeatureRoutingConfig?> GetRoutingConfigAsync(
+        AiFeature feature,
+        CancellationToken ct
+    )
     {
-        return await _context.FeatureRoutingConfigs
-            .AsNoTracking()
+        return await _context
+            .FeatureRoutingConfigs.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Feature == feature, ct);
     }
 
-    public async Task<IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>> GetEnabledModelsAtTierAsync(
-        ModelTier tier,
-        CancellationToken ct)
+    public async Task<
+        IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>
+    > GetEnabledModelsAtTierAsync(ModelTier tier, CancellationToken ct)
     {
-        var results = await _context.ProviderModelConfigs
-            .AsNoTracking()
+        var results = await _context
+            .ProviderModelConfigs.AsNoTracking()
             .Where(m => m.IsEnabled && m.Tier == tier)
             .Join(
                 _context.LlmProviders.AsNoTracking().Where(p => p.IsEnabled),
                 m => m.ProviderId,
                 p => p.Id,
-                (m, p) => new { Model = m, Provider = p })
+                (m, p) => new { Model = m, Provider = p }
+            )
             .OrderBy(x => x.Provider.Name)
             .ToListAsync(ct);
 
@@ -42,24 +46,24 @@ public sealed class DbContextRoutingConfigProvider : IRoutingConfigProvider
 
     public async Task<LlmProvider?> GetProviderAsync(Guid providerId, CancellationToken ct)
     {
-        return await _context.LlmProviders
-            .AsNoTracking()
+        return await _context
+            .LlmProviders.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == providerId, ct);
     }
 
-    public async Task<IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>> GetEnabledModelsAtTierForProviderAsync(
-        ModelTier tier,
-        Guid providerId,
-        CancellationToken ct)
+    public async Task<
+        IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>
+    > GetEnabledModelsAtTierForProviderAsync(ModelTier tier, Guid providerId, CancellationToken ct)
     {
-        var results = await _context.ProviderModelConfigs
-            .AsNoTracking()
+        var results = await _context
+            .ProviderModelConfigs.AsNoTracking()
             .Where(m => m.IsEnabled && m.Tier == tier && m.ProviderId == providerId)
             .Join(
                 _context.LlmProviders.AsNoTracking().Where(p => p.IsEnabled && p.Id == providerId),
                 m => m.ProviderId,
                 p => p.Id,
-                (m, p) => new { Model = m, Provider = p })
+                (m, p) => new { Model = m, Provider = p }
+            )
             .ToListAsync(ct);
 
         return results.Select(x => (x.Model, x.Provider)).ToList();

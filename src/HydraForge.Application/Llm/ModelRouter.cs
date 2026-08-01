@@ -21,7 +21,8 @@ public sealed class ModelRouter : IModelRouter
         Guid userId,
         Guid? projectId,
         int estimatedTokens,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         // TODO: Apply user-specific tier ceiling when user budget/role tiers are implemented.
         var routingConfig = await _provider.GetRoutingConfigAsync(feature, ct);
@@ -29,7 +30,11 @@ public sealed class ModelRouter : IModelRouter
         if (routingConfig is null)
         {
             return Result<RouteDecision>.Failure(
-                new Error(DomainErrorCodes.Llm.NoModelForFeature, $"No routing config found for feature {feature}."));
+                new Error(
+                    DomainErrorCodes.Llm.NoModelForFeature,
+                    $"No routing config found for feature {feature}."
+                )
+            );
         }
 
         var tier = routingConfig.DefaultTier;
@@ -40,6 +45,7 @@ public sealed class ModelRouter : IModelRouter
         }
 
         var candidate = await FindModelAtTierAsync(tier, ct);
+        var hadModelAtInitialTier = candidate is not null;
 
         if (candidate is null || estimatedTokens > candidate.Model.MaxTokens)
         {
@@ -48,18 +54,27 @@ public sealed class ModelRouter : IModelRouter
 
             if (candidate is null)
             {
-                var errorCode = hadAnyModel
-                    ? DomainErrorCodes.Llm.ContextWindowExceeded
-                    : DomainErrorCodes.Llm.NoModelForFeature;
+                var errorCode =
+                    (hadAnyModel || hadModelAtInitialTier)
+                        ? DomainErrorCodes.Llm.ContextWindowExceeded
+                        : DomainErrorCodes.Llm.NoModelForFeature;
                 return Result<RouteDecision>.Failure(
-                    new Error(errorCode, $"No model found for feature {feature} with {estimatedTokens} tokens."));
+                    new Error(
+                        errorCode,
+                        $"No model found for feature {feature} with {estimatedTokens} tokens."
+                    )
+                );
             }
         }
 
         var primaryModel = candidate.Model;
         var primaryProvider = candidate.Provider;
 
-        var fallbackCandidates = await BuildFallbackChainAsync(primaryProvider.Id, primaryModel.Tier, ct);
+        var fallbackCandidates = await BuildFallbackChainAsync(
+            primaryProvider.Id,
+            primaryModel.Tier,
+            ct
+        );
 
         var primaryModelDto = ToModelDto(primaryModel);
         var primaryProviderDto = ToProviderDto(primaryProvider);
@@ -68,7 +83,8 @@ public sealed class ModelRouter : IModelRouter
             .ToList();
 
         return Result<RouteDecision>.Success(
-            new RouteDecision(primaryModelDto, primaryProviderDto, fallbackDtos));
+            new RouteDecision(primaryModelDto, primaryProviderDto, fallbackDtos)
+        );
     }
 
     private async Task<Candidate?> FindModelAtTierAsync(ModelTier tier, CancellationToken ct)
@@ -83,7 +99,8 @@ public sealed class ModelRouter : IModelRouter
     private async Task<(Candidate? Candidate, bool HadAnyModel)> TryAutoBumpTierAsync(
         ModelTier initialTier,
         int estimatedTokens,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var tiersToTry = new List<ModelTier>();
 
@@ -113,7 +130,8 @@ public sealed class ModelRouter : IModelRouter
     private async Task<IReadOnlyList<Candidate>> BuildFallbackChainAsync(
         Guid providerId,
         ModelTier primaryModelTier,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var candidates = new List<Candidate>();
         var visited = new HashSet<Guid> { providerId };
@@ -136,11 +154,15 @@ public sealed class ModelRouter : IModelRouter
 
             visited.Add(fallbackId);
 
-            var fallbackModels = await _provider.GetEnabledModelsAtTierForProviderAsync(primaryModelTier, fallbackId, ct);
+            var fallbackModels = await _provider.GetEnabledModelsAtTierForProviderAsync(
+                primaryModelTier,
+                fallbackId,
+                ct
+            );
 
             var fallbackModel = fallbackModels
                 .Select(x => new Candidate(x.Model, x.Provider))
-        .FirstOrDefault();
+                .FirstOrDefault();
 
             if (fallbackModel is not null)
             {
@@ -165,7 +187,8 @@ public sealed class ModelRouter : IModelRouter
             m.Tier.ToString(),
             m.PricePerToken,
             m.MaxTokens,
-            m.IsEnabled);
+            m.IsEnabled
+        );
 
     private static ProviderDto ToProviderDto(LlmProvider p) =>
         new(
@@ -178,7 +201,8 @@ public sealed class ModelRouter : IModelRouter
             p.FallbackProviderId,
             p.IsEnabled,
             p.CreatedAt,
-            p.UpdatedAt);
+            p.UpdatedAt
+        );
 
     private record Candidate(ProviderModelConfig Model, LlmProvider Provider);
 }
