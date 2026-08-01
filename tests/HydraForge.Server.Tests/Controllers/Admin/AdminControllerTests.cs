@@ -398,6 +398,6 @@ internal class TestAuditLogReader : IAuditLogReader
     public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default)
     {
         LastQuery = query;
-        return Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
+        return Task.FromResult(new AuditLogQueryResult([], 0));
     }
 }

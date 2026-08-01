@@ -14,7 +14,7 @@
 - Switch on `provider.AdapterType`:
   - `OpenAiCompatible` → new `OpenAiCompatibleAdapter(httpClientFactory.CreateClient("openai-compatible"), keyVault, provider)`
   - `Anthropic` → new `AnthropicAdapter(httpClientFactory.CreateClient("anthropic"), keyVault, provider)`
-  - `Ollama` → new `OllamaAdapter(httpClientFactory.CreateClient("ollama"), keyVault, provider)`
+  - `Ollama` → new `OllamaAdapter(httpClientFactory.CreateClient("ollama"), provider)`
 - Cache adapters in `ConcurrentDictionary<Guid, ILlmClient>` keyed by provider ID (singleton per provider).
 - API key decrypted at call time inside each adapter — never cached in factory state.
 
