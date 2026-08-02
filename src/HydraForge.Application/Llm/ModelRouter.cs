@@ -117,7 +117,13 @@ public sealed class ModelRouter : IModelRouter
             if (candidate is not null)
             {
                 hadAnyModel = true;
-                if (candidate.Model.MaxTokens >= estimatedTokens)
+                // Null MaxTokens means no configured limit — treat as unlimited,
+                // matching the initial-tier acceptance check above (`estimatedTokens > candidate.Model.MaxTokens`
+                // is also false when MaxTokens is null, so that path already accepts it).
+                if (
+                    candidate.Model.MaxTokens is null
+                    || candidate.Model.MaxTokens >= estimatedTokens
+                )
                 {
                     return (candidate, true);
                 }

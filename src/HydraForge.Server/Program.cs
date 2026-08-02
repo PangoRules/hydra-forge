@@ -7,6 +7,8 @@ using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Constants;
 using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Audit;
@@ -322,6 +324,7 @@ builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<TestUserSeeder>();
 builder.Services.AddScoped<FeatureRoutingConfigSeeder>();
 builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProbe>()));
+builder.Services.AddScoped<ProjectContextSnapshotService>();
 
 builder.Services.AddRealtimeServices();
 
@@ -406,6 +409,30 @@ if (!app.Environment.IsEnvironment("Test"))
         "/hangfire",
         new DashboardOptions { Authorization = [new AdminRequiredAuthFilter()] }
     );
+
+    // Register AI narrative generation job after app starts (avoids sync-over-async at startup).
+    // AiNarrativeGenerationTimeUtc is read once at app start; admin changes require restart.
+    app.Lifetime.ApplicationStarted.Register(async () =>
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+            var systemSettings = await settingsProvider.GetAsync();
+            var narrativeTime = systemSettings.AiNarrativeGenerationTimeUtc ?? TimeSpan.Zero;
+            RecurringJob.AddOrUpdate<ProjectContextSnapshotService>(
+                "ai-narrative-gen",
+                svc => svc.GenerateAiNarrativeForAllActiveProjectsAsync(default),
+                () => Cron.Daily(narrativeTime.Hours, narrativeTime.Minutes)
+            );
+        }
+        catch (Exception ex)
+        {
+            var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Hangfire");
+            logger.LogError(ex, "Failed to register ai-narrative-gen recurring job");
+        }
+    });
 }
 
 app.MapControllers();

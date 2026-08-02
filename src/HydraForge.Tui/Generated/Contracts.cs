@@ -328,7 +328,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task ProjectSnapshotAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ProjectSnapshotResponse> ProjectSnapshotAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
@@ -428,7 +428,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task SettingsPUTAsync(UpdateSystemSettingsRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task SettingsPUTAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -616,6 +616,9 @@ namespace HydraForge.Tui.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"ImageGalleryEditor")]
         ImageGalleryEditor = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ProjectNarrative")]
+        ProjectNarrative = 11,
 
     }
 
@@ -2179,6 +2182,39 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProjectSnapshotResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid ProjectId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("templateContent", Required = Newtonsoft.Json.Required.Always)]
+        public string TemplateContent { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("templateGeneratedAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset TemplateGeneratedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("aiNarrative", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? AiNarrative { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("aiNarrativeGeneratedAt", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.DateTimeOffset? AiNarrativeGeneratedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum ProjectSortField
     {
 
@@ -3035,42 +3071,6 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
         public string Content { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateSystemSettingsRequest
-    {
-
-        [Newtonsoft.Json.JsonProperty("archivedItemRetentionDays", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? ArchivedItemRetentionDays { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("auditLogRetentionDays", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? AuditLogRetentionDays { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("notificationRetentionDays", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? NotificationRetentionDays { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("ntfyServerUrl", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string? NtfyServerUrl { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("searXngUrl", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string? SearXngUrl { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("brandName", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string? BrandName { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("brandLogoUrl", Required = Newtonsoft.Json.Required.AllowNull)]
-        public string? BrandLogoUrl { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

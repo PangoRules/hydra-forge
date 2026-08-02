@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+    "/api/account/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AccountUsageResponse"];
+                        "application/json": components["schemas"]["AccountUsageResponse"];
+                        "text/json": components["schemas"]["AccountUsageResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/Notifications": {
         parameters: {
             query?: never;
@@ -2603,7 +2640,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["ProjectSnapshotResponse"];
+                        "application/json": components["schemas"]["ProjectSnapshotResponse"];
+                        "text/json": components["schemas"]["ProjectSnapshotResponse"];
+                    };
                 };
             };
         };
@@ -3485,13 +3526,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateSystemSettingsRequest"];
-                    "text/json": components["schemas"]["UpdateSystemSettingsRequest"];
-                    "application/*+json": components["schemas"]["UpdateSystemSettingsRequest"];
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
@@ -3566,15 +3601,782 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    skip?: number | string;
+                    take?: number | string;
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderPageDto"];
+                        "application/json": components["schemas"]["ProviderPageDto"];
+                        "text/json": components["schemas"]["ProviderPageDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateProviderInput"];
+                    "text/json": components["schemas"]["CreateProviderInput"];
+                    "application/*+json": components["schemas"]["CreateProviderInput"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderDto"];
+                        "application/json": components["schemas"]["ProviderDto"];
+                        "text/json": components["schemas"]["ProviderDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderDto"];
+                        "application/json": components["schemas"]["ProviderDto"];
+                        "text/json": components["schemas"]["ProviderDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProviderInput"];
+                    "text/json": components["schemas"]["UpdateProviderInput"];
+                    "application/*+json": components["schemas"]["UpdateProviderInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderDto"];
+                        "application/json": components["schemas"]["ProviderDto"];
+                        "text/json": components["schemas"]["ProviderDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers/{providerId}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderModelDto"][];
+                        "application/json": components["schemas"]["ProviderModelDto"][];
+                        "text/json": components["schemas"]["ProviderModelDto"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateModelInput"];
+                    "text/json": components["schemas"]["CreateModelInput"];
+                    "application/*+json": components["schemas"]["CreateModelInput"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderModelConfigDto"];
+                        "application/json": components["schemas"]["ProviderModelConfigDto"];
+                        "text/json": components["schemas"]["ProviderModelConfigDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers/{providerId}/models/configured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderModelConfigDto"][];
+                        "application/json": components["schemas"]["ProviderModelConfigDto"][];
+                        "text/json": components["schemas"]["ProviderModelConfigDto"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers/{providerId}/models/{modelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                    modelId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderModelConfigDto"];
+                        "application/json": components["schemas"]["ProviderModelConfigDto"];
+                        "text/json": components["schemas"]["ProviderModelConfigDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                    modelId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateModelInput"];
+                    "text/json": components["schemas"]["UpdateModelInput"];
+                    "application/*+json": components["schemas"]["UpdateModelInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProviderModelConfigDto"];
+                        "application/json": components["schemas"]["ProviderModelConfigDto"];
+                        "text/json": components["schemas"]["ProviderModelConfigDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerId: string;
+                    modelId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FeatureRoutingDto"][];
+                        "application/json": components["schemas"]["FeatureRoutingDto"][];
+                        "text/json": components["schemas"]["FeatureRoutingDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/routing/{feature}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    feature: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRoutingInput"];
+                    "text/json": components["schemas"]["UpdateRoutingInput"];
+                    "application/*+json": components["schemas"]["UpdateRoutingInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FeatureRoutingDto"];
+                        "application/json": components["schemas"]["FeatureRoutingDto"];
+                        "text/json": components["schemas"]["FeatureRoutingDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/usage/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                    projectId?: string;
+                    feature?: string[];
+                    providerId?: string;
+                    modelId?: string;
+                    from?: string;
+                    to?: string;
+                    skip?: number | string;
+                    take?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TokenUsagePageDto"];
+                        "application/json": components["schemas"]["TokenUsagePageDto"];
+                        "text/json": components["schemas"]["TokenUsagePageDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/usage/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                    projectId?: string;
+                    feature?: string[];
+                    providerId?: string;
+                    modelId?: string;
+                    from?: string;
+                    to?: string;
+                    skip?: number | string;
+                    take?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ImageUsagePageDto"];
+                        "application/json": components["schemas"]["ImageUsagePageDto"];
+                        "text/json": components["schemas"]["ImageUsagePageDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{userId}/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserBudgetDto"];
+                        "application/json": components["schemas"]["UserBudgetDto"];
+                        "text/json": components["schemas"]["UserBudgetDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateBudgetInput"];
+                    "text/json": components["schemas"]["UpdateBudgetInput"];
+                    "application/*+json": components["schemas"]["UpdateBudgetInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserBudgetDto"];
+                        "application/json": components["schemas"]["UserBudgetDto"];
+                        "text/json": components["schemas"]["UserBudgetDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountUsageResponse: {
+            /** Format: int64 */
+            tokensUsed: number | string;
+            /** Format: int32 */
+            tokensBudget: number | string;
+            /** Format: int32 */
+            imagesUsed: number | string;
+            /** Format: int32 */
+            imagesBudget: number | string;
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
+            recentCalls: components["schemas"]["RecentCallDto"][];
+        };
         AddMemberRequest: {
             /** Format: uuid */
             userId: string;
             role: components["schemas"]["MemberRole"];
         };
+        /** @enum {string} */
+        AiFeature: "PersonalChat" | "ProjectChat" | "DeepResearch" | "AgentPipeline" | "MemoryExtraction" | "NotesClassification" | "DocumentEditing" | "CardReview" | "ImageChat" | "ImageDocument" | "ImageGalleryEditor" | "ProjectNarrative";
         ArchiveCardRequest: {
             /** Format: int32 */
             version: number | string;
@@ -3801,6 +4603,16 @@ export interface components {
         CreateCommentRequest: {
             content: string;
         };
+        CreateModelInput: {
+            modelId: string;
+            name: string;
+            tier: string;
+            /** Format: double */
+            pricePerToken: null | number | string;
+            /** Format: int32 */
+            maxTokens: null | number | string;
+            isEnabled: boolean;
+        };
         CreatePlanRequest: {
             title: string;
             description: null | string;
@@ -3819,6 +4631,16 @@ export interface components {
             gitRemoteUrl: null | string;
             gitProvider: null | string;
             template?: components["schemas"]["ColumnTemplate"];
+        };
+        CreateProviderInput: {
+            name: string;
+            baseUrl: string;
+            apiKey: null | string;
+            adapterType: string;
+            providerType: string;
+            tier: string;
+            /** Format: uuid */
+            fallbackProviderId: null | string;
         };
         CreateRelationshipRequest: {
             /** Format: uuid */
@@ -3851,6 +4673,44 @@ export interface components {
         };
         /** @enum {string} */
         DocType: "Specification" | "Concept" | "Report";
+        FeatureRoutingDto: {
+            /** Format: uuid */
+            id: string;
+            feature: components["schemas"]["AiFeature"];
+            defaultTier: string;
+            maxUserTier: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ImageUsageDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            projectId: null | string;
+            feature: components["schemas"]["AiFeature"];
+            modelName: string;
+            /** Format: int32 */
+            imageCount: number | string;
+            resolution: string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            userName?: null | string;
+        };
+        ImageUsagePageDto: {
+            items: components["schemas"]["ImageUsageDto"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            totalImageCount: number | string;
+            /** Format: double */
+            totalCost: number | string;
+        };
         LoginRequest: {
             username: string;
             password: string;
@@ -3996,8 +4856,75 @@ export interface components {
             columns: components["schemas"]["ColumnResponse"][];
             members: components["schemas"]["MemberResponse"][];
         };
+        ProjectSnapshotResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            templateContent: string;
+            /** Format: date-time */
+            templateGeneratedAt: string;
+            aiNarrative: null | string;
+            /** Format: date-time */
+            aiNarrativeGeneratedAt: null | string;
+        };
         /** @enum {string} */
         ProjectSortField: "Name" | "CreatedAt" | "UpdatedAt";
+        ProviderDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            baseUrl: string;
+            adapterType: string;
+            providerType: string;
+            tier: string;
+            /** Format: uuid */
+            fallbackProviderId: null | string;
+            isEnabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProviderModelConfigDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            providerId: string;
+            modelId: string;
+            name: string;
+            tier: string;
+            /** Format: double */
+            pricePerToken: null | number | string;
+            /** Format: int32 */
+            maxTokens: null | number | string;
+            isEnabled: boolean;
+        };
+        ProviderModelDto: {
+            modelId: string;
+            name: string;
+            description: null | string;
+            metadata: null | {
+                [key: string]: string;
+            };
+        };
+        ProviderPageDto: {
+            items: components["schemas"]["ProviderDto"][];
+            /** Format: int32 */
+            totalCount: number | string;
+        };
+        RecentCallDto: {
+            feature: string;
+            model: string;
+            /** Format: int32 */
+            tokens: number | string;
+            /** Format: int32 */
+            images: number | string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: date-time */
+            timestamp: string;
+        };
         RefreshTokenResponse: {
             accessToken: string;
             /** Format: date-time */
@@ -4071,9 +4998,51 @@ export interface components {
             /** Format: uuid */
             createdByUserId: string;
         };
+        TokenUsageDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            projectId: null | string;
+            feature: components["schemas"]["AiFeature"];
+            modelName: string;
+            /** Format: int32 */
+            inputTokens: number | string;
+            /** Format: int32 */
+            outputTokens: number | string;
+            /** Format: int32 */
+            cachedTokens: number | string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: date-time */
+            createdAt: string;
+            userName?: null | string;
+        };
+        TokenUsagePageDto: {
+            items: components["schemas"]["TokenUsageDto"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int64 */
+            totalInputTokens: number | string;
+            /** Format: int64 */
+            totalOutputTokens: number | string;
+            /** Format: double */
+            totalCost: number | string;
+        };
         UnreadCountResponse: {
             /** Format: int32 */
             count: number | string;
+        };
+        UpdateBudgetInput: {
+            /** Format: int32 */
+            dailyLimit: null | number | string;
+            /** Format: int32 */
+            monthlyLimit: null | number | string;
+            /** Format: int32 */
+            monthlyTokenBudget: null | number | string;
+            /** Format: int32 */
+            monthlyImageBudget: null | number | string;
         };
         UpdateCardRequest: {
             title: string;
@@ -4103,6 +5072,15 @@ export interface components {
         UpdateMemberRequest: {
             role: components["schemas"]["MemberRole"];
         };
+        UpdateModelInput: {
+            name: null | string;
+            tier: null | string;
+            /** Format: double */
+            pricePerToken: null | number | string;
+            /** Format: int32 */
+            maxTokens: null | number | string;
+            isEnabled: null | boolean;
+        };
         UpdatePlanRequest: {
             title: string;
             description: null | string;
@@ -4114,22 +5092,43 @@ export interface components {
             gitRemoteUrl: null | string;
             gitProvider: null | string;
         };
+        UpdateProviderInput: {
+            name: null | string;
+            baseUrl: null | string;
+            apiKey: null | string;
+            tier: null | string;
+            /** Format: uuid */
+            fallbackProviderId: null | string;
+            isEnabled: null | boolean;
+        };
+        UpdateRoutingInput: {
+            defaultTier: string;
+            maxUserTier: null | string;
+        };
         UpdateSpecRequest: {
             title: string;
             description: null | string;
             content: string;
         };
-        UpdateSystemSettingsRequest: {
+        UserBudgetDto: {
+            /** Format: uuid */
+            userId: string;
             /** Format: int32 */
-            archivedItemRetentionDays: null | number | string;
+            dailyLimit: null | number | string;
             /** Format: int32 */
-            auditLogRetentionDays: null | number | string;
+            monthlyLimit: null | number | string;
             /** Format: int32 */
-            notificationRetentionDays: null | number | string;
-            ntfyServerUrl: null | string;
-            searXngUrl: null | string;
-            brandName: null | string;
-            brandLogoUrl: null | string;
+            monthlyTokenBudget: number | string;
+            /** Format: int32 */
+            monthlyTokenUsed: number | string;
+            /** Format: int32 */
+            monthlyImageBudget: number | string;
+            /** Format: int32 */
+            monthlyImageUsed: number | string;
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
         };
         UserDto: {
             /** Format: uuid */

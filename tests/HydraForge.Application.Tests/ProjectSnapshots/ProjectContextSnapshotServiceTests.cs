@@ -1,8 +1,11 @@
 using HydraForge.Application.Cards;
+using HydraForge.Application.Llm;
 using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 
 namespace HydraForge.Application.Tests.ProjectSnapshots;
 
@@ -30,7 +33,12 @@ public class ProjectContextSnapshotServiceTests
             columnRepo,
             cardRepo,
             relationshipRepo,
-            snapshotRepo
+            snapshotRepo,
+            new InMemoryProjectRepository(),
+            Substitute.For<IModelRouter>(),
+            Substitute.For<ILlmClientFactory>(),
+            Substitute.For<IUsageRecorder>(),
+            Substitute.For<ILogger<ProjectContextSnapshotService>>()
         );
 
         await service.RefreshAsync(projectId);
@@ -71,7 +79,12 @@ public class ProjectContextSnapshotServiceTests
             columnRepo,
             cardRepo,
             relationshipRepo,
-            snapshotRepo
+            snapshotRepo,
+            new InMemoryProjectRepository(),
+            Substitute.For<IModelRouter>(),
+            Substitute.For<ILlmClientFactory>(),
+            Substitute.For<IUsageRecorder>(),
+            Substitute.For<ILogger<ProjectContextSnapshotService>>()
         );
 
         await service.RefreshAsync(projectId);
@@ -119,7 +132,12 @@ public class ProjectContextSnapshotServiceTests
             columnRepo,
             cardRepo,
             relationshipRepo,
-            snapshotRepo
+            snapshotRepo,
+            new InMemoryProjectRepository(),
+            Substitute.For<IModelRouter>(),
+            Substitute.For<ILlmClientFactory>(),
+            Substitute.For<IUsageRecorder>(),
+            Substitute.For<ILogger<ProjectContextSnapshotService>>()
         );
 
         await service.RefreshAsync(projectId);
@@ -422,6 +440,70 @@ internal class InMemorySnapshotRepository : IProjectContextSnapshotRepository
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {
         UpdatedSnapshots.Add(snapshot);
+        return Task.CompletedTask;
+    }
+}
+
+internal class InMemoryProjectRepository : IProjectRepository
+{
+    private readonly List<Project> _projects = [];
+
+    public void AddProject(Project project) => _projects.Add(project);
+
+    public Task<ProjectListPage> ListAllAsync(
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        var query = _projects.AsEnumerable();
+        if (!includeArchived)
+            query = query.Where(p => p.ArchivedAt == null);
+        var projects = query.ToList();
+        return Task.FromResult(new ProjectListPage(projects, projects.Count));
+    }
+
+    public Task AddAsync(Project project, CancellationToken ct = default)
+    {
+        _projects.Add(project);
+        return Task.CompletedTask;
+    }
+
+    public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(_projects.FirstOrDefault(p => p.Id == id));
+
+    public Task<ProjectListPage> ListByUserIdAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        MemberRole? role,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    ) => Task.FromResult(new ProjectListPage([], 0));
+
+    public Task<ProjectListPage> ListNonMemberProjectsAsync(
+        Guid userId,
+        bool includeArchived,
+        string? search,
+        ProjectSortField sortBy,
+        bool sortDescending,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    ) => Task.FromResult(new ProjectListPage([], 0));
+
+    public Task UpdateAsync(Project project, CancellationToken ct = default)
+    {
+        var idx = _projects.FindIndex(p => p.Id == project.Id);
+        if (idx >= 0)
+            _projects[idx] = project;
         return Task.CompletedTask;
     }
 }

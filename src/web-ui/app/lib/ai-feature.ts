@@ -9,7 +9,8 @@ export const AI_FEATURE_LABELS: Record<string, string> = {
   CardReview: 'Card Review',
   ImageChat: 'Image Chat',
   ImageDocument: 'Image Document',
-  ImageGalleryEditor: 'Image Gallery Editor'
+  ImageGalleryEditor: 'Image Gallery Editor',
+  ProjectNarrative: 'Project Narrative (nightly)'
 }
 
 export type LlmTier = 'Economy' | 'Standard' | 'Premium'

@@ -31,12 +31,21 @@ public sealed class OllamaAdapter(
     {
         var baseUrl = provider.BaseUrl.TrimEnd('/');
 
+        // Ollama has no prompt-caching API — cache blocks are flattened into plain
+        // system messages ahead of the conversation instead of being dropped.
+        var messages = new List<ChatMessage>(request.Messages);
+        int insertIndex = 0;
+        foreach (var block in request.CacheBlocks)
+        {
+            messages.Insert(insertIndex++, new ChatMessage(ChatRole.System, block.Content));
+        }
+
         var body = new OllamaChatRequest
         {
             Model = request.ModelId,
             Messages =
             [
-                .. request.Messages.Select(m => new OllamaMessage
+                .. messages.Select(m => new OllamaMessage
                 {
                     Role = m.Role.ToString().ToLowerInvariant(),
                     Content = m.Content,

@@ -128,6 +128,30 @@ public class ModelRouterTests
     }
 
     [Fact]
+    public async Task ResolveAsync_BumpedCandidateHasNullMaxTokens_TreatedAsUnlimited()
+    {
+        var stdProviderId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        // Default tier Economy has no models — must bump to Standard.
+        provider.AddRouting(AiFeature.ProjectNarrative, ModelTier.Economy, null);
+        provider.AddEnabledProvider(stdProviderId, "StdProvider", ModelTier.Standard);
+        // MaxTokens unset (null) — means "no configured limit", not "zero capacity".
+        provider.AddModel(Guid.NewGuid(), stdProviderId, "local-model", ModelTier.Standard);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(
+            AiFeature.ProjectNarrative,
+            Guid.NewGuid(),
+            null,
+            4000
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("local-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
     public async Task ResolveAsync_NoModelFitsAfterAllTiers_ReturnsContextWindowExceeded()
     {
         var ecoProviderId = Guid.NewGuid();
