@@ -139,8 +139,6 @@ public sealed record ImageUsageDto(
 
 public sealed record UserBudgetDto(
     Guid UserId,
-    int? DailyLimit,
-    int? MonthlyLimit,
     int MonthlyTokenBudget,
     int MonthlyTokenUsed,
     int MonthlyImageBudget,
@@ -149,9 +147,4 @@ public sealed record UserBudgetDto(
     DateTime PeriodEnd
 );
 
-public sealed record UpdateBudgetInput(
-    int? DailyLimit,
-    int? MonthlyLimit,
-    int? MonthlyTokenBudget,
-    int? MonthlyImageBudget
-);
+public sealed record UpdateBudgetInput(int? MonthlyTokenBudget, int? MonthlyImageBudget);

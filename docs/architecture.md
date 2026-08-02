@@ -249,6 +249,8 @@ Feature Request (e.g. ProjectChat)
 └──────────────────────────────────────────────┘
 ```
 
+**Per-feature model allowlist (opt-in):** a feature can pin routing to a specific ordered set of models via `FeatureAllowedModel` rows (`FeatureRoutingConfigId`, `ProviderModelConfigId`, `Priority`). No rows → step 3 above (tier-based) is unchanged. Rows present → candidates are restricted to that set, tried in `Priority` order; the context-window auto-bump (step 4) still runs, scoped to the allowed set. Admin-managed on the Routing page (`admin/routing.vue`).
+
 ### Prompt Caching Strategy
 
 `ProjectContextSnapshot.TemplateContent` and user memory blocks are formatted as cache-eligible blocks in `ILlmClient`. On repeated project chat calls with the same board state, the provider returns cached tokens — reducing cost. Tracked in `TokenUsageRecord.CachedTokens`.

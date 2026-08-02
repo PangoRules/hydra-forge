@@ -199,7 +199,9 @@ For detailed phase task lists, see [functional-spec.md](functional-spec.md) §13
 
 > **Before Phase 2:** Define `IFileStore` abstraction (`LocalFileStore` + `S3FileStore`). Default: local FS. S3 opt-in via env var.
 
-> **Before Phase 6:** Pick nightly job scheduler. Recommendation: start with `.NET BackgroundService`, migrate to Hangfire if job visibility becomes important.
+> **Before Phase 6:** Pick nightly job scheduler. **Resolved: Hangfire + `Hangfire.PostgreSql`** (see D-57) — chosen over `BackgroundService` for restart-persistence/retry/history, over Quartz.NET for not needing full cron flexibility. Supersedes the `BackgroundService` recommendation this line originally carried.
+
+> **Before Phase 7:** `ILlmClient.StreamChatAsync` (`IAsyncEnumerable<ChatChunk>`) is built and drained server-side (D-64), but no transport forwards chunks to a live client yet. Decide the SignalR/SSE streaming shape for chat before building ChatSession/ChatMessage persistence on top of it.
 
 > **Before Phase 9:** Add `UserPreferences` and `UserTheme` entities to the data model before building any preference-related endpoints.
 

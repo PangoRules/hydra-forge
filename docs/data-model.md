@@ -454,14 +454,25 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 
 > `FeatureRoutingConfig` implements FR-172 and FR-173 — one row seeded per `AiFeature` on startup (`FeatureRoutingConfigSeeder`, `DefaultTier = Standard`, `MaxUserTier = null` unless admin locks it). `ModelRouter.ResolveAsync` reads it via `IRoutingConfigProvider`.
 
+### FeatureAllowedModel
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | Primary key |
+| FeatureRoutingConfigId | Guid | FK to `FeatureRoutingConfig` |
+| ProviderModelConfigId | Guid | FK to `ProviderModelConfig` |
+| Priority | int | Preference order within the feature's allowlist; 0 = most preferred |
+
+> Opt-in, additive — no rows for a feature means today's tier-based routing behavior is unchanged. When rows exist, `ModelRouter` restricts candidates to that set, tried in `Priority` order; the context-window auto-bump still runs but scoped to the allowed set. Admin-managed on the Routing page (`admin/routing.vue`).
+
 ### UserTokenBudget
 
 | Field | Type | Description |
 |---|---|---|
 | Id | Guid | Primary key |
-| UserId | Guid | FK to User |
-| MonthlyTokenBudget | int | Token cap per billing period (0 = unlimited) |
-| MonthlyTokenUsed | int | Current period token spend |
+| UserId | Guid | FK to User. Unique index — see D-61 (lost-update gap accepted over pessimistic locking) |
+| MonthlyTokenBudget | int | Token cap per billing period (0 = unlimited). Enforced by `LlmCallGuard.CheckTokenBudgetAsync` |
+| MonthlyTokenUsed | int | Current period token spend, accrued by `EfUsageRecorder.AccrueTokenUsageAsync` |
 | MonthlyImageBudget | int | Image generation cap per billing period (0 = unlimited) |
 | MonthlyImageUsed | int | Current period image spend |
 | PeriodStart | DateTime | Start of the current billing period |

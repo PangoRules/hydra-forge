@@ -201,7 +201,7 @@ public class HydraForgeDbContextModelTests
 
         var budget = model.FindEntityType(typeof(UserTokenBudget));
         Assert.NotNull(budget);
-        AssertProperties(budget, "DailyLimit", "MonthlyLimit");
+        AssertProperties(budget, "MonthlyTokenBudget", "MonthlyTokenUsed");
     }
 
     [Fact]

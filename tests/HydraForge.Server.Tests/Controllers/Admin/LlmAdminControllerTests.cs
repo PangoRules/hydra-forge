@@ -815,8 +815,6 @@ public class LlmAdminControllerTests
                 Result<UserBudgetDto>.Success(
                     new UserBudgetDto(
                         userId,
-                        null,
-                        1000,
                         100000,
                         500,
                         50000,
@@ -860,8 +858,6 @@ public class LlmAdminControllerTests
                 Result<UserBudgetDto>.Success(
                     new UserBudgetDto(
                         userId,
-                        null,
-                        null,
                         200000,
                         500,
                         500,
@@ -879,7 +875,7 @@ public class LlmAdminControllerTests
             AdminToken
         );
 
-        var input = new UpdateBudgetInput(null, null, 200000, 500);
+        var input = new UpdateBudgetInput(200000, 500);
         var response = await client.PutAsJsonAsync(
             $"api/admin/users/{userId}/budget",
             input,

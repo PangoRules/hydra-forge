@@ -836,25 +836,13 @@ public sealed class LlmAdminService : ILlmAdminService
         if (budget is null)
         {
             return Result<UserBudgetDto>.Success(
-                new UserBudgetDto(
-                    userId,
-                    null,
-                    null,
-                    0,
-                    0,
-                    0,
-                    0,
-                    DateTime.UtcNow,
-                    DateTime.UtcNow.AddMonths(1)
-                )
+                new UserBudgetDto(userId, 0, 0, 0, 0, DateTime.UtcNow, DateTime.UtcNow.AddMonths(1))
             );
         }
 
         return Result<UserBudgetDto>.Success(
             new UserBudgetDto(
                 budget.UserId,
-                budget.DailyLimit,
-                budget.MonthlyLimit,
                 budget.MonthlyTokenBudget,
                 budget.MonthlyTokenUsed,
                 budget.MonthlyImageBudget,
@@ -878,8 +866,6 @@ public sealed class LlmAdminService : ILlmAdminService
             budget = new UserTokenBudget
             {
                 UserId = userId,
-                DailyLimit = input.DailyLimit,
-                MonthlyLimit = input.MonthlyLimit,
                 MonthlyTokenBudget = input.MonthlyTokenBudget ?? 0,
                 MonthlyImageBudget = input.MonthlyImageBudget ?? 0,
                 PeriodStart = DateTime.UtcNow,
@@ -889,16 +875,6 @@ public sealed class LlmAdminService : ILlmAdminService
         }
         else
         {
-            if (input.DailyLimit.HasValue)
-            {
-                budget.DailyLimit = input.DailyLimit.Value;
-            }
-
-            if (input.MonthlyLimit.HasValue)
-            {
-                budget.MonthlyLimit = input.MonthlyLimit.Value;
-            }
-
             if (input.MonthlyTokenBudget.HasValue)
             {
                 budget.MonthlyTokenBudget = input.MonthlyTokenBudget.Value;
@@ -915,8 +891,6 @@ public sealed class LlmAdminService : ILlmAdminService
         return Result<UserBudgetDto>.Success(
             new UserBudgetDto(
                 budget.UserId,
-                budget.DailyLimit,
-                budget.MonthlyLimit,
                 budget.MonthlyTokenBudget,
                 budget.MonthlyTokenUsed,
                 budget.MonthlyImageBudget,

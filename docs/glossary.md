@@ -57,3 +57,12 @@
 | **ProblemDetails** | RFC 7807 structured error response shape. Every API error returns: `type`, `title`, `status`, `detail`, `correlationId`. Stack traces never included. |
 | **correlationId** | Unique identifier assigned to every request by the global exception middleware. Logged server-side. Visible to users in error messages for support escalation. |
 | **SearXNG** | Open-source, self-hosted metasearch engine. Bundled as an optional Docker Compose service. Required for Deep Research. |
+| **Hangfire** | Persistent background job library (`Hangfire.PostgreSql`, same DB as the app — no new infra). Runs recurring jobs (e.g. `ai-narrative-gen`) with restart-persistence, retry, and a dashboard at `/hangfire` (admin-only). See D-57. |
+| **IKeyVault** | Application port for encrypting/decrypting LLM provider API keys at rest. `AesGcmKeyVault` (AES-256-GCM) is the only implementation; key comes from `Llm:EncryptionKey` config, validated at startup. See D-59. |
+| **LlmProvider** | Admin-configured connection to an LLM vendor/endpoint (base URL, encrypted API key, `ProviderType`, optional `FallbackProviderId`). One provider can expose many `ProviderModelConfig` rows. |
+| **ProviderModelConfig** | A specific model exposed by an `LlmProvider` — model id, `ModelTier`, `MaxTokens`, pricing, enabled flag. The configured model catalog `ModelRouter` selects from. |
+| **AdapterType** | Enum selecting which adapter class handles a provider's wire protocol: `OpenAiCompatible`, `Anthropic`, `Ollama`, `DallE`, `StabilityAi`, `ComfyUi`, `Diffusers` (`ComfyUi`/`Diffusers` share one adapter class, see D-62). |
+| **FeatureRoutingConfig** | Per-`AiFeature` admin routing policy: `DefaultTier` + `MaxUserTier` ceiling. One row seeded per feature on startup. Read by `ModelRouter` via `IRoutingConfigProvider`. |
+| **FeatureAllowedModel** | Opt-in per-feature model allowlist (`FeatureRoutingConfigId`, `ProviderModelConfigId`, `Priority`). Empty = tier-based routing unchanged; rows present = `ModelRouter` restricts candidates to that ordered set. Admin-managed in the Routing page. |
+| **UserTokenBudget** | Per-user soft cap on LLM token/image spend, checked by `LlmCallGuard` before a call and accrued by `EfUsageRecorder`. Unique index on `UserId`; concurrent accrual can lose updates by design (see D-61). |
+| **cache_control** | Anthropic-specific request field marking a content block as cache-eligible (`{type:"ephemeral"}`). Enables prompt caching on repeated system/context blocks — see "Prompt Caching" and CLAUDE.md's LLM adapter conventions. |

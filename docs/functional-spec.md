@@ -586,7 +586,7 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 - [x] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects (see D-57; moved here from its earlier placement under Phase 7 — the job itself is Phase 6 scope, only the live chat *transport* is Phase 7)
 - [x] Web UI: "View AI narrative" button next to project title on board view → modal showing `AiNarrative` + `AiNarrativeGeneratedAt` (see D-58)
 - [x] TUI: narrative viewer screen (`NarrativeViewerScreen`), same overlay pattern as spec/plan viewer, launched via `v` on the Board screen (help-overlay-only per D-58 — status bar has no room)
-- [ ] Per-feature model allowlist for admin Routing page (exact provider + exact models, not just tier bucket) — **deferred, not required for Phase 6 completion**. Current routing is tier-only (`FeatureRoutingConfig.DefaultTier`/`MaxUserTier`); no way to pin a feature to specific provider/model pairs. See `docs/plans/2026-08-02-routing-model-allowlist.md`.
+- [x] Per-feature model allowlist for admin Routing page: `FeatureAllowedModel` (Id, FeatureRoutingConfigId, ProviderModelConfigId, Priority) — opt-in, empty list = unchanged tier-based behavior; rows present = `ModelRouter` restricts candidates to that ordered set. Admin Routing page drag-to-reorder editor (`routing.vue`). Shipped in `#88`.
 
 ### Phase 7: Chat — General & Project 💬
 > Goal: full chat system built on top of Phase 6 LLM infrastructure.
