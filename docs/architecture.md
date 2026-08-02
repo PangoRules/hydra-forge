@@ -49,6 +49,7 @@
 │  │  - AuditService                │        │
 │  │  - NotificationService         │
 │  │  - INotificationHubBus (port)  │        │
+│  │  - IKeyVault (port)            │        │
 │  └──────────────┬─────────────────┘        │
 ├─────────────────┼──────────────────────────┤
 │  ┌──────────────▼─────────────────┐        │
@@ -62,6 +63,8 @@
 │  │  - EF Core / Npgsql provider   │        │
 │  │  - Git service                 │        │
 │  │  - LLM client (OpenAI/etc)     │        │
+│  │    + AesGcmKeyVault (IKeyVault)│        │
+│  │    + LlmServiceCollectionExtensions│        │
 │  │  - SignalR messaging           │        │
 │  │    + BoardHub, PresenceHub     │        │
 │  │    + NotificationHub            │
@@ -207,8 +210,9 @@ Web UI User: ◀─────────────────────�
 **Rules:**
 - Server is the **only** component that calls LLMs. TUI and Web UI never call LLMs directly.
 - Admin configures API keys centrally. Users never touch credentials.
-- All LLM calls go through `ModelRouter`, which selects provider based on feature tier.
-- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`.
+- **API keys encrypted at rest** via `IKeyVault`/`AesGcmKeyVault` (AES-256-GCM, key from `Llm:EncryptionKey` config). Migration `20260731000000_ReencryptLlmProviderApiKeys` backfills existing placeholder rows. Decrypted at call time in `ILlmClientFactory` — never cached in adapter state.
+- All LLM calls go through `ModelRouter`, which resolves feature + user context → provider/model selection. Router returns `RouteDecision`; the calling service executes the call and handles fallback/retry.
+- Always code to interfaces: `ILlmClient`, `IImageClient`, `IEmbeddingClient`, `IKeyVault`, `IRoutingConfigProvider`.
 
 ### ModelRouter
 
@@ -216,23 +220,36 @@ Web UI User: ◀─────────────────────�
 Feature Request (e.g. ProjectChat)
   │
   ▼
-┌─────────────────────────────────────────┐
-│  ModelRouter                            │
-│  1. Look up FeatureRoutingConfig        │
-│     → Default tier for this AiFeature  │
-│  2. Apply user tier ceiling             │
-│     → Can user go higher? Cap if not.  │
-│  3. Check context window               │
-│     → Too big for Economy? Auto-bump.  │
-│  4. Select ProviderModelConfig          │
-│     → Active provider at resolved tier │
-│  5. Route request                       │
-│     → ILlmClient.StreamChatAsync()     │
-│  6. On rate-limit / 5xx:               │
-│     → Retry with fallback provider     │
-│  7. Log TokenUsageRecord               │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  ModelRouter                                 │
+│  ┌────────────────────────────────────────┐  │
+│  │  IRoutingConfigProvider                │  │
+│  │  (Application port, EF-backed)        │  │
+│  └────────────────────────────────────────┘  │
+│  1. Look up FeatureRoutingConfig             │
+│     → Default tier for this AiFeature       │
+│  2. Apply user tier ceiling                  │
+│     → Cap to MaxUserTier if exceeded.       │
+│     null = locked to default.                │
+│  3. Find model at resolved tier              │
+│     → GetEnabledModelsAtTierAsync()          │
+│  4. Context-window guard                     │
+│     → estimatedTokens > MaxTokens?          │
+│     → Auto-bump tier (Economy→Standard→Premium)│
+│  5. Build fallback chain                     │
+│     → Walk LlmProvider.FallbackProviderId    │
+│     → Cycle detection via HashSet<Guid>      │
+│  6. Return RouteDecision                     │
+│     (Primary + Fallbacks)                    │
+│  ════════════════════════════════════════    │
+│  Calling service handles:                    │
+│  → ILlmClient.StreamChatAsync()              │
+│  → Retry fallback on rate-limit / 5xx       │
+│  → Log TokenUsageRecord                      │
+└──────────────────────────────────────────────┘
 ```
+
+**Per-feature model allowlist (opt-in):** a feature can pin routing to a specific ordered set of models via `FeatureAllowedModel` rows (`FeatureRoutingConfigId`, `ProviderModelConfigId`, `Priority`). No rows → step 3 above (tier-based) is unchanged. Rows present → candidates are restricted to that set, tried in `Priority` order; the context-window auto-bump (step 4) still runs, scoped to the allowed set. Admin-managed on the Routing page (`admin/routing.vue`).
 
 ### Prompt Caching Strategy
 
@@ -244,12 +261,25 @@ When injected context (board state + memory + card detail) exceeds the configura
 
 ### LLM Adapters
 
-| Adapter | Covers |
-|---|---|
-| `OpenAiCompatibleAdapter` | OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp, any OpenAI-compat endpoint |
-| `AnthropicAdapter` | Claude models — includes `cache_control` prompt caching blocks |
-| `OllamaAdapter` | Local Ollama server |
-| `DallEAdapter` / `StabilityAdapter` / `DiffusersAdapter` | Image generation |
+| Adapter | `AdapterType` value(s) | Covers |
+|---|---|---|
+| `OpenAiCompatibleAdapter` | `OpenAiCompatible` | OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp, any OpenAI-compat chat endpoint |
+| `AnthropicAdapter` | `Anthropic` | Claude models — `cache_control` ephemeral prompt-caching blocks, `/v1/messages` streaming |
+| `OllamaAdapter` | `Ollama` | Local Ollama server — no API key (`IKeyVault` not injected) |
+| `DallEAdapter` | `DallE` | OpenAI image generation — `/images/generations` + `/images/edits` inpaint |
+| `StabilityAiAdapter` | `StabilityAi` | Stability AI image generation |
+| `ComfyUiAdapter` | `ComfyUi`, `Diffusers` | Local/self-hosted workflow-API image generation (`/prompt` submit + `/history` poll, 2s poll interval, 5-min timeout). One adapter class serves both enum values — `Diffusers` setups speak the same workflow-API wire shape as ComfyUI, so `LlmClientFactory` maps both to the same registered instance (only one named `HttpClient`, `"comfyui"`). See D-62. |
+
+All adapters except `OllamaAdapter` decrypt their provider's API key via `IKeyVault` at call time (never cached in adapter state, see D-59).
+
+### Scheduled Jobs (Hangfire)
+
+Persistent recurring jobs run on Hangfire + `Hangfire.PostgreSql` (same Postgres instance the app already runs — no new infra service, see D-57). One recurring job exists today: `"ai-narrative-gen"`, calling `ProjectContextSnapshotService.GenerateAiNarrativeForAllActiveProjectsAsync` on the admin-configurable `SystemSettings.AiNarrativeGenerationTimeUtc` schedule (default midnight UTC). For every active (non-archived) project with an existing snapshot, it resolves a model via `IModelRouter`, streams a narrative from the project's `TemplateContent`, writes `ProjectContextSnapshot.AiNarrative` + `AiNarrativeGeneratedAt`, and records the call via `IUsageRecorder` (`UserId = Guid.Empty` — a system/batch identity, not a real user, so no `UserTokenBudget` is charged; only `TokenUsageRecord` is written for admin usage-dashboard visibility). Per-project failures are caught and logged; one project's failure never aborts the batch.
+
+- **Dashboard**: `/hangfire`, admin-only. JWT bearer auth reads the `auth_token` cookie for `/hangfire` paths (dashboard is a browser UI, not an API client) — `AdminRequiredAuthFilter` then checks `IsInRole("Admin")`.
+- **Registration timing**: the recurring job is registered from `app.Lifetime.ApplicationStarted.Register(...)`, reading `SystemSettings.AiNarrativeGenerationTimeUtc` once at startup — an admin changing the generation time takes effect on next server restart, not live.
+- **Test env gating**: both `AddHangfire(...)` and `UseHangfireDashboard(...)` are skipped when `IsEnvironment("Test")` — `Hangfire.PostgreSql` requires a real connection string that `WebApplicationFactory` test fixtures don't provide.
+- **Narrative display**: read-only, no edit path. Web UI "View Narrative" button (board header) → modal; TUI `v` key on the board screen → overlay viewer. See D-58.
 
 ---
 
@@ -433,8 +463,9 @@ hydra-forge/
 │   │   ├── Persistence/
 │   │   ├── Auth/
 │   │   ├── Audit/
-│   │   ├── FileStorage/         # LocalFileStore, S3FileStore
-│   │   ├── Attachments/         # EfAttachmentRepository, DI extensions
+│   │   ├── FileStorage/            # LocalFileStore, S3FileStore
+│   │   ├── Llm/                    # AesGcmKeyVault, LlmServiceCollectionExtensions
+│   │   ├── Attachments/            # EfAttachmentRepository, DI extensions
 │   │   ├── Realtime/            # BoardHub, SignalRProjectBoardEventPublisher, RealtimeServiceCollectionExtensions
 │   │   └── Health/
 │   │

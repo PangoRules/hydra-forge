@@ -217,6 +217,7 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             "Jwt:SigningKey",
             "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
         );
+        builder.UseSetting("Llm:EncryptionKey", "0YEf4ZBA47CpqWSH0ZczKZ62owvbQ7T5IRfcecZ4Vgo=");
         builder.ConfigureServices(services =>
         {
             foreach (
@@ -397,6 +398,6 @@ internal class TestAuditLogReader : IAuditLogReader
     public Task<AuditLogQueryResult> QueryAsync(AuditLogQuery query, CancellationToken ct = default)
     {
         LastQuery = query;
-        return Task.FromResult(new AuditLogQueryResult(Array.Empty<AuditLogEntryDto>(), 0));
+        return Task.FromResult(new AuditLogQueryResult([], 0));
     }
 }

@@ -45,6 +45,8 @@ const makeCard = (overrides: Partial<CardResponse> = {}): CardResponse => ({
   watchers: [],
   relationshipBadges: [],
   relationshipCount: 0,
+  parentCard: null,
+  childCount: 0,
   ...overrides,
 })
 
@@ -233,6 +235,26 @@ describe('BoardCard', () => {
       }
     })
     expect(wrapper.text()).toContain('+2 more')
+  })
+
+  it('renders parent card summary from the server-provided field', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: {
+        card: makeCard({
+          parentCard: { id: 'p1', cardNumber: 5, title: 'Parent card', type: 'Goal' }
+        }),
+        projectId: 'p1'
+      }
+    })
+    expect(wrapper.text()).toContain('#5')
+    expect(wrapper.text()).toContain('Goal')
+  })
+
+  it('renders child count from the server-provided field', async () => {
+    const wrapper = await mountSuspended(BoardCard, {
+      props: { card: makeCard({ childCount: 3 }), projectId: 'p1' }
+    })
+    expect(wrapper.text()).toContain('3')
   })
 
   it('shows no relationship section and no lock icon when there are no relationships', async () => {

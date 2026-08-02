@@ -18,11 +18,67 @@ namespace HydraForge.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.Admin.FeatureAllowedModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FeatureRoutingConfigId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProviderModelConfigId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureRoutingConfigId");
+
+                    b.HasIndex("ProviderModelConfigId");
+
+                    b.HasIndex("FeatureRoutingConfigId", "ProviderModelConfigId")
+                        .IsUnique();
+
+                    b.ToTable("feature_allowed_models", (string)null);
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.Admin.FeatureRoutingConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DefaultTier")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Feature")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxUserTier")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Feature")
+                        .IsUnique();
+
+                    b.ToTable("feature_routing_configs", (string)null);
+                });
 
             modelBuilder.Entity("HydraForge.Domain.Entities.Admin.ImageUsageRecord", b =>
                 {
@@ -174,9 +230,10 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelId");
-
                     b.HasIndex("ProviderId");
+
+                    b.HasIndex("ProviderId", "ModelId")
+                        .IsUnique();
 
                     b.ToTable("provider_model_configs", (string)null);
                 });
@@ -253,16 +310,10 @@ namespace HydraForge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("DailyLimit")
-                        .HasColumnType("integer");
-
                     b.Property<int>("MonthlyImageBudget")
                         .HasColumnType("integer");
 
                     b.Property<int>("MonthlyImageUsed")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("MonthlyLimit")
                         .HasColumnType("integer");
 
                     b.Property<int>("MonthlyTokenBudget")
@@ -282,7 +333,8 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("user_token_budgets", (string)null);
                 });
@@ -1151,6 +1203,9 @@ namespace HydraForge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<TimeSpan?>("AiNarrativeGenerationTimeUtc")
+                        .HasColumnType("interval");
+
                     b.Property<int>("ArchivedItemRetentionDays")
                         .HasColumnType("integer");
 
@@ -1186,6 +1241,7 @@ namespace HydraForge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            AiNarrativeGenerationTimeUtc = new TimeSpan(0, 0, 0, 0, 0),
                             ArchivedItemRetentionDays = 730,
                             AuditLogRetentionDays = 90,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -1808,6 +1864,21 @@ namespace HydraForge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("spec_versions", (string)null);
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.Admin.FeatureAllowedModel", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.Admin.FeatureRoutingConfig", null)
+                        .WithMany()
+                        .HasForeignKey("FeatureRoutingConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HydraForge.Domain.Entities.Admin.ProviderModelConfig", null)
+                        .WithMany()
+                        .HasForeignKey("ProviderModelConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("HydraForge.Domain.Entities.Chat.ChatMessage", b =>

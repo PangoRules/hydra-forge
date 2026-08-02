@@ -135,7 +135,7 @@ public class EfProjectRepository(HydraForgeDbContext context) : IProjectReposito
                 on new { ProjectId = p.Id, UserId = userId } equals new { m.ProjectId, m.UserId }
                 into gj
             from m in gj.DefaultIfEmpty()
-            where (Guid?)m.ProjectId == null // null membership row = not a member
+            where m == null // null membership row = not a member
             select p;
 
         if (!includeArchived)
@@ -358,6 +358,16 @@ public class EfProjectContextSnapshotRepository(HydraForgeDbContext context)
         );
     }
 
+    public async Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    )
+    {
+        return await context
+            .ProjectContextSnapshots.Where(s => projectIds.Contains(s.ProjectId))
+            .ToListAsync(ct);
+    }
+
     public async Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {
         context.ProjectContextSnapshots.Add(snapshot);
@@ -367,6 +377,15 @@ public class EfProjectContextSnapshotRepository(HydraForgeDbContext context)
     public async Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {
         context.ProjectContextSnapshots.Update(snapshot);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    )
+    {
+        context.ProjectContextSnapshots.UpdateRange(snapshots);
         await context.SaveChangesAsync(ct);
     }
 }

@@ -1,10 +1,14 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Hangfire;
+using Hangfire.PostgreSql;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.ProjectSnapshots;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Constants;
 using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Audit;
@@ -13,6 +17,7 @@ using HydraForge.Infrastructure.Cards;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
@@ -147,6 +152,19 @@ builder.Services.AddPlanServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
 
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    var connectionString =
+        builder.Configuration.GetConnectionString("Default")
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Default is required for Hangfire storage."
+        );
+    builder.Services.AddHangfire(c =>
+        c.UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString))
+    );
+    builder.Services.AddHangfireServer();
+}
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey =
@@ -258,6 +276,10 @@ builder
                 {
                     context.Token = accessToken;
                 }
+                else if (path.StartsWithSegments("/hangfire"))
+                {
+                    context.Token = context.Request.Cookies["auth_token"];
+                }
                 return Task.CompletedTask;
             },
         };
@@ -300,7 +322,9 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<TestUserSeeder>();
+builder.Services.AddScoped<FeatureRoutingConfigSeeder>();
 builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProbe>()));
+builder.Services.AddScoped<ProjectContextSnapshotService>();
 
 builder.Services.AddRealtimeServices();
 
@@ -331,6 +355,10 @@ if (applyMigrationsOnStartup)
 
     var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
     await adminSeeder.SeedIfNeededAsync();
+
+    var featureRoutingConfigSeeder =
+        scope.ServiceProvider.GetRequiredService<FeatureRoutingConfigSeeder>();
+    await featureRoutingConfigSeeder.SeedAsync();
 
     if (app.Environment.IsDevelopment())
     {
@@ -374,6 +402,38 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (!app.Environment.IsEnvironment("Test"))
+{
+    app.UseHangfireDashboard(
+        "/hangfire",
+        new DashboardOptions { Authorization = [new AdminRequiredAuthFilter()] }
+    );
+
+    // Register AI narrative generation job after app starts (avoids sync-over-async at startup).
+    // AiNarrativeGenerationTimeUtc is read once at app start; admin changes require restart.
+    app.Lifetime.ApplicationStarted.Register(async () =>
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<ISettingsProvider>();
+            var systemSettings = await settingsProvider.GetAsync();
+            var narrativeTime = systemSettings.AiNarrativeGenerationTimeUtc ?? TimeSpan.Zero;
+            RecurringJob.AddOrUpdate<ProjectContextSnapshotService>(
+                "ai-narrative-gen",
+                svc => svc.GenerateAiNarrativeForAllActiveProjectsAsync(default),
+                () => Cron.Daily(narrativeTime.Hours, narrativeTime.Minutes)
+            );
+        }
+        catch (Exception ex)
+        {
+            var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Hangfire");
+            logger.LogError(ex, "Failed to register ai-narrative-gen recurring job");
+        }
+    });
+}
 
 app.MapControllers();
 

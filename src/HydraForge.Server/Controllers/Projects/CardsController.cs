@@ -383,6 +383,15 @@ public class CardsController(CardService cardService) : ControllerBase
                     b.IsSource
                 )),
             ],
-            dto.RelationshipCount
+            dto.RelationshipCount,
+            dto.ParentCard == null
+                ? null
+                : new ParentCardSummaryResponse(
+                    dto.ParentCard.Id,
+                    dto.ParentCard.CardNumber,
+                    dto.ParentCard.Title,
+                    dto.ParentCard.Type
+                ),
+            dto.ChildCount
         );
 }

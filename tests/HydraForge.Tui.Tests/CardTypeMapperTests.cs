@@ -29,11 +29,12 @@ public class CardTypeMapperTests
     public void ToShortDisplayString_Should_Return_Correct_Short_Strings()
     {
         // Arrange
+        // "D" for Idea, not "I" — Issue already owns that letter.
         var expectedMappings = new Dictionary<CardType, string>
         {
             { CardType.Task, "T" },
             { CardType.Issue, "I" },
-            { CardType.Idea, "ID" },
+            { CardType.Idea, "D" },
             { CardType.Goal, "G" },
         };
 
@@ -42,6 +43,24 @@ public class CardTypeMapperTests
         {
             var result = CardTypeMapper.ToShortDisplayString(kvp.Key);
             Assert.Equal(kvp.Value, result);
+        }
+    }
+
+    [Fact]
+    public void ToColorName_Should_Return_Correct_Colors()
+    {
+        var expectedMappings = new Dictionary<CardType, string>
+        {
+            { CardType.Task, "cyan1" },
+            { CardType.Issue, "red" },
+            { CardType.Goal, "yellow" },
+            { CardType.Idea, "green" },
+        };
+
+        foreach (var kvp in expectedMappings)
+        {
+            Assert.Equal(kvp.Value, CardTypeMapper.ToColorName(kvp.Key));
+            Assert.Equal(kvp.Value, CardTypeMapper.ToColorName(kvp.Key.ToString()));
         }
     }
 

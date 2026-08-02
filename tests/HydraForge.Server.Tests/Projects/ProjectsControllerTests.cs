@@ -318,6 +318,7 @@ internal class ProjectsTestWebApplicationFactory : WebApplicationFactory<Program
             "Jwt:SigningKey",
             "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
         );
+        builder.UseSetting("Llm:EncryptionKey", "0YEf4ZBA47CpqWSH0ZczKZ62owvbQ7T5IRfcecZ4Vgo=");
         builder.ConfigureServices(services =>
         {
             foreach (
@@ -717,6 +718,19 @@ internal class TestSnapshotRepository : IProjectContextSnapshotRepository
 
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
         Task.CompletedTask;
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([
+            .. _snapshots.Where(s => projectIds.Contains(s.ProjectId)),
+        ]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class TestChatArchiveService : IChatArchiveService

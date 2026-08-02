@@ -418,7 +418,7 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | BaseUrl | string | e.g. `https://api.openai.com/v1` |
 | ApiKeyEncrypted | string | Encrypted at rest |
 | IsEnabled | bool | Admin toggle |
-| AdapterType | AdapterType | `OpenAiCompatible` / `Anthropic` / `Ollama` / `Diffusers` / `ComfyUi` |
+| AdapterType | AdapterType | `OpenAiCompatible` / `Anthropic` / `Ollama` / `Diffusers` / `ComfyUi` / `DallE` / `StabilityAi` |
 | ProviderType | ProviderType | `Text` / `Image` / `Both` |
 | Tier | ModelTier | `Economy` / `Standard` / `Premium` |
 | FallbackProviderId | Guid? | Used if this provider is rate-limited or unavailable |
@@ -452,15 +452,31 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | DefaultTier | ModelTier | Install default tier for the feature |
 | MaxUserTier | ModelTier? | Ceiling for user overrides — null means locked to default |
 
-> `FeatureRoutingConfig` remains planned for the model-routing work that implements FR-172 and FR-173.
+> `FeatureRoutingConfig` implements FR-172 and FR-173 — one row seeded per `AiFeature` on startup (`FeatureRoutingConfigSeeder`, `DefaultTier = Standard`, `MaxUserTier = null` unless admin locks it). `ModelRouter.ResolveAsync` reads it via `IRoutingConfigProvider`.
+
+### FeatureAllowedModel
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | Primary key |
+| FeatureRoutingConfigId | Guid | FK to `FeatureRoutingConfig` |
+| ProviderModelConfigId | Guid | FK to `ProviderModelConfig` |
+| Priority | int | Preference order within the feature's allowlist; 0 = most preferred |
+
+> Opt-in, additive — no rows for a feature means today's tier-based routing behavior is unchanged. When rows exist, `ModelRouter` restricts candidates to that set, tried in `Priority` order; the context-window auto-bump still runs but scoped to the allowed set. Admin-managed on the Routing page (`admin/routing.vue`).
 
 ### UserTokenBudget
 
 | Field | Type | Description |
 |---|---|---|
-| UserId | Guid | FK to User |
-| DailyLimit | int? | Token cap per day (null = unlimited) |
-| MonthlyLimit | int? | Token cap per month (null = unlimited) |
+| Id | Guid | Primary key |
+| UserId | Guid | FK to User. Unique index — see D-61 (lost-update gap accepted over pessimistic locking) |
+| MonthlyTokenBudget | int | Token cap per billing period (0 = unlimited). Enforced by `LlmCallGuard.CheckTokenBudgetAsync` |
+| MonthlyTokenUsed | int | Current period token spend, accrued by `EfUsageRecorder.AccrueTokenUsageAsync` |
+| MonthlyImageBudget | int | Image generation cap per billing period (0 = unlimited) |
+| MonthlyImageUsed | int | Current period image spend |
+| PeriodStart | DateTime | Start of the current billing period |
+| PeriodEnd | DateTime | End of the current billing period |
 
 ### TokenUsageRecord
 
@@ -717,6 +733,11 @@ Singleton row (Id = `00000000-0000-0000-0000-000000000001`) holding admin-config
 | ArchivedItemRetentionDays | int | Days an item stays in the `ArchivedAt` state before housekeeping hard-deletes it. Default `730` (2 years). |
 | AuditLogRetentionDays | int | Days audit log and LLM/image usage records are kept. Default `90` (satisfies NFR-7). |
 | NotificationRetentionDays | int | Days a read notification is kept before housekeeping purges it. Default `30`. |
+| AiNarrativeGenerationTimeUtc | TimeSpan? | Time of day (UTC) the Hangfire `"ai-narrative-gen"` recurring job runs. `null` clears the schedule. Default `00:00` (midnight). Read once at server startup — admin changes take effect on next restart, not live. Set via a dedicated `SetAiNarrativeGenerationTime` method, not the general `UpdateSettings` (nullable-means-"don't change" doesn't work for a field where `null` is itself a meaningful value — see D-57/Hangfire patterns in `CLAUDE.md`). |
+| NtfyServerUrl | string? | Base URL of the ntfy server for push notifications; `null` disables ntfy delivery. |
+| SearXngUrl | string? | Base URL of the SearXNG instance used for AI web search, if configured. |
+| BrandName | string? | Custom branding — display name shown in place of "HydraForge" when set. |
+| BrandLogoUrl | string? | Custom branding — logo URL shown in place of the default when set. |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 
@@ -773,7 +794,7 @@ Lifecycle state for `Plan`. Done plans are read-only; a `Reactivate` action tran
 `User`, `AI`
 
 ### AdapterType
-`OpenAiCompatible`, `Anthropic`, `Ollama`, `Diffusers`, `ComfyUi`
+`OpenAiCompatible` (1), `Anthropic` (2), `Ollama` (3), `Diffusers` (4), `ComfyUi` (5), `DallE` (6), `StabilityAi` (7)
 
 ### ProviderType
 `Text`, `Image`, `Both`

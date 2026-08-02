@@ -53,12 +53,21 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     public DbSet<ImageTag> ImageTags => Set<ImageTag>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
+    public DbSet<FeatureRoutingConfig> FeatureRoutingConfigs => Set<FeatureRoutingConfig>();
+    public DbSet<FeatureAllowedModel> FeatureAllowedModels => Set<FeatureAllowedModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.HasPostgresExtension("vector");
+        try
+        {
+            modelBuilder.HasPostgresExtension("vector");
+        }
+        catch (InvalidOperationException)
+        {
+            // Non-PostgreSQL provider (e.g. InMemory) — skip HasPostgresExtension
+        }
 
         ConfigureEntity<User>(
             modelBuilder,
@@ -319,7 +328,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.ProviderId);
-                b.HasIndex(e => e.ModelId);
+                b.HasIndex(e => new { e.ProviderId, e.ModelId }).IsUnique();
             }
         );
 
@@ -328,7 +337,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             "user_token_budgets",
             b =>
             {
-                b.HasIndex(e => e.UserId);
+                b.HasIndex(e => e.UserId).IsUnique();
             }
         );
 
@@ -492,6 +501,34 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                         UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     }
                 );
+            }
+        );
+
+        ConfigureEntity<FeatureRoutingConfig>(
+            modelBuilder,
+            "feature_routing_configs",
+            b =>
+            {
+                b.HasIndex(e => e.Feature).IsUnique();
+            }
+        );
+
+        ConfigureEntity<FeatureAllowedModel>(
+            modelBuilder,
+            "feature_allowed_models",
+            b =>
+            {
+                b.HasIndex(e => e.FeatureRoutingConfigId);
+                b.HasIndex(e => new { e.FeatureRoutingConfigId, e.ProviderModelConfigId })
+                    .IsUnique();
+                b.HasOne<FeatureRoutingConfig>()
+                    .WithMany()
+                    .HasForeignKey(e => e.FeatureRoutingConfigId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasOne<ProviderModelConfig>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ProviderModelConfigId)
+                    .OnDelete(DeleteBehavior.Cascade);
             }
         );
 

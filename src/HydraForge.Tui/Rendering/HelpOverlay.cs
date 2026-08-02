@@ -27,6 +27,7 @@ public static class HelpOverlay
         };
 
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
         AnsiConsole.Write(panel);
         AnsiConsole.MarkupLine("[grey]Press [[?]] or [[Esc]] to close[/]");
 

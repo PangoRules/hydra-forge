@@ -125,16 +125,26 @@ async function fetchCardRelationships() {
     )
 
     // Type assertion for the response data
-    const data = response.data as { relationships: Array<{ sourceCardId: string, targetCardId: string, targetCardTitle: string, type: string }> }
+    const data = response.data as {
+      relationships: Array<{
+        sourceCardId: string
+        targetCardId: string
+        sourceCardTitle: string
+        targetCardTitle: string
+        type: string
+      }>
+    }
 
-    // Filter relationships where this card is the source (blocking others)
-    const dependents = data.relationships
-      .filter((rel: { sourceCardId: string }) => rel.sourceCardId === card.value!.id)
-      .map((rel: { targetCardId: string, targetCardTitle: string, type: string }) => ({
-        id: rel.targetCardId,
-        title: rel.targetCardTitle,
-        type: rel.type
-      }))
+    // A relationship this card participates in can have it on either side —
+    // e.g. a "Blocked by" link reverses which side is Source (see
+    // CardDependencies.vue's `reverse` flag) — so archiving must warn about
+    // relationships regardless of direction, not just the ones where this
+    // card happens to be the source.
+    const dependents = data.relationships.map(rel =>
+      rel.sourceCardId === card.value!.id
+        ? { id: rel.targetCardId, title: rel.targetCardTitle, type: rel.type }
+        : { id: rel.sourceCardId, title: rel.sourceCardTitle, type: rel.type }
+    )
 
     if (dependents.length > 0) {
       archiveDependents.value = dependents

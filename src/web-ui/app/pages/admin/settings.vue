@@ -10,7 +10,7 @@ if (!user?.isAdmin) {
 }
 
 const api = useApi()
-const toast = useToast()
+const toast = useAppToast()
 const loading = ref(false)
 
 const settings = reactive({
@@ -20,7 +20,8 @@ const settings = reactive({
   ntfyServerUrl: '',
   searXngUrl: '',
   brandName: '',
-  brandLogoUrl: ''
+  brandLogoUrl: '',
+  aiNarrativeGenerationTimeUtc: null as string | null
 })
 
 const saving = reactive({
@@ -38,6 +39,7 @@ interface SettingsResponse {
   searXngUrl: string | null
   brandName: string | null
   brandLogoUrl: string | null
+  aiNarrativeGenerationTimeUtc: string | null
 }
 
 async function loadSettings() {
@@ -46,7 +48,7 @@ async function loadSettings() {
     const { data } = await api.GET<SettingsResponse>(ApiRoutes.Admin.settingsGet())
     if (data) Object.assign(settings, data)
   } catch (e: unknown) {
-    toast.add({ title: e instanceof Error ? e.message : 'Failed to load settings', color: 'error' })
+    toast.error(e instanceof Error ? e.message : 'Failed to load settings')
   } finally {
     loading.value = false
   }
@@ -56,14 +58,27 @@ function retentionFieldError(value: number): string | undefined {
   return Number.isInteger(value) && value >= 1 ? undefined : 'Must be a whole number of at least 1'
 }
 
-function requiredFieldError(value: string): string | undefined {
-  return value.trim() ? undefined : 'Required'
+function requiredFieldError(value: string | null): string | undefined {
+  return value?.trim() ? undefined : 'Required'
 }
 
 const archivedItemsError = computed(() => retentionFieldError(settings.archivedItemRetentionDays))
 const auditLogError = computed(() => retentionFieldError(settings.auditLogRetentionDays))
 const notificationRetentionError = computed(() => retentionFieldError(settings.notificationRetentionDays))
 const retentionHasErrors = computed(() => !!(archivedItemsError.value || auditLogError.value || notificationRetentionError.value))
+
+const aiNarrativeTimeModel = computed({
+  get: () => {
+    if (!settings.aiNarrativeGenerationTimeUtc) return ''
+    const parts = settings.aiNarrativeGenerationTimeUtc.split(':')
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : ''
+  },
+  set: (val: string) => {
+    settings.aiNarrativeGenerationTimeUtc = val
+      ? val.split(':').slice(0, 2).join(':') + ':00'
+      : null
+  }
+})
 
 const ntfyServerUrlError = computed(() => requiredFieldError(settings.ntfyServerUrl))
 const searXngUrlError = computed(() => requiredFieldError(settings.searXngUrl))
@@ -102,6 +117,7 @@ async function saveSettings(section: keyof typeof saving) {
       body.archivedItemRetentionDays = settings.archivedItemRetentionDays
       body.auditLogRetentionDays = settings.auditLogRetentionDays
       body.notificationRetentionDays = settings.notificationRetentionDays
+      body.aiNarrativeGenerationTimeUtc = settings.aiNarrativeGenerationTimeUtc
     } else if (section === 'notifications') {
       body.ntfyServerUrl = settings.ntfyServerUrl
     } else if (section === 'search') {
@@ -111,9 +127,9 @@ async function saveSettings(section: keyof typeof saving) {
       body.brandLogoUrl = settings.brandLogoUrl
     }
     await api.PUT(ApiRoutes.Admin.settingsUpdate(), { body })
-    toast.add({ title: 'Settings saved. Changes apply within 5 minutes (cache TTL) or on next housekeeping run.', color: 'success' })
+    toast.success('Settings saved. Changes apply within 5 minutes (cache TTL) or on next housekeeping run.', 6000)
   } catch (e: unknown) {
-    toast.add({ title: e instanceof Error ? e.message : 'Save failed', color: 'error' })
+    toast.error(e instanceof Error ? e.message : 'Save failed')
   } finally {
     saving[section] = false
   }
@@ -179,6 +195,16 @@ onMounted(() => loadSettings())
               type="number"
               class="w-full"
               :min="1"
+            />
+          </UFormField>
+          <UFormField
+            label="AI Narrative Generation Time"
+            description="UTC"
+          >
+            <UInput
+              v-model="aiNarrativeTimeModel"
+              type="time"
+              class="w-full"
             />
           </UFormField>
         </div>

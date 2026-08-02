@@ -3,7 +3,6 @@ using System.Security.Claims;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Constants;
-using HydraForge.Infrastructure.Realtime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
@@ -42,7 +41,7 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
                 ?? throw new HubException("Access denied");
         }
 
-        var groupName = BoardHub.ProjectGroup(projectId);
+        var groupName = ProjectGroup(projectId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
 
         var username = Context.User!.FindFirstValue("name") ?? "unknown";
@@ -96,7 +95,7 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
                 ?? throw new HubException("Access denied");
         }
 
-        var groupName = BoardHub.ProjectGroup(projectId);
+        var groupName = ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)
             .SendAsync(
@@ -122,7 +121,7 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
                 ?? throw new HubException("Access denied");
         }
 
-        var groupName = BoardHub.ProjectGroup(projectId);
+        var groupName = ProjectGroup(projectId);
         await Clients
             .OthersInGroup(groupName)
             .SendAsync("CardUnfocused", new { UserId = userId, Context.ConnectionId });
@@ -130,7 +129,7 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
 
     public async Task LeaveProject(Guid projectId)
     {
-        var groupName = BoardHub.ProjectGroup(projectId);
+        var groupName = ProjectGroup(projectId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
 
         if (_projectPresence.TryGetValue(projectId, out var projectEntries))
@@ -160,7 +159,7 @@ public class PresenceHub(IProjectMemberRepository memberRepo) : Hub
         {
             if (projectEntries.TryRemove(Context.ConnectionId, out var entry))
             {
-                var groupName = BoardHub.ProjectGroup(projectId);
+                var groupName = ProjectGroup(projectId);
                 await Clients
                     .OthersInGroup(groupName)
                     .SendAsync(

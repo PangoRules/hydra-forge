@@ -17,6 +17,27 @@ public static class DomainErrorCodes
         public const string LlmProviderUnavailable = "LLM_PROVIDER_UNAVAILABLE";
     }
 
+    public static class Llm
+    {
+        public const string TokenBudgetExceeded = "TOKEN_BUDGET_EXCEEDED";
+        public const string ImageBudgetExceeded = "IMAGE_BUDGET_EXCEEDED";
+        public const string NoModelForFeature = "LLM_NO_MODEL_FOR_FEATURE";
+        public const string ContextWindowExceeded = "LLM_CONTEXT_WINDOW_EXCEEDED";
+        public const string EncryptionKeyInvalid = "LLM_ENCRYPTION_KEY_INVALID";
+        public const string ProviderUnavailable = "LLM_PROVIDER_UNAVAILABLE";
+        public const string ProviderNotFound = "PROVIDER_NOT_FOUND";
+        public const string ModelNotFound = "MODEL_NOT_FOUND";
+        public const string ModelAlreadyExists = "MODEL_ALREADY_EXISTS";
+        public const string RoutingNotFound = "ROUTING_NOT_FOUND";
+        public const string InvalidFeature = "INVALID_FEATURE";
+    }
+
+    public static class Validation
+    {
+        public const string Required = "VALIDATION_REQUIRED";
+        public const string InvalidValue = "VALIDATION_INVALID_VALUE";
+    }
+
     public static class Projects
     {
         public const string NotFound = "PROJECT_NOT_FOUND";

@@ -555,31 +555,38 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [x] Admin: see and manage all projects regardless of membership — Plan 8 (#59)
 - [x] Audit log viewer: filter by project, user, entity type, date range — Plan 11 reader (#62) + Plan 12 web UI (#63)
 
-### Phase 6: LLM Infrastructure 🔧
+### Phase 6: LLM Infrastructure 🔧 — **COMPLETE** (2026-08-02)
 > Goal: all AI plumbing in place before any chat or AI feature is built on top.
 
 > ✅ **Pre-phase decision resolved:** Nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (see D-57) — chosen over `BackgroundService` for restart-persistence/retry/history, over Quartz.NET for not needing full cron flexibility.
 
-- [ ] Hangfire wired: `Hangfire.AspNetCore` + `Hangfire.PostgreSql`, dashboard mounted at `/hangfire` behind admin auth filter
-- [ ] Recurring job registered: `ProjectContextSnapshotService.GenerateAiNarrative()` for all active projects, admin-configurable time (default midnight server time, per D-32)
-- [ ] `ILlmClient` abstraction: `StreamChatAsync()`, `GetModelsAsync()`, `SupportsToolCalling()`, cache block placement
-- [ ] OpenAI-compatible adapter (covers OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp)
-- [ ] Anthropic adapter (with prompt caching `cache_control` blocks)
-- [ ] Ollama adapter
-- [ ] `IImageClient` abstraction: `GenerateImageAsync()`, `InpaintAsync()`
-- [ ] Image adapters: OpenAI DALL-E, Stability AI, diffusers/ComfyUI (local)
-- [ ] Embedding service: `IEmbeddingClient` abstraction — generate `vector(1536)` from text (needed for RAG + Brain/Memory)
-- [ ] Admin LLM provider management UI: add/edit/disable providers, assign `ProviderType` + `ModelTier`, set fallback chain
-- [ ] Admin image provider management UI (same panel, filtered by ProviderType: Image)
-- [ ] `FeatureRoutingConfig`: admin assigns default tier per `AiFeature`, sets user override ceiling per feature
-- [ ] `ModelRouter` service: feature + user context → correct provider, context window guard, auto-bump tier, fallback on rate-limit/5xx
-- [ ] `ContextCompressor` service: auto-summarize injected context when threshold exceeded
-- [ ] `TokenUsageRecord`: log every text LLM call
-- [ ] `ImageUsageRecord`: log every image generation call
-- [ ] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error
-- [ ] Admin token usage dashboard: by user / feature / model / period
-- [ ] Admin image usage dashboard: by user / feature / model / period
-- [ ] User self-service usage view
+All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-30-phase-6-llm-infrastructure-design.md`, consolidated validation matrix at `docs/archive/manual-validation/2026-08-02-phase-6-llm-infrastructure-matrix.md`.
+
+- [x] Hangfire wired: `Hangfire.AspNetCore` + `Hangfire.PostgreSql`, dashboard mounted at `/hangfire` behind admin auth filter
+- [x] Recurring job registered: `ProjectContextSnapshotService.GenerateAiNarrativeForAllActiveProjectsAsync()` for all active projects, admin-configurable time (default midnight UTC, `SystemSettings.AiNarrativeGenerationTimeUtc`)
+- [x] `ILlmClient` abstraction: `StreamChatAsync()`, `GetModelsAsync()`, `SupportsToolCalling()`, cache block placement
+- [x] OpenAI-compatible adapter (covers OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp)
+- [x] Anthropic adapter (with prompt caching `cache_control` blocks)
+- [x] Ollama adapter
+- [x] `IImageClient` abstraction: `GenerateImageAsync()`, `InpaintAsync()`
+- [x] Image adapters: OpenAI DALL-E (`DallEAdapter`), Stability AI (`StabilityAiAdapter`), diffusers/ComfyUI local (`ComfyUiAdapter`, serves both `ComfyUi` + `Diffusers` — see D-62)
+- [x] Embedding service: `IEmbeddingClient` abstraction — `OpenAiCompatibleAdapter.EmbedAsync` generates `vector(1536)` from text (needed for RAG + Brain/Memory, both Phase 7+)
+- [x] Admin LLM provider management UI: add/edit/disable providers, assign `ProviderType` + `ModelTier`, set fallback chain (`admin/providers.vue` + `admin/provider-models.vue`)
+- [x] Admin image provider management UI (same panel, filtered by `ProviderType: Image`)
+- [x] `FeatureRoutingConfig`: admin assigns default tier per `AiFeature`, sets user override ceiling per feature (`admin/routing.vue`, seeded on startup by `FeatureRoutingConfigSeeder`)
+- [x] `ModelRouter` service: feature + user context → correct provider, context window guard, auto-bump tier, fallback on rate-limit/5xx
+- [x] `ContextCompressor` service: auto-summarize injected context when threshold exceeded
+- [x] `TokenUsageRecord`: recording mechanism built and tested (`EfUsageRecorder.RecordTokenAsync`, auto cost calc from `ProviderModelConfig.PricePerToken`); live caller today is the AiNarrative job — a per-message chat caller lands with Phase 7
+- [x] `ImageUsageRecord`: recording mechanism built and tested (`EfUsageRecorder.RecordImageAsync`); no live caller yet since image-generation UI is Phase 7+ scope
+- [x] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error
+- [x] Admin token usage dashboard: by user / feature / model / period
+- [x] Admin image usage dashboard: by user / feature / model / period
+- [x] User self-service usage view
+- [x] `IKeyVault`/`AesGcmKeyVault`: API keys encrypted at rest (AES-256-GCM), startup-validated `Llm:EncryptionKey` (see D-59)
+- [x] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects (see D-57; moved here from its earlier placement under Phase 7 — the job itself is Phase 6 scope, only the live chat *transport* is Phase 7)
+- [x] Web UI: "View AI narrative" button next to project title on board view → modal showing `AiNarrative` + `AiNarrativeGeneratedAt` (see D-58)
+- [x] TUI: narrative viewer screen (`NarrativeViewerScreen`), same overlay pattern as spec/plan viewer, launched via `v` on the Board screen (help-overlay-only per D-58 — status bar has no room)
+- [x] Per-feature model allowlist for admin Routing page: `FeatureAllowedModel` (Id, FeatureRoutingConfigId, ProviderModelConfigId, Priority) — opt-in, empty list = unchanged tier-based behavior; rows present = `ModelRouter` restricts candidates to that ordered set. Admin Routing page drag-to-reorder editor (`routing.vue`). Shipped in `#88`.
 
 ### Phase 7: Chat — General & Project 💬
 > Goal: full chat system built on top of Phase 6 LLM infrastructure.
@@ -608,10 +615,9 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [ ] "Summarize → start my own" fork action
 - [ ] Project archive → chat folder archived (revivable)
 - [ ] `ChatArchiveService.ArchiveFolder(folderId)`: sets `ChatFolder.ArchivedAt` and cascades to every child `ChatSession.ArchivedAt`. Invoked by `ProjectArchiveService` and by explicit user "archive folder" action.
-- [ ] Nightly scheduled job: generate `ProjectContextSnapshot.AiNarrative` for all active projects (Hangfire recurring job, wired in Phase 6 — see D-57)
-- [ ] Web UI: "View Narrative" button next to project title on board view → modal showing `AiNarrative` + `AiNarrativeGeneratedAt` (D-58)
-- [ ] TUI: narrative viewer screen, same overlay pattern as spec/plan viewer, launched from Board screen keybinding (falls back to `?` help overlay only if status bar has no room — D-58)
 - [ ] TUI: chat mode for general chats + project chat panel
+
+> The AiNarrative nightly job and its Web UI/TUI display surface shipped in Phase 6 (see that section) — it doesn't depend on live chat and was pulled forward once the display-surface gap was found (D-58).
 
 ### Phase 8: AI Features — Project Space 🤖
 > Goal: AI agents can operate on the board. Chat can create and mutate cards.

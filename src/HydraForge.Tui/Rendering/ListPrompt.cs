@@ -29,6 +29,7 @@ public static class ListPrompt
                 await renderBackdrop();
             else
                 AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             var maxVisible = Math.Max(5, AnsiConsole.Profile.Height / 2);
             var window = ListScrollWindow.Compute(choices.Count, index, maxVisible);
@@ -103,6 +104,7 @@ public static class ListPrompt
                 await renderBackdrop();
             else
                 AnsiConsole.Clear();
+            ConsoleSize.Sync();
 
             var maxVisible = Math.Max(5, AnsiConsole.Profile.Height / 2);
             var window = ListScrollWindow.Compute(choices.Count, index, maxVisible);

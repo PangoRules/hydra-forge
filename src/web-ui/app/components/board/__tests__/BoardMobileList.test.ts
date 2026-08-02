@@ -30,6 +30,8 @@ const makeCard = (id: string, columnId: string, title: string, type: CardType = 
   watchers: [],
   relationshipBadges: [],
   relationshipCount: 0,
+  parentCard: null,
+  childCount: 0,
 })
 
 describe('BoardMobileList', () => {
@@ -54,7 +56,7 @@ describe('BoardMobileList', () => {
     const wrapper = await mountSuspended(BoardMobileList, {
       props: { columns, cardsByColumn, projectId: 'p1' }
     })
-    await wrapper.find('.cursor-pointer').trigger('click')
+    await wrapper.find('[data-testid="column-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('My Task')
   })
@@ -68,10 +70,10 @@ describe('BoardMobileList', () => {
     const wrapper = await mountSuspended(BoardMobileList, {
       props: { columns, cardsByColumn, projectId: 'p1' }
     })
-    const headers = wrapper.findAll('.cursor-pointer')
-    await headers.at(0)!.trigger('click')
+    const toggles = wrapper.findAll('[data-testid="column-toggle"]')
+    await toggles.at(0)!.trigger('click')
     await wrapper.vm.$nextTick()
-    await headers.at(1)!.trigger('click')
+    await toggles.at(1)!.trigger('click')
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('Task 1')
     expect(wrapper.text()).toContain('Task 2')
@@ -83,20 +85,21 @@ describe('BoardMobileList', () => {
     const wrapper = await mountSuspended(BoardMobileList, {
       props: { columns, cardsByColumn, projectId: 'p1' }
     })
-    await wrapper.find('.cursor-pointer').trigger('click')
+    await wrapper.find('[data-testid="column-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
-    await wrapper.findAll('.cursor-pointer').at(1)!.trigger('click')
+    await wrapper.find('.cursor-pointer').trigger('click')
     expect(wrapper.emitted('card-click')).toBeTruthy()
     expect(wrapper.emitted('card-click')?.[0]).toBeDefined()
   })
 
-  it('shows WIP limit when set and at limit', async () => {
+  it('shows WIP limit when over the limit (shared ColumnHeader — matches desktop threshold)', async () => {
     const columns = [makeColumn('col1', 'In Progress', 3)]
     const cardsByColumn = new Map([
       ['col1', [
         makeCard('c1', 'col1', 'Task 1'),
         makeCard('c2', 'col1', 'Task 2'),
         makeCard('c3', 'col1', 'Task 3'),
+        makeCard('c4', 'col1', 'Task 4'),
       ]]
     ])
     const wrapper = await mountSuspended(BoardMobileList, {
@@ -146,6 +149,24 @@ describe('BoardMobileList', () => {
     const checkbox = wrapper.find('input[type="checkbox"]')
     expect(checkbox.exists()).toBe(true)
     expect(wrapper.text()).toContain('Backlog')
+  })
+
+  it('exposes column rename/delete via the shared ColumnHeader (not a mobile-only gap)', async () => {
+    const columns = [makeColumn('col1', 'Backlog')]
+    const cardsByColumn = new Map([['col1', []]])
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: { columns, cardsByColumn, projectId: 'p1' }
+    })
+    expect(wrapper.find('[data-testid="column-edit-trigger"]').exists()).toBe(true)
+  })
+
+  it('hides column rename/delete when readonly, same as desktop', async () => {
+    const columns = [makeColumn('col1', 'Backlog')]
+    const cardsByColumn = new Map([['col1', []]])
+    const wrapper = await mountSuspended(BoardMobileList, {
+      props: { columns, cardsByColumn, projectId: 'p1', readonly: true }
+    })
+    expect(wrapper.find('[data-testid="column-edit-trigger"]').exists()).toBe(false)
   })
 
   it('disables hideEmptyColumns when column is selected', async () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import { formatDateTime, formatTime } from '~/lib/date'
 import { onClickOutside } from '@vueuse/core'
 
 interface CommentResponse {
@@ -105,14 +106,6 @@ onClickOutside(mentionBoxRef, () => {
   mentionQuery.value = null
 })
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString()
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
 function isSameAuthor(comment: CommentResponse, prev: CommentResponse | undefined): boolean {
   return !!prev && comment.authorId === prev.authorId
 }
@@ -196,7 +189,7 @@ onMounted(() => fetchComments())
                 {{ comment.content }}
               </p>
               <span class="text-xs text-muted whitespace-nowrap shrink-0 ml-2">
-                {{ isSameDay(comment.createdAt, comments[idx - 1]!.createdAt) ? formatTime(comment.createdAt) : formatDate(comment.createdAt) }}
+                {{ isSameDay(comment.createdAt, comments[idx - 1]!.createdAt) ? formatTime(comment.createdAt) : formatDateTime(comment.createdAt) }}
               </span>
             </div>
           </div>
@@ -210,7 +203,7 @@ onMounted(() => fetchComments())
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">{{ comment.authorUsername }}</span>
-              <span class="text-xs text-muted">{{ formatDate(comment.createdAt) }}</span>
+              <span class="text-xs text-muted">{{ formatDateTime(comment.createdAt) }}</span>
             </div>
             <p class="text-sm mt-0.5 wrap-break-word">
               {{ comment.content }}

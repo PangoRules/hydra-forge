@@ -5,10 +5,12 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useEventListener, onClickOutside } from '@vueuse/core'
 import { nextTick, watch } from 'vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import { CARD_TYPE_FILTER_OPTIONS, cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
+import ColumnHeader from '~/components/board/ColumnHeader.vue'
+import { cardTypeOption, cardTypeColorClass } from '~/lib/card-type'
 import { formatDueDate, isOverdue } from '~/lib/date'
 import { formatRelationshipBadge } from '~/lib/card-relationship'
 import { useColumnReorder } from '~/composables/useColumnReorder'
+import { useColumnManage } from '~/composables/useColumnManage'
 import CardRelationshipBadges from '~/components/board/CardRelationshipBadges.vue'
 
 type ColumnResponse = components['schemas']['ColumnResponse']
@@ -26,7 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'card-click': [card: CardResponse]
-  'add-card': []
+  'add-card': [columnId?: string]
   'card-move': [cardId: string, targetColumnId: string, targetPosition: number]
 }>()
 
@@ -35,6 +37,7 @@ const board = useBoardStore()
 const toast = useAppToast()
 const authStore = useAuthStore()
 const { search, assigneeUserId: filterAssignee, includeArchived, hideEmptyColumns, visibleColumnIds, columnSelectionActive, toggleColumnVisibility } = useBoardFilters()
+const { updateColumn, deleteColumn } = useColumnManage(props.projectId)
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -147,14 +150,6 @@ function toggleColumn(colId: string) {
   expandedColumns.value[colId] = !expandedColumns.value[colId]
 }
 
-function onHeaderClick(e: Event, colId: string) {
-  // ignore clicks coming from interactive children (select, button, inputs)
-  if ((e.target as Node) !== (e.currentTarget as Node)) return
-  toggleColumn(colId)
-}
-
-// header toggle handled by dedicated button (avoids interfering with inner interactive controls)
-
 // Global filter panel visibility
 const showFilters = ref(false)
 
@@ -169,6 +164,13 @@ onClickOutside(columnPickerRef, () => {
 const columnTypeFilters = ref<Record<string, string | null>>({})
 // Per-column archived-only filter state (null = show all, false = non-archived, true = archived only)
 const columnArchivedFilters = ref<Record<string, boolean | null>>({})
+// Per-column search state — same as BoardColumn.vue's columnSearch, wired via ColumnHeader's #filter-row slot
+const columnSearchFilters = ref<Record<string, string>>({})
+
+function handleFilterArchived(colId: string, value: boolean) {
+  // false = reset to show all (respect server fetch); true = show archived only — mirrors BoardColumn.vue
+  columnArchivedFilters.value[colId] = value ? true : null
+}
 
 function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
   let filtered = cards
@@ -182,6 +184,16 @@ function getColumnFilteredCards(colId: string, cards: CardResponse[]) {
   }
   if (filterAssignee.value) {
     filtered = filtered.filter(c => c.assignees.some(a => a.userId === filterAssignee.value))
+  }
+
+  // Per-column search
+  const colSearch = columnSearchFilters.value[colId]
+  if (colSearch) {
+    const q = colSearch.toLowerCase()
+    filtered = filtered.filter(c =>
+      c.title.toLowerCase().includes(q)
+      || String(c.cardNumber).includes(q)
+    )
   }
 
   // Per-column type filter
@@ -221,14 +233,14 @@ const filteredColumns = computed(() => {
 async function confirmArchive() {
   const card = archiveTargetCard.value
   if (!card) return
-  const { error } = await api.POST(ApiRoutes.Cards.archive(props.projectId, card.id), {
-    body: { version: card.version }
-  })
-  if (error) {
-    toast.error('Failed to archive card')
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.archive(props.projectId, card.id), {
+      body: { version: card.version }
+    })
     board.removeCard(card.id)
     toast.success('Card archived')
+  } catch {
+    toast.error('Failed to archive card')
   }
   archiveTargetCard.value = null
   menuOpenFor.value = null
@@ -236,14 +248,14 @@ async function confirmArchive() {
 
 async function handleRestore(card: CardResponse) {
   menuOpenFor.value = null
-  const { error } = await api.POST(ApiRoutes.Cards.restore(props.projectId, card.id), {
-    body: { version: card.version }
-  })
-  if (error) {
-    toast.error('Failed to restore card')
-  } else {
+  try {
+    await api.POST(ApiRoutes.Cards.restore(props.projectId, card.id), {
+      body: { version: card.version }
+    })
     board.fetchBoard(props.projectId)
     toast.success('Card restored')
+  } catch {
+    toast.error('Failed to restore card')
   }
 }
 
@@ -273,23 +285,6 @@ async function toggleWatch(card: CardResponse) {
   }
 }
 
-function getParentCard(card: CardResponse): CardResponse | null {
-  if (!card.parentCardId) return null
-  for (const cards of props.cardsByColumn.values()) {
-    const found = cards.find(c => c.id === card.parentCardId)
-    if (found) return found
-  }
-  return null
-}
-
-function getChildCount(card: CardResponse): number {
-  let count = 0
-  for (const cards of props.cardsByColumn.values()) {
-    count += cards.filter(c => c.parentCardId === card.id).length
-  }
-  return count
-}
-
 function getRelationshipBadges(card: CardResponse) {
   return (card.relationshipBadges ?? []).map((b) => {
     const style = formatRelationshipBadge(b.type, b.isSource)
@@ -304,6 +299,10 @@ function getRelationshipBadges(card: CardResponse) {
 
 function getRelationshipOverflow(card: CardResponse): number {
   return Math.max(0, Number(card.relationshipCount) - getRelationshipBadges(card).length)
+}
+
+function getChildCount(card: CardResponse): number {
+  return Number(card.childCount)
 }
 </script>
 
@@ -445,74 +444,36 @@ function getRelationshipOverflow(card: CardResponse): number {
         :key="column.id"
         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
       >
-        <!-- Column header (accordion toggle) -->
-        <div
-          class="flex items-center justify-between px-3 py-2 cursor-pointer"
-          @click="onHeaderClick($event, column.id)"
+        <!-- Column header — same ColumnHeader used on desktop, so rename/color/WIP-limit/
+             delete/per-column search/type/archived-only filters aren't mobile-only gaps. -->
+        <ColumnHeader
+          :column="column"
+          :card-count="filteredCardsByColumn.get(column.id)?.length ?? 0"
+          :include-archived="includeArchived"
+          :readonly="readonly"
+          :can-move-left="colIdx > 0"
+          :can-move-right="colIdx < filteredColumns.length - 1"
+          @add-card="emit('add-card', column.id)"
+          @filter-type="(v: string | null) => { columnTypeFilters[column.id] = v }"
+          @filter-archived="(v: boolean) => handleFilterArchived(column.id, v)"
+          @move-left="moveColumnLeft(column.id)"
+          @move-right="moveColumnRight(column.id)"
+          @update-column="(name: string, color: string | null, wipLimit: number | null) => updateColumn(column.id, name, color, wipLimit)"
+          @delete-column="() => deleteColumn(column.id)"
         >
-          <div class="flex items-center gap-2">
-            <div
-              v-if="column.color"
-              class="size-3 rounded-full shrink-0"
-              :style="{ backgroundColor: column.color }"
-            />
-            <h3 class="text-sm font-semibold">
-              {{ column.name }}
-            </h3>
-            <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
-              {{ filteredCardsByColumn.get(column.id)?.length ?? 0 }}
-            </span>
-            <span
-              v-if="column.wipLimit && (filteredCardsByColumn.get(column.id)?.length ?? 0) >= Number(column.wipLimit)"
-              class="text-xs text-red-500 font-medium"
+          <template #filter-row>
+            <input
+              :value="columnSearchFilters[column.id] ?? ''"
+              placeholder="Filter cards in this column..."
+              class="w-full mt-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-primary"
+              @input="columnSearchFilters[column.id] = ($event.target as HTMLInputElement).value"
             >
-              WIP {{ column.wipLimit }}
-            </span>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              class="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Move column up"
-              :disabled="colIdx === 0"
-              @click.stop="moveColumnLeft(column.id)"
-            >
-              <UIcon
-                name="i-lucide-chevron-up"
-                class="size-3"
-              />
-            </button>
-            <button
-              type="button"
-              class="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Move column down"
-              :disabled="colIdx === filteredColumns.length - 1"
-              @click.stop="moveColumnRight(column.id)"
-            >
-              <UIcon
-                name="i-lucide-chevron-down"
-                class="size-3"
-              />
-            </button>
-            <!-- Type filter for this column -->
-            <span class="text-xs text-gray-500 shrink-0">Type:</span>
-            <select
-              :value="columnTypeFilters[column.id] ?? ''"
-              class="text-xs px-1.5 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-              @click.stop
-              @change="columnTypeFilters[column.id] = ($event.target as HTMLSelectElement).value || null"
-            >
-              <option
-                v-for="opt in CARD_TYPE_FILTER_OPTIONS"
-                :key="opt.label"
-                :value="opt.value ?? ''"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
+          </template>
+          <template #trailing>
             <button
               type="button"
               class="text-xs text-gray-400"
+              data-testid="column-toggle"
               :aria-expanded="!!expandedColumns[column.id]"
               aria-label="Toggle column"
               @click="toggleColumn(column.id)"
@@ -521,8 +482,8 @@ function getRelationshipOverflow(card: CardResponse): number {
             >
               {{ expandedColumns[column.id] ? '▼' : '▶' }}
             </button>
-          </div>
-        </div>
+          </template>
+        </ColumnHeader>
 
         <!-- Expanded accordion content -->
         <div
@@ -736,23 +697,23 @@ function getRelationshipOverflow(card: CardResponse): number {
 
                 <!-- Row 4: parent + children -->
                 <div
-                  v-if="getParentCard(card) || getChildCount(card) > 0"
+                  v-if="card.parentCard || getChildCount(card) > 0"
                   class="flex items-center gap-3 mt-1"
                 >
                   <div
-                    v-if="getParentCard(card)"
+                    v-if="card.parentCard"
                     class="flex flex-col"
                   >
                     <span class="text-[10px] text-gray-400 leading-none mb-0.5">Parent:</span>
                     <p
                       class="text-xs text-primary flex items-center gap-1"
-                      :title="getParentCard(card)!.title"
+                      :title="card.parentCard.title"
                     >
                       <UIcon
-                        :name="cardTypeOption(getParentCard(card)!.type).icon"
+                        :name="cardTypeOption(card.parentCard.type).icon"
                         class="size-3"
                       />
-                      {{ cardTypeOption(getParentCard(card)!.type).label }} #{{ getParentCard(card)!.cardNumber }}
+                      {{ cardTypeOption(card.parentCard.type).label }} #{{ card.parentCard.cardNumber }}
                     </p>
                   </div>
                   <div

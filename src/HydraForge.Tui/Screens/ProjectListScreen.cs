@@ -18,9 +18,11 @@ public class ProjectListScreen(
     private bool _signalRSubscribed;
 
     // Matches the Web UI's server-paginated project list convention
-    // (docs/specs/2026-07-07-project-list-redesign-design.md): page size 20,
-    // default sort CreatedAt descending.
-    private const int PageSize = 20;
+    // (docs/specs/2026-07-07-project-list-redesign-design.md): default sort
+    // CreatedAt descending. Page size itself is NOT fixed at 20 — it's recomputed
+    // per load from the current terminal height (see ComputePageSize) so a full
+    // page always fits without scrolling, down to a 25-row terminal.
+    private int _pageSize = 20;
 
     private List<ProjectItem> _projects = [];
     private int _selectedIndex;
@@ -77,6 +79,7 @@ public class ProjectListScreen(
     public async Task RenderAsync()
     {
         AnsiConsole.Clear();
+        ConsoleSize.Sync();
 
         // Header
         var header = new Rule("[blue]Projects[/]");
@@ -101,7 +104,11 @@ public class ProjectListScreen(
         const int columnCount = 6;
         const int cellPadding = 2; // left+right padding per cell
         var chrome = columnCount * cellPadding + columnCount + 1; // padding + border/separator chars
-        var nameWidth = Math.Max(20, AnsiConsole.Profile.Width - otherColumnsWidth - chrome);
+        // Floor at 1, not a "readable" minimum like 20 — the fixed columns (59 cols
+        // incl. chrome) are non-negotiable, so on a narrower terminal the table must
+        // still fit within Profile.Width or Spectre wraps/corrupts the redraw instead
+        // of just showing a squeezed Name column.
+        var nameWidth = Math.Max(1, AnsiConsole.Profile.Width - otherColumnsWidth - chrome);
 
         var table = new Table()
             .Border(TableBorder.Rounded)
@@ -117,9 +124,15 @@ public class ProjectListScreen(
             var p = _projects[i];
             var isSelected = i == _selectedIndex;
 
+            // Every data row must render as exactly one line — a wrapped name breaks the
+            // "1 row = 1 line" assumption ComputePageSize relies on to fit the page without
+            // scrolling. Truncate instead of letting Spectre wrap the cell.
+            var archivedSuffix = p.ArchivedAt != null ? " (archived)" : "";
+            var displayName = TruncateToFit(p.Name, Math.Max(1, nameWidth - archivedSuffix.Length));
+
             var nameMarkup = isSelected
-                ? $"[blue bold]{Markup.Escape(p.Name)}[/]"
-                : Markup.Escape(p.Name);
+                ? $"[blue bold]{Markup.Escape(displayName)}[/]"
+                : Markup.Escape(displayName);
 
             var archivedBadge = p.ArchivedAt != null ? " [grey](archived)[/]" : "";
 
@@ -128,7 +141,7 @@ public class ProjectListScreen(
                 $"{nameMarkup}{archivedBadge}",
                 p.MemberCount.ToString(),
                 GetRoleString(p.MyRole),
-                FormatRelative(p.CreatedAt),
+                DateFormatting.FormatLongRelative(p.CreatedAt),
                 p.ArchivedAt != null ? "[grey]Yes[/]" : ""
             );
         }
@@ -136,8 +149,8 @@ public class ProjectListScreen(
         AnsiConsole.Write(table);
 
         // Footer — sits directly under the table, no blank line in between.
-        var totalPages = _totalCount == 0 ? 1 : (int)Math.Ceiling(_totalCount / (double)PageSize);
-        var currentPage = _skip / PageSize + 1;
+        var totalPages = _totalCount == 0 ? 1 : (int)Math.Ceiling(_totalCount / (double)_pageSize);
+        var currentPage = _skip / _pageSize + 1;
         var rangeStart = _totalCount == 0 ? 0 : _skip + 1;
         var rangeEnd = Math.Min(_skip + _projects.Count, _totalCount);
         AnsiConsole.MarkupLine(
@@ -145,6 +158,23 @@ public class ProjectListScreen(
         );
 
         var errors = errorCollector.GetErrors();
+        KeyHintBar.Render(BuildHints());
+
+        RenderErrors(errors);
+    }
+
+    // Board's title truncation (BoardRenderer.cs) uses a fixed 25-char cutoff since card
+    // titles have a fixed column; here the budget is dynamic (nameWidth shrinks with the
+    // terminal), so the ellipsis threshold has to be computed per call instead.
+    private static string TruncateToFit(string text, int maxChars)
+    {
+        if (text.Length <= maxChars)
+            return text;
+        return maxChars <= 3 ? text[..maxChars] : text[..(maxChars - 3)] + "...";
+    }
+
+    private List<string> BuildHints()
+    {
         var hints = new List<string>
         {
             "[Enter] Open",
@@ -159,11 +189,35 @@ public class ProjectListScreen(
             "[n]/[p] Page",
             "[?] Help",
         };
-        if (errors.Count > 0)
+        if (errorCollector.Count > 0)
             hints.Add("[x] Dismiss errors");
-        KeyHintBar.Render(hints);
+        return hints;
+    }
 
-        RenderErrors(errors);
+    // Recomputed on every load (terminal can resize between renders) so the table + header
+    // + footer + hint bar always fit within the terminal height without scrolling — same
+    // "everything must fit, nothing scrolls off" standard as BoardRenderer's Layout. Table
+    // chrome is top border + header + header separator + bottom border = 4 non-data rows;
+    // the error panel's reserve is worst-case (TakeLast(3) + panel border) since it only
+    // shows up to 3 entries regardless of how many errors are collected.
+    private int ComputePageSize()
+    {
+        ConsoleSize.Sync();
+
+        const int ruleLine = 1;
+        const int sortLine = 1;
+        const int footerLine = 1;
+        const int tableChrome = 4;
+
+        var filterLine = _searchFilter.Length > 0 ? 1 : 0;
+        var hintLines = KeyHintBar.WrapLines(BuildHints(), AnsiConsole.Profile.Width).Count;
+        var errors = errorCollector.GetErrors();
+        var errorReserve = errors.Count > 0 ? 1 + 2 + Math.Min(errors.Count, 3) : 0;
+
+        var reserved =
+            ruleLine + filterLine + sortLine + footerLine + hintLines + errorReserve + tableChrome;
+
+        return Math.Max(1, AnsiConsole.Profile.Height - reserved);
     }
 
     // Nothing gets swallowed silently — every caught ApiException/HttpRequestException
@@ -267,8 +321,14 @@ public class ProjectListScreen(
 
             case ConsoleKey.Divide
             or ConsoleKey.Oem2: // '/' key
+                // No .DefaultValue() here on purpose — Spectre returns the default on a
+                // blank Enter even with AllowEmpty(), so a default would make it
+                // impossible to ever clear the filter back to "". Show the current
+                // value as a hint instead of a real default.
+                if (_searchFilter.Length > 0)
+                    AnsiConsole.MarkupLine($"[grey]Current: \"{Markup.Escape(_searchFilter)}\"[/]");
                 _searchFilter = AnsiConsole.Prompt(
-                    new TextPrompt<string>("Search:").DefaultValue(_searchFilter).AllowEmpty()
+                    new TextPrompt<string>("Search (blank to clear):").AllowEmpty()
                 );
                 _skip = 0;
                 _selectedIndex = 0;
@@ -314,9 +374,9 @@ public class ProjectListScreen(
                 break;
 
             case ConsoleKey.N:
-                if (_skip + PageSize < _totalCount)
+                if (_skip + _pageSize < _totalCount)
                 {
-                    _skip += PageSize;
+                    _skip += _pageSize;
                     _selectedIndex = 0;
                     await LoadProjectsAsync();
                     await RenderAsync();
@@ -326,7 +386,7 @@ public class ProjectListScreen(
             case ConsoleKey.P:
                 if (_skip > 0)
                 {
-                    _skip = Math.Max(0, _skip - PageSize);
+                    _skip = Math.Max(0, _skip - _pageSize);
                     _selectedIndex = 0;
                     await LoadProjectsAsync();
                     await RenderAsync();
@@ -344,7 +404,7 @@ public class ProjectListScreen(
                 break;
 
             case ConsoleKey.Q:
-                var confirm = AnsiConsole.Confirm("Quit HydraForge?");
+                var confirm = QuitConfirm.Show();
                 if (confirm)
                     Environment.Exit(0);
                 break;
@@ -379,6 +439,7 @@ public class ProjectListScreen(
 
     private async Task LoadProjectsAsync()
     {
+        _pageSize = ComputePageSize();
         try
         {
             // NSwag generates ProjectsGETAsync with optional parameters
@@ -389,7 +450,7 @@ public class ProjectListScreen(
                 sortDescending: _sortDescending,
                 role: _roleFilter,
                 skip: _skip,
-                take: PageSize,
+                take: _pageSize,
                 excludeMembership: _notMemberFilter ? true : null
             );
 
@@ -475,20 +536,6 @@ public class ProjectListScreen(
         {
             errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
-    }
-
-    private static string FormatRelative(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt;
-        if (diff.TotalDays > 365)
-            return $"{(int)(diff.TotalDays / 365)}y ago";
-        if (diff.TotalDays > 30)
-            return $"{(int)(diff.TotalDays / 30)}mo ago";
-        if (diff.TotalDays >= 1)
-            return $"{(int)diff.TotalDays}d ago";
-        if (diff.TotalHours >= 1)
-            return $"{(int)diff.TotalHours}h ago";
-        return "just now";
     }
 
     private static string GetRoleString(MemberRole? role) => role?.ToString() ?? "—";

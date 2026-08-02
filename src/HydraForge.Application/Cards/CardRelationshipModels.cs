@@ -18,7 +18,15 @@ public record CardRelationshipDto(
 
 public record CardRelationshipListResponse(List<CardRelationshipDto> Relationships);
 
-public record CreateRelationshipRequest(Guid TargetCardId, RelationshipType Type);
+// Reverse=true swaps which side becomes SourceCardId — lets a client on card X
+// declare "X is blocked by / follows targetCardId" instead of the default
+// "X blocks / precedes targetCardId", without changing the storage convention
+// (Source is always the blocker/predecessor) or breaking the existing wire contract.
+public record CreateRelationshipRequest(
+    Guid TargetCardId,
+    RelationshipType Type,
+    bool Reverse = false
+);
 
 public record CreateRelationshipCommand(
     Guid ProjectId,

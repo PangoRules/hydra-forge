@@ -930,4 +930,89 @@ Chats
 | **Status** | ✅ Settled |
 | **Decision** | **Web UI:** a "View Narrative" button next to the project title (board view header) opens a modal (`UModal`) showing `AiNarrative` + `AiNarrativeGeneratedAt` (fetched via existing `GET /api/projects/{projectId}/ProjectSnapshot`). **TUI:** same pattern as the existing spec/plan viewer screen (overlay push/pop, per D-4x TUI conventions) — a keybinding on the board screen opens a read-only narrative view. If the board status bar has no room for a new binding hint (it's already carrying connection/online/error-count per Phase 4), the binding lives in that screen's `?` help overlay only, not forced onto the bar. |
 | **Rationale** | Directly requested. Closes a real spec gap: `AiNarrative` had a producer (nightly job) and an API (`ProjectSnapshotController`) but zero consumer task in either client — it would have shipped generated and unreadable. Reusing the spec/plan viewer overlay pattern on TUI and the modal pattern already established for card details on Web UI avoids inventing a new UI primitive for a read-only text panel. |
-| **Impact** | Web UI: new button in board header component, new modal component (or reuse `AppModal` per its `#body` slot convention), no new store needed beyond the existing snapshot fetch. TUI: new `NarrativeViewerScreen` (or extends existing spec/plan viewer), overlay-launched from Board screen per the `PreviousScreen`/`CurrentScreen` pattern, help-table entry added to Board's `ShowHelp()` binding list. `docs/functional-spec.md` Phase 7 checklist gets an explicit display task (previously only had "generate," never "display"). |
+| **Implementation note (2026-08-02)** | Landed during Task 22 review: `ProjectSnapshotController.GetSnapshot` was missing `[ProducesResponseType]`, so OpenAPI/NSwag generated no response schema for either client — the modal/viewer literally could not have been built type-safe until that was added. `ProjectNarrativeModal.vue` (Web UI, wired into `board.vue`'s header) and `NarrativeViewerScreen.cs` (TUI, `v` keybinding on `BoardScreen`, help-overlay-only per the decision above since the status bar has no room) both now consume it. |
+---
+
+## D-59: IKeyVault Port + AesGcmKeyVault Implementation + Startup Validation + Migration
+
+| Field | Value |
+|---|---|
+| **Topic** | How LLM provider API keys are encrypted at rest, decrypted on demand, and migrated from placeholder values |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **`IKeyVault` port in Application layer (`HydraForge.Application.Llm`). `AesGcmKeyVault` implementation in Infrastructure (`HydraForge.Infrastructure.Llm`). Encryption key from `Llm:EncryptionKey` config (base64-encoded 32-byte AES-256 key), validated at startup. Migration re-encrypts existing placeholder rows idempotently.** |
+| **Interface** | `IKeyVault` has two methods: `string Encrypt(string plaintext)` and `string Decrypt(string ciphertext)`. No async needed — AES-GCM is CPU-bound, acts on in-memory data, and completes in microseconds. |
+| **Ciphertext format** | Versioned prefix `v1:{nonceB64}:{ciphertextB64}:{tagB64}`. Nonce = 12 bytes (`RandomNumberGenerator.GetBytes`), tag = 16 bytes (AES-GCM default). The `v1:` prefix leaves room for future key rotation without schema changes. |
+| **Encryption algorithm** | `System.Security.Cryptography.AesGcm` with 256-bit key, 12-byte nonce, 16-byte tag. .NET's built-in `AesGcm` is the recommended AES-GCM implementation — no BouncyCastle dependency needed. |
+| **DI registration** | `LlmServiceCollectionExtensions.AddLlmInfrastructure(configuration)` in `src/HydraForge.Infrastructure/Llm/` — registers `LlmOptions` via `IOptions`, validates encryption key (decode base64, assert length == 32, throw `InvalidOperationException` on failure), registers `IKeyVault` as singleton. Called from `PersistenceServiceCollectionExtensions.AddPersistence` alongside existing audit and health registrations. Fail-fast: missing or invalid key prevents server startup entirely — no degenerate "encrypt with empty key" fallback. |
+| **Migration strategy** | Migration `20260731000000_ReencryptLlmProviderApiKeys` reads `Llm:EncryptionKey` from environment variable (`Llm__EncryptionKey`), iterates `llm_providers` rows where `api_key_encrypted` is empty, a known sentinel (`not-configured`/`placeholder`/`dummy`/`test`/`sk_test`), or does not start with `v1:`, and re-encrypts via `AesGcmKeyVault.EncryptStatic`. Idempotent: already-encrypted rows (`v1:` prefix) are skipped. Migration cannot use DI, so a static `EncryptStatic` method on `AesGcmKeyVault` accepts raw key bytes directly. |
+| **Alternatives considered** | 1. `DataProtectionProvider` (Microsoft.AspNetCore.DataProtection) instead of raw AES-GCM (rejected — Data Protection keys are machine-bound; a migrated DB moved to a different server would fail to decrypt. AES-GCM with a config key is portable — the key travels with the config, not the machine). 2. Store encryption key in a file on disk (rejected — environment variable is the standard Docker/12-factor pattern; file-based adds path configuration surface). 3. No startup validation, fall back to a no-op encryption (rejected — fail-fast is better than silently storing plaintext keys when config is wrong). |
+| **Impact** | New file: `src/HydraForge.Application/Llm/IKeyVault.cs` (port). New files: `src/HydraForge.Infrastructure/Llm/AesGcmKeyVault.cs` (impl), `src/HydraForge.Infrastructure/Llm/LlmServiceCollectionExtensions.cs` (DI). New migration: `20260731000000_ReencryptLlmProviderApiKeys.cs`. Config: `Llm:EncryptionKey` (base64) is required in `appsettings.json`, environment variable, or user secrets — server will not start without it. All 14 `WebApplicationFactory` test fixtures must now set `Llm:EncryptionKey` in their `ConfigureWebHost` override (same pattern as the "new Application-layer port checklist" in AGENTS.md for required config keys). `LlmOptions` class added to `AesGcmKeyVault.cs` with `SectionName = "Llm"` and `EncryptionKey` property. `IKeyVault` is injected into `ILlmClientFactory`, `ILlmAdminService`, and all image adapters (DallE, StabilityAi, ComfyUi) for decrypting API keys at call time; `OllamaAdapter` does not inject `IKeyVault` (local, no API key). |
+
+---
+
+## D-60: Test Mocking Library — NSubstitute, Not Moq
+
+| Field | Value |
+|---|---|
+| **Topic** | Which mocking library test code uses |
+| **Date** | 2026-08-01 |
+| **Status** | ✅ Settled |
+| **Decision** | **NSubstitute** for all test doubles going forward. `Moq` package reference removed from `HydraForge.Application.Tests` and `HydraForge.Server.Tests`; `NSubstitute` added to both. All existing `Moq`-based tests migrated. |
+| **Rationale** | Moq 4.20.0 (Aug 2023) shipped `SponsorLink` — a closed-source binary that read the developer's local git config email, hashed it, and phoned home for sponsorship-nagging, with no opt-in. The maintainer walked back the most aggressive behavior within days, but the trust damage (telemetry/data collection bundled into a test-mocking library without consent) was the trigger for moving off it — the risk is the precedent (a build-time dependency silently reading local machine state), not the current package state. NSubstitute has no such history and covers the same surface (interface/virtual-member substitution, argument matching, call verification) used across HydraForge's test suite. |
+| **Alternatives considered** | 1. Stay on Moq post-fix (rejected — the SponsorLink incident is a reason to not depend on the maintainer's future judgment on bundling telemetry, not just a one-time bug to patch around). 2. FakeItEasy (rejected — no functional advantage over NSubstitute for this codebase's needs; NSubstitute's fluent syntax is closer to the existing `Setup`/`Returns` call shape, minimizing migration diff). |
+| **API mapping** | `new Mock<T>()` → `Substitute.For<T>()` (no `.Object` — the substitute instance is used directly). `mock.Setup(x => x.Method(args)).Returns(val)` / `.ReturnsAsync(val)` → `sub.Method(args).Returns(val)` (NSubstitute's `Returns` handles `Task<T>`-returning members directly, no `Task.FromResult` wrapping needed). `It.IsAny<T>()` → `Arg.Any<T>()`. `It.Is<T>(predicate)` → `Arg.Is<T>(predicate)`. `mock.Verify(x => x.Method(args), Times.Once)` → `sub.Received(1).Method(args)`. |
+| **Impact** | `tests/HydraForge.Application.Tests/HydraForge.Application.Tests.csproj` and `tests/HydraForge.Server.Tests/HydraForge.Server.Tests.csproj`: `Moq` → `NSubstitute` package reference. Migrated files: `Llm/ContextCompressorTests.cs`, `Realtime/PresenceHubTests.cs`, `Realtime/SignalRProjectBoardEventPublisherTests.cs`. See `CLAUDE.md` Testing conventions for the day-to-day API mapping. |
+
+---
+
+## D-61: UserTokenBudget Concurrent Accrual — Unique Index, Accept Lost-Update Gap
+
+| Field | Value |
+|---|---|
+| **Topic** | Concurrency safety for `UserTokenBudget` monthly-usage counters |
+| **Date** | 2026-08-01 |
+| **Status** | ✅ Settled |
+| **Decision** | **Unique index on `UserTokenBudget.UserId` instead of a repeatable-read transaction. Accept the lost-update gap when concurrent requests accrue the same budget simultaneously.** |
+| **Rationale** | PostgreSQL's `RepeatableRead` isolation level prevents serialization anomalies (phantom reads, non-repeatable reads) but does **not** prevent lost-updates under snapshot isolation — two concurrent `AccrueTokenUsageAsync` calls both read `MonthlyTokenUsed = 100`, both add `50`, both write `150` instead of `200`. A unique index on `UserId` blocks the worst-case failure mode (duplicate `UserTokenBudget` rows) while keeping accrual simple. The lost-update gap is acceptable for Phase 6 because budget enforcement is soft (no hard billing tie, admin can correct via UI). |
+| **Alternatives considered** | 1. `RepeatableRead` transaction wrapping the read-check-write cycle (rejected — PG's snapshot isolation does not enforce predicate locking; two concurrent transactions both pass the `PeriodEnd` check and both write. Only `SERIALIZABLE` with retry-on-serialization-failure would fully prevent lost-updates, at the cost of complexity and retry overhead). 2. `SELECT ... FOR UPDATE` pessimistic row lock (rejected — pessimistic locking for a non-billing counter adds blocking risk for no real-world penalty if an accrual is lost; budget drift is bounded by the number-of-concurrent-requests × accrual-size in a single request, and resets every period rollover anyway). |
+| **Impact** | Migration `20260801123311_AddUniqueIndexOnUserTokenBudgetUserId` adds unique index `IX_UserTokenBudget_UserId` on `user_token_budget.user_id`. `EfUsageRecorder.AccrueTokenUsageAsync` and `AccrueImageUsageAsync` use a plain `SaveChangesAsync` with no explicit transaction. The v1 implementation documents the lost-update gap; a future `SERIALIZABLE` upgrade or atomic `UPDATE user_token_budget SET monthly_token_used = monthly_token_used + @tokens WHERE user_id = @userId` can close it. |
+
+---
+
+## D-62: Image Adapter Types — DallE + StabilityAi, ComfyUi Serves Two Enum Values
+
+| Field | Value |
+|---|---|
+| **Topic** | How image-generation providers map onto `AdapterType` and adapter classes |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **Add `DallE` and `StabilityAi` to `AdapterType`. Three image adapter classes: `DallEAdapter`, `StabilityAiAdapter`, `ComfyUiAdapter`. `ComfyUiAdapter` handles both `ComfyUi` and `Diffusers` enum values — local/self-hosted image generation shares one workflow-API-shaped implementation regardless of which local backend serves it.** |
+| **Rationale** | DALL·E and Stability AI have materially different request/response shapes from each other and from local ComfyUi/Diffusers setups, so each hosted provider gets its own adapter. `ComfyUi` and `Diffusers` are both "local workflow-API" backends with the same wire shape (`/prompt` submit + `/history` poll) — one adapter class serving two enum values avoids a near-duplicate `DiffusersAdapter` for zero behavioral difference. |
+| **Impact** | `AdapterType` enum gains `DallE = 6`, `StabilityAi = 7`. `LlmClientFactory` maps both `ComfyUi` and `Diffusers` to the same registered `ComfyUiAdapter` instance — only one named `HttpClient` (`comfyui`) registered. See `docs/architecture.md` adapter table. |
+
+---
+
+## D-63: Token Estimation — `chars / 4` Heuristic, No Tokenizer Dependency
+
+| Field | Value |
+|---|---|
+| **Topic** | How token counts are estimated before a call completes (context-window pre-flight checks, budget-check estimates) |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **`chars / 4` heuristic (`TokenEstimator`). No tokenizer library dependency (no `tiktoken`/`SharpToken`/model-specific vocab).** |
+| **Rationale** | A real tokenizer is per-model (GPT vs Claude vs local models all tokenize differently) and pulling one in per-provider is disproportionate for what the estimate is used for: a pre-flight "will this likely fit the context window" check and a budget-check upper bound. `chars / 4` is the standard rough English-text approximation and is cheap, dependency-free, and provider-agnostic. **Provider-reported token counts remain authoritative** for anything billed or persisted — `TokenUsageRecord`/`ImageUsageRecord` always use the `UsageSnapshot` returned by the adapter's final stream chunk, never the heuristic. |
+| **Impact** | `HydraForge.Application/Llm/TokenEstimator.cs`. Used by `ModelRouter.ResolveAsync`'s `estimatedTokens` parameter and `LlmCallGuard.CheckTokenBudgetAsync`. Never used for `Cost` or persisted usage rows. |
+
+---
+
+## D-64: Streaming Chat Contract — `IAsyncEnumerable<ChatChunk>`, Transport Deferred to Phase 7
+
+| Field | Value |
+|---|---|
+| **Topic** | The shape `ILlmClient.StreamChatAsync` returns, and how far Phase 6 goes toward actually streaming a chat response to a client |
+| **Date** | 2026-07-30 |
+| **Status** | ✅ Settled |
+| **Decision** | **`StreamChatAsync` returns `IAsyncEnumerable<ChatChunk>`.** Phase 6 only builds the server-side producer side (adapters yielding chunks) and consumers that fully drain the stream server-side (`ContextCompressor`, the `GenerateAiNarrativeForAllActiveProjectsAsync` job). The SignalR/SSE transport that would forward chunks to a live Web UI/TUI chat client is Phase 7 scope — no chat feature UI exists yet in Phase 6. |
+| **Rationale** | `IAsyncEnumerable` is the natural .NET shape for a token-by-token stream and composes directly with `await foreach`, without forcing every caller through a callback or channel. Deferring the transport keeps Phase 6 scoped to LLM *infrastructure* (adapters, routing, budgets, admin, encryption) rather than pulling forward a full chat feature that has its own UI/UX surface to design. |
+| **Impact** | `ChatChunk(string? Delta, ChatChunkFinishReason? FinishReason, UsageSnapshot? Usage)` — see `LlmDtos.cs`. Non-2xx responses yield a single `ChatChunk` with `FinishReason: Error` rather than throwing (see CLAUDE.md LLM adapter conventions). `ChatChunkFinishReason.Error` added specifically to make transport-level failures representable inside the stream instead of an exception that would break `IAsyncEnumerable` consumers mid-iteration. |

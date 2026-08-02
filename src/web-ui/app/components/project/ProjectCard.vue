@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
 import { onClickOutside } from '@vueuse/core'
+import { formatDateOnly } from '~/lib/date'
+import { displayRole } from '~/lib/member-role'
 
 type ProjectListResponse = components['schemas']['ProjectListResponse']
 
@@ -102,5 +104,21 @@ onClickOutside(menuRef, closeMenu, { ignore: [menuButtonRef] })
     <p class="text-sm text-muted line-clamp-2">
       {{ project.description ?? 'No description' }}
     </p>
+    <div class="flex items-center gap-3 mt-2 text-xs text-muted">
+      <span class="flex items-center gap-1">
+        <UIcon
+          name="i-lucide-user"
+          class="size-3"
+        />
+        {{ displayRole(project.myRole) }}
+      </span>
+      <span class="flex items-center gap-1">
+        <UIcon
+          name="i-lucide-calendar"
+          class="size-3"
+        />
+        {{ formatDateOnly(project.createdAt) }}
+      </span>
+    </div>
   </UCard>
 </template>

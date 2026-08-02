@@ -432,6 +432,7 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
             "Jwt:SigningKey",
             "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
         );
+        builder.UseSetting("Llm:EncryptionKey", "0YEf4ZBA47CpqWSH0ZczKZ62owvbQ7T5IRfcecZ4Vgo=");
         builder.ConfigureServices(services =>
         {
             services
@@ -825,6 +826,9 @@ internal class AttachmentsTestCardRepository(List<Card> cards) : ICardRepository
 
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
         Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null));
 }
 
 internal class AttachmentsTestCardAssigneeRepository : ICardAssigneeRepository
@@ -1091,6 +1095,16 @@ internal class AttachmentsTestSnapshotRepository : IProjectContextSnapshotReposi
 
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
         Task.CompletedTask;
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class AttachmentsTestSnapshotRefresher

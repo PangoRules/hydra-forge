@@ -17,6 +17,7 @@ public class ProjectSnapshotController(
 ) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(ProjectSnapshotResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSnapshot(Guid projectId, CancellationToken ct)
     {
         if (!await User.IsProjectMemberOrAdmin(memberRepo, projectId, ct))

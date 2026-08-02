@@ -564,6 +564,59 @@ public class CardRelationshipServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_excludes_relationship_to_archived_related_card()
+    {
+        var (relationshipRepo, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
+        var projectId = NewId();
+        var actorId = NewId();
+        var blocked = NewId();
+        var blocker = NewId();
+
+        cardRepo.Add(
+            new Card
+            {
+                Id = blocked,
+                ProjectId = projectId,
+                Title = "Blocked",
+                CardNumber = 1,
+            }
+        );
+        cardRepo.Add(
+            new Card
+            {
+                Id = blocker,
+                ProjectId = projectId,
+                Title = "Blocker",
+                CardNumber = 2,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        relationshipRepo.Relationships.Add(
+            new CardRelationship
+            {
+                SourceCardId = blocker,
+                TargetCardId = blocked,
+                Type = RelationshipType.BlockedBy,
+            }
+        );
+
+        // The Dependencies panel (this endpoint) must agree with the board badge —
+        // an archived blocker's relationship should not linger here either.
+        var result = await service.ListAsync(projectId, blocked, actorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value.Relationships);
+    }
+
+    [Fact]
     public async Task DeleteAsync_archives_relationship()
     {
         var (_, cardRepo, memberRepo, _, _, _, _, service) = CreateService();
@@ -1324,6 +1377,14 @@ public class CardRelationshipServiceTests
 
         public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
             Task.FromResult(Cards.Count(c => c.ColumnId == columnId));
+
+        public Task<int> CountActiveChildrenAsync(
+            Guid parentCardId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null)
+            );
 
         public void AddColumn(Column column) => Columns.Add(column);
     }

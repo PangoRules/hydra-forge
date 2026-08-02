@@ -42,7 +42,7 @@ function relatedTitle(rel: CardRelationshipDto): string {
 function badgeLabel(rel: CardRelationshipDto): string {
   const isSource = rel.sourceCardId === props.cardId
   switch (rel.type) {
-    case 'BlockedBy': return isSource ? 'Blocked by' : 'Blocks'
+    case 'BlockedBy': return isSource ? 'Blocks' : 'Blocked by'
     case 'Precedes': return isSource ? 'Precedes' : 'Follows'
     case 'Relates': return 'Relates to'
     default: return rel.type
@@ -63,16 +63,30 @@ const searchTerm = ref('')
 const searchResults = ref<{ id: string, cardNumber: number, title: string }[]>([])
 const searchLoading = ref(false)
 const selectedTargetCard = ref<{ id: string, cardNumber: number, title: string } | null>(null)
-const selectedType = ref<string>('BlockedBy')
+const selectedDirection = ref<string>('blocks')
 const linking = ref(false)
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
 
+// Each option resolves to a (type, reverse) pair sent to the create endpoint.
+// Reverse=true swaps which side becomes SourceCardId, so "Blocked by"/"Follows"
+// let this card declare itself as the blocked/successor party instead of always
+// being forced into the blocker/predecessor role (route card = default Source).
 const relationshipTypeOptions = [
-  { label: 'Blocked by', value: 'BlockedBy' },
-  { label: 'Precedes', value: 'Precedes' },
-  { label: 'Relates to', value: 'Relates' }
+  { label: 'Blocks', value: 'blocks' },
+  { label: 'Blocked by', value: 'blocked-by' },
+  { label: 'Precedes', value: 'precedes' },
+  { label: 'Follows', value: 'follows' },
+  { label: 'Relates to', value: 'relates' }
 ]
+
+const DIRECTION_MAP: Record<string, { type: string, reverse: boolean }> = {
+  'blocks': { type: 'BlockedBy', reverse: false },
+  'blocked-by': { type: 'BlockedBy', reverse: true },
+  'precedes': { type: 'Precedes', reverse: false },
+  'follows': { type: 'Precedes', reverse: true },
+  'relates': { type: 'Relates', reverse: false }
+}
 
 async function fetchRelationships() {
   loading.value = true
@@ -145,10 +159,12 @@ async function linkCard() {
   if (!selectedTargetCard.value) return
   linking.value = true
   try {
+    const { type, reverse } = DIRECTION_MAP[selectedDirection.value] ?? DIRECTION_MAP.blocks!
     await api.POST(ApiRoutes.Relationships.create(props.projectId, props.cardId), {
       body: {
         targetCardId: selectedTargetCard.value.id,
-        type: selectedType.value
+        type,
+        reverse
       }
     })
     await fetchRelationships()
@@ -165,7 +181,7 @@ function cancelLinkForm() {
   searchTerm.value = ''
   searchResults.value = []
   selectedTargetCard.value = null
-  selectedType.value = 'BlockedBy'
+  selectedDirection.value = 'blocks'
   if (searchDebounce) clearTimeout(searchDebounce)
 }
 
@@ -276,8 +292,9 @@ onMounted(() => fetchRelationships())
         </div>
 
         <USelect
-          v-model="selectedType"
+          v-model="selectedDirection"
           :items="relationshipTypeOptions"
+          aria-label="Relationship type"
           size="sm"
         />
 

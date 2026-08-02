@@ -383,6 +383,87 @@ public class CardRelationshipsControllerTests
     }
 
     [Fact]
+    public async Task Create_Reverse_StoresTargetAsSource()
+    {
+        var factory = new CRTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = CardsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+        var projectId = Guid.NewGuid();
+        var cardA = Guid.NewGuid();
+        var cardB = Guid.NewGuid();
+        var colId = Guid.NewGuid();
+
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddColumn(
+            new Column
+            {
+                Id = colId,
+                ProjectId = projectId,
+                Name = "Backlog",
+                Position = 0,
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardA,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 1,
+                Title = "Card A",
+            }
+        );
+        factory.AddCard(
+            new Card
+            {
+                Id = cardB,
+                ProjectId = projectId,
+                ColumnId = colId,
+                CardNumber = 2,
+                Title = "Card B",
+            }
+        );
+
+        // From cardA's panel, declare "cardA is blocked by cardB" — Reverse=true
+        // means cardB (not the route's cardA) ends up as SourceCardId (the blocker).
+        var createReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/cards/{cardA}/cardrelationships"
+        )
+        {
+            Content = new StringContent(
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        targetCardId = cardB.ToString(),
+                        type = 1,
+                        reverse = true,
+                    }
+                ),
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var createResp = await client.SendAsync(createReq);
+        Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
+
+        var body = await createResp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.Equal(cardB.ToString(), doc.RootElement.GetProperty("sourceCardId").GetString());
+        Assert.Equal(cardA.ToString(), doc.RootElement.GetProperty("targetCardId").GetString());
+    }
+
+    [Fact]
     public async Task Create_Relates_Success()
     {
         var factory = new CRTestWebApplicationFactory();

@@ -552,6 +552,7 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
             "Jwt:SigningKey",
             "test-secret-key-that-is-at-least-32-chars-long-for-hs256"
         );
+        builder.UseSetting("Llm:EncryptionKey", "0YEf4ZBA47CpqWSH0ZczKZ62owvbQ7T5IRfcecZ4Vgo=");
         builder.ConfigureServices(services =>
         {
             foreach (
@@ -882,6 +883,9 @@ internal class ColTestCardRepository(List<Card> cards) : ICardRepository
 
     public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
         Task.FromResult(_cards.Count(c => c.ColumnId == columnId && c.ArchivedAt == null));
+
+    public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
+        Task.FromResult(_cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null));
 }
 
 internal class ColTestColumnMemberRepository(List<ProjectMember> members) : IProjectMemberRepository
@@ -977,6 +981,19 @@ internal class ColTestColumnSnapshotRepository : IProjectContextSnapshotReposito
             _snapshots.Add(snapshot);
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([
+            .. _snapshots.Where(s => projectIds.Contains(s.ProjectId)),
+        ]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class ColTestColumnChatArchiveService : IChatArchiveService
