@@ -722,9 +722,10 @@ internal class TestSnapshotRepository : IProjectContextSnapshotRepository
     public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
         IReadOnlyList<Guid> projectIds,
         CancellationToken ct = default
-    ) => Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>(
-        [.. _snapshots.Where(s => projectIds.Contains(s.ProjectId))]
-    );
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([
+            .. _snapshots.Where(s => projectIds.Contains(s.ProjectId)),
+        ]);
 
     public Task UpdateRangeAsync(
         IReadOnlyList<ProjectContextSnapshot> snapshots,

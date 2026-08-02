@@ -51,12 +51,20 @@ public class GenerateAiNarrativeTests
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, Arg.Any<CancellationToken>())
+            .ResolveAsync(
+                AiFeature.ProjectNarrative,
+                Guid.Empty,
+                projectId,
+                4000,
+                Arg.Any<CancellationToken>()
+            )
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
 
-        llmClientFactory.For(provider).Returns(new FakeLlmClient("This is the generated narrative."));
+        llmClientFactory
+            .For(provider)
+            .Returns(new FakeLlmClient("This is the generated narrative."));
         var usageRecorder = Substitute.For<IUsageRecorder>();
 
         var service = new ProjectContextSnapshotService(
@@ -145,13 +153,16 @@ public class GenerateAiNarrativeTests
         projectRepo.AddProject(new Project { Id = projectId1, Name = "Project 1" });
         projectRepo.AddProject(new Project { Id = projectId2, Name = "Project 2" });
 
+        // Distinct TemplateContent per project so the fake LLM client can decide
+        // success/failure by inspecting the request instead of relying on call order —
+        // Parallel.ForEachAsync does not guarantee dispatch order across projects.
         var snapshotRepo = new InMemorySnapshotRepository();
         snapshotRepo.AddSnapshot(
             new ProjectContextSnapshot
             {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId1,
-                TemplateContent = "{}",
+                TemplateContent = "project-1-snapshot",
             }
         );
         snapshotRepo.AddSnapshot(
@@ -159,7 +170,7 @@ public class GenerateAiNarrativeTests
             {
                 Id = Guid.NewGuid(),
                 ProjectId = projectId2,
-                TemplateContent = "{}",
+                TemplateContent = "project-2-snapshot",
             }
         );
 
@@ -185,14 +196,26 @@ public class GenerateAiNarrativeTests
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, Arg.Any<Guid?>(), 4000, Arg.Any<CancellationToken>())
+            .ResolveAsync(
+                AiFeature.ProjectNarrative,
+                Guid.Empty,
+                Arg.Any<Guid?>(),
+                4000,
+                Arg.Any<CancellationToken>()
+            )
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
 
-        llmClientFactory.For(provider).Returns(
-            new FakeLlmClient(new InvalidOperationException("LLM failure")),
-            new FakeLlmClient("Project 2 narrative."));
+        llmClientFactory
+            .For(provider)
+            .Returns(
+                new ContentRoutedFakeLlmClient(content =>
+                    content == "project-1-snapshot"
+                        ? new ThrowingAsyncEnumerable(new InvalidOperationException("LLM failure"))
+                        : new FakeAsyncEnumerable("Project 2 narrative.")
+                )
+            );
 
         var service = new ProjectContextSnapshotService(
             Substitute.For<IColumnRepository>(),
@@ -253,7 +276,13 @@ public class GenerateAiNarrativeTests
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, Arg.Any<CancellationToken>())
+            .ResolveAsync(
+                AiFeature.ProjectNarrative,
+                Guid.Empty,
+                projectId,
+                4000,
+                Arg.Any<CancellationToken>()
+            )
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
@@ -312,13 +341,15 @@ public class GenerateAiNarrativeTests
 
         public FakeAsyncEnumerator(string text) => _text = text;
 
-        public ChatChunk Current => _moved
-            ? new ChatChunk(Delta: _text, FinishReason: ChatChunkFinishReason.Stop, Usage: null)
-            : default;
+        public ChatChunk Current =>
+            _moved
+                ? new ChatChunk(Delta: _text, FinishReason: ChatChunkFinishReason.Stop, Usage: null)
+                : default;
 
         public ValueTask<bool> MoveNextAsync()
         {
-            if (_moved) return new ValueTask<bool>(false);
+            if (_moved)
+                return new ValueTask<bool>(false);
             _moved = true;
             return new ValueTask<bool>(true);
         }
@@ -345,6 +376,7 @@ public class GenerateAiNarrativeTests
         public AdapterType AdapterType => AdapterType.OpenAiCompatible;
 
         public FakeLlmClient(string? narrative) => _narrative = narrative;
+
         public FakeLlmClient(Exception ex) => _exception = ex;
 
         public IAsyncEnumerable<ChatChunk> StreamChatAsync(
@@ -357,9 +389,35 @@ public class GenerateAiNarrativeTests
             return new FakeAsyncEnumerable(_narrative!);
         }
 
-        public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(CancellationToken ct = default) =>
-            Task.FromResult(Result<IReadOnlyList<ProviderModelDto>>.Success(
-                Array.Empty<ProviderModelDto>()));
+        public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Result<IReadOnlyList<ProviderModelDto>>.Success(Array.Empty<ProviderModelDto>())
+            );
+
+        public bool SupportsToolCalling(ProviderModelConfigDto model) => false;
+    }
+
+    // Decides its streamed response by inspecting the request's cache-block content
+    // instead of by call order, so it stays deterministic under parallel dispatch.
+    private sealed class ContentRoutedFakeLlmClient(
+        Func<string, IAsyncEnumerable<ChatChunk>> respond
+    ) : ILlmClient
+    {
+        public AdapterType AdapterType => AdapterType.OpenAiCompatible;
+
+        public IAsyncEnumerable<ChatChunk> StreamChatAsync(
+            ChatRequest request,
+            CancellationToken ct = default
+        ) => respond(request.CacheBlocks[0].Content);
+
+        public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                Result<IReadOnlyList<ProviderModelDto>>.Success(Array.Empty<ProviderModelDto>())
+            );
 
         public bool SupportsToolCalling(ProviderModelConfigDto model) => false;
     }

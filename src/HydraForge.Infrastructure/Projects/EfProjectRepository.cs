@@ -363,8 +363,8 @@ public class EfProjectContextSnapshotRepository(HydraForgeDbContext context)
         CancellationToken ct = default
     )
     {
-        return await context.ProjectContextSnapshots
-            .Where(s => projectIds.Contains(s.ProjectId))
+        return await context
+            .ProjectContextSnapshots.Where(s => projectIds.Contains(s.ProjectId))
             .ToListAsync(ct);
     }
 

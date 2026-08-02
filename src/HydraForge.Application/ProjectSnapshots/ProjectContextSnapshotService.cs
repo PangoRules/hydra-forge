@@ -45,41 +45,53 @@ public class ProjectContextSnapshotService(
         var snapshots = await snapshotRepo.GetByProjectIdsAsync(projectIds, ct);
         var snapshotByProjectId = snapshots.ToDictionary(s => s.ProjectId);
 
-        // Project-by-project narrative generation with controlled parallelism.
-        // Each batch of up to MaxDegreeOfParallelism projects runs LLM calls concurrently,
-        // but DB access is bulk (one read before, one write after for the whole batch).
+        // Phase 1 (sequential — HydraForgeDbContext is scoped to this job and is not
+        // thread-safe, so every DB-backed call, including ModelRouter's routing-config
+        // lookups, must run one at a time here rather than inside the parallel phase below).
+        var narrativeJobs = new List<NarrativeJob>();
+        foreach (var project in page.Items)
+        {
+            if (!snapshotByProjectId.TryGetValue(project.Id, out var snapshot))
+                continue;
+
+            var routeResult = await modelRouter.ResolveAsync(
+                AiFeature.ProjectNarrative,
+                BatchJobUserId,
+                project.Id,
+                estimatedTokens: 4000,
+                ct
+            );
+
+            if (routeResult.IsFailure)
+            {
+                logger.LogWarning(
+                    "Failed to resolve model for project {ProjectId}: {Error}",
+                    project.Id,
+                    routeResult.Error.Message
+                );
+                continue;
+            }
+
+            narrativeJobs.Add(new NarrativeJob(project.Id, snapshot, routeResult.Value));
+        }
+
+        if (narrativeJobs.Count == 0)
+            return;
+
+        // Phase 2 (parallel — pure network calls to LLM providers, no shared DbContext
+        // access, so concurrent dispatch here is safe).
         var updatedSnapshots = new List<ProjectContextSnapshot>();
         var pendingUsageRecords = new List<TokenUsageRecordInput>();
 
         await Parallel.ForEachAsync(
-            page.Items,
+            narrativeJobs,
             new ParallelOptions { MaxDegreeOfParallelism = 5, CancellationToken = ct },
-            async (project, innerCt) =>
+            async (job, innerCt) =>
             {
-                if (!snapshotByProjectId.TryGetValue(project.Id, out var snapshot))
-                    return;
+                var (projectId, snapshot, route) = job;
 
                 try
                 {
-                    var routeResult = await modelRouter.ResolveAsync(
-                        AiFeature.ProjectNarrative,
-                        BatchJobUserId,
-                        project.Id,
-                        estimatedTokens: 4000,
-                        innerCt
-                    );
-
-                    if (routeResult.IsFailure)
-                    {
-                        logger.LogWarning(
-                            "Failed to resolve model for project {ProjectId}: {Error}",
-                            project.Id,
-                            routeResult.Error.Message
-                        );
-                        return;
-                    }
-
-                    var route = routeResult.Value;
                     var client = llmClientFactory.For(route.Provider!);
 
                     var systemPrompt =
@@ -93,7 +105,10 @@ public class ProjectContextSnapshotService(
                         Messages: [new ChatMessage(ChatRole.User, systemPrompt)],
                         CacheBlocks:
                         [
-                            new CacheBlock(snapshot.TemplateContent, CacheBlockType.ProjectSnapshot),
+                            new CacheBlock(
+                                snapshot.TemplateContent,
+                                CacheBlockType.ProjectSnapshot
+                            ),
                         ],
                         Tools: [],
                         MaxOutputTokens: 500,
@@ -115,7 +130,7 @@ public class ProjectContextSnapshotService(
                     {
                         logger.LogWarning(
                             "Empty AI narrative response for project {ProjectId} — skipping update",
-                            project.Id
+                            projectId
                         );
                         return;
                     }
@@ -130,36 +145,44 @@ public class ProjectContextSnapshotService(
 
                     lock (pendingUsageRecords)
                     {
-                        pendingUsageRecords.Add(new TokenUsageRecordInput(
-                            UserId: BatchJobUserId,
-                            ProjectId: project.Id,
-                            Feature: AiFeature.ProjectNarrative,
-                            ProviderModelConfigId: route.Primary.Id,
-                            ProviderId: route.Provider!.Id,
-                            ModelId: route.Primary.ModelId,
-                            ModelName: route.Primary.Name,
-                            InputTokens: usage?.InputTokens ?? 0,
-                            OutputTokens: usage?.OutputTokens ?? 0,
-                            CachedTokens: usage?.CachedTokens ?? 0,
-                            PipelineRunId: null,
-                            Cost: 0
-                        ));
+                        pendingUsageRecords.Add(
+                            new TokenUsageRecordInput(
+                                UserId: BatchJobUserId,
+                                ProjectId: projectId,
+                                Feature: AiFeature.ProjectNarrative,
+                                ProviderModelConfigId: route.Primary.Id,
+                                ProviderId: route.Provider!.Id,
+                                ModelId: route.Primary.ModelId,
+                                ModelName: route.Primary.Name,
+                                InputTokens: usage?.InputTokens ?? 0,
+                                OutputTokens: usage?.OutputTokens ?? 0,
+                                CachedTokens: usage?.CachedTokens ?? 0,
+                                PipelineRunId: null,
+                                Cost: 0
+                            )
+                        );
                     }
                 }
-                catch (OperationCanceledException) when (!innerCt.IsCancellationRequested)
+                // Outer cancellation (the job's own ct) must propagate so the batch stops;
+                // anything else (a per-iteration hiccup) is caught below and logged instead.
+                catch (OperationCanceledException) when (innerCt.IsCancellationRequested)
                 {
                     throw;
                 }
                 catch (OperationCanceledException)
                 {
-                    // Inner cancellation (per-iteration) — swallow so other branches continue.
+                    // Not caused by outer cancellation — treat as a per-project failure.
+                    logger.LogWarning(
+                        "AI narrative generation for project {ProjectId} was cancelled unexpectedly",
+                        projectId
+                    );
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(
                         ex,
                         "Failed to generate AI narrative for project {ProjectId}",
-                        project.Id
+                        projectId
                     );
                 }
             }
@@ -222,4 +245,10 @@ public class ProjectContextSnapshotService(
     {
         return snapshotRepo.GetByProjectIdAsync(projectId, ct);
     }
+
+    private sealed record NarrativeJob(
+        Guid ProjectId,
+        ProjectContextSnapshot Snapshot,
+        RouteDecision Route
+    );
 }
