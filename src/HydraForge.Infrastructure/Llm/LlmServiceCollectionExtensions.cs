@@ -1,7 +1,9 @@
 namespace HydraForge.Infrastructure.Llm;
 
+using HydraForge.Application.Admin;
 using HydraForge.Application.Llm;
 using HydraForge.Application.Logging;
+using HydraForge.Infrastructure.Admin;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -73,6 +75,8 @@ public static class LlmServiceCollectionExtensions
         services.AddScoped<IModelRouter, ModelRouter>();
         services.AddScoped<IContextCompressor, ContextCompressor>();
         services.AddScoped<IUsageRecorder, EfUsageRecorder>();
+        services.AddScoped<IUserTokenBudgetRepository, EfUserTokenBudgetRepository>();
+        services.AddScoped<LlmCallGuard>();
 
         return services;
     }

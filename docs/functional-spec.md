@@ -576,7 +576,7 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [x] `ContextCompressor` service: auto-summarize injected context when threshold exceeded
 - [ ] `TokenUsageRecord`: log every text LLM call
 - [ ] `ImageUsageRecord`: log every image generation call
-- [ ] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error
+- [x] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error
 - [ ] Admin token usage dashboard: by user / feature / model / period
 - [ ] Admin image usage dashboard: by user / feature / model / period
 - [ ] User self-service usage view
