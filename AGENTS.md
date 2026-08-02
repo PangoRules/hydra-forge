@@ -28,7 +28,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 ## Repo Shape
 
 - Solution file is `HydraForge.slnx`; projects target `net10.0` with nullable and implicit usings enabled.
-- Backend boundaries: `Domain` -> `Application` -> `Infrastructure` -> `Server`/`Tui`. Keep Domain free of EF Core, HTTP, SignalR, and infrastructure concerns.
+- Backend boundaries: `Domain` -> `Application` -> `Infrastructure` -> `Server`/`Tui`. Keep Domain and Application free of EF Core, HTTP, SignalR, and infrastructure concerns. Application services must never reference `HydraForgeDbContext` or other Infrastructure types directly — use Application-layer repository ports even for simple read-only queries.
 - `src/HydraForge.Server` is ASP.NET Core. `Program.cs` calls `builder.Services.AddPersistence(builder.Configuration)` and wires auth, ProblemDetails/correlation middleware, health probes, admin seeding, and controllers. Starter weather endpoints are removed.
 - `src/HydraForge.Tui` is the terminal client — Spectre.Console for rendering, NSwag-generated `HydraForgeApiClient` for HTTP, `Microsoft.AspNetCore.SignalR.Client` for BoardHub/PresenceHub. No `ProjectReference` to Domain/Application/Infrastructure — pure HTTP client over the same API the Web UI uses.
 - `src/web-ui` is a separate pnpm package using Nuxt `^4.4.6`, Nuxt UI `^4.8.1`, Tailwind `^4.3.0`, TypeScript `^6.0.3`, pnpm `^11.5.0`. Nuxt 4 source layout (`src/web-ui/app/`).
