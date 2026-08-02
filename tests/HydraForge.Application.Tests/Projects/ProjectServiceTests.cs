@@ -1214,6 +1214,20 @@ internal class InMemorySnapshotRepository : IProjectContextSnapshotRepository
         UpdatedSnapshots.Add(snapshot);
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    )
+    {
+        UpdatedSnapshots.AddRange(snapshots);
+        return Task.CompletedTask;
+    }
 }
 
 internal class InMemoryChatArchiveService : IChatArchiveService

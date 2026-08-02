@@ -31,7 +31,6 @@ public class GenerateAiNarrativeTests
 
         var modelRouter = Substitute.For<IModelRouter>();
         var llmClientFactory = Substitute.For<ILlmClientFactory>();
-        var llmClient = Substitute.For<ILlmClient>();
 
         var providerId = Guid.NewGuid();
         var configId = Guid.NewGuid();
@@ -52,16 +51,12 @@ public class GenerateAiNarrativeTests
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, default)
+            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, Arg.Any<CancellationToken>())
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
 
-        llmClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), default)
-            .Returns(FakeStream("This is the generated narrative."));
-
-        llmClientFactory.For(provider).Returns(llmClient);
+        llmClientFactory.For(provider).Returns(new FakeLlmClient("This is the generated narrative."));
         var usageRecorder = Substitute.For<IUsageRecorder>();
 
         var service = new ProjectContextSnapshotService(
@@ -170,8 +165,6 @@ public class GenerateAiNarrativeTests
 
         var modelRouter = Substitute.For<IModelRouter>();
         var llmClientFactory = Substitute.For<ILlmClientFactory>();
-        var llmClient1 = Substitute.For<ILlmClient>();
-        var llmClient2 = Substitute.For<ILlmClient>();
 
         var providerId = Guid.NewGuid();
         var configId = Guid.NewGuid();
@@ -181,31 +174,25 @@ public class GenerateAiNarrativeTests
             AdapterType = AdapterType.OpenAiCompatible,
         };
         var primaryConfig = new ProviderModelConfigDto(
-            Id: configId,
-            ProviderId: providerId,
-            ModelId: "gpt-4o-mini",
-            Name: "GPT-4o Mini",
-            Tier: "Standard",
-            PricePerToken: 0.00015m,
-            MaxTokens: 5000,
-            IsEnabled: true
+            configId,
+            providerId,
+            "gpt-4o-mini",
+            "GPT-4o Mini",
+            "Standard",
+            0.00015m,
+            5000,
+            true
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, Arg.Any<Guid?>(), 4000, default)
+            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, Arg.Any<Guid?>(), 4000, Arg.Any<CancellationToken>())
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
 
-        llmClient1
-            .StreamChatAsync(Arg.Any<ChatRequest>(), default)
-            .Returns(ThrowingStream(new InvalidOperationException("LLM failure")));
-
-        llmClient2
-            .StreamChatAsync(Arg.Any<ChatRequest>(), default)
-            .Returns(FakeStream("Project 2 narrative."));
-
-        llmClientFactory.For(provider).Returns(llmClient1, llmClient2);
+        llmClientFactory.For(provider).Returns(
+            new FakeLlmClient(new InvalidOperationException("LLM failure")),
+            new FakeLlmClient("Project 2 narrative."));
 
         var service = new ProjectContextSnapshotService(
             Substitute.For<IColumnRepository>(),
@@ -246,7 +233,6 @@ public class GenerateAiNarrativeTests
 
         var modelRouter = Substitute.For<IModelRouter>();
         var llmClientFactory = Substitute.For<ILlmClientFactory>();
-        var llmClient = Substitute.For<ILlmClient>();
 
         var providerId = Guid.NewGuid();
         var configId = Guid.NewGuid();
@@ -267,16 +253,12 @@ public class GenerateAiNarrativeTests
         );
 
         modelRouter
-            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, default)
+            .ResolveAsync(AiFeature.ProjectNarrative, Guid.Empty, projectId, 4000, Arg.Any<CancellationToken>())
             .Returns(
                 Result<RouteDecision>.Success(new RouteDecision(primaryConfig, null!, [], provider))
             );
 
-        llmClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), default)
-            .Returns(FakeStream("Narrative."));
-
-        llmClientFactory.For(provider).Returns(llmClient);
+        llmClientFactory.For(provider).Returns(new FakeLlmClient("Narrative."));
 
         var service = new ProjectContextSnapshotService(
             Substitute.For<IColumnRepository>(),
@@ -313,6 +295,37 @@ public class GenerateAiNarrativeTests
     private static IAsyncEnumerable<ChatChunk> ThrowingStream(Exception ex) =>
         new ThrowingAsyncEnumerable(ex);
 
+    private sealed class FakeAsyncEnumerable : IAsyncEnumerable<ChatChunk>
+    {
+        private readonly string _text;
+
+        public FakeAsyncEnumerable(string text) => _text = text;
+
+        public IAsyncEnumerator<ChatChunk> GetAsyncEnumerator(CancellationToken _) =>
+            new FakeAsyncEnumerator(_text);
+    }
+
+    private sealed class FakeAsyncEnumerator : IAsyncEnumerator<ChatChunk>
+    {
+        private readonly string _text;
+        private bool _moved;
+
+        public FakeAsyncEnumerator(string text) => _text = text;
+
+        public ChatChunk Current => _moved
+            ? new ChatChunk(Delta: _text, FinishReason: ChatChunkFinishReason.Stop, Usage: null)
+            : default;
+
+        public ValueTask<bool> MoveNextAsync()
+        {
+            if (_moved) return new ValueTask<bool>(false);
+            _moved = true;
+            return new ValueTask<bool>(true);
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
     private sealed class ThrowingAsyncEnumerable : IAsyncEnumerable<ChatChunk>
     {
         private readonly Exception _ex;
@@ -321,6 +334,34 @@ public class GenerateAiNarrativeTests
 
         public IAsyncEnumerator<ChatChunk> GetAsyncEnumerator(CancellationToken _) =>
             new ThrowingAsyncEnumerator(_ex);
+    }
+
+    // Concrete test double that wraps FakeAsyncEnumerable for use as ILlmClient.
+    private sealed class FakeLlmClient : ILlmClient
+    {
+        private readonly string? _narrative;
+        private readonly Exception? _exception;
+
+        public AdapterType AdapterType => AdapterType.OpenAiCompatible;
+
+        public FakeLlmClient(string? narrative) => _narrative = narrative;
+        public FakeLlmClient(Exception ex) => _exception = ex;
+
+        public IAsyncEnumerable<ChatChunk> StreamChatAsync(
+            ChatRequest request,
+            CancellationToken ct = default
+        )
+        {
+            if (_exception is not null)
+                return new ThrowingAsyncEnumerable(_exception);
+            return new FakeAsyncEnumerable(_narrative!);
+        }
+
+        public Task<Result<IReadOnlyList<ProviderModelDto>>> GetModelsAsync(CancellationToken ct = default) =>
+            Task.FromResult(Result<IReadOnlyList<ProviderModelDto>>.Success(
+                Array.Empty<ProviderModelDto>()));
+
+        public bool SupportsToolCalling(ProviderModelConfigDto model) => false;
     }
 
     private sealed class ThrowingAsyncEnumerator : IAsyncEnumerator<ChatChunk>

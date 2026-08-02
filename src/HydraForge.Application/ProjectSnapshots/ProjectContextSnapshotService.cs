@@ -37,107 +37,144 @@ public class ProjectContextSnapshotService(
             ct
         );
 
-        foreach (var project in page.Items)
-        {
-            try
+        if (page.Items.Count == 0)
+            return;
+
+        // Bulk-fetch all snapshots in one DB round-trip instead of N individual calls.
+        var projectIds = page.Items.Select(p => p.Id).ToList();
+        var snapshots = await snapshotRepo.GetByProjectIdsAsync(projectIds, ct);
+        var snapshotByProjectId = snapshots.ToDictionary(s => s.ProjectId);
+
+        // Project-by-project narrative generation with controlled parallelism.
+        // Each batch of up to MaxDegreeOfParallelism projects runs LLM calls concurrently,
+        // but DB access is bulk (one read before, one write after for the whole batch).
+        var updatedSnapshots = new List<ProjectContextSnapshot>();
+        var pendingUsageRecords = new List<TokenUsageRecordInput>();
+
+        await Parallel.ForEachAsync(
+            page.Items,
+            new ParallelOptions { MaxDegreeOfParallelism = 5, CancellationToken = ct },
+            async (project, innerCt) =>
             {
-                var snapshot = await snapshotRepo.GetByProjectIdAsync(project.Id, ct);
-                if (snapshot is null)
-                    continue;
+                if (!snapshotByProjectId.TryGetValue(project.Id, out var snapshot))
+                    return;
 
-                var routeResult = await modelRouter.ResolveAsync(
-                    AiFeature.ProjectNarrative,
-                    BatchJobUserId,
-                    project.Id,
-                    estimatedTokens: 4000,
-                    ct
-                );
-
-                if (routeResult.IsFailure)
+                try
                 {
-                    logger.LogWarning(
-                        "Failed to resolve model for project {ProjectId}: {Error}",
+                    var routeResult = await modelRouter.ResolveAsync(
+                        AiFeature.ProjectNarrative,
+                        BatchJobUserId,
                         project.Id,
-                        routeResult.Error.Message
+                        estimatedTokens: 4000,
+                        innerCt
                     );
-                    continue;
+
+                    if (routeResult.IsFailure)
+                    {
+                        logger.LogWarning(
+                            "Failed to resolve model for project {ProjectId}: {Error}",
+                            project.Id,
+                            routeResult.Error.Message
+                        );
+                        return;
+                    }
+
+                    var route = routeResult.Value;
+                    var client = llmClientFactory.For(route.Provider!);
+
+                    var systemPrompt =
+                        "Generate a concise project narrative (3-5 sentences) based on the following project snapshot. "
+                        + "The narrative should describe the current state of the project, key themes, and notable work items. "
+                        + "Be descriptive but succinct.";
+
+                    var request = new ChatRequest(
+                        route.Primary.Id,
+                        route.Primary.ModelId,
+                        Messages: [new ChatMessage(ChatRole.User, systemPrompt)],
+                        CacheBlocks:
+                        [
+                            new CacheBlock(snapshot.TemplateContent, CacheBlockType.ProjectSnapshot),
+                        ],
+                        Tools: [],
+                        MaxOutputTokens: 500,
+                        Temperature: 0.3m
+                    );
+
+                    var fullResponse = new List<string>();
+                    UsageSnapshot? usage = null;
+                    await foreach (var chunk in client.StreamChatAsync(request, innerCt))
+                    {
+                        if (chunk.Delta is not null)
+                            fullResponse.Add(chunk.Delta);
+                        if (chunk.Usage is not null)
+                            usage = chunk.Usage;
+                    }
+
+                    var narrative = string.Join("", fullResponse);
+                    if (fullResponse.Count == 0)
+                    {
+                        logger.LogWarning(
+                            "Empty AI narrative response for project {ProjectId} — skipping update",
+                            project.Id
+                        );
+                        return;
+                    }
+
+                    snapshot.AiNarrative = narrative;
+                    snapshot.AiNarrativeGeneratedAt = DateTime.UtcNow;
+
+                    lock (updatedSnapshots)
+                    {
+                        updatedSnapshots.Add(snapshot);
+                    }
+
+                    lock (pendingUsageRecords)
+                    {
+                        pendingUsageRecords.Add(new TokenUsageRecordInput(
+                            UserId: BatchJobUserId,
+                            ProjectId: project.Id,
+                            Feature: AiFeature.ProjectNarrative,
+                            ProviderModelConfigId: route.Primary.Id,
+                            ProviderId: route.Provider!.Id,
+                            ModelId: route.Primary.ModelId,
+                            ModelName: route.Primary.Name,
+                            InputTokens: usage?.InputTokens ?? 0,
+                            OutputTokens: usage?.OutputTokens ?? 0,
+                            CachedTokens: usage?.CachedTokens ?? 0,
+                            PipelineRunId: null,
+                            Cost: 0
+                        ));
+                    }
                 }
-
-                var route = routeResult.Value;
-                var client = llmClientFactory.For(route.Provider!);
-
-                var systemPrompt =
-                    "Generate a concise project narrative (3-5 sentences) based on the following project snapshot. "
-                    + "The narrative should describe the current state of the project, key themes, and notable work items. "
-                    + "Be descriptive but succinct.";
-
-                var request = new ChatRequest(
-                    route.Primary.Id,
-                    route.Primary.ModelId,
-                    Messages: [new ChatMessage(ChatRole.User, systemPrompt)],
-                    CacheBlocks:
-                    [
-                        new CacheBlock(snapshot.TemplateContent, CacheBlockType.ProjectSnapshot),
-                    ],
-                    Tools: [],
-                    MaxOutputTokens: 500,
-                    Temperature: 0.3m
-                );
-
-                var fullResponse = new List<string>();
-                UsageSnapshot? usage = null;
-                await foreach (var chunk in client.StreamChatAsync(request, ct))
+                catch (OperationCanceledException) when (!innerCt.IsCancellationRequested)
                 {
-                    if (chunk.Delta is not null)
-                        fullResponse.Add(chunk.Delta);
-                    if (chunk.Usage is not null)
-                        usage = chunk.Usage;
+                    throw;
                 }
-
-                var narrative = string.Join("", fullResponse);
-                if (fullResponse.Count == 0)
+                catch (OperationCanceledException)
                 {
-                    logger.LogWarning(
-                        "Empty AI narrative response for project {ProjectId} — skipping update",
+                    // Inner cancellation (per-iteration) — swallow so other branches continue.
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(
+                        ex,
+                        "Failed to generate AI narrative for project {ProjectId}",
                         project.Id
                     );
-                    continue;
                 }
+            }
+        );
 
-                snapshot.AiNarrative = narrative;
-                snapshot.AiNarrativeGeneratedAt = DateTime.UtcNow;
-                await snapshotRepo.UpdateAsync(snapshot, ct);
+        // Bulk-write all updated snapshots in one DB round-trip.
+        if (updatedSnapshots.Count > 0)
+        {
+            await snapshotRepo.UpdateRangeAsync(updatedSnapshots, ct);
+        }
 
-                await usageRecorder.RecordTokenAsync(
-                    new TokenUsageRecordInput(
-                        UserId: BatchJobUserId,
-                        ProjectId: project.Id,
-                        Feature: AiFeature.ProjectNarrative,
-                        ProviderModelConfigId: route.Primary.Id,
-                        ProviderId: route.Provider!.Id,
-                        ModelId: route.Primary.ModelId,
-                        ModelName: route.Primary.Name,
-                        InputTokens: usage?.InputTokens ?? 0,
-                        OutputTokens: usage?.OutputTokens ?? 0,
-                        CachedTokens: usage?.CachedTokens ?? 0,
-                        PipelineRunId: null,
-                        Cost: 0
-                    ),
-                    ct
-                );
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "Failed to generate AI narrative for project {ProjectId}",
-                    project.Id
-                );
-            }
+        // Record usage for all completed generations.
+        foreach (var record in pendingUsageRecords)
+        {
+            await usageRecorder.RecordTokenAsync(record, ct);
         }
     }
 

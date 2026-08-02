@@ -431,6 +431,13 @@ internal class InMemorySnapshotRepository : IProjectContextSnapshotRepository
         CancellationToken ct = default
     ) => Task.FromResult(_snapshots.FirstOrDefault(s => s.ProjectId == projectId));
 
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>(
+        [.. _snapshots.Where(s => projectIds.Contains(s.ProjectId))]
+    );
+
     public Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {
         AddedSnapshots.Add(snapshot);
@@ -440,6 +447,15 @@ internal class InMemorySnapshotRepository : IProjectContextSnapshotRepository
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default)
     {
         UpdatedSnapshots.Add(snapshot);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    )
+    {
+        UpdatedSnapshots.AddRange(snapshots);
         return Task.CompletedTask;
     }
 }

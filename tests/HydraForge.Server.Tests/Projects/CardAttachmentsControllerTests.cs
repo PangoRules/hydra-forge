@@ -1095,6 +1095,16 @@ internal class AttachmentsTestSnapshotRepository : IProjectContextSnapshotReposi
 
     public Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default) =>
         Task.CompletedTask;
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) => Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class AttachmentsTestSnapshotRefresher
