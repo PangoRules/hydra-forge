@@ -70,8 +70,10 @@ ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
                  └── (N) ChatSession
 
 ChatSession (1) ──┬── (N) ChatMessage
-                  ├── (N) CardChatLink
-                  └── (1) Project? (when in project folder)
+                   ├── (N) CardChatLink
+                   ├── (N) ChatSessionDocument
+                   ├── (1) Project? (when in project folder)
+                   └── (N) AgentPersonality? (via PersonalityId)
 
 Note (1) ──┬── (N) NoteReminder
            └── (N) NoteImageAttachment
@@ -361,6 +363,13 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | FolderId | Guid? | FK to ChatFolder |
 | ProjectId | Guid? | FK to Project when session is in a project folder |
 | IsShared | bool | True for project-folder chats (visible to all members read-only) |
+| Status | ChatSessionStatus | `Active` (default) or `Closed`. Drives AI-edit-permission gating. |
+| AiEditMode | AiEditMode | `PerMutation` (default) or `Blanket`. Only meaningful for project chats. |
+| SearchAllMyDocs | bool | RAG scope toggle — `false` (default) = session-scoped docs only; `true` = all owner's documents. |
+| PersonalityId | Guid? | FK to AgentPersonality (OnDelete: SetNull). Soft-archive does not null this — read path checks ArchivedAt. |
+| OpenCardId | Guid? | Card context the session was opened with (project chats). Not an enforced FK. |
+| ClosedAt | DateTime? | Set when Status flips to Closed. |
+| Summary | string? | LLM-generated summary produced on close. |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 | ArchivedAt | DateTime? | |
@@ -377,6 +386,7 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | OutputTokens | int | Tokens in this response (0 for user messages) |
 | CachedTokens | int | Prompt cache hits for this call |
 | ModelName | string? | Model used (null for user messages) |
+| ImagesJson | string? | JSON-serialized `ImageBlock[]` for vision messages. Null for text-only. |
 | CreatedAt | DateTime | |
 
 ### CardChatLink
@@ -390,6 +400,46 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | Summary | string | Auto-generated summary of what was discussed |
 | CreatedAt | DateTime | |
 | ArchivedAt | DateTime? | Soft-delete marker; archived links remain visible (so archived cards still show "discussed in chat X"), hard-deleted by housekeeping job after admin-configured retention period |
+
+### ChatSessionDocument
+
+Join entity binding a document to a session for session-scoped RAG retrieval. Unique index on `(SessionId, DocumentId)`.
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | |
+| SessionId | Guid | FK to ChatSession (cascade on hard-delete) |
+| DocumentId | Guid | FK to Document (no cascade — housekeeping cleans orphaned rows) |
+| AddedByUserId | Guid | FK to User |
+| AddedAt | DateTime | |
+
+### PromptPresetGroup
+
+Named container for prompt presets. Soft-archive sets `GroupId = null` on all member presets (presets kept, ungrouped).
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | |
+| UserId | Guid | FK to User |
+| Name | string | Display name |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete |
+
+### PromptPreset
+
+A preset belongs to ≤1 group (nullable FK). Ungrouped presets have `GroupId = null`.
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | |
+| UserId | Guid | FK to User |
+| GroupId | Guid? | FK to PromptPresetGroup (OnDelete: Cascade — fires only on hard-delete; soft-archive nulls GroupId instead) |
+| Name | string | Display name |
+| Content | string | Prompt body (markdown) |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete |
 
 ### AgentPersonality
 
@@ -807,3 +857,17 @@ Lifecycle state for `Plan`. Done plans are read-only; a `Reactivate` action tran
 Shared domain enum used to connect routing policy, token/image usage records, and admin usage dashboards without relying on free-form feature strings.
 
 Values: `PersonalChat`, `ProjectChat`, `DeepResearch`, `AgentPipeline`, `MemoryExtraction`, `NotesClassification`, `DocumentEditing`, `CardReview`, `ImageChat`, `ImageDocument`, `ImageGalleryEditor`
+
+### ChatSessionStatus
+
+| Value | Name | Description |
+|---|---|---|
+| 1 | Active | Open, accepting messages, AI edit permission granted (project chats) |
+| 2 | Closed | Ended — no new messages, AI edit permission revoked |
+
+### AiEditMode
+
+| Value | Name | Description |
+|---|---|---|
+| 1 | PerMutation | Each AI board mutation requires a confirmation dialog |
+| 2 | Blanket | Session-level AI edit permission, no per-mutation confirm |
