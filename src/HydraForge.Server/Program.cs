@@ -152,7 +152,8 @@ builder.Services.AddSettingsServices();
 
 if (!builder.Environment.IsEnvironment("Test"))
 {
-    var connectionString = builder.Configuration.GetConnectionString("Default")!;
+    var connectionString = builder.Configuration.GetConnectionString("Default")
+        ?? throw new InvalidOperationException("ConnectionStrings:Default is required for Hangfire storage.");
     builder.Services.AddHangfire(c => c.UsePostgreSqlStorage(connectionString));
     builder.Services.AddHangfireServer();
 }

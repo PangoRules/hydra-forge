@@ -21,7 +21,7 @@ const settings = reactive({
   searXngUrl: '',
   brandName: '',
   brandLogoUrl: '',
-  aiNarrativeGenerationTimeUtc: ''
+  aiNarrativeGenerationTimeUtc: null as string | null
 })
 
 const saving = reactive({
@@ -76,7 +76,7 @@ const aiNarrativeTimeModel = computed({
   set: (val: string) => {
     settings.aiNarrativeGenerationTimeUtc = val
       ? val.split(':').slice(0, 2).join(':') + ':00'
-      : null as unknown as string
+      : null
   }
 })
 
@@ -117,7 +117,7 @@ async function saveSettings(section: keyof typeof saving) {
       body.archivedItemRetentionDays = settings.archivedItemRetentionDays
       body.auditLogRetentionDays = settings.auditLogRetentionDays
       body.notificationRetentionDays = settings.notificationRetentionDays
-      body.aiNarrativeGenerationTimeUtc = settings.aiNarrativeGenerationTimeUtc || null
+      body.aiNarrativeGenerationTimeUtc = settings.aiNarrativeGenerationTimeUtc
     } else if (section === 'notifications') {
       body.ntfyServerUrl = settings.ntfyServerUrl
     } else if (section === 'search') {
