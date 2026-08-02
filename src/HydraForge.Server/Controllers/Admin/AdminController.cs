@@ -170,6 +170,7 @@ public class AdminController(
                 settings.SearXngUrl,
                 settings.BrandName,
                 settings.BrandLogoUrl,
+                settings.AiNarrativeGenerationTimeUtc,
             }
         );
     }
@@ -190,7 +191,8 @@ public class AdminController(
             request.NtfyServerUrl,
             request.SearXngUrl,
             request.BrandName,
-            request.BrandLogoUrl
+            request.BrandLogoUrl,
+            request.AiNarrativeGenerationTimeUtc
         );
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
@@ -233,7 +235,8 @@ public record UpdateSystemSettingsRequest(
     string? NtfyServerUrl,
     string? SearXngUrl,
     string? BrandName,
-    string? BrandLogoUrl
+    string? BrandLogoUrl,
+    TimeSpan? AiNarrativeGenerationTimeUtc
 );
 
 public record ResetPasswordRequest(string NewPassword);
