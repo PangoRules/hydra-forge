@@ -12,6 +12,7 @@ public class SystemSettings
     public string? SearXngUrl { get; set; }
     public string? BrandName { get; set; }
     public string? BrandLogoUrl { get; set; }
+    public TimeSpan? AiNarrativeGenerationTimeUtc { get; set; } = TimeSpan.Zero;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -22,7 +23,8 @@ public class SystemSettings
         string? ntfyServerUrl = null,
         string? searXngUrl = null,
         string? brandName = null,
-        string? brandLogoUrl = null
+        string? brandLogoUrl = null,
+        TimeSpan? aiNarrativeGenerationTimeUtc = null
     )
     {
         if (archivedItemRetentionDays.HasValue)
@@ -39,6 +41,14 @@ public class SystemSettings
             BrandName = string.IsNullOrWhiteSpace(brandName) ? null : brandName;
         if (brandLogoUrl is not null)
             BrandLogoUrl = string.IsNullOrWhiteSpace(brandLogoUrl) ? null : brandLogoUrl;
+        if (aiNarrativeGenerationTimeUtc.HasValue)
+            AiNarrativeGenerationTimeUtc = aiNarrativeGenerationTimeUtc.Value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetAiNarrativeGenerationTime(TimeSpan? value)
+    {
+        AiNarrativeGenerationTimeUtc = value;
         UpdatedAt = DateTime.UtcNow;
     }
 }

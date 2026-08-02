@@ -18,7 +18,7 @@
 
 ### 3. Add `AiNarrativeGenerationTimeUtc` to SystemSettings
 - File: `src/HydraForge.Domain/Entities/PersonalSpace/SystemSettings.cs`
-- Add property: `public TimeSpan? AiNarrativeGenerationTimeUtc { get; set; }` (default `new TimeSpan(0, 0, 0)` = midnight UTC).
+- Add property: `public TimeSpan? AiNarrativeGenerationTimeUtc { get; set; }` (default `TimeSpan.Zero` = midnight UTC).
 - Update `UpdateSettings` method: add optional `TimeSpan? aiNarrativeGenerationTimeUtc` parameter.
 
 ### 4. Add EF migration

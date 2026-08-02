@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -170,6 +171,7 @@ public class AdminController(
                 settings.SearXngUrl,
                 settings.BrandName,
                 settings.BrandLogoUrl,
+                settings.AiNarrativeGenerationTimeUtc,
             }
         );
     }
@@ -177,11 +179,49 @@ public class AdminController(
     [HttpPut("settings")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UpdateSettings(
-        [FromBody] UpdateSystemSettingsRequest request,
-        CancellationToken ct
-    )
+    public async Task<IActionResult> UpdateSettings(CancellationToken ct)
     {
+        Request.EnableBuffering();
+        string body;
+        using (var reader = new StreamReader(Request.Body, leaveOpen: true))
+        {
+            body = await reader.ReadToEndAsync();
+        }
+        Request.Body.Position = 0;
+
+        if (string.IsNullOrWhiteSpace(body))
+            return BadRequest(new ProblemDetails { Title = "Request body is required." });
+
+        UpdateSystemSettingsRequest? request;
+        try
+        {
+            request = JsonSerializer.Deserialize<UpdateSystemSettingsRequest>(
+                body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid JSON in request body." });
+        }
+
+        if (request is null)
+            return BadRequest(new ProblemDetails { Title = "Request body is required." });
+
+        bool hasAiNarrativeTime;
+        try
+        {
+            using var jsonDoc = JsonDocument.Parse(body);
+            hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty(
+                "aiNarrativeGenerationTimeUtc",
+                out _
+            );
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid JSON in request body." });
+        }
+
         var settings = await settingsRepo.GetSingletonAsync(ct);
         settings.UpdateSettings(
             request.ArchivedItemRetentionDays,
@@ -192,6 +232,8 @@ public class AdminController(
             request.BrandName,
             request.BrandLogoUrl
         );
+        if (hasAiNarrativeTime)
+            settings.SetAiNarrativeGenerationTime(request.AiNarrativeGenerationTimeUtc);
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
         return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
@@ -233,7 +275,8 @@ public record UpdateSystemSettingsRequest(
     string? NtfyServerUrl,
     string? SearXngUrl,
     string? BrandName,
-    string? BrandLogoUrl
+    string? BrandLogoUrl,
+    TimeSpan? AiNarrativeGenerationTimeUtc
 );
 
 public record ResetPasswordRequest(string NewPassword);

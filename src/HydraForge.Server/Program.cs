@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Hangfire;
+using Hangfire.PostgreSql;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -148,6 +150,19 @@ builder.Services.AddPlanServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
 
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    var connectionString =
+        builder.Configuration.GetConnectionString("Default")
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Default is required for Hangfire storage."
+        );
+    builder.Services.AddHangfire(c =>
+        c.UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString))
+    );
+    builder.Services.AddHangfireServer();
+}
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
 var jwtSigningKey =
@@ -258,6 +273,10 @@ builder
                 )
                 {
                     context.Token = accessToken;
+                }
+                else if (path.StartsWithSegments("/hangfire"))
+                {
+                    context.Token = context.Request.Cookies["auth_token"];
                 }
                 return Task.CompletedTask;
             },
@@ -380,6 +399,14 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (!app.Environment.IsEnvironment("Test"))
+{
+    app.UseHangfireDashboard(
+        "/hangfire",
+        new DashboardOptions { Authorization = [new AdminRequiredAuthFilter()] }
+    );
+}
 
 app.MapControllers();
 
