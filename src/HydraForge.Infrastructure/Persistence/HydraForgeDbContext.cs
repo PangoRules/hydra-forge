@@ -604,7 +604,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.SessionId);
-                b.Property(e => e.ImagesJson).HasColumnType("nvarchar(max)");
+                b.Property(e => e.ImagesJson).HasColumnType("text");
                 b.HasOne<ChatSession>()
                     .WithMany()
                     .HasForeignKey(e => e.SessionId)

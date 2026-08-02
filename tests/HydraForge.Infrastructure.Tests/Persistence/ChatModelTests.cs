@@ -143,7 +143,7 @@ public class ChatModelTests
     }
 
     [Fact]
-    public void FindEntityType_ChatMessage_ImagesJson_IsNvarcharMax()
+    public void FindEntityType_ChatMessage_ImagesJson_IsText()
     {
         using var context = new HydraForgeDbContext(CreateOptions());
         var entity = context.Model.FindEntityType(typeof(ChatMessage));
@@ -151,7 +151,28 @@ public class ChatModelTests
 
         var prop = entity.GetProperties().FirstOrDefault(p => p.Name == "ImagesJson");
         Assert.NotNull(prop);
-        Assert.Equal("nvarchar(max)", prop.GetColumnType());
+        Assert.Equal("text", prop.GetColumnType());
+    }
+
+    [Fact]
+    public void FindEntityType_ChatSession_HasRequiredProperties()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var entity = context.Model.FindEntityType(typeof(ChatSession));
+        Assert.NotNull(entity);
+        AssertProperties(entity, "Id", "FolderId", "OwnerId", "ProjectId", "Title", "IsShared",
+            "CreatedAt", "UpdatedAt", "ArchivedAt", "Status", "AiEditMode", "SearchAllMyDocs",
+            "PersonalityId", "OpenCardId", "ClosedAt", "Summary");
+    }
+
+    [Fact]
+    public void FindEntityType_ChatMessage_HasRequiredProperties()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var entity = context.Model.FindEntityType(typeof(ChatMessage));
+        Assert.NotNull(entity);
+        AssertProperties(entity, "Id", "SessionId", "Role", "Content", "InputTokens", "OutputTokens",
+            "CachedTokens", "ModelName", "ImagesJson", "CreatedAt");
     }
 
     [Fact]

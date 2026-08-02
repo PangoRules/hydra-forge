@@ -13,7 +13,7 @@ using Pgvector;
 namespace HydraForge.Infrastructure.Migrations
 {
     [DbContext(typeof(HydraForgeDbContext))]
-    [Migration("20260802193728_AddPhase7Chat")]
+    [Migration("20260802194539_AddPhase7Chat")]
     partial class AddPhase7Chat
     {
         /// <inheritdoc />
@@ -493,7 +493,7 @@ namespace HydraForge.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ImagesJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("InputTokens")
                         .HasColumnType("integer");

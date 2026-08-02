@@ -490,7 +490,7 @@ namespace HydraForge.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ImagesJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("InputTokens")
                         .HasColumnType("integer");
