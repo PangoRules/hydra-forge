@@ -13,12 +13,12 @@ using HydraForge.Infrastructure.Cards;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Realtime;
-using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Settings;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
@@ -301,6 +301,7 @@ builder.Services.AddSingleton<IAccessTokenIssuer>(sp => new JwtTokenIssuer(
 builder.Services.AddScoped<LoginUserHandler>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<TestUserSeeder>();
+builder.Services.AddScoped<FeatureRoutingConfigSeeder>();
 builder.Services.AddScoped(sp => new GetHealthHandler(sp.GetServices<IHealthProbe>()));
 
 builder.Services.AddRealtimeServices();
@@ -333,7 +334,9 @@ if (applyMigrationsOnStartup)
     var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
     await adminSeeder.SeedIfNeededAsync();
 
-    await new FeatureRoutingConfigSeeder(db).SeedAsync();
+    var featureRoutingConfigSeeder =
+        scope.ServiceProvider.GetRequiredService<FeatureRoutingConfigSeeder>();
+    await featureRoutingConfigSeeder.SeedAsync();
 
     if (app.Environment.IsDevelopment())
     {
