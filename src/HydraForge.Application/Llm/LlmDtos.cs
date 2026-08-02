@@ -15,7 +15,9 @@ public sealed record ChatRequest(
     decimal? Temperature
 );
 
-public sealed record ChatMessage(ChatRole Role, string Content);
+public sealed record ImageBlock(string StorageKey, string MediaType);
+
+public sealed record ChatMessage(ChatRole Role, string Content, IReadOnlyList<ImageBlock>? Images = null);
 
 public sealed record ToolDefinition(
     string Name,
