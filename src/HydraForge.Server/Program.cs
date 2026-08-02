@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Hangfire;
+using Hangfire.PostgreSql;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -147,6 +149,13 @@ builder.Services.AddSpecServices();
 builder.Services.AddPlanServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
+
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    var connectionString = builder.Configuration.GetConnectionString("Default")!;
+    builder.Services.AddHangfire(c => c.UsePostgreSqlStorage(connectionString));
+    builder.Services.AddHangfireServer();
+}
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HydraForge";
@@ -380,6 +389,14 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (!app.Environment.IsEnvironment("Test"))
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new AdminRequiredAuthFilter()],
+    });
+}
 
 app.MapControllers();
 

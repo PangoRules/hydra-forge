@@ -8371,7 +8371,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<TokenUsagePageDto> TokensAsync(System.Guid? userId = null, System.Guid? projectId = null, string? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<TokenUsagePageDto> TokensAsync(System.Guid? userId = null, System.Guid? projectId = null, System.Collections.Generic.IEnumerable<string>? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8397,7 +8397,7 @@ namespace HydraForge.Tui.Generated
                     }
                     if (feature != null)
                     {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("feature")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(feature, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                            foreach (var item_ in feature) { urlBuilder_.Append(System.Uri.EscapeDataString("feature")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
                     }
                     if (providerId != null)
                     {
@@ -8480,7 +8480,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ImageUsagePageDto> ImagesAsync(System.Guid? userId = null, System.Guid? projectId = null, string? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ImageUsagePageDto> ImagesAsync(System.Guid? userId = null, System.Guid? projectId = null, System.Collections.Generic.IEnumerable<string>? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -8506,7 +8506,7 @@ namespace HydraForge.Tui.Generated
                     }
                     if (feature != null)
                     {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("feature")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(feature, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                            foreach (var item_ in feature) { urlBuilder_.Append(System.Uri.EscapeDataString("feature")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
                     }
                     if (providerId != null)
                     {
