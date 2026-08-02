@@ -18,6 +18,7 @@ using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Realtime;
+using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Settings;
 using HydraForge.Infrastructure.Specs;
 using HydraForge.Server.Auth;
@@ -331,6 +332,8 @@ if (applyMigrationsOnStartup)
 
     var adminSeeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
     await adminSeeder.SeedIfNeededAsync();
+
+    await new FeatureRoutingConfigSeeder(db).SeedAsync();
 
     if (app.Environment.IsDevelopment())
     {
