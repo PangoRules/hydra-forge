@@ -41,6 +41,16 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
 
     public void AddProvider(LlmProvider provider) => _db.LlmProviders.Add(provider);
 
+    public Task<List<ProviderModelConfig>> ListModelConfigsAsync(
+        Guid providerId,
+        CancellationToken ct = default
+    ) =>
+        _db
+            .ProviderModelConfigs.AsNoTracking()
+            .Where(c => c.ProviderId == providerId)
+            .OrderBy(c => c.ModelId)
+            .ToListAsync(ct);
+
     public Task<ProviderModelConfig?> GetModelConfigAsync(
         Guid providerId,
         Guid modelId,

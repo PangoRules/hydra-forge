@@ -29,6 +29,10 @@ public interface ILlmAdminService
         Guid providerId,
         CancellationToken ct = default
     );
+    Task<Result<IReadOnlyList<ProviderModelConfigDto>>> ListModelsAsync(
+        Guid providerId,
+        CancellationToken ct = default
+    );
     Task<Result<ProviderModelConfigDto>> CreateModelAsync(
         Guid providerId,
         CreateModelInput input,

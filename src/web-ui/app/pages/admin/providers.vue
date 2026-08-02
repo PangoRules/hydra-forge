@@ -134,7 +134,11 @@ async function confirmToggleDisable() {
   const wasEnabled = confirmCurrentEnabled.value
   confirmTargetId.value = null
   try {
-    await api.DELETE(ApiRoutes.Admin.providers.disable(targetId))
+    if (wasEnabled) {
+      await api.DELETE(ApiRoutes.Admin.providers.disable(targetId))
+    } else {
+      await api.PUT(ApiRoutes.Admin.providers.update(targetId), { body: { isEnabled: true } })
+    }
     await loadProviders()
     toast.success(`Provider ${wasEnabled ? 'disabled' : 'enabled'}`)
   } catch (e) {
@@ -224,6 +228,14 @@ onMounted(() => loadProviders())
             >
               Disable
             </UButton>
+            <UButton
+              v-else
+              size="xs"
+              color="success"
+              @click="showDisableConfirm(row.original)"
+            >
+              Enable
+            </UButton>
           </div>
         </template>
 
@@ -261,6 +273,14 @@ onMounted(() => loadProviders())
                   @click="showDisableConfirm(item)"
                 >
                   Disable
+                </UButton>
+                <UButton
+                  v-else
+                  size="xs"
+                  color="success"
+                  @click="showDisableConfirm(item)"
+                >
+                  Enable
                 </UButton>
               </div>
             </div>

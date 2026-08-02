@@ -163,6 +163,7 @@ export const ApiRoutes = {
       update: (id: string) => `/api/admin/providers/${id}`,
       disable: (id: string) => `/api/admin/providers/${id}`,
       probeModels: (id: string) => `/api/admin/providers/${id}/models`,
+      listModels: (id: string) => `/api/admin/providers/${id}/models/configured`,
       createModel: (id: string) => `/api/admin/providers/${id}/models`,
       updateModel: (id: string, modelId: string) => `/api/admin/providers/${id}/models/${modelId}`,
       deleteModel: (id: string, modelId: string) => `/api/admin/providers/${id}/models/${modelId}`

@@ -19,11 +19,11 @@ interface ProviderDto {
   isEnabled: boolean
 }
 
-interface ProviderModelDto {
+interface ProbedModelDto {
   modelId: string
   name: string
   description: string | null
-  metadata: Record<string, unknown> | null
+  metadata: Record<string, string> | null
 }
 
 interface ProviderModelConfigDto {
@@ -65,17 +65,25 @@ const toast = useAppToast()
 
 const allProviders = ref<ProviderDto[]>([])
 const selectedProviderId = ref<string | undefined>(undefined)
-const models = ref<ProviderModelDto[]>([])
+const models = ref<ProviderModelConfigDto[]>([])
 const totalCount = ref(0)
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 
-// Modal state
+// Add/edit modal state
 const showModal = ref(false)
 const editingModel = ref<ProviderModelConfigDto | null>(null)
 const modalLoading = ref(false)
 const modalError = ref<string | null>(null)
+
+// Probe (discover) modal state
+const showProbeModal = ref(false)
+const probeResults = ref<ProbedModelDto[]>([])
+const probeLoading = ref(false)
+const probeError = ref<string | null>(null)
+
+const configuredModelIds = computed(() => new Set(models.value.map(m => m.modelId)))
 
 // Form fields
 const formModelId = ref('')
@@ -94,7 +102,8 @@ const modelFormRef = ref<HTMLFormElement | null>(null)
 const columns = [
   { accessorKey: 'modelId', header: 'Model ID' },
   { accessorKey: 'name', header: 'Display Name' },
-  { accessorKey: 'description', header: 'Description' },
+  { accessorKey: 'tier', header: 'Tier' },
+  { accessorKey: 'isEnabled', header: 'Status' },
   { accessorKey: 'actions', header: 'Actions', enableSorting: false }
 ]
 
@@ -118,8 +127,8 @@ async function loadModels() {
   }
   loading.value = true
   try {
-    const { data, error } = await api.GET<ProviderModelDto[]>(
-      ApiRoutes.Admin.providers.probeModels(selectedProviderId.value)
+    const { data, error } = await api.GET<ProviderModelConfigDto[]>(
+      ApiRoutes.Admin.providers.listModels(selectedProviderId.value)
     )
     if (error) throw error
     models.value = data ?? []
@@ -139,6 +148,18 @@ function onProviderChange() {
 function openAddModal() {
   editingModel.value = null
   resetForm()
+  modalError.value = null
+  showModal.value = true
+}
+
+function openEditModal(model: ProviderModelConfigDto) {
+  editingModel.value = model
+  formModelId.value = model.modelId
+  formName.value = model.name
+  formTier.value = model.tier
+  formPricePerToken.value = model.pricePerToken
+  formMaxTokens.value = model.maxTokens
+  formEnabled.value = model.isEnabled
   modalError.value = null
   showModal.value = true
 }
@@ -208,6 +229,39 @@ async function deleteModel(modelId: string) {
   }
 }
 
+async function discoverModels() {
+  if (!selectedProviderId.value) return
+  probeLoading.value = true
+  probeError.value = null
+  probeResults.value = []
+  showProbeModal.value = true
+  try {
+    const { data, error } = await api.GET<ProbedModelDto[]>(
+      ApiRoutes.Admin.providers.probeModels(selectedProviderId.value)
+    )
+    if (error) throw error
+    probeResults.value = data ?? []
+  } catch (e) {
+    probeError.value = (e as Error).message || 'Probe failed'
+  } finally {
+    probeLoading.value = false
+  }
+}
+
+function addProbedModel(model: ProbedModelDto) {
+  if (configuredModelIds.value.has(model.modelId)) return
+  showProbeModal.value = false
+  editingModel.value = null
+  formModelId.value = model.modelId
+  formName.value = model.name
+  formTier.value = 'Standard'
+  formPricePerToken.value = null
+  formMaxTokens.value = null
+  formEnabled.value = true
+  modalError.value = null
+  showModal.value = true
+}
+
 onMounted(() => loadProviders())
 </script>
 
@@ -218,11 +272,20 @@ onMounted(() => loadProviders())
         <h1 class="text-2xl font-bold">
           Provider Models
         </h1>
-        <UButton
-          label="Add Model"
-          :disabled="!selectedProviderId"
-          @click="openAddModal"
-        />
+        <div class="flex gap-2">
+          <UButton
+            label="Discover Models"
+            color="neutral"
+            variant="outline"
+            :disabled="!selectedProviderId"
+            @click="discoverModels"
+          />
+          <UButton
+            label="Add Model"
+            :disabled="!selectedProviderId"
+            @click="openAddModal"
+          />
+        </div>
       </div>
 
       <div class="max-w-xs">
@@ -244,26 +307,63 @@ onMounted(() => loadProviders())
         :page="page"
         :page-size="pageSize"
         :total-count="totalCount"
-        :row-key="(item: ProviderModelDto) => item.modelId"
+        :row-key="(item: ProviderModelConfigDto) => item.id"
         fill-height
         @update:page="page = $event"
         @update:page-size="pageSize = $event"
       >
-        <template #actions-cell>
-          <span class="text-xs text-muted">Not configured</span>
+        <template #isEnabled-cell="{ row }">
+          <UBadge :color="row.original.isEnabled ? 'success' : 'error'">
+            {{ row.original.isEnabled ? 'Enabled' : 'Disabled' }}
+          </UBadge>
+        </template>
+
+        <template #actions-cell="{ row }">
+          <div class="flex gap-1">
+            <UButton
+              size="xs"
+              color="neutral"
+              @click="openEditModal(row.original)"
+            >
+              Edit
+            </UButton>
+            <UButton
+              size="xs"
+              color="error"
+              @click="deleteTargetId = row.original.id"
+            >
+              Delete
+            </UButton>
+          </div>
         </template>
 
         <template #card="{ item }">
           <UCard>
             <div class="space-y-2">
-              <p class="font-medium text-sm">
-                {{ item.name || item.modelId }}
-              </p>
+              <div class="flex items-center justify-between">
+                <span class="font-medium">{{ item.name || item.modelId }}</span>
+                <UBadge :color="item.isEnabled ? 'success' : 'error'">
+                  {{ item.isEnabled ? 'Enabled' : 'Disabled' }}
+                </UBadge>
+              </div>
               <p class="text-xs text-muted font-mono">
                 {{ item.modelId }}
               </p>
               <div class="flex gap-1">
-                <span class="text-xs text-muted">Not configured</span>
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  @click="openEditModal(item)"
+                >
+                  Edit
+                </UButton>
+                <UButton
+                  size="xs"
+                  color="error"
+                  @click="deleteTargetId = item.id"
+                >
+                  Delete
+                </UButton>
               </div>
             </div>
           </UCard>
@@ -367,6 +467,65 @@ onMounted(() => loadProviders())
             {{ editingModel ? 'Save' : 'Create' }}
           </UButton>
         </div>
+      </template>
+    </AppModal>
+
+    <!-- Discover (probe) Models Modal -->
+    <AppModal
+      v-model:open="showProbeModal"
+      title="Discovered Models"
+      width="sm:max-w-xl"
+      :loading="probeLoading"
+      :error="probeError"
+      @close="showProbeModal = false"
+    >
+      <template #body>
+        <div
+          v-if="!probeLoading && !probeError && probeResults.length === 0"
+          class="p-4 text-center text-muted"
+        >
+          No models discovered.
+        </div>
+        <ul
+          v-else-if="!probeLoading && !probeError"
+          class="divide-y divide-muted max-h-96 overflow-y-auto"
+        >
+          <li
+            v-for="model in probeResults"
+            :key="model.modelId"
+            class="p-3 flex items-center justify-between gap-2"
+          >
+            <div class="min-w-0">
+              <p class="font-medium text-sm truncate">
+                {{ model.name || model.modelId }}
+              </p>
+              <code class="text-xs text-muted">{{ model.modelId }}</code>
+            </div>
+            <UBadge
+              v-if="configuredModelIds.has(model.modelId)"
+              color="neutral"
+              variant="subtle"
+            >
+              Already added
+            </UBadge>
+            <UButton
+              v-else
+              size="xs"
+              color="neutral"
+              @click="addProbedModel(model)"
+            >
+              Add
+            </UButton>
+          </li>
+        </ul>
+      </template>
+      <template #footer>
+        <UButton
+          variant="outline"
+          @click="showProbeModal = false"
+        >
+          Close
+        </UButton>
       </template>
     </AppModal>
 

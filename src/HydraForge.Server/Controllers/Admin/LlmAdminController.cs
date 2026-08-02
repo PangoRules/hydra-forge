@@ -95,6 +95,15 @@ public class LlmAdminController : ControllerBase
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
     }
 
+    [HttpGet("providers/{providerId:guid}/models/configured")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProviderModelConfigDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ListModels(Guid providerId, CancellationToken ct)
+    {
+        var result = await _llmAdmin.ListModelsAsync(providerId, ct);
+        return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
+    }
+
     [HttpPost("providers/{providerId:guid}/models")]
     [ProducesResponseType(typeof(ProviderModelConfigDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

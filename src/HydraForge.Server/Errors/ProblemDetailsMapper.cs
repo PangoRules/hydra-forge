@@ -100,6 +100,10 @@ public static class ProblemDetailsMapper
             DomainErrorCodes.Llm.ProviderUnavailable => (503, "Provider unavailable"),
             DomainErrorCodes.Llm.ProviderNotFound => (404, "Provider not found"),
             DomainErrorCodes.Llm.ModelNotFound => (404, "Model not found"),
+            DomainErrorCodes.Llm.ModelAlreadyExists => (
+                409,
+                "Model already configured for this provider"
+            ),
             DomainErrorCodes.Llm.RoutingNotFound => (404, "Routing config not found"),
             DomainErrorCodes.Llm.InvalidFeature => (400, "Invalid feature"),
             _ => (400, "Bad request"),
