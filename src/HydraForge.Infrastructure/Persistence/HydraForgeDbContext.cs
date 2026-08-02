@@ -29,7 +29,10 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     public DbSet<ProjectContextSnapshot> ProjectContextSnapshots => Set<ProjectContextSnapshot>();
     public DbSet<ChatFolder> ChatFolders => Set<ChatFolder>();
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+    public DbSet<ChatSessionDocument> ChatSessionDocuments => Set<ChatSessionDocument>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<PromptPresetGroup> PromptPresetGroups => Set<PromptPresetGroup>();
+    public DbSet<PromptPreset> PromptPresets => Set<PromptPreset>();
     public DbSet<CardChatLink> CardChatLinks => Set<CardChatLink>();
     public DbSet<LlmProvider> LlmProviders => Set<LlmProvider>();
     public DbSet<ProviderModelConfig> ProviderModelConfigs => Set<ProviderModelConfig>();
@@ -297,6 +300,18 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                 b.HasIndex(e => e.OwnerId);
                 b.HasIndex(e => e.FolderId);
                 b.HasIndex(e => e.ProjectId);
+                b.Property(e => e.Status)
+                    .HasConversion<int>()
+                    .HasDefaultValue(ChatSessionStatus.Active)
+                    .HasSentinel(default);
+                b.Property(e => e.AiEditMode)
+                    .HasConversion<int>()
+                    .HasDefaultValue(AiEditMode.PerMutation)
+                    .HasSentinel(default);
+                b.HasOne<AgentPersonality>()
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonalityId)
+                    .OnDelete(DeleteBehavior.SetNull);
             }
         );
 
@@ -589,9 +604,45 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.SessionId);
+                b.Property(e => e.ImagesJson).HasColumnType("nvarchar(max)");
                 b.HasOne<ChatSession>()
                     .WithMany()
                     .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<ChatSessionDocument>(
+            modelBuilder,
+            "chat_session_documents",
+            b =>
+            {
+                b.HasIndex(e => new { e.SessionId, e.DocumentId }).IsUnique();
+                b.HasOne<ChatSession>()
+                    .WithMany()
+                    .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<PromptPresetGroup>(
+            modelBuilder,
+            "prompt_preset_groups",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+            }
+        );
+
+        ConfigureEntity<PromptPreset>(
+            modelBuilder,
+            "prompt_presets",
+            b =>
+            {
+                b.HasIndex(e => e.UserId);
+                b.HasOne<PromptPresetGroup>()
+                    .WithMany()
+                    .HasForeignKey(e => e.GroupId)
                     .OnDelete(DeleteBehavior.Cascade);
             }
         );
