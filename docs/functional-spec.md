@@ -561,7 +561,7 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 > ✅ **Pre-phase decision resolved:** Nightly job scheduler is **Hangfire + `Hangfire.PostgreSql`** (see D-57) — chosen over `BackgroundService` for restart-persistence/retry/history, over Quartz.NET for not needing full cron flexibility.
 
 - [ ] Hangfire wired: `Hangfire.AspNetCore` + `Hangfire.PostgreSql`, dashboard mounted at `/hangfire` behind admin auth filter
-- [ ] Recurring job registered: `ProjectContextSnapshotService.GenerateAiNarrative()` for all active projects, admin-configurable time (default midnight server time, per D-32)
+- [x] Recurring job registered: `ProjectContextSnapshotService.GenerateAiNarrative()` for all active projects, admin-configurable time (default midnight server time, per D-32)
 - [ ] `ILlmClient` abstraction: `StreamChatAsync()`, `GetModelsAsync()`, `SupportsToolCalling()`, cache block placement
 - [ ] OpenAI-compatible adapter (covers OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp)
 - [ ] Anthropic adapter (with prompt caching `cache_control` blocks)
