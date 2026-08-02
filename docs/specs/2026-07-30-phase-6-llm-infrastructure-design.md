@@ -496,7 +496,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).
 - [x] Task 16: `ILlmAdminService` + controller endpoints (providers CRUD, model config CRUD, live probe, routing CRUD, usage queries, budget get/set) + server tests (with `TestILlmClient`/`TestIKeyVault` stubs wired in every factory).
 - [x] Task 17: `/api/account/usage` self-service endpoint (caller-scoped) + tests.
-- [ ] Task 18: Web UI — admin providers page (`/admin/providers`) + provider-models page + nav + `ApiRoutes.Admin`/`UiRoutes.Admin` extensions.
+- [x] Task 18: Web UI — admin providers page (`/admin/providers`) + provider-models page + nav + `ApiRoutes.Admin`/`UiRoutes.Admin` extensions.
 - [ ] Task 19: Web UI — admin routing page (`/admin/routing`).
 - [ ] Task 20: Web UI — admin usage dashboard (`/admin/usage`, `DataTable` `fillHeight`, filters) + account self-service usage (`/account/usage`).
 - [ ] Task 21: Hangfire wiring (`AddHangfire` + `UsePostgreSqlStorage` + `AddHangfireServer`, `/hangfire` dashboard behind admin auth) + `SystemSettings.AiNarrativeGenerationTimeUtc` field + migration + settings UI time picker.
