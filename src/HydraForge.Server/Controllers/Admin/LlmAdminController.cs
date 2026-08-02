@@ -28,7 +28,8 @@ public class LlmAdminController : ControllerBase
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
         [FromQuery] string? search = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var result = await _llmAdmin.ListProvidersAsync(skip, take, search, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
@@ -39,7 +40,8 @@ public class LlmAdminController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateProvider(
         [FromBody] CreateProviderInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.CreateProviderAsync(input, ct);
         if (result.IsFailure)
@@ -66,7 +68,8 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> UpdateProvider(
         Guid id,
         [FromBody] UpdateProviderInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.UpdateProviderAsync(id, input, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
@@ -99,7 +102,8 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> CreateModel(
         Guid providerId,
         [FromBody] CreateModelInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.CreateModelAsync(providerId, input, ct);
         if (result.IsFailure)
@@ -108,19 +112,13 @@ public class LlmAdminController : ControllerBase
         }
 
         var dto = result.Value;
-        return CreatedAtAction(
-            nameof(GetModel),
-            new { providerId, modelId = dto.Id },
-            dto);
+        return CreatedAtAction(nameof(GetModel), new { providerId, modelId = dto.Id }, dto);
     }
 
     [HttpGet("providers/{providerId:guid}/models/{modelId:guid}")]
     [ProducesResponseType(typeof(ProviderModelConfigDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetModel(
-        Guid providerId,
-        Guid modelId,
-        CancellationToken ct)
+    public async Task<IActionResult> GetModel(Guid providerId, Guid modelId, CancellationToken ct)
     {
         var result = await _llmAdmin.GetModelAsync(providerId, modelId, ct);
         if (result.IsFailure)
@@ -138,7 +136,8 @@ public class LlmAdminController : ControllerBase
         Guid providerId,
         Guid modelId,
         [FromBody] UpdateModelInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.UpdateModelAsync(providerId, modelId, input, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
@@ -150,7 +149,8 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> DeleteModel(
         Guid providerId,
         Guid modelId,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.DeleteModelAsync(providerId, modelId, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : NoContent();
@@ -172,7 +172,8 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> UpdateRouting(
         string feature,
         [FromBody] UpdateRoutingInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.UpdateRoutingAsync(feature, input, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
@@ -192,11 +193,22 @@ public class LlmAdminController : ControllerBase
         [FromQuery] DateTime? to,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         take = Math.Min(take, PaginationConstants.MaxAdminPageSize);
         var result = await _llmAdmin.QueryTokenUsageAsync(
-            userId, projectId, feature, providerId, modelId, from, to, skip, take, ct);
+            userId,
+            projectId,
+            feature,
+            providerId,
+            modelId,
+            from,
+            to,
+            skip,
+            take,
+            ct
+        );
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
     }
 
@@ -212,11 +224,22 @@ public class LlmAdminController : ControllerBase
         [FromQuery] DateTime? to,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         take = Math.Min(take, PaginationConstants.MaxAdminPageSize);
         var result = await _llmAdmin.QueryImageUsageAsync(
-            userId, projectId, feature, providerId, modelId, from, to, skip, take, ct);
+            userId,
+            projectId,
+            feature,
+            providerId,
+            modelId,
+            from,
+            to,
+            skip,
+            take,
+            ct
+        );
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
     }
 
@@ -237,7 +260,8 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> UpdateBudget(
         Guid userId,
         [FromBody] UpdateBudgetInput input,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var result = await _llmAdmin.UpdateBudgetAsync(userId, input, ct);
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
@@ -246,8 +270,7 @@ public class LlmAdminController : ControllerBase
     private ObjectResult ToProblemResult(Error error)
     {
         var correlationId =
-            HttpContext.Items["CorrelationId"] as string
-            ?? HttpContext.TraceIdentifier;
+            HttpContext.Items["CorrelationId"] as string ?? HttpContext.TraceIdentifier;
         var problemDetails = ProblemDetailsMapper.FromError(error, correlationId);
         return new ObjectResult(problemDetails)
         {

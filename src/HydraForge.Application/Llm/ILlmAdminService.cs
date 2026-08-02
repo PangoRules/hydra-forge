@@ -16,10 +16,7 @@ public interface ILlmAdminService
         CreateProviderInput input,
         CancellationToken ct = default
     );
-    Task<Result<ProviderDto>> GetProviderAsync(
-        Guid id,
-        CancellationToken ct = default
-    );
+    Task<Result<ProviderDto>> GetProviderAsync(Guid id, CancellationToken ct = default);
     Task<Result<ProviderDto>> UpdateProviderAsync(
         Guid id,
         UpdateProviderInput input,

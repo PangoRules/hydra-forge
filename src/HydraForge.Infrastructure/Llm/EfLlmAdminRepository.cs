@@ -15,7 +15,12 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         _db = db;
     }
 
-    public async Task<List<LlmProvider>> ListProvidersAsync(int skip, int take, string? search, CancellationToken ct = default)
+    public async Task<List<LlmProvider>> ListProvidersAsync(
+        int skip,
+        int take,
+        string? search,
+        CancellationToken ct = default
+    )
     {
         var query = _db.LlmProviders.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
@@ -31,27 +36,52 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         return await query.CountAsync(ct);
     }
 
-    public Task<LlmProvider?> GetProviderByIdAsync(Guid id, CancellationToken ct = default)
-        => _db.LlmProviders.FirstOrDefaultAsync(p => p.Id == id, ct);
+    public Task<LlmProvider?> GetProviderByIdAsync(Guid id, CancellationToken ct = default) =>
+        _db.LlmProviders.FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public void AddProvider(LlmProvider provider) => _db.LlmProviders.Add(provider);
 
-    public Task<ProviderModelConfig?> GetModelConfigAsync(Guid providerId, Guid modelId, CancellationToken ct = default)
-        => _db.ProviderModelConfigs.FirstOrDefaultAsync(c => c.Id == modelId && c.ProviderId == providerId, ct);
+    public Task<ProviderModelConfig?> GetModelConfigAsync(
+        Guid providerId,
+        Guid modelId,
+        CancellationToken ct = default
+    ) =>
+        _db.ProviderModelConfigs.FirstOrDefaultAsync(
+            c => c.Id == modelId && c.ProviderId == providerId,
+            ct
+        );
 
     public void AddModelConfig(ProviderModelConfig config) => _db.ProviderModelConfigs.Add(config);
 
-    public void DeleteModelConfig(ProviderModelConfig config) => _db.ProviderModelConfigs.Remove(config);
+    public void DeleteModelConfig(ProviderModelConfig config) =>
+        _db.ProviderModelConfigs.Remove(config);
 
-    public Task<List<FeatureRoutingConfig>> ListRoutingAsync(CancellationToken ct = default)
-        => _db.FeatureRoutingConfigs.AsNoTracking().OrderBy(c => c.Feature).ToListAsync(ct);
+    public Task<List<FeatureRoutingConfig>> ListRoutingAsync(CancellationToken ct = default) =>
+        _db.FeatureRoutingConfigs.AsNoTracking().OrderBy(c => c.Feature).ToListAsync(ct);
 
-    public Task<FeatureRoutingConfig?> GetRoutingByFeatureAsync(AiFeature feature, CancellationToken ct = default)
-        => _db.FeatureRoutingConfigs.FirstOrDefaultAsync(c => c.Feature == feature, ct);
+    public Task<FeatureRoutingConfig?> GetRoutingByFeatureAsync(
+        AiFeature feature,
+        CancellationToken ct = default
+    ) => _db.FeatureRoutingConfigs.FirstOrDefaultAsync(c => c.Feature == feature, ct);
 
-    public async Task<(List<TokenUsageRecord> Items, int TotalCount, long TotalInput, long TotalOutput, decimal TotalCost)> QueryTokenUsageAsync(
-        Guid? userId, Guid? projectId, AiFeature? feature, Guid? providerId, string? modelId,
-        DateTime? from, DateTime? to, int skip, int take, CancellationToken ct = default)
+    public async Task<(
+        List<TokenUsageRecord> Items,
+        int TotalCount,
+        long TotalInput,
+        long TotalOutput,
+        decimal TotalCost
+    )> QueryTokenUsageAsync(
+        Guid? userId,
+        Guid? projectId,
+        AiFeature? feature,
+        Guid? providerId,
+        string? modelId,
+        DateTime? from,
+        DateTime? to,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
     {
         var query = _db.TokenUsageRecords.AsNoTracking().AsQueryable();
 
@@ -90,9 +120,23 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         return (items, totalCount, totalInput, totalOutput, totalCost);
     }
 
-    public async Task<(List<ImageUsageRecord> Items, int TotalCount, int TotalImages, decimal TotalCost)> QueryImageUsageAsync(
-        Guid? userId, Guid? projectId, AiFeature? feature, Guid? providerId, string? modelId,
-        DateTime? from, DateTime? to, int skip, int take, CancellationToken ct = default)
+    public async Task<(
+        List<ImageUsageRecord> Items,
+        int TotalCount,
+        int TotalImages,
+        decimal TotalCost
+    )> QueryImageUsageAsync(
+        Guid? userId,
+        Guid? projectId,
+        AiFeature? feature,
+        Guid? providerId,
+        string? modelId,
+        DateTime? from,
+        DateTime? to,
+        int skip,
+        int take,
+        CancellationToken ct = default
+    )
     {
         var query = _db.ImageUsageRecords.AsNoTracking().AsQueryable();
 
@@ -130,8 +174,10 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         return (items, totalCount, totalImages, totalCost);
     }
 
-    public Task<UserTokenBudget?> GetBudgetByUserIdAsync(Guid userId, CancellationToken ct = default)
-        => _db.UserTokenBudgets.FirstOrDefaultAsync(b => b.UserId == userId, ct);
+    public Task<UserTokenBudget?> GetBudgetByUserIdAsync(
+        Guid userId,
+        CancellationToken ct = default
+    ) => _db.UserTokenBudgets.FirstOrDefaultAsync(b => b.UserId == userId, ct);
 
     public void AddBudget(UserTokenBudget budget) => _db.UserTokenBudgets.Add(budget);
 

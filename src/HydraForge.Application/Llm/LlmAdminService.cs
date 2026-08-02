@@ -14,7 +14,8 @@ public sealed class LlmAdminService : ILlmAdminService
     public LlmAdminService(
         ILlmAdminRepository repo,
         IKeyVault keyVault,
-        ILlmClientFactory llmClientFactory)
+        ILlmClientFactory llmClientFactory
+    )
     {
         _repo = repo;
         _keyVault = keyVault;
@@ -27,58 +28,86 @@ public sealed class LlmAdminService : ILlmAdminService
         int skip,
         int take,
         string? search,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var totalCount = await _repo.CountProvidersAsync(search, ct);
 
         var items = await _repo.ListProvidersAsync(skip, take, search, ct);
 
-        return Result<ProviderPageDto>.Success(new ProviderPageDto(
-            items.Select(p => new ProviderDto(
-                p.Id,
-                p.Name,
-                p.BaseUrl,
-                p.AdapterType.ToString(),
-                p.ProviderType.ToString(),
-                p.Tier.ToString(),
-                p.FallbackProviderId,
-                p.IsEnabled,
-                p.CreatedAt,
-                p.UpdatedAt)).ToList(),
-            totalCount));
+        return Result<ProviderPageDto>.Success(
+            new ProviderPageDto(
+                items
+                    .Select(p => new ProviderDto(
+                        p.Id,
+                        p.Name,
+                        p.BaseUrl,
+                        p.AdapterType.ToString(),
+                        p.ProviderType.ToString(),
+                        p.Tier.ToString(),
+                        p.FallbackProviderId,
+                        p.IsEnabled,
+                        p.CreatedAt,
+                        p.UpdatedAt
+                    ))
+                    .ToList(),
+                totalCount
+            )
+        );
     }
 
     public async Task<Result<ProviderDto>> CreateProviderAsync(
         CreateProviderInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (string.IsNullOrWhiteSpace(input.Name))
         {
-return Result<ProviderDto>.Failure(new Error("PROVIDER_NAME_REQUIRED", "Provider name is required."));
-            }
+            return Result<ProviderDto>.Failure(
+                new Error(DomainErrorCodes.Validation.Required, "Provider name is required.")
+            );
+        }
 
-            if (string.IsNullOrWhiteSpace(input.BaseUrl))
-            {
-                return Result<ProviderDto>.Failure(new Error("PROVIDER_BASE_URL_REQUIRED", "Provider base URL is required."));
-            }
+        if (string.IsNullOrWhiteSpace(input.BaseUrl))
+        {
+            return Result<ProviderDto>.Failure(
+                new Error(DomainErrorCodes.Validation.Required, "Provider base URL is required.")
+            );
+        }
 
-            if (!Enum.TryParse<AdapterType>(input.AdapterType, true, out var adapterType))
-            {
-                return Result<ProviderDto>.Failure(new Error("INVALID_ADAPTER_TYPE", $"Unknown adapter type: {input.AdapterType}"));
-            }
+        if (!Enum.TryParse<AdapterType>(input.AdapterType, true, out var adapterType))
+        {
+            return Result<ProviderDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown adapter type: {input.AdapterType}"
+                )
+            );
+        }
 
-            if (!Enum.TryParse<ProviderType>(input.ProviderType, true, out var providerType))
-            {
-                return Result<ProviderDto>.Failure(new Error("INVALID_PROVIDER_TYPE", $"Unknown provider type: {input.ProviderType}"));
-            }
+        if (!Enum.TryParse<ProviderType>(input.ProviderType, true, out var providerType))
+        {
+            return Result<ProviderDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown provider type: {input.ProviderType}"
+                )
+            );
+        }
 
         if (!Enum.TryParse<ModelTier>(input.Tier, true, out var tier))
         {
             return Result<ProviderDto>.Failure(
-                new Error(DomainErrorCodes.Validation.InvalidValue, $"Unknown model tier: {input.Tier}"));
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown model tier: {input.Tier}"
+                )
+            );
         }
 
-        var apiKeyEncrypted = input.ApiKey is not null ? _keyVault.Encrypt(input.ApiKey) : string.Empty;
+        var apiKeyEncrypted = input.ApiKey is not null
+            ? _keyVault.Encrypt(input.ApiKey)
+            : string.Empty;
 
         var provider = new LlmProvider
         {
@@ -102,22 +131,27 @@ return Result<ProviderDto>.Failure(new Error("PROVIDER_NAME_REQUIRED", "Provider
     {
         var provider = await _repo.GetProviderByIdAsync(id, ct);
         if (provider is null)
-            return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}"));
+            return Result<ProviderDto>.Failure(
+                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}")
+            );
         return Result<ProviderDto>.Success(ToProviderDto(provider));
     }
 
     public async Task<Result<ProviderDto>> UpdateProviderAsync(
         Guid id,
         UpdateProviderInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var provider = await _repo.GetProviderByIdAsync(id, ct);
         if (provider is null)
         {
-return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}"));
-            }
+            return Result<ProviderDto>.Failure(
+                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}")
+            );
+        }
 
-            if (input.Name is { } name && !string.IsNullOrWhiteSpace(name))
+        if (input.Name is { } name && !string.IsNullOrWhiteSpace(name))
         {
             provider.Name = name;
         }
@@ -132,8 +166,18 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
             provider.ApiKeyEncrypted = _keyVault.Encrypt(input.ApiKey);
         }
 
-        if (input.Tier is { } tierStr && Enum.TryParse<ModelTier>(tierStr, true, out var tier))
+        if (input.Tier is { } tierStr)
         {
+            if (!Enum.TryParse<ModelTier>(tierStr, true, out var tier))
+            {
+                return Result<ProviderDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown model tier: {tierStr}"
+                    )
+                );
+            }
+
             provider.Tier = tier;
         }
 
@@ -158,7 +202,9 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         var provider = await _repo.GetProviderByIdAsync(id, ct);
         if (provider is null)
         {
-            return Result.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}"));
+            return Result.Failure(
+                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}")
+            );
         }
 
         provider.IsEnabled = false;
@@ -172,13 +218,18 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
 
     public async Task<Result<IReadOnlyList<ProviderModelDto>>> ProbeModelsAsync(
         Guid providerId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var provider = await _repo.GetProviderByIdAsync(providerId, ct);
         if (provider is null)
         {
             return Result<IReadOnlyList<ProviderModelDto>>.Failure(
-                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {providerId}"));
+                new Error(
+                    DomainErrorCodes.Llm.ProviderNotFound,
+                    $"Provider not found: {providerId}"
+                )
+            );
         }
 
         var client = _llmClientFactory.For(provider);
@@ -186,7 +237,11 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         if (result.IsFailure)
         {
             return Result<IReadOnlyList<ProviderModelDto>>.Failure(
-                new Error(DomainErrorCodes.Llm.ProviderUnavailable, $"Failed to probe models: {result.Error.Message}"));
+                new Error(
+                    DomainErrorCodes.Llm.ProviderUnavailable,
+                    $"Failed to probe models: {result.Error.Message}"
+                )
+            );
         }
 
         return Result<IReadOnlyList<ProviderModelDto>>.Success(result.Value);
@@ -195,18 +250,28 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
     public async Task<Result<ProviderModelConfigDto>> CreateModelAsync(
         Guid providerId,
         CreateModelInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var provider = await _repo.GetProviderByIdAsync(providerId, ct);
         if (provider is null)
         {
             return Result<ProviderModelConfigDto>.Failure(
-                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {providerId}"));
+                new Error(
+                    DomainErrorCodes.Llm.ProviderNotFound,
+                    $"Provider not found: {providerId}"
+                )
+            );
         }
 
         if (!Enum.TryParse<ModelTier>(input.Tier, true, out var tier))
         {
-            tier = ModelTier.Standard;
+            return Result<ProviderModelConfigDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown model tier: {input.Tier}"
+                )
+            );
         }
 
         var config = new ProviderModelConfig
@@ -229,11 +294,14 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
     public async Task<Result<ProviderModelConfigDto>> GetModelAsync(
         Guid providerId,
         Guid modelId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var config = await _repo.GetModelConfigAsync(providerId, modelId, ct);
         if (config is null)
-            return Result<ProviderModelConfigDto>.Failure(new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}"));
+            return Result<ProviderModelConfigDto>.Failure(
+                new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}")
+            );
         return Result<ProviderModelConfigDto>.Success(ToModelConfigDto(config));
     }
 
@@ -241,13 +309,15 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         Guid providerId,
         Guid modelId,
         UpdateModelInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var config = await _repo.GetModelConfigAsync(providerId, modelId, ct);
         if (config is null)
         {
             return Result<ProviderModelConfigDto>.Failure(
-                new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}"));
+                new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}")
+            );
         }
 
         if (input.Name is { } name)
@@ -255,8 +325,18 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
             config.Name = name;
         }
 
-        if (input.Tier is { } tierStr && Enum.TryParse<ModelTier>(tierStr, true, out var tier))
+        if (input.Tier is { } tierStr)
         {
+            if (!Enum.TryParse<ModelTier>(tierStr, true, out var tier))
+            {
+                return Result<ProviderModelConfigDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown model tier: {tierStr}"
+                    )
+                );
+            }
+
             config.Tier = tier;
         }
 
@@ -281,12 +361,18 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         return Result<ProviderModelConfigDto>.Success(ToModelConfigDto(config));
     }
 
-    public async Task<Result> DeleteModelAsync(Guid providerId, Guid modelId, CancellationToken ct = default)
+    public async Task<Result> DeleteModelAsync(
+        Guid providerId,
+        Guid modelId,
+        CancellationToken ct = default
+    )
     {
         var config = await _repo.GetModelConfigAsync(providerId, modelId, ct);
         if (config is null)
         {
-            return Result.Failure(new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}"));
+            return Result.Failure(
+                new Error(DomainErrorCodes.Llm.ModelNotFound, $"Model not found: {modelId}")
+            );
         }
 
         _repo.DeleteModelConfig(config);
@@ -297,17 +383,22 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
 
     // Routing
 
-    public async Task<Result<IReadOnlyList<FeatureRoutingDto>>> ListRoutingAsync(CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<FeatureRoutingDto>>> ListRoutingAsync(
+        CancellationToken ct = default
+    )
     {
         var configs = await _repo.ListRoutingAsync(ct);
 
-        var dtos = configs.Select(c => new FeatureRoutingDto(
-            c.Id,
-            c.Feature,
-            c.DefaultTier.ToString(),
-            c.MaxUserTier?.ToString(),
-            c.CreatedAt,
-            c.UpdatedAt)).ToList();
+        var dtos = configs
+            .Select(c => new FeatureRoutingDto(
+                c.Id,
+                c.Feature,
+                c.DefaultTier.ToString(),
+                c.MaxUserTier?.ToString(),
+                c.CreatedAt,
+                c.UpdatedAt
+            ))
+            .ToList();
 
         return Result<IReadOnlyList<FeatureRoutingDto>>.Success(dtos);
     }
@@ -315,30 +406,57 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
     public async Task<Result<FeatureRoutingDto>> UpdateRoutingAsync(
         string feature,
         UpdateRoutingInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (!Enum.TryParse<AiFeature>(feature, true, out var aiFeature))
         {
             return Result<FeatureRoutingDto>.Failure(
-                new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {feature}"));
+                new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {feature}")
+            );
         }
 
         var config = await _repo.GetRoutingByFeatureAsync(aiFeature, ct);
         if (config is null)
         {
             return Result<FeatureRoutingDto>.Failure(
-                new Error(DomainErrorCodes.Llm.RoutingNotFound, $"Routing config not found for feature: {feature}"));
+                new Error(
+                    DomainErrorCodes.Llm.RoutingNotFound,
+                    $"Routing config not found for feature: {feature}"
+                )
+            );
         }
 
-        if (Enum.TryParse<ModelTier>(input.DefaultTier, true, out var defaultTier))
+        if (!Enum.TryParse<ModelTier>(input.DefaultTier, true, out var defaultTier))
         {
-            config.DefaultTier = defaultTier;
+            return Result<FeatureRoutingDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown model tier: {input.DefaultTier}"
+                )
+            );
         }
 
-        config.MaxUserTier = input.MaxUserTier is { } maxTierStr
-            && Enum.TryParse<ModelTier>(maxTierStr, true, out var maxTier)
-                ? maxTier
-                : null;
+        config.DefaultTier = defaultTier;
+
+        if (input.MaxUserTier is { } maxTierStr)
+        {
+            if (!Enum.TryParse<ModelTier>(maxTierStr, true, out var maxTier))
+            {
+                return Result<FeatureRoutingDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown model tier: {maxTierStr}"
+                    )
+                );
+            }
+
+            config.MaxUserTier = maxTier;
+        }
+        else
+        {
+            config.MaxUserTier = null;
+        }
 
         config.UpdatedAt = DateTime.UtcNow;
         await _repo.SaveChangesAsync(ct);
@@ -358,37 +476,57 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         DateTime? to,
         int skip,
         int take,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         AiFeature? aiFeature = null;
         if (feature is { } f)
         {
             if (!Enum.TryParse<AiFeature>(f, true, out var parsed))
             {
-                return Result<TokenUsagePageDto>.Failure(new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}"));
+                return Result<TokenUsagePageDto>.Failure(
+                    new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}")
+                );
             }
             aiFeature = parsed;
         }
 
-        var (items, totalCount, totalInput, totalOutput, totalCost) = await _repo.QueryTokenUsageAsync(
-            userId, projectId, aiFeature, providerId, modelId, from, to, skip, take, ct);
+        var (items, totalCount, totalInput, totalOutput, totalCost) =
+            await _repo.QueryTokenUsageAsync(
+                userId,
+                projectId,
+                aiFeature,
+                providerId,
+                modelId,
+                from,
+                to,
+                skip,
+                take,
+                ct
+            );
 
-        return Result<TokenUsagePageDto>.Success(new TokenUsagePageDto(
-            items.Select(r => new TokenUsageDto(
-                r.Id,
-                r.UserId,
-                r.ProjectId,
-                r.Feature,
-                r.ModelName,
-                r.InputTokens,
-                r.OutputTokens,
-                r.CachedTokens,
-                r.Cost,
-                r.CreatedAt)).ToList(),
-            totalCount,
-            (int)totalInput,
-            (int)totalOutput,
-            totalCost));
+        return Result<TokenUsagePageDto>.Success(
+            new TokenUsagePageDto(
+                items
+                    .Select(r => new TokenUsageDto(
+                        r.Id,
+                        r.UserId,
+                        r.ProjectId,
+                        r.Feature,
+                        r.ModelName,
+                        r.InputTokens,
+                        r.OutputTokens,
+                        r.CachedTokens,
+                        r.Cost,
+                        r.CreatedAt
+                    ))
+                    .ToList(),
+                totalCount,
+                totalInput,
+                totalOutput,
+                totalCost
+            )
+        );
     }
 
     public async Task<Result<ImageUsagePageDto>> QueryImageUsageAsync(
@@ -401,73 +539,102 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
         DateTime? to,
         int skip,
         int take,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         AiFeature? aiFeature = null;
         if (feature is { } f)
         {
             if (!Enum.TryParse<AiFeature>(f, true, out var parsed))
             {
-                return Result<ImageUsagePageDto>.Failure(new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}"));
+                return Result<ImageUsagePageDto>.Failure(
+                    new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}")
+                );
             }
             aiFeature = parsed;
         }
 
         var (items, totalCount, totalImages, totalCost) = await _repo.QueryImageUsageAsync(
-            userId, projectId, aiFeature, providerId, modelId, from, to, skip, take, ct);
+            userId,
+            projectId,
+            aiFeature,
+            providerId,
+            modelId,
+            from,
+            to,
+            skip,
+            take,
+            ct
+        );
 
-        return Result<ImageUsagePageDto>.Success(new ImageUsagePageDto(
-            items.Select(r => new ImageUsageDto(
-                r.Id,
-                r.UserId,
-                r.ProjectId,
-                r.Feature,
-                r.ModelName,
-                r.ImageCount,
-                r.Resolution,
-                r.Cost,
-                r.CreatedAt)).ToList(),
-            totalCount,
-            totalImages,
-            totalCost));
+        return Result<ImageUsagePageDto>.Success(
+            new ImageUsagePageDto(
+                items
+                    .Select(r => new ImageUsageDto(
+                        r.Id,
+                        r.UserId,
+                        r.ProjectId,
+                        r.Feature,
+                        r.ModelName,
+                        r.ImageCount,
+                        r.Resolution,
+                        r.Cost,
+                        r.CreatedAt
+                    ))
+                    .ToList(),
+                totalCount,
+                totalImages,
+                totalCost
+            )
+        );
     }
 
     // Budget
 
-    public async Task<Result<UserBudgetDto>> GetBudgetAsync(Guid userId, CancellationToken ct = default)
+    public async Task<Result<UserBudgetDto>> GetBudgetAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         var budget = await _repo.GetBudgetByUserIdAsync(userId, ct);
 
         if (budget is null)
         {
-            return Result<UserBudgetDto>.Success(new UserBudgetDto(
-                userId,
-                null,
-                null,
-                0,
-                0,
-                0,
-                0,
-                DateTime.UtcNow,
-                DateTime.UtcNow.AddMonths(1)));
+            return Result<UserBudgetDto>.Success(
+                new UserBudgetDto(
+                    userId,
+                    null,
+                    null,
+                    0,
+                    0,
+                    0,
+                    0,
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddMonths(1)
+                )
+            );
         }
 
-        return Result<UserBudgetDto>.Success(new UserBudgetDto(
-            budget.UserId,
-            budget.DailyLimit,
-            budget.MonthlyLimit,
-            budget.MonthlyTokenBudget,
-            budget.MonthlyTokenUsed,
-            budget.MonthlyImageBudget,
-            budget.MonthlyImageUsed,
-            budget.PeriodStart,
-            budget.PeriodEnd));
+        return Result<UserBudgetDto>.Success(
+            new UserBudgetDto(
+                budget.UserId,
+                budget.DailyLimit,
+                budget.MonthlyLimit,
+                budget.MonthlyTokenBudget,
+                budget.MonthlyTokenUsed,
+                budget.MonthlyImageBudget,
+                budget.MonthlyImageUsed,
+                budget.PeriodStart,
+                budget.PeriodEnd
+            )
+        );
     }
 
     public async Task<Result<UserBudgetDto>> UpdateBudgetAsync(
         Guid userId,
         UpdateBudgetInput input,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var budget = await _repo.GetBudgetByUserIdAsync(userId, ct);
 
@@ -510,45 +677,54 @@ return Result<ProviderDto>.Failure(new Error(DomainErrorCodes.Llm.ProviderNotFou
 
         await _repo.SaveChangesAsync(ct);
 
-        return Result<UserBudgetDto>.Success(new UserBudgetDto(
-            budget.UserId,
-            budget.DailyLimit,
-            budget.MonthlyLimit,
-            budget.MonthlyTokenBudget,
-            budget.MonthlyTokenUsed,
-            budget.MonthlyImageBudget,
-            budget.MonthlyImageUsed,
-            budget.PeriodStart,
-            budget.PeriodEnd));
+        return Result<UserBudgetDto>.Success(
+            new UserBudgetDto(
+                budget.UserId,
+                budget.DailyLimit,
+                budget.MonthlyLimit,
+                budget.MonthlyTokenBudget,
+                budget.MonthlyTokenUsed,
+                budget.MonthlyImageBudget,
+                budget.MonthlyImageUsed,
+                budget.PeriodStart,
+                budget.PeriodEnd
+            )
+        );
     }
 
-    private static ProviderDto ToProviderDto(LlmProvider p) => new(
-        p.Id,
-        p.Name,
-        p.BaseUrl,
-        p.AdapterType.ToString(),
-        p.ProviderType.ToString(),
-        p.Tier.ToString(),
-        p.FallbackProviderId,
-        p.IsEnabled,
-        p.CreatedAt,
-        p.UpdatedAt);
+    private static ProviderDto ToProviderDto(LlmProvider p) =>
+        new(
+            p.Id,
+            p.Name,
+            p.BaseUrl,
+            p.AdapterType.ToString(),
+            p.ProviderType.ToString(),
+            p.Tier.ToString(),
+            p.FallbackProviderId,
+            p.IsEnabled,
+            p.CreatedAt,
+            p.UpdatedAt
+        );
 
-    private static ProviderModelConfigDto ToModelConfigDto(ProviderModelConfig c) => new(
-        c.Id,
-        c.ProviderId,
-        c.ModelId,
-        c.Name,
-        c.Tier.ToString(),
-        c.PricePerToken,
-        c.MaxTokens,
-        c.IsEnabled);
+    private static ProviderModelConfigDto ToModelConfigDto(ProviderModelConfig c) =>
+        new(
+            c.Id,
+            c.ProviderId,
+            c.ModelId,
+            c.Name,
+            c.Tier.ToString(),
+            c.PricePerToken,
+            c.MaxTokens,
+            c.IsEnabled
+        );
 
-    private static FeatureRoutingDto ToRoutingDto(FeatureRoutingConfig c) => new(
-        c.Id,
-        c.Feature,
-        c.DefaultTier.ToString(),
-        c.MaxUserTier?.ToString(),
-        c.CreatedAt,
-        c.UpdatedAt);
+    private static FeatureRoutingDto ToRoutingDto(FeatureRoutingConfig c) =>
+        new(
+            c.Id,
+            c.Feature,
+            c.DefaultTier.ToString(),
+            c.MaxUserTier?.ToString(),
+            c.CreatedAt,
+            c.UpdatedAt
+        );
 }

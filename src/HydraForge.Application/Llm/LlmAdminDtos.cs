@@ -93,8 +93,8 @@ public sealed record UpdateRoutingInput(string DefaultTier, string? MaxUserTier)
 public sealed record TokenUsagePageDto(
     IReadOnlyList<TokenUsageDto> Items,
     int TotalCount,
-    int TotalInputTokens,
-    int TotalOutputTokens,
+    long TotalInputTokens,
+    long TotalOutputTokens,
     decimal TotalCost
 );
 
