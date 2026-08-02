@@ -7,7 +7,7 @@ public static class ChatMessageMapper
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     public static string ToDomainImagesJson(IReadOnlyList<ImageBlock>? images)
