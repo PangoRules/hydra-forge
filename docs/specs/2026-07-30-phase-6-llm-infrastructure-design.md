@@ -113,7 +113,7 @@ Already mapped. Startup seeder inserts one row per `AiFeature` value if the tabl
 | ImageDocument | Standard | Premium |
 | ImageGalleryEditor | Economy | Standard |
 
-`null` MaxUserTier = locked to default (admin-only override). Seeding is idempotent and runs in `PersistenceServiceCollectionExtensions` startup path (same pattern as admin seed).
+`null` MaxUserTier = locked to default (admin-only override). `FeatureRoutingConfigSeeder` is registered via `AddScoped` in `Program.cs` and invoked inside the migration startup scope alongside `AdminSeeder` — same startup pattern, not inside `PersistenceServiceCollectionExtensions`.
 
 ### `UserTokenBudget` (existing — reconcile docs)
 
