@@ -152,9 +152,14 @@ builder.Services.AddSettingsServices();
 
 if (!builder.Environment.IsEnvironment("Test"))
 {
-    var connectionString = builder.Configuration.GetConnectionString("Default")
-        ?? throw new InvalidOperationException("ConnectionStrings:Default is required for Hangfire storage.");
-    builder.Services.AddHangfire(c => c.UsePostgreSqlStorage(connectionString));
+    var connectionString =
+        builder.Configuration.GetConnectionString("Default")
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Default is required for Hangfire storage."
+        );
+    builder.Services.AddHangfire(c =>
+        c.UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString))
+    );
     builder.Services.AddHangfireServer();
 }
 
@@ -397,10 +402,10 @@ app.UseAuthorization();
 
 if (!app.Environment.IsEnvironment("Test"))
 {
-    app.UseHangfireDashboard("/hangfire", new DashboardOptions
-    {
-        Authorization = [new AdminRequiredAuthFilter()],
-    });
+    app.UseHangfireDashboard(
+        "/hangfire",
+        new DashboardOptions { Authorization = [new AdminRequiredAuthFilter()] }
+    );
 }
 
 app.MapControllers();

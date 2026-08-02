@@ -196,7 +196,9 @@ public class AdminController(
         try
         {
             request = JsonSerializer.Deserialize<UpdateSystemSettingsRequest>(
-                body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
         }
         catch (JsonException)
         {
@@ -210,7 +212,10 @@ public class AdminController(
         try
         {
             using var jsonDoc = JsonDocument.Parse(body);
-            hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty("aiNarrativeGenerationTimeUtc", out _);
+            hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty(
+                "aiNarrativeGenerationTimeUtc",
+                out _
+            );
         }
         catch (JsonException)
         {

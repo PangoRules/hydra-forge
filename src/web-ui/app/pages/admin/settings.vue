@@ -58,8 +58,8 @@ function retentionFieldError(value: number): string | undefined {
   return Number.isInteger(value) && value >= 1 ? undefined : 'Must be a whole number of at least 1'
 }
 
-function requiredFieldError(value: string): string | undefined {
-  return value.trim() ? undefined : 'Required'
+function requiredFieldError(value: string | null): string | undefined {
+  return value?.trim() ? undefined : 'Required'
 }
 
 const archivedItemsError = computed(() => retentionFieldError(settings.archivedItemRetentionDays))
