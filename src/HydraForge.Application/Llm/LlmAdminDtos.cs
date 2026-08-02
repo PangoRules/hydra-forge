@@ -1,3 +1,5 @@
+using HydraForge.Domain.Enums;
+
 namespace HydraForge.Application.Llm;
 
 // Provider DTOs
@@ -77,7 +79,7 @@ public sealed record UpdateModelInput(
 
 public sealed record FeatureRoutingDto(
     Guid Id,
-    Guid Feature,
+    AiFeature Feature,
     string DefaultTier,
     string? MaxUserTier,
     DateTime CreatedAt,
@@ -100,7 +102,7 @@ public sealed record TokenUsageDto(
     Guid Id,
     Guid UserId,
     Guid? ProjectId,
-    Guid Feature,
+    AiFeature Feature,
     string ModelName,
     int InputTokens,
     int OutputTokens,
@@ -120,7 +122,7 @@ public sealed record ImageUsageDto(
     Guid Id,
     Guid UserId,
     Guid? ProjectId,
-    Guid Feature,
+    AiFeature Feature,
     string ModelName,
     int ImageCount,
     string Resolution,

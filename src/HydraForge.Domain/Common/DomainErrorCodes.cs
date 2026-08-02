@@ -25,6 +25,16 @@ public static class DomainErrorCodes
         public const string ContextWindowExceeded = "LLM_CONTEXT_WINDOW_EXCEEDED";
         public const string EncryptionKeyInvalid = "LLM_ENCRYPTION_KEY_INVALID";
         public const string ProviderUnavailable = "LLM_PROVIDER_UNAVAILABLE";
+        public const string ProviderNotFound = "PROVIDER_NOT_FOUND";
+        public const string ModelNotFound = "MODEL_NOT_FOUND";
+        public const string RoutingNotFound = "ROUTING_NOT_FOUND";
+        public const string InvalidFeature = "INVALID_FEATURE";
+    }
+
+    public static class Validation
+    {
+        public const string Required = "VALIDATION_REQUIRED";
+        public const string InvalidValue = "VALIDATION_INVALID_VALUE";
     }
 
     public static class Projects

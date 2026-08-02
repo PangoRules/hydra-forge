@@ -92,6 +92,16 @@ public static class ProblemDetailsMapper
                 409,
                 "Confirmation required"
             ),
+            DomainErrorCodes.Llm.TokenBudgetExceeded => (400, "Token budget exceeded"),
+            DomainErrorCodes.Llm.ImageBudgetExceeded => (400, "Image budget exceeded"),
+            DomainErrorCodes.Llm.NoModelForFeature => (400, "No model configured for feature"),
+            DomainErrorCodes.Llm.ContextWindowExceeded => (400, "Context window exceeded"),
+            DomainErrorCodes.Llm.EncryptionKeyInvalid => (500, "Encryption key invalid"),
+            DomainErrorCodes.Llm.ProviderUnavailable => (503, "Provider unavailable"),
+            DomainErrorCodes.Llm.ProviderNotFound => (404, "Provider not found"),
+            DomainErrorCodes.Llm.ModelNotFound => (404, "Model not found"),
+            DomainErrorCodes.Llm.RoutingNotFound => (404, "Routing config not found"),
+            DomainErrorCodes.Llm.InvalidFeature => (400, "Invalid feature"),
             _ => (400, "Bad request"),
         };
 

@@ -76,6 +76,8 @@ public static class LlmServiceCollectionExtensions
         services.AddScoped<IContextCompressor, ContextCompressor>();
         services.AddScoped<IUsageRecorder, EfUsageRecorder>();
         services.AddScoped<IUserTokenBudgetRepository, EfUserTokenBudgetRepository>();
+        services.AddScoped<ILlmAdminRepository, EfLlmAdminRepository>();
+        services.AddScoped<ILlmAdminService, LlmAdminService>();
         services.AddScoped<LlmCallGuard>();
 
         return services;

@@ -59,7 +59,14 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.HasPostgresExtension("vector");
+        try
+        {
+            modelBuilder.HasPostgresExtension("vector");
+        }
+        catch (InvalidOperationException)
+        {
+            // Non-PostgreSQL provider (e.g. InMemory) — skip HasPostgresExtension
+        }
 
         ConfigureEntity<User>(
             modelBuilder,
