@@ -29,6 +29,9 @@ export const UiRoutes = {
     ProviderModels: '/admin/provider-models',
     Routing: '/admin/routing',
     Usage: '/admin/usage'
+  },
+  Account: {
+    Usage: '/account/usage'
   }
 } as const
 
@@ -139,6 +142,10 @@ export const ApiRoutes = {
     unreadCount: () => '/api/Notifications/unread-count',
     markRead: (id: string) => `/api/Notifications/${id}/read`,
     markAllRead: () => '/api/Notifications/read-all'
+  },
+
+  Account: {
+    usage: () => '/api/account/usage'
   },
 
   Admin: {
