@@ -25,9 +25,7 @@ public record UpdateChatSessionRequest(
     bool SearchAllMyDocs
 );
 
-public record MoveChatSessionRequest(
-    Guid? FolderId
-);
+public record MoveChatSessionRequest(Guid? FolderId);
 
 // ── Responses ─────────────────────────────────────────────────
 
@@ -69,10 +67,7 @@ public record ChatSessionDetailDto(
     IReadOnlyList<ChatMessageDto> Messages
 );
 
-public record ChatSessionPageDto(
-    IReadOnlyList<ChatSessionDto> Items,
-    int TotalCount
-);
+public record ChatSessionPageDto(IReadOnlyList<ChatSessionDto> Items, int TotalCount);
 
 public record ChatMessageDto(
     Guid Id,
@@ -87,10 +82,7 @@ public record ChatMessageDto(
     DateTime CreatedAt
 );
 
-public record ChatMessagePageDto(
-    IReadOnlyList<ChatMessageDto> Items,
-    int TotalCount
-);
+public record ChatMessagePageDto(IReadOnlyList<ChatMessageDto> Items, int TotalCount);
 
 public record ChatFolderDto(
     Guid Id,
@@ -160,7 +152,4 @@ public record ChatSearchResultDto(
     string? Snippet
 );
 
-public record ChatPermissionDto(
-    bool Granted,
-    AiEditMode Mode
-);
+public record ChatPermissionDto(bool Granted, AiEditMode Mode);
