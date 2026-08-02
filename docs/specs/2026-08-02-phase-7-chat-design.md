@@ -118,7 +118,7 @@ Generated on close (F3) when `ChatSession.OpenCardId != null` AND `ChatSession.P
 - `ChatSessionDocument` → composite unique index `(SessionId, DocumentId)`.
 - `PromptPreset.GroupId` → FK with `OnDelete: Cascade`, but that cascade only fires on **hard**-delete (housekeeping deleting the group row for real — then its presets go too). The normal **soft**-archive path (`DELETE /api/chat/preset-groups/{groupId}`) is an Application-service operation that sets `GroupId = null` on every preset in the group and leaves the presets themselves untouched — archiving a group never deletes or archives a user's presets, only ungroups them. §1.6, §1.10, and §2.4 all describe this same nulling behavior; do not reintroduce a "presets get archived too" path.
 - `ChatSession.PersonalityId` → FK to `AgentPersonality` with `OnDelete: SetNull`. This only fires on hard-delete. `AgentPersonality` is soft-deleted via `ArchivedAt` in normal use (confirmed: `src/HydraForge.Domain/Entities/PersonalSpace/AgentPersonality.cs` has no hard-delete path), so archiving a personality does **not** null `ChatSession.PersonalityId` — the FK stays populated pointing at an archived row. The read/build path must check `ArchivedAt` explicitly instead of relying on the FK: see §4.2 step 6 and the "Personality archived mid-session" row in §7.
-- `ChatMessage.ImagesJson` → `nvarchar(max) NULL`.
+- `ChatMessage.ImagesJson` → `text NULL`.
 - No new pgvector columns — `DocumentChunk.Embedding` (existing `vector(1536)`) is reused for RAG.
 
 ---
@@ -469,7 +469,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 ## Tasks
 
 - [x] Task 1: Domain entities + enums (`ChatSessionStatus`, `AiEditMode`, `ChatSession` mods, `ChatMessage.ImagesJson`, `ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`) + state-transition methods
-- [ ] Task 2: EF migration `AddPhase7Chat` + Infrastructure model config + `AssertProperties` tests
+- [x] Task 2: EF migration `AddPhase7Chat` + Infrastructure model config + `AssertProperties` tests
 - [ ] Task 3: Application ports + DTOs (`IChatSessionRepository`, `IChatMessageRepository`, `IChatSessionDocumentRepository`, `IPromptPresetRepository`, `IPromptPresetGroupRepository`, `IAgentPersonalityRepository`, `ICardChatLinkRepository`, `IDocumentRepository`, `IChatRagRetriever`, `IChatSummaryGenerator`) + error codes
 - [ ] Task 4: `Application.Llm.ChatMessage` `Images` extension + `ImageBlock` DTO + mapper (F5)
 - [ ] Task 5: Document upload + chunking + embedding ingestion service (`IEmbeddingClient` pipeline)

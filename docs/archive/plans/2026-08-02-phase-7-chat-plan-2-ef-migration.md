@@ -1,0 +1,26 @@
+# Plan 2: EF Migration + Model Config
+**Branch:** `task/ef-migration`
+**Parent branch:** `feat/phase-7-chat`
+**Parent spec:** `2026-08-02-phase-7-chat-design.md` — Task 2
+
+**Goal:** Add `AddPhase7Chat` migration. Configure EF for new/modified entities. Write `AssertProperties` tests.
+
+**Files:**
+- Modify: `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`
+- Create: `src/HydraForge.Infrastructure/Migrations/*_AddPhase7Chat.cs`
+- Create: `tests/HydraForge.Infrastructure.Tests/Model/ChatModelTests.cs`
+
+**Steps:**
+
+- [x] Add `DbSet<ChatSessionDocument>`, `DbSet<PromptPresetGroup>`, `DbSet<PromptPreset>` to DbContext
+- [x] Configure `ChatSession`: enum-to-int for Status/AiEditMode, `.HasDefaultValue(ChatSessionStatus.Active)`/`.HasDefaultValue(AiEditMode.PerMutation)`. Both enums start at `1` (not `0`), so the EF Core 10 zero-sentinel collision that bit `DocType`/`PlanStatus` doesn't apply here — but chain `.HasSentinel(default)` anyway per repo convention, don't rely on the non-zero start being enough by inspection. FK `PersonalityId → AgentPersonality` with `OnDelete: SetNull`, index on `OwnerId`
+- [x] Configure `ChatMessage`: `ImagesJson` as `text NULL`
+- [x] Configure `ChatSessionDocument`: table `chat_session_documents`, unique index `(SessionId, DocumentId)`, FK cascade on session delete
+- [x] Configure `PromptPresetGroup`: table `prompt_preset_groups`, index on `UserId`
+- [x] Configure `PromptPreset`: table `prompt_presets`, FK `GroupId → PromptPresetGroup` with `OnDelete: Cascade`, index on `UserId`
+- [x] Run `dotnet ef migrations add AddPhase7Chat`
+- [x] Write `AssertProperties` tests for `ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`, modified `ChatSession`/`ChatMessage`
+
+**Acceptance:**
+- `dotnet ef migrations has-pending-model-changes` → no pending changes
+- `dotnet test tests/HydraForge.Infrastructure.Tests --filter "FullyQualifiedName~ChatModel"`
