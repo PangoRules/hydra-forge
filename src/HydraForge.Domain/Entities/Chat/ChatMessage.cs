@@ -12,5 +12,6 @@ public class ChatMessage
     public int OutputTokens { get; set; }
     public int CachedTokens { get; set; }
     public string? ModelName { get; set; }
+    public string? ImagesJson { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
