@@ -12,12 +12,12 @@
 
 **Steps:**
 
-- [ ] Define `IDocumentIngestionService`: `IngestAsync(userId, title, content, contentType, stream?)` → `Result<Document, Error>`
-- [ ] Implement chunking: split text into ~500-token chunks (~2000 chars) with ~100-token overlap. Chunk index 0..N
-- [ ] Implement embedding: batch all chunks through `IEmbeddingClient.EmbedAsync`. On failure → `CHAT_EMBEDDING_FAILED`, don't persist
-- [ ] Store file via `IFileStore` (key: `{userId}/document/{documentId}/{guid}`)
-- [ ] Persist `Document` row + `DocumentChunk[]` rows with `SourceType="document"`, `SourceId=DocumentId`
-- [ ] Write tests: chunk boundary, overlap, embedding failure path, empty content
+- [x] Define `IDocumentIngestionService`: `IngestAsync(userId, title, content, contentType, stream?)` → `Result<Document, Error>`
+- [x] Implement chunking: split text into ~500-token chunks (~2000 chars) with ~100-token overlap. Chunk index 0..N
+- [x] Implement embedding: batch all chunks through `IEmbeddingClient.EmbedAsync`. On failure → `CHAT_EMBEDDING_FAILED`, don't persist
+- [x] Store file via `IFileStore` (key: `{userId}/document/{documentId}/{guid}`)
+- [x] Persist `Document` row + `DocumentChunk[]` rows with `SourceType="document"`, `SourceId=DocumentId`
+- [x] Write tests: chunk boundary, overlap, embedding failure path, empty content
 - [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-5-document-ingestion-matrix.md` — upload text/markdown/csv/html, confirm chunks + embeddings persisted; force an embedding failure and confirm no `Document` or `DocumentChunk` rows are left orphaned
 
 **Acceptance:**

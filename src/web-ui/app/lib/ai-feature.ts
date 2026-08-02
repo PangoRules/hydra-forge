@@ -10,7 +10,8 @@ export const AI_FEATURE_LABELS: Record<string, string> = {
   ImageChat: 'Image Chat',
   ImageDocument: 'Image Document',
   ImageGalleryEditor: 'Image Gallery Editor',
-  ProjectNarrative: 'Project Narrative (nightly)'
+  ProjectNarrative: 'Project Narrative (nightly)',
+  DocumentEmbedding: 'Document Embedding'
 }
 
 export type LlmTier = 'Economy' | 'Standard' | 'Premium'

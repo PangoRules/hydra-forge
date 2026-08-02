@@ -94,6 +94,12 @@ public class FeatureRoutingConfigSeeder
                 DefaultTier = ModelTier.Economy,
                 MaxUserTier = null,
             },
+            new FeatureRoutingConfig
+            {
+                Feature = AiFeature.DocumentEmbedding,
+                DefaultTier = ModelTier.Economy,
+                MaxUserTier = ModelTier.Standard,
+            },
         };
 
         var missing = configs.Where(c => !existingFeatures.Contains(c.Feature)).ToList();
