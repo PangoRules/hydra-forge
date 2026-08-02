@@ -1,4 +1,5 @@
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Enums;
 
 namespace HydraForge.Application.Llm;
 
@@ -15,6 +16,7 @@ public interface ILlmAdminService
         CreateProviderInput input,
         CancellationToken ct = default
     );
+    Task<Result<ProviderDto>> GetProviderAsync(Guid id, CancellationToken ct = default);
     Task<Result<ProviderDto>> UpdateProviderAsync(
         Guid id,
         UpdateProviderInput input,
@@ -32,6 +34,11 @@ public interface ILlmAdminService
         CreateModelInput input,
         CancellationToken ct = default
     );
+    Task<Result<ProviderModelConfigDto>> GetModelAsync(
+        Guid providerId,
+        Guid modelId,
+        CancellationToken ct = default
+    );
     Task<Result<ProviderModelConfigDto>> UpdateModelAsync(
         Guid providerId,
         Guid modelId,
@@ -43,7 +50,7 @@ public interface ILlmAdminService
     // Routing
     Task<Result<IReadOnlyList<FeatureRoutingDto>>> ListRoutingAsync(CancellationToken ct = default);
     Task<Result<FeatureRoutingDto>> UpdateRoutingAsync(
-        Guid featureId,
+        string feature,
         UpdateRoutingInput input,
         CancellationToken ct = default
     );
@@ -52,7 +59,7 @@ public interface ILlmAdminService
     Task<Result<TokenUsagePageDto>> QueryTokenUsageAsync(
         Guid? userId,
         Guid? projectId,
-        Guid? feature,
+        string? feature,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -65,7 +72,7 @@ public interface ILlmAdminService
     Task<Result<ImageUsagePageDto>> QueryImageUsageAsync(
         Guid? userId,
         Guid? projectId,
-        Guid? feature,
+        string? feature,
         Guid? providerId,
         string? modelId,
         DateTime? from,
