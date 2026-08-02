@@ -16,6 +16,7 @@ public static class LlmServiceCollectionExtensions
     )
     {
         services.AddOptions<LlmOptions>().Bind(configuration.GetSection(LlmOptions.SectionName));
+        services.AddOptions<RagOptions>().Bind(configuration.GetSection("Llm:Rag"));
 
         ValidateEncryptionKey(configuration);
         services.AddSingleton<IKeyVault, AesGcmKeyVault>();
