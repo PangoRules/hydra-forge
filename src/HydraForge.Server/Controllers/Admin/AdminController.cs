@@ -189,11 +189,33 @@ public class AdminController(
         }
         Request.Body.Position = 0;
 
-        var request = JsonSerializer.Deserialize<UpdateSystemSettingsRequest>(
-            body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        if (string.IsNullOrWhiteSpace(body))
+            return BadRequest(new ProblemDetails { Title = "Request body is required." });
 
-        using var jsonDoc = JsonDocument.Parse(body);
-        bool hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty("aiNarrativeGenerationTimeUtc", out _);
+        UpdateSystemSettingsRequest? request;
+        try
+        {
+            request = JsonSerializer.Deserialize<UpdateSystemSettingsRequest>(
+                body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid JSON in request body." });
+        }
+
+        if (request is null)
+            return BadRequest(new ProblemDetails { Title = "Request body is required." });
+
+        bool hasAiNarrativeTime;
+        try
+        {
+            using var jsonDoc = JsonDocument.Parse(body);
+            hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty("aiNarrativeGenerationTimeUtc", out _);
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid JSON in request body." });
+        }
 
         var settings = await settingsRepo.GetSingletonAsync(ct);
         settings.UpdateSettings(
@@ -203,9 +225,10 @@ public class AdminController(
             request.NtfyServerUrl,
             request.SearXngUrl,
             request.BrandName,
-            request.BrandLogoUrl,
-            hasAiNarrativeTime ? request.AiNarrativeGenerationTimeUtc : settings.AiNarrativeGenerationTimeUtc
+            request.BrandLogoUrl
         );
+        if (hasAiNarrativeTime)
+            settings.SetAiNarrativeGenerationTime(request.AiNarrativeGenerationTimeUtc);
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
         return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
