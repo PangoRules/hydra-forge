@@ -495,7 +495,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 14: Budget pre-check + `TOKEN_BUDGET_EXCEEDED`/`IMAGE_BUDGET_EXCEEDED` enforcement in call-path service contract (router or a `LlmCallGuard` helper) + tests.
 - [x] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).
 - [x] Task 16: `ILlmAdminService` + controller endpoints (providers CRUD, model config CRUD, live probe, routing CRUD, usage queries, budget get/set) + server tests (with `TestILlmClient`/`TestIKeyVault` stubs wired in every factory).
-- [ ] Task 17: `/api/account/usage` self-service endpoint (caller-scoped) + tests.
+- [x] Task 17: `/api/account/usage` self-service endpoint (caller-scoped) + tests.
 - [ ] Task 18: Web UI — admin providers page (`/admin/providers`) + provider-models page + nav + `ApiRoutes.Admin`/`UiRoutes.Admin` extensions.
 - [ ] Task 19: Web UI — admin routing page (`/admin/routing`).
 - [ ] Task 20: Web UI — admin usage dashboard (`/admin/usage`, `DataTable` `fillHeight`, filters) + account self-service usage (`/account/usage`).

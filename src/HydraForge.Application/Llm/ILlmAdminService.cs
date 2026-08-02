@@ -89,4 +89,10 @@ public interface ILlmAdminService
         UpdateBudgetInput input,
         CancellationToken ct = default
     );
+
+    // Account usage
+    Task<Result<AccountUsageResponse>> GetAccountUsageAsync(
+        Guid userId,
+        CancellationToken ct = default
+    );
 }
