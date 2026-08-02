@@ -17,6 +17,7 @@
 - [ ] `ListPresetsAsync`: `?groupId=` empty → ungrouped only; `?groupId=guid` → group's presets; no param → all
 - [ ] `CreatePresetAsync`: validate `groupId` exists if set, validate ownership
 - [ ] Write tests: group archive nulls presets, ungrouped preset CRUD, ownership validation
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-10-prompt-preset-service-matrix.md` — archiving a group leaves its presets intact and ungrouped, not deleted
 
 **Acceptance:**
 - `dotnet build`

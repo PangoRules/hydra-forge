@@ -18,6 +18,7 @@
 - [ ] Prompt preset injection: prepend preset content to user message wrapped in `<preset>` tags
 - [ ] Embedding failure at retrieval → log warning, skip RAG, proceed (don't fail send)
 - [ ] Write tests: scope toggle (session vs all-my-docs), empty docs, embedding failure fallback
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-6-rag-retrieval-matrix.md` — session-scoped vs all-my-docs toggle returns different retrieval sets; project snapshot block appears only on the session's first message, not subsequent ones
 
 **Acceptance:**
 - `dotnet build`

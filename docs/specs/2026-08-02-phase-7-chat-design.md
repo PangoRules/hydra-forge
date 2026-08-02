@@ -15,7 +15,7 @@
 | **F3=B** | `CardChatLink` + summary both generated only on explicit "Close session" / panel close. One LLM call. |
 | **F4=A** | `PromptPresetGroup` = named container entity. `PromptPreset` belongs to ≤1 group (nullable FK). |
 | **F5=A** | Extend `Application.Llm.ChatMessage` with `IReadOnlyList<ImageBlock>? Images`. |
-| **F6** | New chat from project-chat panel → old session: `Status=Closed`, `CardChatLink`+summary generated immediately (implicit close), AI edit permission revoked. One LLM call. |
+| **F6** | New chat from project-chat panel → new session created and returned immediately; old session's implicit close (`Status=Closed`, `CardChatLink`+summary, AI edit permission revoked) runs as an async background job, does not block the request. One LLM call, off the request path. |
 
 ---
 
@@ -98,7 +98,7 @@ Join entity binding a document to a session for session-scoped RAG retrieval.
 | `UpdatedAt` | `DateTime` | |
 | `ArchivedAt` | `DateTime?` | Soft-delete |
 
-> A preset belongs to ≤1 group (F4=A). Ungrouped presets have `GroupId = null`. Injecting a preset into a session prepends its `Content` as a `CacheBlock(SystemContext)` (or appends to the next user message — see §4.4).
+> A preset belongs to ≤1 group (F4=A). Ungrouped presets have `GroupId = null`. Injecting a preset into a session prepends its `Content` as a `CacheBlock(SystemContext)` (or appends to the next user message — see §4.4). When a group is archived, its presets are **not** archived — `GroupId` is set to `null` on all of them (ungrouped, kept). See §1.10 and §2.4, which are now the single source of truth for this behavior.
 
 ### 1.7 `AgentPersonality` (existing, unchanged)
 
@@ -116,8 +116,8 @@ Generated on close (F3) when `ChatSession.OpenCardId != null` AND `ChatSession.P
 
 - `ChatSession.Status`, `AiEditMode` → enum-to-int columns.
 - `ChatSessionDocument` → composite unique index `(SessionId, DocumentId)`.
-- `PromptPreset.GroupId` → FK with `OnDelete: Cascade` (archiving a group cascades to its presets' `ArchivedAt` via Application service, not FK cascade — group archive is a soft operation; the FK cascade is for hard-delete housekeeping only).
-- `ChatSession.PersonalityId` → FK to `AgentPersonality` with `OnDelete: SetNull` (archiving/deleting a personality nulls the session's reference; service must toast a warning).
+- `PromptPreset.GroupId` → FK with `OnDelete: Cascade`, but that cascade only fires on **hard**-delete (housekeeping deleting the group row for real — then its presets go too). The normal **soft**-archive path (`DELETE /api/chat/preset-groups/{groupId}`) is an Application-service operation that sets `GroupId = null` on every preset in the group and leaves the presets themselves untouched — archiving a group never deletes or archives a user's presets, only ungroups them. §1.6, §1.10, and §2.4 all describe this same nulling behavior; do not reintroduce a "presets get archived too" path.
+- `ChatSession.PersonalityId` → FK to `AgentPersonality` with `OnDelete: SetNull`. This only fires on hard-delete. `AgentPersonality` is soft-deleted via `ArchivedAt` in normal use (confirmed: `src/HydraForge.Domain/Entities/PersonalSpace/AgentPersonality.cs` has no hard-delete path), so archiving a personality does **not** null `ChatSession.PersonalityId` — the FK stays populated pointing at an archived row. The read/build path must check `ArchivedAt` explicitly instead of relying on the FK: see §4.2 step 6 and the "Personality archived mid-session" row in §7.
 - `ChatMessage.ImagesJson` → `nvarchar(max) NULL`.
 - No new pgvector columns — `DocumentChunk.Embedding` (existing `vector(1536)`) is reused for RAG.
 
@@ -131,7 +131,7 @@ All routes are versioned under `/api`. Auth required. Controllers live under `sr
 
 | Method | Route | Body / Query | Returns | Notes |
 |---|---|---|---|---|
-| `POST` | `/api/chat/sessions` | `{ title?, folderId?, projectId?, openCardId?, personalityId?, searchAllMyDocs?, aiEditMode? }` | `201 ChatSessionDto` | Creates `Active` session. If `projectId` set, membership guard (admin bypass). If `openCardId` set, card must belong to `projectId`. **F6**: if the panel already has an `Active` session for the same `(projectId, openCardId, ownerId)` tuple, the server first closes that old session (implicit close: summary + CardChatLink, one LLM call) before creating the new one. The request blocks until the old session's summary completes. |
+| `POST` | `/api/chat/sessions` | `{ title?, folderId?, projectId?, openCardId?, personalityId?, searchAllMyDocs?, aiEditMode? }` | `201 ChatSessionDto` | Creates `Active` session and returns it immediately. If `projectId` set, membership guard (admin bypass). If `openCardId` set, card must belong to `projectId`. **F6 (async)**: if the panel already has an `Active` session for the same `(projectId, openCardId, ownerId)` tuple, the server enqueues a background job to close that old session (summary + CardChatLink, one LLM call, AI edit permission revoked) and returns the new session's `201` without waiting for it. The old session remains `Active` for the brief window until the background job completes — this is fine, its AI-edit permission is revoked the moment the job finishes, and nothing else reads its state in that window. |
 | `GET` | `/api/chat/sessions` | `?folderId=&projectId=&includeArchived=&before=&limit=` | `ChatSessionPageDto` | Lists owner's sessions. Filter by folder/project. Paginated cursor (`before` = `UpdatedAt` of last item). |
 | `GET` | `/api/chat/sessions/{sessionId}` | — | `ChatSessionDetailDto` (session + last N messages) | Owner or project member (for shared project chats). |
 | `PATCH` | `/api/chat/sessions/{sessionId}` | `{ title?, personalityId?, searchAllMyDocs?, aiEditMode? }` | `ChatSessionDto` | Only while `Status=Active`. |
@@ -146,7 +146,7 @@ All routes are versioned under `/api`. Auth required. Controllers live under `sr
 | Method | Route | Body / Query | Returns | Notes |
 |---|---|---|---|---|
 | `GET` | `/api/chat/sessions/{sessionId}/messages` | `?before=&limit=` | `ChatMessagePageDto` | Paginated history (cursor = `CreatedAt` of oldest in page). Owner or project member. |
-| `POST` | `/api/chat/sessions/{sessionId}/messages` | `{ content, images? }` | `201 ChatMessageDto` | Persists a `User` message. Does **not** trigger LLM response — the client initiates the response stream via `ChatHub.SendMessage` (§3). This endpoint exists so a user message is durable even if the client disconnects before the stream starts. Returns the persisted user message. |
+| `POST` | `/api/chat/sessions/{sessionId}/messages` | `{ content, images? }` | `201 ChatMessageDto` | Persists a `User` message and returns its `messageId`. This is the **only** path that persists a user message — the hub never persists on the client's behalf. **Client contract: call this first, then pass the returned `messageId` into `ChatHub.SendMessage` (§3.2).** That ordering is what makes the message durable if the client disconnects before the stream starts, and it's why every client (Web, TUI) must call both endpoints, not just the hub. |
 
 ### 2.3 ChatFolder
 
@@ -164,7 +164,7 @@ All routes are versioned under `/api`. Auth required. Controllers live under `sr
 | `POST` | `/api/chat/preset-groups` | `{ name }` | `201 PromptPresetGroupDto` |
 | `GET` | `/api/chat/preset-groups` | — | `PromptPresetGroupDto[]` (with nested `Presets[]`) |
 | `PATCH` | `/api/chat/preset-groups/{groupId}` | `{ name }` | `PromptPresetGroupDto` |
-| `DELETE` | `/api/chat/preset-groups/{groupId}` | — | `204` (soft; presets' `GroupId` nulled, presets kept) |
+| `DELETE` | `/api/chat/preset-groups/{groupId}` | — | `204` (soft-archive the group; presets' `GroupId` set to `null`, presets kept — this is the authoritative behavior, see §1.10) |
 
 ### 2.5 PromptPreset
 
@@ -213,6 +213,7 @@ Searches across the caller's chat sessions' titles + message content (postgres f
 Per repo convention, expected Application-layer failures return `Result<T, Error>` with named error codes in Domain. New error codes for Phase 7:
 
 - `CHAT_SESSION_NOT_FOUND`
+- `CHAT_MESSAGE_NOT_FOUND` — `ChatHub.SendMessage`'s `userMessageId` doesn't exist or isn't owned by the caller (client skipped the required `POST /messages` step, or raced it).
 - `CHAT_SESSION_CLOSED` — attempted to send/stream on a `Closed` session.
 - `CHAT_SESSION_NOT_OWNER`
 - `CHAT_FOLDER_MAX_DEPTH` — exceeds 2-level nesting.
@@ -246,7 +247,7 @@ Lives at `src/HydraForge.Infrastructure/Realtime/ChatHub.cs` (mirrors `BoardHub`
 |---|---|---|
 | `JoinSession(sessionId)` | `Guid` | Authorize (owner or project member for shared). Add connection to group `chat-{sessionId}`. |
 | `LeaveSession(sessionId)` | `Guid` | Remove from group. |
-| `SendMessage(sessionId, content, images?)` | `Guid, string, ImageBlock[]?` | **Main entry.** Persist user `ChatMessage` (or rely on the REST POST already done — hub trusts the REST call was made; if no user message exists with this content, persist it). Run RAG retrieval (§4). Build `ChatRequest` with personality system prompt + cache blocks + messages. Route via `ModelRouter`. Allocate assistant `messageId`. Emit `StreamStart`. `await foreach` over `ILlmClient.StreamChatAsync` → forward each `ChatChunk.Delta` as `StreamDelta`. On finish: persist assistant `ChatMessage` (with `InputTokens`/`OutputTokens`/`CachedTokens`/`ModelName`/`ImagesJson=null`), emit `StreamDone`. On error chunk: emit `StreamError`, discard partial. |
+| `SendMessage(sessionId, userMessageId, presetId?)` | `Guid, Guid, Guid?` | **Main entry.** Look up the already-persisted user `ChatMessage` by `userMessageId` (client must have called `POST /messages` first — §2.2); `404`/`StreamError(code=CHAT_MESSAGE_NOT_FOUND)` if it doesn't exist or isn't owned by the caller. No content-matching, no hub-side persist — the message is guaranteed to exist by contract. Run RAG retrieval (§4). Build `ChatRequest` with personality system prompt + cache blocks + messages, applying `presetId` injection (§4.4) if set. Route via `ModelRouter`. Allocate assistant `messageId`. Emit `StreamStart`. `await foreach` over `ILlmClient.StreamChatAsync` → forward each `ChatChunk.Delta` as `StreamDelta`. On finish: persist assistant `ChatMessage` (with `InputTokens`/`OutputTokens`/`CachedTokens`/`ModelName`/`ImagesJson=null`), emit `StreamDone`. On error chunk: emit `StreamError`, discard partial. |
 | `CancelStream(sessionId)` | `Guid` | Cancel the active `CancellationTokenSource` for that session's stream. Emit `StreamDone` (with `usage=null`) or `StreamError` (`code=Cancelled`). Partial assistant message discarded. |
 
 ### 3.3 Streaming lifecycle invariants
@@ -277,9 +278,9 @@ Lives at `src/HydraForge.Infrastructure/Realtime/ChatHub.cs` (mirrors `BoardHub`
    - `false` (default, F1): `SELECT ... FROM document_chunk WHERE user_id = @owner AND document_id IN (SELECT document_id FROM chat_session_document WHERE session_id = @session)`.
    - `true`: `SELECT ... FROM document_chunk WHERE user_id = @owner`.
 3. pgvector similarity: `ORDER BY embedding <=> @queryEmbedding LIMIT @k` (k=8, configurable in `Llm:Rag:TopK`). `<=>` = cosine distance.
-4. Build `CacheBlock(SystemContext, Content=concatenated chunk texts)` and prepend to the `ChatRequest.CacheBlocks`.
-5. For project chats, also prepend `CacheBlock(ProjectSnapshot, Content=ProjectContextSnapshot.TemplateContent)` (existing pattern from Phase 2).
-6. Personality system prompt (if `PersonalityId` set) → first `ChatMessage(Role=System, Content=systemPrompt)`.
+4. Build `CacheBlock(SystemContext, Content=concatenated chunk texts)` and prepend to `ChatRequest.CacheBlocks` — **without** `cache_control`. RAG content is different on every message (different retrieval each time), so caching it never pays off and would burn a breakpoint slot for nothing (CLAUDE.md's 4-cache-breakpoint limit).
+5. For project chats, prepend `CacheBlock(ProjectSnapshot, Content=ProjectContextSnapshot.TemplateContent)` **only on the session's first message** — same `snapshotInjected`-flag pattern the existing adapters already use (CLAUDE.md: "Project snapshot injected into first user message only"), not re-derived per session type. Determine "first message" from whether any prior `ChatMessage` exists for this session before the current one is persisted. Every later message in the session omits this block — the model already has it from turn 1.
+6. Personality system prompt (if `PersonalityId` set and not archived — see §1.10, check `ArchivedAt`) → first `ChatMessage(Role=System, Content=systemPrompt)`.
 7. Injected prompt preset (if user picked one for this send) → either prepend to user content or add as a `System` message. **Decision: prepend preset content to the user's message content** (simpler, avoids an extra system message that some adapters handle inconsistently). UI shows the preset as a chip above the input.
 
 ### 4.3 Scope toggle UX
@@ -291,8 +292,8 @@ Lives at `src/HydraForge.Infrastructure/Realtime/ChatHub.cs` (mirrors `BoardHub`
 ### 4.4 PromptPreset injection
 
 - User picks a preset from a dropdown in the input area (Web) or via a hotkey menu (TUI).
-- The selected preset id is held client-side; on send, the client includes `presetId` in the `SendMessage` args (add to §3.2 signature: `SendMessage(sessionId, content, images?, presetId?)`).
-- Server fetches the preset, validates ownership, prepends `preset.Content` to the user message content (wrapped: `"<preset>\n{content}\n</preset>\n\n{userContent}"`). The persisted `ChatMessage.Content` stores the user's raw content only; the preset-wrapped version is used for the LLM call and discarded.
+- The selected preset id is held client-side; on send, the client includes `presetId` in the `SendMessage` args (§3.2: `SendMessage(sessionId, userMessageId, presetId?)`).
+- Server fetches the preset, validates ownership, prepends `preset.Content` to the user message content (wrapped: `"<preset>\n{content}\n</preset>\n\n{userContent}"`). The persisted `ChatMessage.Content` (written earlier via `POST /messages`) stores the user's raw content only; the preset-wrapped version is built in-memory for the LLM call and discarded.
 
 ---
 
@@ -327,13 +328,13 @@ Nuxt 4 source layout (`src/web-ui/app/`). All API paths via `ApiRoutes.Chat.*` i
 
 ### 5.3 Streaming client
 
-- `app/composables/useChatStream.ts` — wraps `@microsoft/signalr` `HubConnection` to `/chat`. Exposes `connect()`, `join(sessionId)`, `leave()`, `send(sessionId, content, images, presetId)`, `cancel()`. Reactive `streamingMessage` ref (accumulated deltas). Emits toasts on `StreamError`.
+- `app/composables/useChatStream.ts` — wraps `@microsoft/signalr` `HubConnection` to `/chat`. Exposes `connect()`, `join(sessionId)`, `leave()`, `send(sessionId, content, images, presetId)`, `cancel()`. Internally, `send()` is two steps per the §2.2/§3.2 contract: (1) `POST ApiRoutes.Chat.sendMessage(sessionId)` via `useApi()` (try/catch per D-40) to persist the user message and get `messageId`, (2) `hubConnection.invoke('SendMessage', sessionId, messageId, presetId)` to start the stream. Callers of the composable still just call `send(content, images, presetId)` — the two-step split is an implementation detail, not exposed. Reactive `streamingMessage` ref (accumulated deltas). Emits toasts on `StreamError` and on REST-step failure (message never reached the server — nothing to stream).
 - Connection lifecycle: connect on `ChatSessionView` mount, disconnect on unmount. Reconnect with backoff (reuse `SignalRConnectionManager` pattern from Phase 4 if applicable).
 
 ### 5.4 Project board integration
 
 - `pages/projects/[projectId]/index.vue` (board view) gains a collapsible `ChatPanel` rail. Toggle button in the board header. When a card is open (card modal), `ChatPanel` is opened with `cardId` set; the panel's session is project-scoped + card-scoped.
-- Closing the panel (collapse button) = "panel close" (F3). Fires `POST /api/chat/sessions/{sessionId}/close`. If the user just collapses without closing, the session stays `Active` (resumable). **Decision: collapsing the panel does NOT close the session; an explicit "End session" button inside the panel does. Tab close / navigate-away fires `close` via the `beforeunload`-equivalent (Nuxt router guard + `visibilitychange` best-effort).** This avoids surprise summary LLM calls on every collapse.
+- Collapsing the panel does **not** close the session — the session stays `Active` (resumable) and AI edit permission stays granted. Only the explicit "End session" button inside the panel fires `POST /api/chat/sessions/{sessionId}/close` (F3). Tab close / navigate-away does **not** close the session either — matches F2=C, which deliberately limits revocation triggers to explicit End + new-session creation (F6) and rejects any auto-revoke-on-navigate-away path (permission silently dropping while the user still thinks it's active is the exact failure mode F2 ruled out). The session is simply left `Active`; it's resumable next time the panel or tab reopens.
 
 ---
 
@@ -376,7 +377,7 @@ Spectre.Console. NSwag `HydraForgeApiClient` for REST, `Microsoft.AspNetCore.Sig
 |---|---|
 | **Stream active when `close` requested** | Server cancels the active stream (`CancelStream` semantics), waits for the assistant message to be discarded, then runs the summary LLM call. The summary covers all persisted messages (the cancelled assistant turn is not persisted). |
 | **Client disconnects mid-stream** | Server keeps the stream alive for a grace period (30s configurable `Llm:Chat:DisconnectGraceSeconds`). If the client reconnects and re-joins the session group within the grace window, deltas continue flowing (already-emitted deltas are lost — client shows a "stream interrupted" placeholder and may `CancelStream` then resend). After grace, server cancels the stream, discards the partial assistant message. Session stays `Active` — only explicit close closes it. |
-| **New chat from panel while old session Active (F6)** | `POST /api/chat/sessions` with the same `(projectId, openCardId, ownerId)` as an existing `Active` session → server first closes the old (summary + CardChatLink, one LLM call, revoke AI edit), then creates the new. Request blocks until the old session's summary completes. If the summary LLM call fails (`CHAT_SUMMARY_FAILED`), the old session is still closed (`Summary=null`), and the new session is created — the failure is surfaced as a toast, not a blocked operation. |
+| **New chat from panel while old session Active (F6)** | `POST /api/chat/sessions` with the same `(projectId, openCardId, ownerId)` as an existing `Active` session → server creates and returns the new session immediately, then enqueues a background job to close the old one (summary + CardChatLink, one LLM call, revoke AI edit). Request never blocks on the LLM call. If the background summary fails (`CHAT_SUMMARY_FAILED`), the old session is still closed (`Summary=null`) by the same job — since this happens after the response already went out, the failure can't be returned synchronously; it's logged server-side and surfaced to the client the next time it fetches that session (toast on next `GET`/list, not a blocked operation). |
 | **RAG with no docs attached + `SearchAllMyDocs=false`** | No retrieval; the LLM call proceeds with personality + project context only. Not an error. |
 | **RAG with `SearchAllMyDocs=true` but user has no documents** | No retrieval; proceed. |
 | **Embedding failure at retrieval time** | Log warning, skip RAG (no `SystemContext` cache block), proceed with the chat. Do not fail the send. |
@@ -385,7 +386,7 @@ Spectre.Console. NSwag `HydraForgeApiClient` for REST, `Microsoft.AspNetCore.Sig
 | **Budget exceeded** | `LlmCallGuard.CheckTokenBudgetAsync` returns `TOKEN_BUDGET_EXCEEDED` before routing → `StreamError(code=TOKEN_BUDGET_EXCEEDED)`. |
 | **Project archived mid-session** | `ProjectArchiveService` cascades `ChatFolder.ArchivedAt` + `ChatSession.ArchivedAt`. An in-flight stream completes; new `SendMessage` on the archived session → `StreamError(code=CHAT_SESSION_ARCHIVED)`. |
 | **Card archived mid-session** | `ChatSession.OpenCardId` stays. On close, `CardChatLink` is still created (link survives via its own `ArchivedAt`). The card's `CardChatLinkList` shows the link with an "archived card" badge. |
-| **Personality archived mid-session** | `ChatSession.PersonalityId` → `null` (FK `OnDelete: SetNull`). Service toasts "personality removed, using default context". Next send uses no personality system prompt. |
+| **Personality archived mid-session** | `ChatSession.PersonalityId` stays populated — `AgentPersonality` is soft-archived via `ArchivedAt`, not hard-deleted, so the FK's `OnDelete: SetNull` never fires here (see §1.10). Chat-request build (§4.2 step 6) checks `ArchivedAt` at read time and skips the system prompt if archived. Session read/patch responses include `personalityArchived: bool` (derived, not stored) so the UI can toast "personality removed, using default context" without depending on the FK ever changing. Next send has no personality system prompt. |
 | **Concurrent sends in one session** | One active stream per session (§3.3). Second `SendMessage` → `StreamError(code=CHAT_STREAM_IN_PROGRESS)`. Client UI disables send while streaming. |
 | **Images on a non-vision model** | `ModelRouter` does not yet route by vision capability in Phase 7 (that's Phase 8 routing refinement). If the routed adapter rejects images, it yields `ChatChunk(FinishReason=Error)` → `StreamError(code=CHAT_MODEL_NO_VISION)`. Client UI should warn when images are attached and the session's effective model is known-non-vision (best-effort, may not be known client-side). |
 | **Empty session close (no messages)** | No summary LLM call. Set `Status=Closed`, `ClosedAt=now`, `Summary=null`. No `CardChatLink` created (nothing to summarize). |

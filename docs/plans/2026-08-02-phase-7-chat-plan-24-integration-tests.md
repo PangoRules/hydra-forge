@@ -15,7 +15,7 @@
 - [ ] `ChatSessionsControllerTests`: create session (auth), F6 implicit close (old session closed in background), close idempotency, `CHAT_SESSION_CLOSED` on send-after-close, `CHAT_STREAM_IN_PROGRESS`, document attach/detach auth
 - [ ] `ChatHubIntegrationTests`: join/leave auth (owner vs project member vs non-member), `SendMessage` with valid/invalid `userMessageId`, one-active-stream invariant, cancel mid-stream, `StreamError` on closed session, `StreamError` on `CHAT_MESSAGE_NOT_FOUND`
 - [ ] Register test stubs for new Application ports in all `CustomWebApplicationFactory` subclasses (per repo checklist)
-- [ ] Manual validation matrix: per-task E2E steps consolidated into `docs/archive/manual-validation/2026-08-02-phase-7-chat-matrix.md`
+- [ ] Manual validation matrix: consolidate the per-plan files written during plans 5–23 (`docs/manual-validation/2026-08-02-phase-7-chat-plan-*-matrix.md`) into `docs/archive/manual-validation/2026-08-02-phase-7-chat-matrix.md`, then delete the per-plan files in the same pass (per repo convention — don't leave them lying around after consolidation)
 
 **Acceptance:**
 - `dotnet test tests/HydraForge.Server.Tests --filter "FullyQualifiedName~Chat"`

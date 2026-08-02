@@ -21,6 +21,7 @@
 - [ ] `pages/chat/presets.vue`: hosts `PromptPresetManager`
 - [ ] `pages/chat/personalities.vue`: hosts `PersonalityManager`
 - [ ] `pages/documents.vue`: personal documents list + `DocumentUploader`
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-21-web-managers-docs-matrix.md` — create/reorder/ungroup presets in the UI; upload a document and watch chunking/embedding progress complete
 
 **Acceptance:**
 - `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`

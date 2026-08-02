@@ -16,6 +16,7 @@
 - [ ] `SendUserMessageAsync`: validate session Active + owner, persist `ChatMessage(Role=User, Content=content, ImagesJson=mapped)`, return `messageId`. This is the **only** persist path
 - [ ] `GetHistoryAsync`: cursor pagination (`before` = `CreatedAt` of oldest in page), owner or project member auth
 - [ ] Write tests: Closed session reject, non-owner reject, pagination boundary
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-8-chatmessage-service-matrix.md` — history pagination loads older pages on scroll-up; message send on a Closed session is rejected
 
 **Acceptance:**
 - `dotnet build`

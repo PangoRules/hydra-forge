@@ -17,6 +17,7 @@
 - [ ] `SetDefaultAsync`: set `IsDefault=true` on target, clear all others for user
 - [ ] `ArchiveAsync`: soft-delete via `ArchivedAt`. FK `OnDelete: SetNull` only fires on hard-delete (housekeeping), not here
 - [ ] Write tests: default uniqueness, archive doesn't null session FK, CRUD ownership
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-11-agent-personality-service-matrix.md` — archive a personality in use by an Active session, confirm the session's next send silently drops the system prompt instead of erroring
 
 **Acceptance:**
 - `dotnet build`

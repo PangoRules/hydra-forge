@@ -19,7 +19,7 @@
 
 **Steps:**
 
-- [ ] `ChatSessionsController`: `[Route("api/chat/[controller]")]`. POST create (F6 async close), GET list, GET detail, PATCH update, POST close, DELETE archive, POST attach doc, GET list docs, DELETE detach doc, GET permission
+- [ ] `ChatSessionsController`: `[Route("api/chat/[controller]")]`. POST create (F6 async close; body accepts `forkedFromSessionId?` for the fork action, spec §7), GET list, GET detail, PATCH update, POST close, DELETE archive, POST attach doc, GET list docs, DELETE detach doc, GET permission
 - [ ] `ChatMessagesController`: GET history, POST user message (persist only — hub streams)
 - [ ] `ChatFoldersController`: CRUD, max-depth-2
 - [ ] `PromptPresetsController` + `PromptPresetGroupsController`: CRUD, group archive nulls presets
@@ -29,6 +29,7 @@
 - [ ] `ChatSearchController`: GET search
 - [ ] Wire DI in `Program.cs`: register all services, repositories, `ChatHub`
 - [ ] All controllers use `[Authorize(Policy = AuthPolicies.UserIdRequired)]`, `[ApiController]`, `[ProducesResponseType]`
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-16-rest-controllers-matrix.md` — `.http` smoke test per controller (per repo convention), verifying each resolved route matches what's documented in the spec
 
 **Acceptance:**
 - `dotnet build`

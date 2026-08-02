@@ -18,6 +18,7 @@
 - [ ] Store file via `IFileStore` (key: `{userId}/document/{documentId}/{guid}`)
 - [ ] Persist `Document` row + `DocumentChunk[]` rows with `SourceType="document"`, `SourceId=DocumentId`
 - [ ] Write tests: chunk boundary, overlap, embedding failure path, empty content
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-5-document-ingestion-matrix.md` — upload text/markdown/csv/html, confirm chunks + embeddings persisted; force an embedding failure and confirm no `Document` or `DocumentChunk` rows are left orphaned
 
 **Acceptance:**
 - `dotnet build`

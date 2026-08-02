@@ -30,8 +30,8 @@
 - [ ] Define `IDocumentRepository`: `GetByIdAsync`, `ListByUserAsync`, `AddAsync`, `ArchiveAsync`
 - [ ] Define `IChatRagRetriever`: `RetrieveAsync(sessionId, queryEmbedding, searchAllMyDocs, k)` → `IReadOnlyList<DocumentChunk>`
 - [ ] Define `IChatSummaryGenerator`: `GenerateSummaryAsync(sessionId)` → `Result<string, Error>`
-- [ ] Define DTOs: `ChatSessionDto`, `ChatSessionDetailDto`, `ChatSessionPageDto`, `ChatMessageDto`, `ChatMessagePageDto`, `ChatFolderDto`, `PromptPresetDto`, `PromptPresetGroupDto`, `AgentPersonalityDto`, `CardChatLinkDto`, `DocumentDto`, `ChatSearchResultDto`, `ChatPermissionDto`
-- [ ] Add error codes: `CHAT_SESSION_NOT_FOUND`, `CHAT_MESSAGE_NOT_FOUND`, `CHAT_SESSION_CLOSED`, `CHAT_SESSION_NOT_OWNER`, `CHAT_FOLDER_MAX_DEPTH`, `CHAT_DOCUMENT_NOT_OWNED`, `CHAT_STREAM_IN_PROGRESS`, `CHAT_MODEL_NO_VISION`, `CHAT_SUMMARY_FAILED`, `CHAT_PRESET_GROUP_NOT_FOUND`, `CHAT_PERSONALITY_NOT_FOUND`, `CHAT_CARD_NOT_IN_PROJECT`, `CHAT_DOCUMENT_ALREADY_ATTACHED`
+- [ ] Define DTOs: `ChatSessionDto`, `ChatSessionDetailDto`, `ChatSessionPageDto`, `ChatMessageDto`, `ChatMessagePageDto`, `ChatFolderDto`, `PromptPresetDto`, `PromptPresetGroupDto`, `AgentPersonalityDto`, `CardChatLinkDto`, `DocumentDto`, `ChatSearchResultDto`, `ChatPermissionDto`. `ChatSessionDto`/`ChatSessionDetailDto` include `personalityArchived: bool` (derived from `AgentPersonality.ArchivedAt`, not stored — see plan-6/plan-11). Session create request DTO includes optional `forkedFromSessionId: Guid?` (fork action, spec §7 "Summarize → start my own")
+- [ ] Add error codes: `CHAT_SESSION_NOT_FOUND`, `CHAT_MESSAGE_NOT_FOUND`, `CHAT_SESSION_CLOSED`, `CHAT_SESSION_ARCHIVED`, `CHAT_SESSION_NOT_OWNER`, `CHAT_FOLDER_MAX_DEPTH`, `CHAT_DOCUMENT_NOT_OWNED`, `CHAT_STREAM_IN_PROGRESS`, `CHAT_MODEL_NO_VISION`, `CHAT_SUMMARY_FAILED`, `CHAT_PRESET_GROUP_NOT_FOUND`, `CHAT_PERSONALITY_NOT_FOUND`, `CHAT_CARD_NOT_IN_PROJECT`, `CHAT_DOCUMENT_ALREADY_ATTACHED`, `CHAT_EMBEDDING_FAILED` (used by plan-5's ingestion failure path — was referenced there without being defined here)
 
 **Acceptance:**
 - `dotnet build` — all projects compile

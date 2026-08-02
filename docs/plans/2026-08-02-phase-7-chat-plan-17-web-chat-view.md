@@ -21,6 +21,7 @@
 - [ ] `ChatMessageList.vue`: virtualized list. Renders `ChatMessageBubble` per message + live "typing" bubble for in-flight assistant. Props: `messages[]`, `streamingMessageId?`
 - [ ] `ChatMessageBubble.vue`: markdown render (markdown-it), image thumbnails for vision messages. Props: `message`
 - [ ] `ChatInput.vue`: textarea + image attach + preset chip + send/cancel. Enter send, Shift+Enter newline. Props: `disabled`, `personalityId`, `presetId`. Emits: `send(content, images?)`, `cancel`
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-17-web-chat-view-matrix.md` — send a message in the browser, confirm streaming deltas render live and the final message persists after refresh
 
 **Acceptance:**
 - `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`

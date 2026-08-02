@@ -19,6 +19,7 @@
 - [ ] `PersonalityScreen.cs`: personality CRUD. Launch from main menu or chat screen `A`
 - [ ] `DocumentListScreen.cs`: personal documents list + upload (path prompt). Launch from main menu
 - [ ] Modify `BoardScreen.cs`: add `c` key binding when card focused → `ProjectChatScreen`
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-23-tui-chat-hub-matrix.md` — `c` from a focused card opens `ProjectChatScreen`; opening a second time triggers F6 without blocking the TUI
 
 **Acceptance:**
 - `dotnet build src/HydraForge.Tui`

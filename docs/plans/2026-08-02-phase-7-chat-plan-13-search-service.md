@@ -16,6 +16,7 @@
 - [ ] Implement: ILIKE on `ChatSession.Title` + `ChatMessage.Content` for caller's sessions. `projectId` optional filter
 - [ ] Return: session id, title, snippet (first 200 chars around match), matched-on field
 - [ ] Write tests: title match, content match, project filter, no results
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-13-search-service-matrix.md` — search matches on both session title and message content, scoped to the caller's own sessions
 
 **Acceptance:**
 - `dotnet build`

@@ -17,6 +17,7 @@
 - [ ] `pages/chat/index.vue`: personal chat home. Folder tree (left), session list (middle), search bar. Mobile: stacked. Create new session button
 - [ ] `pages/chat/[sessionId].vue`: full-page personal chat session view. Reuses `ChatSessionView`
 - [ ] Integrate `CardChatLinkList` into existing card modal component
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-20-web-card-chat-link-list-matrix.md` — card modal shows the link list after a project chat closes; personal chat pages list/search/open sessions correctly
 
 **Acceptance:**
 - `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
