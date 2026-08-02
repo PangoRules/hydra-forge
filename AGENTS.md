@@ -122,6 +122,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 - Table naming convention is snake_case plural (e.g. `card_chat_links`, `audit_log_entries`).
 - Local dev DBs typically run on host port **5433** (per `docker-compose.yml`); update `appsettings.Development.json` if your local Postgres uses a different port.
 - `dotnet ef` warns "Unable to check if the migration has been applied" when no DB is reachable — migrations still regenerate locally; use `has-pending-model-changes` to verify model state.
+- **`nvarchar(max)` → `text` for PostgreSQL:** EF Core defaults `string` properties to `nvarchar(max)` (SQL Server convention). On Npgsql, this generates `nvarchar(max)` in migrations — always chain `.HasColumnType("text")` for unbounded-length string columns to produce PostgreSQL-compatible DDL.
 
 ## Web UI Conventions
 

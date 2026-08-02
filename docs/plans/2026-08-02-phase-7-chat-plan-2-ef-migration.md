@@ -12,14 +12,14 @@
 
 **Steps:**
 
-- [ ] Add `DbSet<ChatSessionDocument>`, `DbSet<PromptPresetGroup>`, `DbSet<PromptPreset>` to DbContext
-- [ ] Configure `ChatSession`: enum-to-int for Status/AiEditMode, `.HasDefaultValue(ChatSessionStatus.Active)`/`.HasDefaultValue(AiEditMode.PerMutation)`. Both enums start at `1` (not `0`), so the EF Core 10 zero-sentinel collision that bit `DocType`/`PlanStatus` doesn't apply here — but chain `.HasSentinel(default)` anyway per repo convention, don't rely on the non-zero start being enough by inspection. FK `PersonalityId → AgentPersonality` with `OnDelete: SetNull`, index on `OwnerId`
-- [ ] Configure `ChatMessage`: `ImagesJson` as `nvarchar(max) NULL`
-- [ ] Configure `ChatSessionDocument`: table `chat_session_documents`, unique index `(SessionId, DocumentId)`, FK cascade on session delete
-- [ ] Configure `PromptPresetGroup`: table `prompt_preset_groups`, index on `UserId`
-- [ ] Configure `PromptPreset`: table `prompt_presets`, FK `GroupId → PromptPresetGroup` with `OnDelete: Cascade`, index on `UserId`
-- [ ] Run `dotnet ef migrations add AddPhase7Chat`
-- [ ] Write `AssertProperties` tests for `ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`, modified `ChatSession`/`ChatMessage`
+- [x] Add `DbSet<ChatSessionDocument>`, `DbSet<PromptPresetGroup>`, `DbSet<PromptPreset>` to DbContext
+- [x] Configure `ChatSession`: enum-to-int for Status/AiEditMode, `.HasDefaultValue(ChatSessionStatus.Active)`/`.HasDefaultValue(AiEditMode.PerMutation)`. Both enums start at `1` (not `0`), so the EF Core 10 zero-sentinel collision that bit `DocType`/`PlanStatus` doesn't apply here — but chain `.HasSentinel(default)` anyway per repo convention, don't rely on the non-zero start being enough by inspection. FK `PersonalityId → AgentPersonality` with `OnDelete: SetNull`, index on `OwnerId`
+- [x] Configure `ChatMessage`: `ImagesJson` as `text NULL`
+- [x] Configure `ChatSessionDocument`: table `chat_session_documents`, unique index `(SessionId, DocumentId)`, FK cascade on session delete
+- [x] Configure `PromptPresetGroup`: table `prompt_preset_groups`, index on `UserId`
+- [x] Configure `PromptPreset`: table `prompt_presets`, FK `GroupId → PromptPresetGroup` with `OnDelete: Cascade`, index on `UserId`
+- [x] Run `dotnet ef migrations add AddPhase7Chat`
+- [x] Write `AssertProperties` tests for `ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`, modified `ChatSession`/`ChatMessage`
 
 **Acceptance:**
 - `dotnet ef migrations has-pending-model-changes` → no pending changes
