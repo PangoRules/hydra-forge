@@ -1,4 +1,3 @@
-using HydraForge.Domain.Common;
 using HydraForge.Domain.Enums;
 
 namespace HydraForge.Domain.Entities.Chat;

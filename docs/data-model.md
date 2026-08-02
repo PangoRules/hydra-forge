@@ -72,8 +72,9 @@ ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
 ChatSession (1) ──┬── (N) ChatMessage
                    ├── (N) CardChatLink
                    ├── (N) ChatSessionDocument
-                   ├── (1) Project? (when in project folder)
-                   └── (N) AgentPersonality? (via PersonalityId)
+                   └── (1) Project? (when in project folder)
+
+AgentPersonality (1) ── (N) ChatSession (via PersonalityId)
 
 Note (1) ──┬── (N) NoteReminder
            └── (N) NoteImageAttachment
