@@ -577,9 +577,9 @@ All 13 task plans shipped. Design spec archived at `docs/archive/specs/phase-5-m
 - [ ] `TokenUsageRecord`: log every text LLM call
 - [ ] `ImageUsageRecord`: log every image generation call
 - [x] `UserTokenBudget`: daily/monthly cap, enforce at call time → `TOKEN_BUDGET_EXCEEDED` error
-- [ ] Admin token usage dashboard: by user / feature / model / period
-- [ ] Admin image usage dashboard: by user / feature / model / period
-- [ ] User self-service usage view
+- [x] Admin token usage dashboard: by user / feature / model / period
+- [x] Admin image usage dashboard: by user / feature / model / period
+- [x] User self-service usage view
 
 ### Phase 7: Chat — General & Project 💬
 > Goal: full chat system built on top of Phase 6 LLM infrastructure.

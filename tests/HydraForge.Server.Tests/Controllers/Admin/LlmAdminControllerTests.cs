@@ -850,7 +850,7 @@ public class LlmAdminControllerTests
         mock.QueryTokenUsageAsync(
                 Arg.Any<Guid?>(),
                 Arg.Any<Guid?>(),
-                Arg.Any<string?>(),
+                Arg.Any<IReadOnlyList<string>?>(),
                 Arg.Any<Guid?>(),
                 Arg.Any<string?>(),
                 Arg.Any<DateTime?>(),
@@ -884,7 +884,7 @@ public class LlmAdminControllerTests
         mock.QueryImageUsageAsync(
                 Arg.Any<Guid?>(),
                 Arg.Any<Guid?>(),
-                Arg.Any<string?>(),
+                Arg.Any<IReadOnlyList<string>?>(),
                 Arg.Any<Guid?>(),
                 Arg.Any<string?>(),
                 Arg.Any<DateTime?>(),

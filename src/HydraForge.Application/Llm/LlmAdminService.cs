@@ -1,5 +1,6 @@
 namespace HydraForge.Application.Llm;
 
+using HydraForge.Application.Auth;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Enums;
@@ -10,16 +11,19 @@ public sealed class LlmAdminService : ILlmAdminService
     private readonly ILlmAdminRepository _repo;
     private readonly IKeyVault _keyVault;
     private readonly ILlmClientFactory _llmClientFactory;
+    private readonly IUserRepository _userRepo;
 
     public LlmAdminService(
         ILlmAdminRepository repo,
         IKeyVault keyVault,
-        ILlmClientFactory llmClientFactory
+        ILlmClientFactory llmClientFactory,
+        IUserRepository userRepo
     )
     {
         _repo = repo;
         _keyVault = keyVault;
         _llmClientFactory = llmClientFactory;
+        _userRepo = userRepo;
     }
 
     // Providers
@@ -502,7 +506,7 @@ public sealed class LlmAdminService : ILlmAdminService
     public async Task<Result<TokenUsagePageDto>> QueryTokenUsageAsync(
         Guid? userId,
         Guid? projectId,
-        string? feature,
+        IReadOnlyList<string>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -512,23 +516,18 @@ public sealed class LlmAdminService : ILlmAdminService
         CancellationToken ct = default
     )
     {
-        AiFeature? aiFeature = null;
-        if (feature is { } f)
+        if (!TryParseFeatures(features, out var aiFeatures, out var invalidFeature))
         {
-            if (!Enum.TryParse<AiFeature>(f, true, out var parsed))
-            {
-                return Result<TokenUsagePageDto>.Failure(
-                    new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}")
-                );
-            }
-            aiFeature = parsed;
+            return Result<TokenUsagePageDto>.Failure(
+                new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {invalidFeature}")
+            );
         }
 
         var (items, totalCount, totalInput, totalOutput, totalCost) =
             await _repo.QueryTokenUsageAsync(
                 userId,
                 projectId,
-                aiFeature,
+                aiFeatures,
                 providerId,
                 modelId,
                 from,
@@ -537,6 +536,8 @@ public sealed class LlmAdminService : ILlmAdminService
                 take,
                 ct
             );
+
+        var userNames = await ResolveUserNamesAsync(items.Select(r => r.UserId), ct);
 
         return Result<TokenUsagePageDto>.Success(
             new TokenUsagePageDto(
@@ -551,7 +552,8 @@ public sealed class LlmAdminService : ILlmAdminService
                         r.OutputTokens,
                         r.CachedTokens,
                         r.Cost,
-                        r.CreatedAt
+                        r.CreatedAt,
+                        userNames.GetValueOrDefault(r.UserId)
                     ))
                     .ToList(),
                 totalCount,
@@ -565,7 +567,7 @@ public sealed class LlmAdminService : ILlmAdminService
     public async Task<Result<ImageUsagePageDto>> QueryImageUsageAsync(
         Guid? userId,
         Guid? projectId,
-        string? feature,
+        IReadOnlyList<string>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -575,22 +577,17 @@ public sealed class LlmAdminService : ILlmAdminService
         CancellationToken ct = default
     )
     {
-        AiFeature? aiFeature = null;
-        if (feature is { } f)
+        if (!TryParseFeatures(features, out var aiFeatures, out var invalidFeature))
         {
-            if (!Enum.TryParse<AiFeature>(f, true, out var parsed))
-            {
-                return Result<ImageUsagePageDto>.Failure(
-                    new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {f}")
-                );
-            }
-            aiFeature = parsed;
+            return Result<ImageUsagePageDto>.Failure(
+                new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {invalidFeature}")
+            );
         }
 
         var (items, totalCount, totalImages, totalCost) = await _repo.QueryImageUsageAsync(
             userId,
             projectId,
-            aiFeature,
+            aiFeatures,
             providerId,
             modelId,
             from,
@@ -599,6 +596,8 @@ public sealed class LlmAdminService : ILlmAdminService
             take,
             ct
         );
+
+        var userNames = await ResolveUserNamesAsync(items.Select(r => r.UserId), ct);
 
         return Result<ImageUsagePageDto>.Success(
             new ImageUsagePageDto(
@@ -612,7 +611,8 @@ public sealed class LlmAdminService : ILlmAdminService
                         r.ImageCount,
                         r.Resolution,
                         r.Cost,
-                        r.CreatedAt
+                        r.CreatedAt,
+                        userNames.GetValueOrDefault(r.UserId)
                     ))
                     .ToList(),
                 totalCount,
@@ -620,6 +620,46 @@ public sealed class LlmAdminService : ILlmAdminService
                 totalCost
             )
         );
+    }
+
+    private static bool TryParseFeatures(
+        IReadOnlyList<string>? features,
+        out List<AiFeature>? parsed,
+        out string? invalidValue
+    )
+    {
+        parsed = null;
+        invalidValue = null;
+
+        if (features is null || features.Count == 0)
+            return true;
+
+        var result = new List<AiFeature>(features.Count);
+        foreach (var f in features)
+        {
+            if (!Enum.TryParse<AiFeature>(f, true, out var value))
+            {
+                invalidValue = f;
+                return false;
+            }
+            result.Add(value);
+        }
+
+        parsed = result;
+        return true;
+    }
+
+    private async Task<Dictionary<Guid, string>> ResolveUserNamesAsync(
+        IEnumerable<Guid> userIds,
+        CancellationToken ct
+    )
+    {
+        var distinctIds = userIds.Distinct().ToList();
+        if (distinctIds.Count == 0)
+            return [];
+
+        var users = await _userRepo.FindByIdsAsync(distinctIds, ct);
+        return users.ToDictionary(kv => kv.Key, kv => kv.Value.Username);
     }
 
     // Account usage

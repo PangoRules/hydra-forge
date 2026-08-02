@@ -195,7 +195,7 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> QueryTokenUsage(
         [FromQuery] Guid? userId,
         [FromQuery] Guid? projectId,
-        [FromQuery] string? feature,
+        [FromQuery] List<string>? feature,
         [FromQuery] Guid? providerId,
         [FromQuery] string? modelId,
         [FromQuery] DateTime? from,
@@ -226,7 +226,7 @@ public class LlmAdminController : ControllerBase
     public async Task<IActionResult> QueryImageUsage(
         [FromQuery] Guid? userId,
         [FromQuery] Guid? projectId,
-        [FromQuery] string? feature,
+        [FromQuery] List<string>? feature,
         [FromQuery] Guid? providerId,
         [FromQuery] string? modelId,
         [FromQuery] DateTime? from,
