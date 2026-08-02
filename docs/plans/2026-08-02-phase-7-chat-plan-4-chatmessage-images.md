@@ -11,10 +11,10 @@
 
 **Steps:**
 
-- [ ] Add `ImageBlock` record: `(string StorageKey, string MediaType)`
-- [ ] Extend `Application.Llm.ChatMessage` record: add `IReadOnlyList<ImageBlock>? Images = null` (forward-compat default)
-- [ ] Create `ChatMessageMapper`: `ToDomainImagesJson(images)` → JSON string, `ToApplicationImages(json)` → `ImageBlock[]`
-- [ ] Verify `RouteDecision` forward-compat not broken (new optional field uses `= null`)
+- [x] Add `ImageBlock` record: `(string StorageKey, string MediaType)`
+- [x] Extend `Application.Llm.ChatMessage` record: add `IReadOnlyList<ImageBlock>? Images = null` (forward-compat default)
+- [x] Create `ChatMessageMapper`: `ToDomainImagesJson(images)` → JSON string, `ToApplicationImages(json)` → `ImageBlock[]`
+- [x] Verify `RouteDecision` forward-compat not broken (new optional field uses `= null`)
 
 **Acceptance:**
 - `dotnet build src/HydraForge.Application`
