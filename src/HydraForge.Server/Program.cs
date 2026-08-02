@@ -14,6 +14,7 @@ using HydraForge.Infrastructure.Attachments;
 using HydraForge.Infrastructure.Audit;
 using HydraForge.Infrastructure.Auth;
 using HydraForge.Infrastructure.Cards;
+using HydraForge.Infrastructure.Chat;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
@@ -141,6 +142,7 @@ builder
         );
     });
 builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddChatInfrastructure();
 builder.Services.AddProjectServices();
 builder.Services.AddColumnServices();
 builder.Services.AddCardServices();
