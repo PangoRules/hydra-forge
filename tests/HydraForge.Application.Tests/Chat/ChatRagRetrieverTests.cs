@@ -3,19 +3,19 @@ namespace HydraForge.Application.Tests.Chat;
 using HydraForge.Application.Chat;
 using HydraForge.Application.Llm;
 using HydraForge.Application.Projects;
-using DomainChatSession = HydraForge.Domain.Entities.Chat.ChatSession;
-using DomainChatSessionDocument = HydraForge.Domain.Entities.Chat.ChatSessionDocument;
-using DomainChatMessage = HydraForge.Domain.Entities.Chat.ChatMessage;
-using DomainDocumentChunk = HydraForge.Domain.Entities.PersonalSpace.DocumentChunk;
-using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Admin;
 using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using DomainChatMessage = HydraForge.Domain.Entities.Chat.ChatMessage;
+using DomainChatSession = HydraForge.Domain.Entities.Chat.ChatSession;
+using DomainChatSessionDocument = HydraForge.Domain.Entities.Chat.ChatSessionDocument;
+using DomainDocumentChunk = HydraForge.Domain.Entities.PersonalSpace.DocumentChunk;
 
 public class ChatRagRetrieverTests
 {
@@ -83,8 +83,11 @@ public class ChatRagRetrieverTests
 
         embeddingClient
             .EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Result<EmbeddingResult>.Success(new EmbeddingResult(
-                [(ReadOnlyMemory<float>)new float[1536]])));
+            .Returns(
+                Result<EmbeddingResult>.Success(
+                    new EmbeddingResult([(ReadOnlyMemory<float>)new float[1536]])
+                )
+            );
 
         var retriever = new ChatRagRetriever(
             modelRouter,
@@ -134,7 +137,12 @@ public class ChatRagRetrieverTests
         deps.SessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>())
             .Returns((ChatSession?)null);
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Empty(result);
     }
@@ -148,28 +156,46 @@ public class ChatRagRetrieverTests
 
         var sessionDocs = new List<DomainChatSessionDocument>
         {
-            new() { SessionId = SessionId, DocumentId = DocId }
+            new() { SessionId = SessionId, DocumentId = DocId },
         };
         deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
             .Returns(sessionDocs);
 
         var chunks = new List<DocumentChunk>
         {
-            new() { Id = Guid.NewGuid(), Content = "chunk1", ChunkIndex = 0 },
-            new() { Id = Guid.NewGuid(), Content = "chunk2", ChunkIndex = 1 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Content = "chunk1",
+                ChunkIndex = 0,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Content = "chunk2",
+                ChunkIndex = 1,
+            },
         };
         deps.ChunkRepo.SearchAsync(
                 UserId,
-                Arg.Is<IReadOnlyList<Guid>>(ids => ids != null && ids.Count == 1 && ids[0] == DocId),
+                Arg.Is<IReadOnlyList<Guid>>(ids =>
+                    ids != null && ids.Count == 1 && ids[0] == DocId
+                ),
                 Arg.Any<ReadOnlyMemory<float>>(),
                 5,
-                Arg.Any<CancellationToken>())
+                Arg.Any<CancellationToken>()
+            )
             .Returns(chunks);
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Single(result);
-        Assert.Equal(CacheBlockType.SystemContext, result[0].Type);
+        Assert.Equal(CacheBlockType.RagContext, result[0].Type);
     }
 
     [Fact]
@@ -184,7 +210,8 @@ public class ChatRagRetrieverTests
                 Arg.Is<IReadOnlyList<Guid>?>(ids => ids == null),
                 Arg.Any<ReadOnlyMemory<float>>(),
                 5,
-                Arg.Any<CancellationToken>())
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<DocumentChunk> { new() { Content = "chunk1" } });
 
         var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: true, k: 5);
@@ -199,19 +226,44 @@ public class ChatRagRetrieverTests
         var session = CreateSession(searchAllMyDocs: true);
         SetupSessionFound(deps, session);
 
-        deps.EmbeddingClient
-            .EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
+        deps.EmbeddingClient.EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
             .Returns(Result<EmbeddingResult>.Failure(new Error("FAIL", "embedding failed")));
 
         var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: true, k: 5);
 
         Assert.Empty(result);
-        deps.Logger.Received(1).Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("RAG embedding failed")),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception?, string>>());
+        deps.Logger.Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString()!.Contains("RAG embedding failed")),
+                Arg.Any<Exception>(),
+                Arg.Any<Func<object, Exception?, string>>()
+            );
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_EmbeddingReturnsEmptyVectors_ReturnsEmptyBlocks()
+    {
+        var (retriever, deps) = CreateSut();
+        var session = CreateSession(searchAllMyDocs: true);
+        SetupSessionFound(deps, session);
+
+        deps.EmbeddingClient.EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Result<EmbeddingResult>.Success(new EmbeddingResult([])));
+
+        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: true, k: 5);
+
+        Assert.Empty(result);
+        await deps
+            .ChunkRepo.DidNotReceive()
+            .SearchAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<IReadOnlyList<Guid>?>(),
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -222,16 +274,31 @@ public class ChatRagRetrieverTests
         SetupSessionFound(deps, session);
 
         deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatSessionDocument> { new() { SessionId = SessionId, DocumentId = DocId } });
+            .Returns(
+                new List<DomainChatSessionDocument>
+                {
+                    new() { SessionId = SessionId, DocumentId = DocId },
+                }
+            );
 
         deps.ChunkRepo.SearchAsync(
-                Arg.Any<Guid>(), Arg.Any<IReadOnlyList<Guid>?>(), Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                Arg.Any<Guid>(),
+                Arg.Any<IReadOnlyList<Guid>?>(),
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<DocumentChunk> { new() { Content = "chunk1" } });
 
         deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
             .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Equal(2, result.Count);
         Assert.Equal(CacheBlockType.ProjectSnapshot, result[0].Type);
@@ -246,16 +313,31 @@ public class ChatRagRetrieverTests
         SetupSessionFound(deps, session);
 
         deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatSessionDocument> { new() { SessionId = SessionId, DocumentId = DocId } });
+            .Returns(
+                new List<DomainChatSessionDocument>
+                {
+                    new() { SessionId = SessionId, DocumentId = DocId },
+                }
+            );
 
         deps.ChunkRepo.SearchAsync(
-                Arg.Any<Guid>(), Arg.Any<IReadOnlyList<Guid>?>(), Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                Arg.Any<Guid>(),
+                Arg.Any<IReadOnlyList<Guid>?>(),
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<DocumentChunk> { new() { Content = "chunk1" } });
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Single(result);
-        Assert.Equal(CacheBlockType.SystemContext, result[0].Type);
+        Assert.Equal(CacheBlockType.RagContext, result[0].Type);
     }
 
     [Fact]
@@ -271,7 +353,12 @@ public class ChatRagRetrieverTests
         deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
             .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Single(result);
         Assert.Equal(CacheBlockType.ProjectSnapshot, result[0].Type);
@@ -285,23 +372,48 @@ public class ChatRagRetrieverTests
         var session = CreateSession(searchAllMyDocs: false, projectId: ProjectId);
         SetupSessionFound(deps, session);
 
-        deps.MessageRepo.GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatMessage> { new() { Id = Guid.NewGuid(), Role = MessageRole.User } });
+        deps.MessageRepo.GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                new List<DomainChatMessage>
+                {
+                    new() { Id = Guid.NewGuid(), Role = MessageRole.User },
+                }
+            );
 
         deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatSessionDocument> { new() { SessionId = SessionId, DocumentId = DocId } });
+            .Returns(
+                new List<DomainChatSessionDocument>
+                {
+                    new() { SessionId = SessionId, DocumentId = DocId },
+                }
+            );
 
         deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
             .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
 
         deps.ChunkRepo.SearchAsync(
-                Arg.Any<Guid>(), Arg.Any<IReadOnlyList<Guid>?>(), Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                Arg.Any<Guid>(),
+                Arg.Any<IReadOnlyList<Guid>?>(),
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<DocumentChunk> { new() { Content = "chunk1" } });
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Single(result);
-        Assert.Equal(CacheBlockType.SystemContext, result[0].Type);
+        Assert.Equal(CacheBlockType.RagContext, result[0].Type);
         Assert.DoesNotContain(result, b => b.Type == CacheBlockType.ProjectSnapshot);
     }
 
@@ -313,26 +425,51 @@ public class ChatRagRetrieverTests
         SetupSessionFound(deps, session);
 
         deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatSessionDocument> { new() { SessionId = SessionId, DocumentId = DocId } });
+            .Returns(
+                new List<DomainChatSessionDocument>
+                {
+                    new() { SessionId = SessionId, DocumentId = DocId },
+                }
+            );
 
         deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
             .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot" });
 
         var chunks = new List<DocumentChunk>
         {
-            new() { Id = Guid.NewGuid(), Content = "chunk A", ChunkIndex = 0 },
-            new() { Id = Guid.NewGuid(), Content = "chunk B", ChunkIndex = 1 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Content = "chunk A",
+                ChunkIndex = 0,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Content = "chunk B",
+                ChunkIndex = 1,
+            },
         };
         deps.ChunkRepo.SearchAsync(
-                Arg.Any<Guid>(), Arg.Any<IReadOnlyList<Guid>?>(), Arg.Any<ReadOnlyMemory<float>>(), 5, Arg.Any<CancellationToken>())
+                Arg.Any<Guid>(),
+                Arg.Any<IReadOnlyList<Guid>?>(),
+                Arg.Any<ReadOnlyMemory<float>>(),
+                5,
+                Arg.Any<CancellationToken>()
+            )
             .Returns(chunks);
 
-        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
 
         Assert.Equal(2, result.Count);
         Assert.Equal(CacheBlockType.ProjectSnapshot, result[0].Type);
         Assert.Equal("snapshot", result[0].Content);
-        Assert.Equal(CacheBlockType.SystemContext, result[1].Type);
+        Assert.Equal(CacheBlockType.RagContext, result[1].Type);
         Assert.Contains("chunk A", result[1].Content);
         Assert.Contains("chunk B", result[1].Content);
     }
@@ -350,7 +487,6 @@ public class ChatRagRetrieverTests
 
     private static void SetupSessionFound(TestDeps deps, ChatSession session)
     {
-        deps.SessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>())
-            .Returns(session);
+        deps.SessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
     }
 }

@@ -57,7 +57,12 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         if (session == null)
             return blocks;
 
-        var priorMessages = await _messageRepo.GetBySessionAsync(sessionId, before: null, limit: 1, ct);
+        var priorMessages = await _messageRepo.GetBySessionAsync(
+            sessionId,
+            before: null,
+            limit: 1,
+            ct
+        );
         bool isFirstMessage = priorMessages.Count == 0;
 
         CacheBlock? snapshotBlock = null;
@@ -86,7 +91,10 @@ public sealed class ChatRagRetriever : IChatRagRetriever
 
         if (embedResult.Value.Vectors.Count == 0)
         {
-            _logger.LogWarning("RAG embedding returned empty vectors for session {SessionId}", sessionId);
+            _logger.LogWarning(
+                "RAG embedding returned empty vectors for session {SessionId}",
+                sessionId
+            );
             if (snapshotBlock != null)
                 blocks.Add(snapshotBlock);
             return blocks;
@@ -123,7 +131,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         }
 
         var concatenatedContent = string.Join("\n\n", chunks.Select(c => c.Content));
-        blocks.Add(new CacheBlock(concatenatedContent, CacheBlockType.SystemContext));
+        blocks.Add(new CacheBlock(concatenatedContent, CacheBlockType.RagContext));
 
         if (snapshotBlock != null)
             blocks.Insert(0, snapshotBlock);

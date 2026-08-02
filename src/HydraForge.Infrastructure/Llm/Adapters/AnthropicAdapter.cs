@@ -33,7 +33,9 @@ public sealed class AnthropicAdapter(
     {
         var baseUrl = provider.BaseUrl.TrimEnd('/');
 
-        // System blocks: SystemContext → array with cache_control; Memory → array without cache_control
+        // System blocks: SystemContext → array with cache_control (stable content, safe to cache).
+        // Memory and RagContext → array without cache_control (RagContext changes every message —
+        // caching it would pay Anthropic's cache-write surcharge with no cache-hit benefit).
         var systemBlocks = new List<AnthropicSystemBlock>();
 
         var systemContextBlock = request.CacheBlocks.FirstOrDefault(b =>
@@ -46,10 +48,15 @@ public sealed class AnthropicAdapter(
             );
         }
 
-        foreach (var block in request.CacheBlocks.Where(b => b.Type == CacheBlockType.Memory))
+        foreach (
+            var block in request.CacheBlocks.Where(b =>
+                b.Type is CacheBlockType.Memory or CacheBlockType.RagContext
+            )
+        )
         {
             logger.LogDebug(
-                "Memory cache block attached to system array (no cache_control): {Content}",
+                "{Type} cache block attached to system array (no cache_control): {Content}",
+                block.Type,
                 block.Content
             );
             systemBlocks.Add(new AnthropicSystemBlock(block.Content, null));

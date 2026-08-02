@@ -139,6 +139,45 @@ The following cannot be exercised today because there's no HTTP endpoint, no Inf
 ### Cleanup
 - [ ] None required — this plan makes no DB writes and no persistent runtime changes
 
+## Plan 6: RAG Retrieval Service
+
+Plan 6 adds `IChatRagRetriever`/`ChatRagRetriever` — embeds the user's query, runs a pgvector similarity search scoped by the session's `SearchAllMyDocs` toggle (F1), and assembles the resulting chunks plus (on the session's first message only) the project snapshot into `CacheBlock`s for the chat request. No HTTP controller, no UI — this is consumed by the (not-yet-built) `SendMessage` hub flow in Plan 15.
+
+### Setup
+- [ ] Branch `task/rag-retrieval` checked out, clean worktree
+- [ ] `dotnet build` returns 0 errors / 0 warnings (besides the pre-existing `GenerateAiNarrativeTests.cs:347` warning)
+- [ ] `dotnet test tests/HydraForge.Application.Tests --filter "FullyQualifiedName~ChatRagRetriever"` → 10/10 pass
+- [ ] `dotnet test tests/HydraForge.Infrastructure.Tests --filter "FullyQualifiedName~AnthropicAdapter"` → 18/18 pass
+
+### Happy Path — Application unit tests
+1. `SearchAllMyDocs == false`: `ChatSessionDocument` rows for the session resolve to a specific `documentId` list, passed to `IDocumentChunkRepository.SearchAsync` (not `null`)
+2. `SearchAllMyDocs == true`: `SearchAsync` called with `sessionDocumentIds = null` (all of the owner's documents are candidates)
+3. Project chat, session's first message (`IChatMessageRepository.GetBySessionAsync` returns empty): result includes a `CacheBlockType.ProjectSnapshot` block first, then a `CacheBlockType.RagContext` block with the concatenated chunk content
+4. Project chat, **not** the first message (a prior `ChatMessage` exists): result omits the `ProjectSnapshot` block entirely — only `RagContext`
+5. Non-project chat (`ProjectId == null`): never includes a `ProjectSnapshot` block regardless of message position
+6. `RagContext` block content is a `"\n\n"`-joined concatenation of every returned chunk's `Content`, in the order `IDocumentChunkRepository.SearchAsync` returned them
+
+### Edge Cases
+1. Session not found (`GetByIdAsync` returns `null`) → empty block list, no embedding call attempted
+2. Embedding call fails (`Result.Failure`) → warning logged, empty (or snapshot-only, if first message) result — retrieval failure never throws, chat send proceeds without RAG
+3. Embedding succeeds but returns zero vectors (`EmbeddingResult.Vectors.Count == 0`, e.g. zero-token query) → warning logged, `IDocumentChunkRepository.SearchAsync` is **not** called, empty (or snapshot-only) result
+4. Session-scoped search (`SearchAllMyDocs == false`) with no `ChatSessionDocument` rows attached → skips the chunk search entirely (nothing to search), snapshot-only or empty result — does not fall back to searching all docs
+5. Chunk search returns zero results (query embedded fine, but no matching chunks) → no `RagContext` block added, snapshot block (if any) still included
+
+### Regressions — Anthropic cache-block correctness
+1. **`CacheBlockType.RagContext` must never receive `cache_control` from `AnthropicAdapter`** — RAG content changes every message, so caching it costs the Anthropic cache-write surcharge with zero cache-hit benefit. Verified by `AnthropicAdapterTests.StreamChatAsync_RagContextBlock_GoesToSystemArray_WithoutCacheControl`. (This was a real bug found in review: the first implementation used `CacheBlockType.SystemContext` for RAG chunks, which `AnthropicAdapter` unconditionally stamps with `cache_control` — silently defeating the plan's own "no cache_control" requirement. Fixed by introducing a dedicated `RagContext` enum value handled the same as `Memory`.)
+2. `OpenAiCompatibleAdapter` treats all `CacheBlockType` values uniformly (prefix-hash + system message) — adding `RagContext` required no adapter change there; confirm `OpenAiCompatibleAdapterTests` still 100% pass
+3. `ContextCompressor`'s eviction logic only targets `CacheBlockType.Memory` — confirm `RagContext` blocks are never evicted/summarized by `ContextCompressorTests` (RAG blocks are already top-K scoped per message; they don't need long-term compression)
+4. Full solution build + full test suite green (`dotnet build && dotnet test`) after the `CacheBlockType` enum addition — no other switch/pattern-match on `CacheBlockType` left un-updated
+
+### Deferred to Plan 15/16 — Re-validate When Hub/Controllers Land
+- [ ] **Real pgvector search:** spin up Postgres with seeded `DocumentChunk` rows (real embeddings), call `ChatRagRetriever.RetrieveAsync` end-to-end, confirm `EfDocumentChunkRepository.SearchAsync`'s `ORDER BY embedding <=> @queryEmbedding LIMIT @k` returns the expected nearest chunks
+- [ ] **Scope toggle E2E:** via the Web UI or `.http` smoke test, confirm toggling a session's "search all my docs" setting changes the retrieved chunk set for the same query
+- [ ] **Snapshot-first-message E2E:** send two messages in the same project session, confirm (via request logging or a debug endpoint) the project snapshot block appears only on the first
+
+### Cleanup
+- [ ] None — pure Application-layer unit tests, no DB writes, no persistent runtime state
+
 ### Setup
 - [ ] Branch `task/app-ports` checked out, clean worktree
 - [ ] `dotnet build` returns 0 errors / 0 warnings
