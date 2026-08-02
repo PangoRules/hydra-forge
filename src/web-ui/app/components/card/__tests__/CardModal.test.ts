@@ -194,6 +194,39 @@ describe('CardModal', () => {
     expect(wrapper.emitted('archived')).toBeFalsy()
   })
 
+  it('shows the archive warning when this card is the target of a relationship, not just the source', async () => {
+    // "Blocked by" links reverse which side is Source — this card can be the
+    // relationship's target (see CardDependencies.vue's `reverse` flag).
+    // Archiving must warn regardless of which side this card is on.
+    const wrapper = await mountLoadedModal()
+    await flushPromises()
+
+    mockGET.mockResolvedValueOnce({
+      data: {
+        relationships: [
+          {
+            sourceCardId: 'other',
+            targetCardId: 'c1',
+            sourceCardNumber: 5,
+            sourceCardTitle: 'Blocker card',
+            targetCardNumber: 1,
+            targetCardTitle: 'Test card',
+            type: 'BlockedBy'
+          }
+        ]
+      },
+      error: undefined
+    })
+
+    await (wrapper.vm as any).handleArchive()
+    await flushPromises()
+
+    expect((wrapper.vm as any).showArchiveWarning).toBe(true)
+    expect((wrapper.vm as any).archiveDependents).toEqual([
+      expect.objectContaining({ id: 'other', title: 'Blocker card' })
+    ])
+  })
+
   it('shows an error toast when restore fails', async () => {
     mockPOST.mockRejectedValue(new ApiError(500, 'UNKNOWN', 'Server Error', null, 'about:blank', 'corr-3'))
     mockGET.mockResolvedValue({ data: makeCard({ archivedAt: '2024-02-01T00:00:00Z' }), error: undefined })
