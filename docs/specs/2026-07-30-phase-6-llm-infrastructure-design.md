@@ -498,7 +498,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 17: `/api/account/usage` self-service endpoint (caller-scoped) + tests.
 - [x] Task 18: Web UI — admin providers page (`/admin/providers`) + provider-models page + nav + `ApiRoutes.Admin`/`UiRoutes.Admin` extensions.
 - [x] Task 19: Web UI — admin routing page (`/admin/routing`).
-- [ ] Task 20: Web UI — admin usage dashboard (`/admin/usage`, `DataTable` `fillHeight`, filters) + account self-service usage (`/account/usage`).
+- [x] Task 20: Web UI — admin usage dashboard (`/admin/usage`, `DataTable` `fillHeight`, filters) + account self-service usage (`/account/usage`).
 - [ ] Task 21: Hangfire wiring (`AddHangfire` + `UsePostgreSqlStorage` + `AddHangfireServer`, `/hangfire` dashboard behind admin auth) + `SystemSettings.AiNarrativeGenerationTimeUtc` field + migration + settings UI time picker.
 - [ ] Task 22: `ProjectContextSnapshotService.GenerateAiNarrativeForAllActiveProjectsAsync` recurring job (per-project enqueue, `ModelRouter` → `StreamChatAsync` with `TemplateContent` cache block, persist `AiNarrative`/`AiNarrativeGeneratedAt`) + tests with stub client.
 - [ ] Task 23: Update `docs/DECISIONS.md` (A–D entries), `docs/architecture.md` (adapter table with DallE/StabilityAi/ComfyUi), `docs/data-model.md` (`UserTokenBudget` reconciliation, `AdapterType` enum note), `docs/functional-spec.md` (Phase 6 checkboxes), `CLAUDE.md`/`AGENTS.md` (LLM config + commands), `appsettings` example (`Llm:EncryptionKey`, `Llm:ContextCompressionThresholdRatio`).
