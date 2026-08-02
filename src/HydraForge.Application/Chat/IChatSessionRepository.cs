@@ -12,6 +12,7 @@ public interface IChatSessionRepository
         CancellationToken ct = default
     );
     Task<IReadOnlyList<ChatSession>> ListAsync(
+        Guid ownerId,
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
