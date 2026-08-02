@@ -41,8 +41,7 @@ public class SystemSettings
             BrandName = string.IsNullOrWhiteSpace(brandName) ? null : brandName;
         if (brandLogoUrl is not null)
             BrandLogoUrl = string.IsNullOrWhiteSpace(brandLogoUrl) ? null : brandLogoUrl;
-        if (aiNarrativeGenerationTimeUtc.HasValue)
-            AiNarrativeGenerationTimeUtc = aiNarrativeGenerationTimeUtc.Value;
+        AiNarrativeGenerationTimeUtc = aiNarrativeGenerationTimeUtc;
         UpdatedAt = DateTime.UtcNow;
     }
 }

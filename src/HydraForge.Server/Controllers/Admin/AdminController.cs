@@ -204,7 +204,7 @@ public class AdminController(
             request.SearXngUrl,
             request.BrandName,
             request.BrandLogoUrl,
-            hasAiNarrativeTime ? request.AiNarrativeGenerationTimeUtc : null
+            hasAiNarrativeTime ? request.AiNarrativeGenerationTimeUtc : settings.AiNarrativeGenerationTimeUtc
         );
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
