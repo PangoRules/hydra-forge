@@ -14,6 +14,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
     private readonly ILlmClientFactory _clientFactory;
     private readonly IChatSessionRepository _sessionRepo;
     private readonly IChatSessionDocumentRepository _sessionDocRepo;
+    private readonly IChatMessageRepository _messageRepo;
     private readonly IDocumentChunkRepository _chunkRepo;
     private readonly IProjectContextSnapshotRepository _snapshotRepo;
     private readonly IOptions<RagOptions> _ragOptions;
@@ -24,6 +25,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         ILlmClientFactory clientFactory,
         IChatSessionRepository sessionRepo,
         IChatSessionDocumentRepository sessionDocRepo,
+        IChatMessageRepository messageRepo,
         IDocumentChunkRepository chunkRepo,
         IProjectContextSnapshotRepository snapshotRepo,
         IOptions<RagOptions> ragOptions,
@@ -34,6 +36,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         _clientFactory = clientFactory;
         _sessionRepo = sessionRepo;
         _sessionDocRepo = sessionDocRepo;
+        _messageRepo = messageRepo;
         _chunkRepo = chunkRepo;
         _snapshotRepo = snapshotRepo;
         _ragOptions = ragOptions;
@@ -54,8 +57,11 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         if (session == null)
             return blocks;
 
+        var priorMessages = await _messageRepo.GetBySessionAsync(sessionId, before: null, limit: 1, ct);
+        bool isFirstMessage = priorMessages.Count == 0;
+
         CacheBlock? snapshotBlock = null;
-        if (session.ProjectId != null)
+        if (session.ProjectId != null && isFirstMessage)
         {
             var snapshot = await _snapshotRepo.GetByProjectIdAsync(session.ProjectId.Value, ct);
             if (snapshot != null)

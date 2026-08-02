@@ -27,6 +27,7 @@ public class ChatRagRetrieverTests
     {
         var sessionRepo = Substitute.For<IChatSessionRepository>();
         var sessionDocRepo = Substitute.For<IChatSessionDocumentRepository>();
+        var messageRepo = Substitute.For<IChatMessageRepository>();
         var chunkRepo = Substitute.For<IDocumentChunkRepository>();
         var snapshotRepo = Substitute.For<IProjectContextSnapshotRepository>();
         var modelRouter = Substitute.For<IModelRouter>();
@@ -89,6 +90,7 @@ public class ChatRagRetrieverTests
             clientFactory,
             sessionRepo,
             sessionDocRepo,
+            messageRepo,
             chunkRepo,
             snapshotRepo,
             ragOptions,
@@ -98,6 +100,7 @@ public class ChatRagRetrieverTests
         var deps = new TestDeps(
             sessionRepo,
             sessionDocRepo,
+            messageRepo,
             chunkRepo,
             snapshotRepo,
             modelRouter,
@@ -113,6 +116,7 @@ public class ChatRagRetrieverTests
     private record TestDeps(
         IChatSessionRepository SessionRepo,
         IChatSessionDocumentRepository SessionDocRepo,
+        IChatMessageRepository MessageRepo,
         IDocumentChunkRepository ChunkRepo,
         IProjectContextSnapshotRepository SnapshotRepo,
         IModelRouter ModelRouter,
@@ -251,6 +255,26 @@ public class ChatRagRetrieverTests
 
         Assert.Single(result);
         Assert.Equal(CacheBlockType.SystemContext, result[0].Type);
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_NoSessionDocs_ReturnsSnapshotOnly()
+    {
+        var (retriever, deps) = CreateSut();
+        var session = CreateSession(searchAllMyDocs: false, projectId: ProjectId);
+        SetupSessionFound(deps, session);
+
+        deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
+            .Returns(new List<DomainChatSessionDocument>());
+
+        deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
+            .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
+
+        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+
+        Assert.Single(result);
+        Assert.Equal(CacheBlockType.ProjectSnapshot, result[0].Type);
+        Assert.Equal("snapshot content", result[0].Content);
     }
 
     [Fact]
