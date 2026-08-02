@@ -90,15 +90,13 @@ public class ProjectContextSnapshotService(
                 {
                     var client = llmClientFactory.For(route.Provider!);
 
-                    var systemPrompt =
-                        "Generate a concise project narrative (3-5 sentences) based on the following project snapshot. "
-                        + "The narrative should describe the current state of the project, key themes, and notable work items. "
-                        + "Be descriptive but succinct.";
-
                     var request = new ChatRequest(
                         route.Primary.Id,
                         route.Primary.ModelId,
-                        Messages: [new ChatMessage(ChatRole.User, systemPrompt)],
+                        Messages:
+                        [
+                            new ChatMessage(ChatRole.User, ProjectNarrativePrompts.SystemPrompt),
+                        ],
                         CacheBlocks:
                         [
                             new CacheBlock(
