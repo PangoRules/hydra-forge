@@ -411,7 +411,11 @@ onMounted(() => loadRecords())
           <span class="text-sm">{{ row.original.userName ?? row.original.userId }}</span>
         </template>
         <template #feature-cell="{ row }">
-          <UBadge variant="subtle" size="sm" color="primary">
+          <UBadge
+            variant="subtle"
+            size="sm"
+            color="primary"
+          >
             {{ row.original.feature }}
           </UBadge>
         </template>
@@ -456,7 +460,11 @@ onMounted(() => loadRecords())
           <span class="text-sm">{{ row.original.userName ?? row.original.userId }}</span>
         </template>
         <template #feature-cell="{ row }">
-          <UBadge variant="subtle" size="sm" color="primary">
+          <UBadge
+            variant="subtle"
+            size="sm"
+            color="primary"
+          >
             {{ row.original.feature }}
           </UBadge>
         </template>

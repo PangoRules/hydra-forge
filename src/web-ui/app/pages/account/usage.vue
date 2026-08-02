@@ -39,12 +39,7 @@ const recentColumns: TableColumn<RecentCallDto>[] = [
   { accessorKey: 'cost', header: 'Cost' }
 ]
 
-function tokenPercent(used: number, budget: number): number {
-  if (budget <= 0) return 0
-  return Math.min(100, Math.round((used / budget) * 100))
-}
-
-function imagePercent(used: number, budget: number): number {
+function usagePercent(used: number, budget: number): number {
   if (budget <= 0) return 0
   return Math.min(100, Math.round((used / budget) * 100))
 }
@@ -73,11 +68,17 @@ onMounted(() => loadUsage())
       </h1>
     </div>
 
-    <div v-if="loading && !usage" class="flex-1 flex items-center justify-center">
+    <div
+      v-if="loading && !usage"
+      class="flex-1 flex items-center justify-center"
+    >
       <span class="text-muted">Loading...</span>
     </div>
 
-    <div v-else-if="usage" class="flex-1 min-h-0 px-6 pb-6 pt-4 space-y-6 overflow-y-auto">
+    <div
+      v-else-if="usage"
+      class="flex-1 min-h-0 px-6 pb-6 pt-4 space-y-6 overflow-y-auto"
+    >
       <!-- Period -->
       <div class="text-sm text-muted">
         Period: {{ formatDateTime(usage.periodStart) }} — {{ formatDateTime(usage.periodEnd) }}
@@ -87,16 +88,25 @@ onMounted(() => loadUsage())
       <div class="space-y-2">
         <div class="flex items-center justify-between text-sm">
           <span class="font-medium">Token Usage</span>
-          <span v-if="usage.tokensBudget > 0" class="tabular-nums">
+          <span
+            v-if="usage.tokensBudget > 0"
+            class="tabular-nums"
+          >
             {{ usage.tokensUsed.toLocaleString() }} / {{ usage.tokensBudget.toLocaleString() }}
-            ({{ tokenPercent(usage.tokensUsed, usage.tokensBudget) }}%)
+            ({{ usagePercent(usage.tokensUsed, usage.tokensBudget) }}%)
           </span>
-          <span v-else class="text-muted">Unlimited</span>
+          <span
+            v-else
+            class="text-muted"
+          >Unlimited</span>
         </div>
-        <div v-if="usage.tokensBudget > 0" class="w-full h-3 rounded-full bg-muted overflow-hidden">
+        <div
+          v-if="usage.tokensBudget > 0"
+          class="w-full h-3 rounded-full bg-muted overflow-hidden"
+        >
           <div
             class="h-full rounded-full bg-primary transition-all"
-            :style="{ width: `${tokenPercent(usage.tokensUsed, usage.tokensBudget)}%` }"
+            :style="{ width: `${usagePercent(usage.tokensUsed, usage.tokensBudget)}%` }"
           />
         </div>
       </div>
@@ -105,16 +115,25 @@ onMounted(() => loadUsage())
       <div class="space-y-2">
         <div class="flex items-center justify-between text-sm">
           <span class="font-medium">Image Usage</span>
-          <span v-if="usage.imagesBudget > 0" class="tabular-nums">
+          <span
+            v-if="usage.imagesBudget > 0"
+            class="tabular-nums"
+          >
             {{ usage.imagesUsed.toLocaleString() }} / {{ usage.imagesBudget.toLocaleString() }}
-            ({{ imagePercent(usage.imagesUsed, usage.imagesBudget) }}%)
+            ({{ usagePercent(usage.imagesUsed, usage.imagesBudget) }}%)
           </span>
-          <span v-else class="text-muted">Unlimited</span>
+          <span
+            v-else
+            class="text-muted"
+          >Unlimited</span>
         </div>
-        <div v-if="usage.imagesBudget > 0" class="w-full h-3 rounded-full bg-muted overflow-hidden">
+        <div
+          v-if="usage.imagesBudget > 0"
+          class="w-full h-3 rounded-full bg-muted overflow-hidden"
+        >
           <div
             class="h-full rounded-full bg-primary transition-all"
-            :style="{ width: `${imagePercent(usage.imagesUsed, usage.imagesBudget)}%` }"
+            :style="{ width: `${usagePercent(usage.imagesUsed, usage.imagesBudget)}%` }"
           />
         </div>
       </div>
@@ -134,7 +153,11 @@ onMounted(() => loadUsage())
             {{ formatDateTime(row.original.timestamp) }}
           </template>
           <template #feature-cell="{ row }">
-            <UBadge variant="subtle" size="sm" color="primary">
+            <UBadge
+              variant="subtle"
+              size="sm"
+              color="primary"
+            >
               {{ row.original.feature }}
             </UBadge>
           </template>

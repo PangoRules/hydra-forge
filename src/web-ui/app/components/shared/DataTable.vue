@@ -87,7 +87,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
             #[name]="slotProps"
           >
             <slot
-              v-if="name !== 'card'"
+              v-if="name !== 'card' && name !== 'footer'"
               :name="name"
               v-bind="slotProps"
             />
@@ -107,6 +107,13 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
         </div>
       </div>
     </template>
+
+    <div
+      v-if="$slots.footer"
+      :class="fillHeight ? 'shrink-0' : ''"
+    >
+      <slot name="footer" />
+    </div>
 
     <div
       v-if="totalCount > 0 && !hideFooter"

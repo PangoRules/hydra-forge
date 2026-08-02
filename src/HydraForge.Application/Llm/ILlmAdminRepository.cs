@@ -42,7 +42,7 @@ public interface ILlmAdminRepository
     )> QueryTokenUsageAsync(
         Guid? userId,
         Guid? projectId,
-        AiFeature? feature,
+        IReadOnlyList<AiFeature>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -60,7 +60,7 @@ public interface ILlmAdminRepository
     )> QueryImageUsageAsync(
         Guid? userId,
         Guid? projectId,
-        AiFeature? feature,
+        IReadOnlyList<AiFeature>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,

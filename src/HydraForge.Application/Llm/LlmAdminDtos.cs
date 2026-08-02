@@ -108,7 +108,8 @@ public sealed record TokenUsageDto(
     int OutputTokens,
     int CachedTokens,
     decimal Cost,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? UserName = null
 );
 
 public sealed record ImageUsagePageDto(
@@ -127,7 +128,8 @@ public sealed record ImageUsageDto(
     int ImageCount,
     string Resolution,
     decimal Cost,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? UserName = null
 );
 
 // Budget DTOs

@@ -63,7 +63,7 @@ public interface ILlmAdminService
     Task<Result<TokenUsagePageDto>> QueryTokenUsageAsync(
         Guid? userId,
         Guid? projectId,
-        string? feature,
+        IReadOnlyList<string>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -76,7 +76,7 @@ public interface ILlmAdminService
     Task<Result<ImageUsagePageDto>> QueryImageUsageAsync(
         Guid? userId,
         Guid? projectId,
-        string? feature,
+        IReadOnlyList<string>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,

@@ -83,7 +83,7 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
     )> QueryTokenUsageAsync(
         Guid? userId,
         Guid? projectId,
-        AiFeature? feature,
+        IReadOnlyList<AiFeature>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -101,8 +101,8 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         if (projectId.HasValue)
             query = query.Where(r => r.ProjectId == projectId.Value);
 
-        if (feature.HasValue)
-            query = query.Where(r => r.Feature == feature.Value);
+        if (features is { Count: > 0 })
+            query = query.Where(r => features.Contains(r.Feature));
 
         if (providerId.HasValue)
             query = query.Where(r => r.ProviderId == providerId.Value);
@@ -138,7 +138,7 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
     )> QueryImageUsageAsync(
         Guid? userId,
         Guid? projectId,
-        AiFeature? feature,
+        IReadOnlyList<AiFeature>? features,
         Guid? providerId,
         string? modelId,
         DateTime? from,
@@ -156,8 +156,8 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         if (projectId.HasValue)
             query = query.Where(r => r.ProjectId == projectId.Value);
 
-        if (feature.HasValue)
-            query = query.Where(r => r.Feature == feature.Value);
+        if (features is { Count: > 0 })
+            query = query.Where(r => features.Contains(r.Feature));
 
         if (providerId.HasValue)
             query = query.Where(r => r.ProviderId == providerId.Value);
