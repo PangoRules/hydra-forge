@@ -471,7 +471,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 1: Domain entities + enums (`ChatSessionStatus`, `AiEditMode`, `ChatSession` mods, `ChatMessage.ImagesJson`, `ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`) + state-transition methods
 - [x] Task 2: EF migration `AddPhase7Chat` + Infrastructure model config + `AssertProperties` tests
 - [x] Task 3: Application ports + DTOs (`IChatSessionRepository`, `IChatMessageRepository`, `IChatSessionDocumentRepository`, `IPromptPresetRepository`, `IPromptPresetGroupRepository`, `IAgentPersonalityRepository`, `ICardChatLinkRepository`, `IDocumentRepository`, `IChatRagRetriever`, `IChatSummaryGenerator`) + error codes
-- [ ] Task 4: `Application.Llm.ChatMessage` `Images` extension + `ImageBlock` DTO + mapper (F5)
+- [x] Task 4: `Application.Llm.ChatMessage` `Images` extension + `ImageBlock` DTO + mapper (F5)
 - [ ] Task 5: Document upload + chunking + embedding ingestion service (`IEmbeddingClient` pipeline)
 - [ ] Task 6: RAG retrieval service (scope toggle F1, pgvector similarity, cache-block assembly)
 - [ ] Task 7: ChatSession service (CRUD, F6 implicit close, close-with-summary, permission-state read)
