@@ -113,7 +113,7 @@ Already mapped. Startup seeder inserts one row per `AiFeature` value if the tabl
 | ImageDocument | Standard | Premium |
 | ImageGalleryEditor | Economy | Standard |
 
-`null` MaxUserTier = locked to default (admin-only override). Seeding is idempotent and runs in `PersistenceServiceCollectionExtensions` startup path (same pattern as admin seed).
+`null` MaxUserTier = locked to default (admin-only override). `FeatureRoutingConfigSeeder` is registered via `AddScoped` in `Program.cs` and invoked inside the migration startup scope alongside `AdminSeeder` — same startup pattern, not inside `PersistenceServiceCollectionExtensions`.
 
 ### `UserTokenBudget` (existing — reconcile docs)
 
@@ -493,7 +493,7 @@ Add `TimeSpan? AiNarrativeGenerationTimeUtc` (default `00:00:00`) to `SystemSett
 - [x] Task 12: `ContextCompressor` service (threshold check, pinned-block preservation, Economy-tier summarize call) + unit tests; wire DI to avoid router cycle.
 - [x] Task 13: `IUsageRecorder` EF impl: write `TokenUsageRecord`/`ImageUsageRecord`, accrue `UserTokenBudget` counters, lazy period rollover + unit tests.
 - [x] Task 14: Budget pre-check + `TOKEN_BUDGET_EXCEEDED`/`IMAGE_BUDGET_EXCEEDED` enforcement in call-path service contract (router or a `LlmCallGuard` helper) + tests.
-- [ ] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).
+- [x] Task 15: `FeatureRoutingConfig` startup seeder (idempotent, one row per `AiFeature` per the default table).
 - [ ] Task 16: `ILlmAdminService` + controller endpoints (providers CRUD, model config CRUD, live probe, routing CRUD, usage queries, budget get/set) + server tests (with `TestILlmClient`/`TestIKeyVault` stubs wired in every factory).
 - [ ] Task 17: `/api/account/usage` self-service endpoint (caller-scoped) + tests.
 - [ ] Task 18: Web UI — admin providers page (`/admin/providers`) + provider-models page + nav + `ApiRoutes.Admin`/`UiRoutes.Admin` extensions.
