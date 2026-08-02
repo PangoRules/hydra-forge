@@ -134,4 +134,23 @@ public static class DomainErrorCodes
         public const string SelfDenied = "RELATIONSHIP_SELF_DENIED";
         public const string ArchiveImpactConfirmRequired = "CARD_ARCHIVE_IMPACT_CONFIRM_REQUIRED";
     }
+
+    public static class Chat
+    {
+        public const string SessionNotFound = "CHAT_SESSION_NOT_FOUND";
+        public const string MessageNotFound = "CHAT_MESSAGE_NOT_FOUND";
+        public const string SessionClosed = "CHAT_SESSION_CLOSED";
+        public const string SessionArchived = "CHAT_SESSION_ARCHIVED";
+        public const string SessionNotOwner = "CHAT_SESSION_NOT_OWNER";
+        public const string FolderMaxDepth = "CHAT_FOLDER_MAX_DEPTH";
+        public const string DocumentNotOwned = "CHAT_DOCUMENT_NOT_OWNED";
+        public const string StreamInProgress = "CHAT_STREAM_IN_PROGRESS";
+        public const string ModelNoVision = "CHAT_MODEL_NO_VISION";
+        public const string SummaryFailed = "CHAT_SUMMARY_FAILED";
+        public const string PresetGroupNotFound = "CHAT_PRESET_GROUP_NOT_FOUND";
+        public const string PersonalityNotFound = "CHAT_PERSONALITY_NOT_FOUND";
+        public const string CardNotInProject = "CHAT_CARD_NOT_IN_PROJECT";
+        public const string DocumentAlreadyAttached = "CHAT_DOCUMENT_ALREADY_ATTACHED";
+        public const string EmbeddingFailed = "CHAT_EMBEDDING_FAILED";
+    }
 }
