@@ -269,6 +269,10 @@ builder
                 {
                     context.Token = accessToken;
                 }
+                else if (path.StartsWithSegments("/hangfire"))
+                {
+                    context.Token = context.Request.Cookies["auth_token"];
+                }
                 return Task.CompletedTask;
             },
         };

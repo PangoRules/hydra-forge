@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
@@ -178,11 +179,22 @@ public class AdminController(
     [HttpPut("settings")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UpdateSettings(
-        [FromBody] UpdateSystemSettingsRequest request,
-        CancellationToken ct
-    )
+    public async Task<IActionResult> UpdateSettings(CancellationToken ct)
     {
+        Request.EnableBuffering();
+        string body;
+        using (var reader = new StreamReader(Request.Body, leaveOpen: true))
+        {
+            body = await reader.ReadToEndAsync();
+        }
+        Request.Body.Position = 0;
+
+        var request = JsonSerializer.Deserialize<UpdateSystemSettingsRequest>(
+            body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+        using var jsonDoc = JsonDocument.Parse(body);
+        bool hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty("aiNarrativeGenerationTimeUtc", out _);
+
         var settings = await settingsRepo.GetSingletonAsync(ct);
         settings.UpdateSettings(
             request.ArchivedItemRetentionDays,
@@ -192,7 +204,7 @@ public class AdminController(
             request.SearXngUrl,
             request.BrandName,
             request.BrandLogoUrl,
-            request.AiNarrativeGenerationTimeUtc
+            hasAiNarrativeTime ? request.AiNarrativeGenerationTimeUtc : null
         );
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
