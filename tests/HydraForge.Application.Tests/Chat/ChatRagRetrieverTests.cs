@@ -5,6 +5,7 @@ using HydraForge.Application.Llm;
 using HydraForge.Application.Projects;
 using DomainChatSession = HydraForge.Domain.Entities.Chat.ChatSession;
 using DomainChatSessionDocument = HydraForge.Domain.Entities.Chat.ChatSessionDocument;
+using DomainChatMessage = HydraForge.Domain.Entities.Chat.ChatMessage;
 using DomainDocumentChunk = HydraForge.Domain.Entities.PersonalSpace.DocumentChunk;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Common;
@@ -275,6 +276,33 @@ public class ChatRagRetrieverTests
         Assert.Single(result);
         Assert.Equal(CacheBlockType.ProjectSnapshot, result[0].Type);
         Assert.Equal("snapshot content", result[0].Content);
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_NotFirstMessage_OmitsSnapshot()
+    {
+        var (retriever, deps) = CreateSut();
+        var session = CreateSession(searchAllMyDocs: false, projectId: ProjectId);
+        SetupSessionFound(deps, session);
+
+        deps.MessageRepo.GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<DomainChatMessage> { new() { Id = Guid.NewGuid(), Role = MessageRole.User } });
+
+        deps.SessionDocRepo.GetBySessionAsync(SessionId, Arg.Any<CancellationToken>())
+            .Returns(new List<DomainChatSessionDocument> { new() { SessionId = SessionId, DocumentId = DocId } });
+
+        deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
+            .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
+
+        deps.ChunkRepo.SearchAsync(
+                Arg.Any<Guid>(), Arg.Any<IReadOnlyList<Guid>?>(), Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<DocumentChunk> { new() { Content = "chunk1" } });
+
+        var result = await retriever.RetrieveAsync(SessionId, "query", searchAllMyDocs: false, k: 5);
+
+        Assert.Single(result);
+        Assert.Equal(CacheBlockType.SystemContext, result[0].Type);
+        Assert.DoesNotContain(result, b => b.Type == CacheBlockType.ProjectSnapshot);
     }
 
     [Fact]

@@ -84,6 +84,14 @@ public sealed class ChatRagRetriever : IChatRagRetriever
             return blocks;
         }
 
+        if (embedResult.Value.Vectors.Count == 0)
+        {
+            _logger.LogWarning("RAG embedding returned empty vectors for session {SessionId}", sessionId);
+            if (snapshotBlock != null)
+                blocks.Add(snapshotBlock);
+            return blocks;
+        }
+
         var queryEmbedding = embedResult.Value.Vectors[0];
 
         IReadOnlyList<Guid>? sessionDocIds = null;
