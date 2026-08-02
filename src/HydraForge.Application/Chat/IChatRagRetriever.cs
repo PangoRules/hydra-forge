@@ -1,5 +1,4 @@
 using HydraForge.Application.Llm;
-using HydraForge.Domain.Entities.PersonalSpace;
 
 namespace HydraForge.Application.Chat;
 
@@ -9,7 +8,6 @@ public interface IChatRagRetriever
         Guid sessionId,
         string query,
         bool searchAllMyDocs,
-        string? presetContent,
         int k,
         CancellationToken ct = default
     );
