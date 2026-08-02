@@ -13,6 +13,7 @@ using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 public class ChatRagRetrieverTests
@@ -32,6 +33,8 @@ public class ChatRagRetrieverTests
         var clientFactory = Substitute.For<ILlmClientFactory>();
         var embeddingClient = Substitute.For<IEmbeddingClient>();
         var logger = Substitute.For<ILogger<ChatRagRetriever>>();
+        var ragOptions = Substitute.For<IOptions<RagOptions>>();
+        ragOptions.Value.Returns(new RagOptions { TopK = 8 });
 
         var provider = new LlmProvider
         {
@@ -88,6 +91,7 @@ public class ChatRagRetrieverTests
             sessionDocRepo,
             chunkRepo,
             snapshotRepo,
+            ragOptions,
             logger
         );
 
@@ -99,6 +103,7 @@ public class ChatRagRetrieverTests
             modelRouter,
             clientFactory,
             embeddingClient,
+            ragOptions,
             logger
         );
 
@@ -113,6 +118,7 @@ public class ChatRagRetrieverTests
         IModelRouter ModelRouter,
         ILlmClientFactory ClientFactory,
         IEmbeddingClient EmbeddingClient,
+        IOptions<RagOptions> RagOptions,
         ILogger<ChatRagRetriever> Logger
     );
 

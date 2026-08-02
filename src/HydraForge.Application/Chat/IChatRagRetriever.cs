@@ -8,7 +8,7 @@ public interface IChatRagRetriever
         Guid sessionId,
         string query,
         bool searchAllMyDocs,
-        int k,
+        int? k,
         CancellationToken ct = default
     );
 }

@@ -6,6 +6,7 @@ using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 public sealed class ChatRagRetriever : IChatRagRetriever
 {
@@ -15,6 +16,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
     private readonly IChatSessionDocumentRepository _sessionDocRepo;
     private readonly IDocumentChunkRepository _chunkRepo;
     private readonly IProjectContextSnapshotRepository _snapshotRepo;
+    private readonly IOptions<RagOptions> _ragOptions;
     private readonly ILogger<ChatRagRetriever> _logger;
 
     public ChatRagRetriever(
@@ -24,6 +26,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         IChatSessionDocumentRepository sessionDocRepo,
         IDocumentChunkRepository chunkRepo,
         IProjectContextSnapshotRepository snapshotRepo,
+        IOptions<RagOptions> ragOptions,
         ILogger<ChatRagRetriever> logger
     )
     {
@@ -33,6 +36,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         _sessionDocRepo = sessionDocRepo;
         _chunkRepo = chunkRepo;
         _snapshotRepo = snapshotRepo;
+        _ragOptions = ragOptions;
         _logger = logger;
     }
 
@@ -40,7 +44,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         Guid sessionId,
         string query,
         bool searchAllMyDocs,
-        int k,
+        int? k,
         CancellationToken ct = default
     )
     {
@@ -50,10 +54,27 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         if (session == null)
             return blocks;
 
+        CacheBlock? snapshotBlock = null;
+        if (session.ProjectId != null)
+        {
+            var snapshot = await _snapshotRepo.GetByProjectIdAsync(session.ProjectId.Value, ct);
+            if (snapshot != null)
+                snapshotBlock = new CacheBlock(
+                    snapshot.TemplateContent,
+                    CacheBlockType.ProjectSnapshot
+                );
+        }
+
         var embedResult = await EmbedQueryAsync(query, session.OwnerId, ct);
         if (embedResult.IsFailure)
         {
-            _logger.LogWarning("RAG embedding failed for session {SessionId}: {Error}", sessionId, embedResult.Error.Message);
+            _logger.LogWarning(
+                "RAG embedding failed for session {SessionId}: {Error}",
+                sessionId,
+                embedResult.Error.Message
+            );
+            if (snapshotBlock != null)
+                blocks.Add(snapshotBlock);
             return blocks;
         }
 
@@ -64,23 +85,34 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         {
             var sessionDocs = await _sessionDocRepo.GetBySessionAsync(sessionId, ct);
             if (sessionDocs.Count == 0)
+            {
+                if (snapshotBlock != null)
+                    blocks.Add(snapshotBlock);
                 return blocks;
+            }
             sessionDocIds = sessionDocs.Select(d => d.DocumentId).ToList();
         }
 
-        var chunks = await _chunkRepo.SearchAsync(session.OwnerId, sessionDocIds, queryEmbedding, k, ct);
+        var effectiveK = k ?? _ragOptions.Value.TopK;
+        var chunks = await _chunkRepo.SearchAsync(
+            session.OwnerId,
+            sessionDocIds,
+            queryEmbedding,
+            effectiveK,
+            ct
+        );
         if (chunks.Count == 0)
+        {
+            if (snapshotBlock != null)
+                blocks.Add(snapshotBlock);
             return blocks;
+        }
 
         var concatenatedContent = string.Join("\n\n", chunks.Select(c => c.Content));
         blocks.Add(new CacheBlock(concatenatedContent, CacheBlockType.SystemContext));
 
-        if (session.ProjectId != null)
-        {
-            var snapshot = await _snapshotRepo.GetByProjectIdAsync(session.ProjectId.Value, ct);
-            if (snapshot != null)
-                blocks.Insert(0, new CacheBlock(snapshot.TemplateContent, CacheBlockType.ProjectSnapshot));
-        }
+        if (snapshotBlock != null)
+            blocks.Insert(0, snapshotBlock);
 
         return blocks;
     }

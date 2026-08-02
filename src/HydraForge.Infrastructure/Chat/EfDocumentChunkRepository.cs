@@ -16,7 +16,10 @@ public sealed class EfDocumentChunkRepository(HydraForgeDbContext context)
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task AddRangeAsync(IReadOnlyList<DocumentChunk> chunks, CancellationToken ct = default)
+    public async Task AddRangeAsync(
+        IReadOnlyList<DocumentChunk> chunks,
+        CancellationToken ct = default
+    )
     {
         context.DocumentChunks.AddRange(chunks);
         await context.SaveChangesAsync(ct);
@@ -35,11 +38,12 @@ public sealed class EfDocumentChunkRepository(HydraForgeDbContext context)
         if (sessionDocumentIds != null)
         {
             var docIdList = sessionDocumentIds.ToList();
-            return await context.DocumentChunks
-                .FromSqlInterpolated(
+            return await context
+                .DocumentChunks.FromSqlInterpolated(
                     $"""
                     SELECT * FROM document_chunks
                     WHERE document_id = ANY({docIdList})
+                      AND user_id = {userId}
                     ORDER BY embedding <=> {vector}
                     LIMIT {k}
                     """
@@ -47,8 +51,8 @@ public sealed class EfDocumentChunkRepository(HydraForgeDbContext context)
                 .ToListAsync(ct);
         }
 
-        return await context.DocumentChunks
-            .FromSqlInterpolated(
+        return await context
+            .DocumentChunks.FromSqlInterpolated(
                 $"""
                 SELECT dc.* FROM document_chunks dc
                 JOIN documents d ON d.id = dc.document_id
