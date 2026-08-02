@@ -140,7 +140,7 @@ async function fetchCardRelationships() {
     // CardDependencies.vue's `reverse` flag) — so archiving must warn about
     // relationships regardless of direction, not just the ones where this
     // card happens to be the source.
-    const dependents = data.relationships.map((rel) =>
+    const dependents = data.relationships.map(rel =>
       rel.sourceCardId === card.value!.id
         ? { id: rel.targetCardId, title: rel.targetCardTitle, type: rel.type }
         : { id: rel.sourceCardId, title: rel.sourceCardTitle, type: rel.type }
