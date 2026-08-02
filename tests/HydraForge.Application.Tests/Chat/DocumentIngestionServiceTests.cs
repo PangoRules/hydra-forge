@@ -31,12 +31,7 @@ public class DocumentIngestionServiceTests
     {
         var (service, _, _, _, _) = CreateSut();
 
-        var result = await service.IngestAsync(
-            Guid.NewGuid(),
-            "Test Doc",
-            "   ",
-            "text/plain"
-        );
+        var result = await service.IngestAsync(Guid.NewGuid(), "Test Doc", "   ", "text/plain");
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.EmbeddingFailed, result.Error.Code);
@@ -56,7 +51,7 @@ public class DocumentIngestionServiceTests
         var doc = result.Value;
         Assert.Equal("Test", doc.Title);
         Assert.Equal(userId, doc.UserId);
-        Assert.Equal(1, mockChunkRepo.CapturedChunks.Count);
+        Assert.Single(mockChunkRepo.CapturedChunks);
     }
 
     [Fact]
@@ -89,7 +84,12 @@ public class DocumentIngestionServiceTests
         var (service, mockDocRepo, mockChunkRepo, _, mockEmbeddingClient) = CreateSut();
         SetupFailedEmbedding(mockEmbeddingClient);
 
-        var result = await service.IngestAsync(Guid.NewGuid(), "Test", "some content", "text/plain");
+        var result = await service.IngestAsync(
+            Guid.NewGuid(),
+            "Test",
+            "some content",
+            "text/plain"
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.EmbeddingFailed, result.Error.Code);
@@ -105,12 +105,70 @@ public class DocumentIngestionServiceTests
         var (service, _, mockChunkRepo, _, mockEmbeddingClient) = CreateSut();
         SetupSuccessfulEmbedding(mockEmbeddingClient, 1);
 
-        var result = await service.IngestAsync(userId, "Test", "", "application/octet-stream", stream);
+        var result = await service.IngestAsync(
+            userId,
+            "Test",
+            "",
+            "application/octet-stream",
+            stream
+        );
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value.FilePath);
         Assert.StartsWith($"{userId}/document/", result.Value.FilePath);
-        Assert.Equal(1, mockChunkRepo.CapturedChunks.Count);
+        Assert.Single(mockChunkRepo.CapturedChunks);
+    }
+
+    [Fact]
+    public async Task IngestAsync_NewlineNearChunkBoundary_SnapsBoundaryAfterNewline()
+    {
+        // Chunk 0 would naturally end at char 2000. Put a newline inside the trailing
+        // overlap window (chars [1600,2000)) so the boundary should snap to just after it
+        // instead of splitting mid-line.
+        var before = new string('a', 1750);
+        var after = new string('b', 2250);
+        var content = before + "\n" + after; // newline at index 1750, well past OverlapChars/4=100
+
+        var (service, _, mockChunkRepo, _, mockEmbeddingClient) = CreateSut();
+        SetupSuccessfulEmbedding(mockEmbeddingClient, 3);
+
+        var result = await service.IngestAsync(Guid.NewGuid(), "Test", content, "text/plain");
+
+        Assert.True(result.IsSuccess);
+        var chunk0 = mockChunkRepo.CapturedChunks[0].Content;
+        Assert.EndsWith("\n", chunk0);
+        Assert.Equal(before + "\n", chunk0);
+    }
+
+    [Fact]
+    public async Task IngestAsync_ManyChunks_EmbedsInMultipleBoundedBatches()
+    {
+        // 340,000 chars -> ~213 chunks, well past the 100-chunk-per-EmbedAsync-call cap.
+        var content = new string('x', 340_000);
+        var (service, _, mockChunkRepo, _, mockEmbeddingClient) = CreateSut();
+
+        var callCount = 0;
+        mockEmbeddingClient
+            .EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                callCount++;
+                var req = callInfo.Arg<EmbeddingRequest>();
+                Assert.True(req.Inputs.Count <= 100);
+                var vectors = req
+                    .Inputs.Select(_ => (ReadOnlyMemory<float>)new float[1536])
+                    .ToList();
+                return Result<EmbeddingResult>.Success(new EmbeddingResult(vectors));
+            });
+
+        var result = await service.IngestAsync(Guid.NewGuid(), "Test", content, "text/plain");
+
+        Assert.True(result.IsSuccess);
+        Assert.True(callCount > 1);
+        for (var i = 0; i < mockChunkRepo.CapturedChunks.Count; i++)
+        {
+            Assert.Equal(i, mockChunkRepo.CapturedChunks[i].ChunkIndex);
+        }
     }
 
     [Fact]
@@ -126,7 +184,13 @@ public class DocumentIngestionServiceTests
         Assert.Empty(mockChunkRepo.CapturedChunks);
     }
 
-    private static (DocumentIngestionService, InMemoryDocumentRepository, InMemoryChunkRepository, InMemoryFileStore, IEmbeddingClient) CreateSut()
+    private static (
+        DocumentIngestionService,
+        InMemoryDocumentRepository,
+        InMemoryChunkRepository,
+        InMemoryFileStore,
+        IEmbeddingClient
+    ) CreateSut()
     {
         var docRepo = new InMemoryDocumentRepository();
         var chunkRepo = new InMemoryChunkRepository();
@@ -170,7 +234,7 @@ public class DocumentIngestionServiceTests
 
         modelRouter
             .ResolveAsync(
-                AiFeature.PersonalChat,
+                AiFeature.DocumentEmbedding,
                 Arg.Any<Guid>(),
                 Arg.Any<Guid?>(),
                 Arg.Any<int>(),
@@ -180,13 +244,20 @@ public class DocumentIngestionServiceTests
 
         clientFactory.EmbeddingFor(provider).Returns(embeddingClient);
 
-        var service = new DocumentIngestionService(docRepo, chunkRepo, fileStore, modelRouter, clientFactory);
+        var service = new DocumentIngestionService(
+            docRepo,
+            chunkRepo,
+            fileStore,
+            modelRouter,
+            clientFactory
+        );
         return (service, docRepo, chunkRepo, fileStore, embeddingClient);
     }
 
     private static void SetupSuccessfulEmbedding(IEmbeddingClient mock, int chunkCount)
     {
-        var vectors = Enumerable.Range(0, chunkCount)
+        var vectors = Enumerable
+            .Range(0, chunkCount)
             .Select(_ => (ReadOnlyMemory<float>)new float[1536])
             .ToList();
         mock.EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
@@ -196,8 +267,11 @@ public class DocumentIngestionServiceTests
     private static void SetupFailedEmbedding(IEmbeddingClient mock)
     {
         mock.EmbedAsync(Arg.Any<EmbeddingRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Result<EmbeddingResult>.Failure(
-                new Error("EMBEDDING_FAILED", "Embedding request failed")));
+            .Returns(
+                Result<EmbeddingResult>.Failure(
+                    new Error("EMBEDDING_FAILED", "Embedding request failed")
+                )
+            );
     }
 
     private sealed class InMemoryDocumentRepository : IDocumentRepository
@@ -216,8 +290,10 @@ public class DocumentIngestionServiceTests
         public Task<Document?> GetByIdAsync(Guid documentId, CancellationToken ct = default) =>
             Task.FromResult<Document?>(null);
 
-        public Task<IReadOnlyList<Document>> ListByUserAsync(Guid userId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Document>>([]);
+        public Task<IReadOnlyList<Document>> ListByUserAsync(
+            Guid userId,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<Document>>([]);
     }
 
     private sealed class InMemoryChunkRepository : IDocumentChunkRepository
@@ -230,7 +306,10 @@ public class DocumentIngestionServiceTests
             return Task.CompletedTask;
         }
 
-        public Task AddRangeAsync(IReadOnlyList<DocumentChunk> chunks, CancellationToken ct = default)
+        public Task AddRangeAsync(
+            IReadOnlyList<DocumentChunk> chunks,
+            CancellationToken ct = default
+        )
         {
             CapturedChunks.AddRange(chunks);
             return Task.CompletedTask;
@@ -246,8 +325,10 @@ public class DocumentIngestionServiceTests
             CancellationToken ct = default
         ) => Task.FromResult(Result<string>.Success(storageKey));
 
-        public Task<Result<Stream>> OpenReadAsync(string storageKey, CancellationToken ct = default) =>
-            Task.FromResult(Result<Stream>.Success(new MemoryStream()));
+        public Task<Result<Stream>> OpenReadAsync(
+            string storageKey,
+            CancellationToken ct = default
+        ) => Task.FromResult(Result<Stream>.Success(new MemoryStream()));
 
         public Task<Result> DeleteAsync(string storageKey, CancellationToken ct = default) =>
             Task.FromResult(Result.Success());

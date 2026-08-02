@@ -14,4 +14,5 @@ public enum AiFeature
     ImageDocument = 10,
     ImageGalleryEditor = 11,
     ProjectNarrative = 12,
+    DocumentEmbedding = 13,
 }
