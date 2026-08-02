@@ -8,7 +8,7 @@
 
 ### 1. Create `LlmCallGuard` helper
 - File: `src/HydraForge.Application/Llm/LlmCallGuard.cs`
-- Static helper or injectable service. Depends on `HydraForgeDbContext` (read-only for budget check) and `IUsageRecorder` (for post-call accrual).
+- Static helper or injectable service. Depends on `IUserTokenBudgetRepository` (for budget check) and `IUsageRecorder` (for post-call accrual and usage recording).
 - Purpose: enforce budget before LLM calls, accrue after. Keeps adapters pure transport.
 
 ### 2. Implement pre-call budget check

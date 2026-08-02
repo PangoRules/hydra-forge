@@ -123,7 +123,7 @@ public class LlmCallGuardTests
     }
 
     [Fact]
-    public async Task CheckTokenBudgetAsync_LazyRollover_ResetsCountersBeforeCheck()
+    public async Task CheckTokenBudgetAsync_ReturnsSuccessWhenPeriodExpired()
     {
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();

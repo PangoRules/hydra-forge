@@ -2,6 +2,7 @@ namespace HydraForge.Application.Llm;
 
 using HydraForge.Application.Admin;
 using HydraForge.Domain.Common;
+using HydraForge.Domain.Enums;
 
 public sealed class LlmCallGuard
 {
@@ -85,6 +86,22 @@ public sealed class LlmCallGuard
         var totalTokens = usage?.InputTokens + usage?.OutputTokens ?? 0;
 
         await _recorder.AccrueTokenUsageAsync(userId, totalTokens, ct);
+
+        var recordInput = new TokenUsageRecordInput(
+            UserId: userId,
+            ProjectId: null,
+            Feature: AiFeature.PersonalChat,
+            ProviderModelConfigId: Guid.Empty,
+            ProviderId: Guid.Empty,
+            ModelId: string.Empty,
+            ModelName: string.Empty,
+            InputTokens: usage?.InputTokens ?? 0,
+            OutputTokens: usage?.OutputTokens ?? 0,
+            CachedTokens: usage?.CachedTokens ?? 0,
+            PipelineRunId: null,
+            Cost: 0
+        );
+        await _recorder.RecordTokenAsync(recordInput, ct);
 
         return totalTokens;
     }

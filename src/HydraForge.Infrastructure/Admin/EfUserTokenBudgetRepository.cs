@@ -18,10 +18,4 @@ public sealed class EfUserTokenBudgetRepository : IUserTokenBudgetRepository
     {
         return await _db.UserTokenBudgets.AsNoTracking().FirstOrDefaultAsync(b => b.UserId == userId, ct);
     }
-
-    public async Task UpdateAsync(UserTokenBudget budget, CancellationToken ct = default)
-    {
-        _db.UserTokenBudgets.Update(budget);
-        await _db.SaveChangesAsync(ct);
-    }
 }
