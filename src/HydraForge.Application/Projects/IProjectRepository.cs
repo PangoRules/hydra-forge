@@ -96,6 +96,14 @@ public interface IProjectContextSnapshotRepository
         Guid projectId,
         CancellationToken ct = default
     );
+    Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    );
     Task AddAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default);
     Task UpdateAsync(ProjectContextSnapshot snapshot, CancellationToken ct = default);
+    Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    );
 }

@@ -16,19 +16,48 @@ public sealed class EfUsageRecorder : IUsageRecorder
 
     public async Task RecordTokenAsync(TokenUsageRecordInput input, CancellationToken ct = default)
     {
-        var cost = input.Cost;
-
         var config = await _db
             .ProviderModelConfigs.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == input.ProviderModelConfigId, ct);
 
-        if (config?.PricePerToken is { } pricePerToken)
+        _db.TokenUsageRecords.Add(ToRecord(input, config?.PricePerToken));
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task RecordTokenBatchAsync(
+        IReadOnlyList<TokenUsageRecordInput> inputs,
+        CancellationToken ct = default
+    )
+    {
+        if (inputs.Count == 0)
+            return;
+
+        var configIds = inputs.Select(i => i.ProviderModelConfigId).Distinct().ToList();
+        var pricesByConfigId = await _db
+            .ProviderModelConfigs.AsNoTracking()
+            .Where(c => configIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.PricePerToken, ct);
+
+        foreach (var input in inputs)
         {
-            var chargeableTokens = input.InputTokens + input.OutputTokens - input.CachedTokens;
-            cost = chargeableTokens * pricePerToken;
+            pricesByConfigId.TryGetValue(input.ProviderModelConfigId, out var pricePerToken);
+            _db.TokenUsageRecords.Add(ToRecord(input, pricePerToken));
         }
 
-        var record = new TokenUsageRecord
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private static TokenUsageRecord ToRecord(TokenUsageRecordInput input, decimal? pricePerToken)
+    {
+        var cost = input.Cost;
+
+        if (pricePerToken is { } price)
+        {
+            var chargeableTokens = input.InputTokens + input.OutputTokens - input.CachedTokens;
+            cost = chargeableTokens * price;
+        }
+
+        return new TokenUsageRecord
         {
             UserId = input.UserId,
             ProjectId = input.ProjectId,
@@ -43,9 +72,6 @@ public sealed class EfUsageRecorder : IUsageRecorder
             PipelineRunId = input.PipelineRunId,
             Cost = cost,
         };
-
-        _db.TokenUsageRecords.Add(record);
-        await _db.SaveChangesAsync(ct);
     }
 
     public async Task RecordImageAsync(ImageUsageRecordInput input, CancellationToken ct = default)

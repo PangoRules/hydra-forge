@@ -425,16 +425,21 @@ public sealed class LlmAdminService : ILlmAdminService
     )
     {
         var configs = await _repo.ListRoutingAsync(ct);
+        var allowedModels = await _repo.ListAllowedModelsAsync(ct);
+        var allowedByConfig = allowedModels
+            .GroupBy(a => a.FeatureRoutingConfigId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<Guid>)g.Select(a => a.ProviderModelConfigId).ToList()
+            );
 
         var dtos = configs
-            .Select(c => new FeatureRoutingDto(
-                c.Id,
-                c.Feature,
-                c.DefaultTier.ToString(),
-                c.MaxUserTier?.ToString(),
-                c.CreatedAt,
-                c.UpdatedAt
-            ))
+            .Select(c =>
+                ToRoutingDto(
+                    c,
+                    allowedByConfig.TryGetValue(c.Id, out var ids) ? ids : Array.Empty<Guid>()
+                )
+            )
             .ToList();
 
         return Result<IReadOnlyList<FeatureRoutingDto>>.Success(dtos);
@@ -498,7 +503,74 @@ public sealed class LlmAdminService : ILlmAdminService
         config.UpdatedAt = DateTime.UtcNow;
         await _repo.SaveChangesAsync(ct);
 
-        return Result<FeatureRoutingDto>.Success(ToRoutingDto(config));
+        var allowedModels = await _repo.ListAllowedModelsByFeatureAsync(config.Id, ct);
+        return Result<FeatureRoutingDto>.Success(
+            ToRoutingDto(config, allowedModels.Select(a => a.ProviderModelConfigId).ToList())
+        );
+    }
+
+    public async Task<Result<FeatureRoutingDto>> SetAllowedModelsAsync(
+        string feature,
+        SetAllowedModelsInput input,
+        CancellationToken ct = default
+    )
+    {
+        if (!Enum.TryParse<AiFeature>(feature, true, out var aiFeature))
+        {
+            return Result<FeatureRoutingDto>.Failure(
+                new Error(DomainErrorCodes.Llm.InvalidFeature, $"Unknown feature: {feature}")
+            );
+        }
+
+        var config = await _repo.GetRoutingByFeatureAsync(aiFeature, ct);
+        if (config is null)
+        {
+            return Result<FeatureRoutingDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Llm.RoutingNotFound,
+                    $"Routing config not found for feature: {feature}"
+                )
+            );
+        }
+
+        var modelConfigIds = input.ModelConfigIds.Distinct().ToList();
+
+        foreach (var modelConfigId in modelConfigIds)
+        {
+            var model = await _repo.GetModelConfigByIdAsync(modelConfigId, ct);
+            if (model is null)
+            {
+                return Result<FeatureRoutingDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Llm.ModelNotFound,
+                        $"Model config not found: {modelConfigId}"
+                    )
+                );
+            }
+        }
+
+        var existing = await _repo.ListAllowedModelsByFeatureAsync(config.Id, ct);
+        foreach (var allowedModel in existing)
+        {
+            _repo.RemoveAllowedModel(allowedModel);
+        }
+
+        for (var priority = 0; priority < modelConfigIds.Count; priority++)
+        {
+            _repo.AddAllowedModel(
+                new FeatureAllowedModel
+                {
+                    FeatureRoutingConfigId = config.Id,
+                    ProviderModelConfigId = modelConfigIds[priority],
+                    Priority = priority,
+                }
+            );
+        }
+
+        config.UpdatedAt = DateTime.UtcNow;
+        await _repo.SaveChangesAsync(ct);
+
+        return Result<FeatureRoutingDto>.Success(ToRoutingDto(config, modelConfigIds));
     }
 
     // Usage
@@ -881,13 +953,17 @@ public sealed class LlmAdminService : ILlmAdminService
             c.IsEnabled
         );
 
-    private static FeatureRoutingDto ToRoutingDto(FeatureRoutingConfig c) =>
+    private static FeatureRoutingDto ToRoutingDto(
+        FeatureRoutingConfig c,
+        IReadOnlyList<Guid> allowedModelConfigIds
+    ) =>
         new(
             c.Id,
             c.Feature,
             c.DefaultTier.ToString(),
             c.MaxUserTier?.ToString(),
             c.CreatedAt,
-            c.UpdatedAt
+            c.UpdatedAt,
+            allowedModelConfigIds
         );
 }

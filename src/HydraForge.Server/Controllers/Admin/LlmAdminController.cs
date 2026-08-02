@@ -188,6 +188,19 @@ public class LlmAdminController : ControllerBase
         return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
     }
 
+    [HttpPut("routing/{feature}/allowed-models")]
+    [ProducesResponseType(typeof(FeatureRoutingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetAllowedModels(
+        string feature,
+        [FromBody] SetAllowedModelsInput input,
+        CancellationToken ct
+    )
+    {
+        var result = await _llmAdmin.SetAllowedModelsAsync(feature, input, ct);
+        return result.IsFailure ? ToProblemResult(result.Error) : Ok(result.Value);
+    }
+
     // Usage
 
     [HttpGet("usage/tokens")]

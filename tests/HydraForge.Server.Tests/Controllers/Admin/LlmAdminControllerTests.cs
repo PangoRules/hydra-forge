@@ -685,7 +685,8 @@ public class LlmAdminControllerTests
                             "Standard",
                             null,
                             DateTime.UtcNow,
-                            DateTime.UtcNow
+                            DateTime.UtcNow,
+                            Array.Empty<Guid>()
                         ),
                     }
                 )
@@ -727,7 +728,8 @@ public class LlmAdminControllerTests
                         "Premium",
                         "Economy",
                         DateTime.UtcNow,
-                        DateTime.UtcNow
+                        DateTime.UtcNow,
+                        Array.Empty<Guid>()
                     )
                 )
             );
@@ -753,6 +755,54 @@ public class LlmAdminControllerTests
         );
         Assert.NotNull(dto);
         Assert.Equal("Premium", dto.DefaultTier);
+    }
+
+    [Fact]
+    public async Task SetAllowedModels_ReturnsOk()
+    {
+        var mock = Substitute.For<ILlmAdminService>();
+        var featureId = Guid.NewGuid();
+        var modelConfigId = Guid.NewGuid();
+        mock.SetAllowedModelsAsync(
+                Arg.Any<string>(),
+                Arg.Any<SetAllowedModelsInput>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                Result<FeatureRoutingDto>.Success(
+                    new FeatureRoutingDto(
+                        featureId,
+                        AiFeature.PersonalChat,
+                        "Standard",
+                        null,
+                        DateTime.UtcNow,
+                        DateTime.UtcNow,
+                        new[] { modelConfigId }
+                    )
+                )
+            );
+
+        using var factory = CreateFactory(mock);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            AdminToken
+        );
+
+        var input = new SetAllowedModelsInput(new[] { modelConfigId });
+        var response = await client.PutAsJsonAsync(
+            $"api/admin/routing/PersonalChat/allowed-models",
+            input,
+            CancellationToken.None
+        );
+
+        Assert.Equal(200, (int)response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<FeatureRoutingDto>(
+            JsonOptions,
+            CancellationToken.None
+        );
+        Assert.NotNull(dto);
+        Assert.Equal(modelConfigId, Assert.Single(dto.AllowedModelConfigIds));
     }
 
     [Fact]

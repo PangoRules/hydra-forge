@@ -45,6 +45,6 @@
 - Test: `AiNarrativeGeneratedAt` set on success.
 
 ## Verification
-- `dotnet build`
-- `dotnet test --filter "GenerateAiNarrative"`
-- Manual: trigger job from Hangfire dashboard → verify narratives populated.
+- [x] `dotnet build`
+- [x] `dotnet test --filter "GenerateAiNarrative"`
+- [x] Manual: trigger job from Hangfire dashboard → verify narratives populated.

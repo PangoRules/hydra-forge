@@ -58,6 +58,11 @@ public interface ILlmAdminService
         UpdateRoutingInput input,
         CancellationToken ct = default
     );
+    Task<Result<FeatureRoutingDto>> SetAllowedModelsAsync(
+        string feature,
+        SetAllowedModelsInput input,
+        CancellationToken ct = default
+    );
 
     // Usage
     Task<Result<TokenUsagePageDto>> QueryTokenUsageAsync(

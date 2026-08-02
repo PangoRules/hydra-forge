@@ -5,6 +5,7 @@ import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
+import ProjectNarrativeModal from '~/components/project/ProjectNarrativeModal.vue'
 import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
@@ -39,6 +40,7 @@ const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 const showMembersPanel = ref(false)
 const showShortcutOverlay = ref(false)
+const showNarrativeModal = ref(false)
 
 // Board-level archive state
 const showArchiveConfirm = ref(false)
@@ -51,6 +53,7 @@ const anyModalOpen = computed(() =>
   || showArchiveConfirm.value
   || showShortcutOverlay.value
   || showMembersPanel.value
+  || showNarrativeModal.value
 )
 
 async function confirmArchive() {
@@ -274,6 +277,13 @@ function hashColor(id: string): string {
         <h1 class="text-xl font-bold truncate">
           {{ projectName || 'Board' }}
         </h1>
+        <UButton
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-sparkles"
+          title="View AI narrative"
+          @click="showNarrativeModal = true"
+        />
         <UBadge
           v-if="projectArchived"
           variant="subtle"
@@ -480,6 +490,12 @@ function hashColor(id: string): string {
       v-if="showShortcutOverlay"
       :open="showShortcutOverlay"
       @close="showShortcutOverlay = false"
+    />
+
+    <ProjectNarrativeModal
+      v-if="showNarrativeModal"
+      :project-id="projectId"
+      @close="showNarrativeModal = false"
     />
 
     <ConfirmDialog

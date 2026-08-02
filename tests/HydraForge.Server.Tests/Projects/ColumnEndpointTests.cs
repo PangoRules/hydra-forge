@@ -981,6 +981,19 @@ internal class ColTestColumnSnapshotRepository : IProjectContextSnapshotReposito
             _snapshots.Add(snapshot);
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<ProjectContextSnapshot>> GetByProjectIdsAsync(
+        IReadOnlyList<Guid> projectIds,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectContextSnapshot>>([
+            .. _snapshots.Where(s => projectIds.Contains(s.ProjectId)),
+        ]);
+
+    public Task UpdateRangeAsync(
+        IReadOnlyList<ProjectContextSnapshot> snapshots,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class ColTestColumnChatArchiveService : IChatArchiveService

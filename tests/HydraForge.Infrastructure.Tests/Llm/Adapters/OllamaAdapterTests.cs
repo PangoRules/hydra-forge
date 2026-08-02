@@ -196,6 +196,36 @@ public class OllamaAdapterTests
     }
 
     [Fact]
+    public async Task StreamChatAsync_SendsCacheBlocksAsSystemMessages()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "llama3.2",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [new CacheBlock("project snapshot content", CacheBlockType.ProjectSnapshot)],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var messages = doc.RootElement.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Equal(2, messages.Count);
+        Assert.Equal("system", messages[0].GetProperty("role").GetString());
+        Assert.Equal("project snapshot content", messages[0].GetProperty("content").GetString());
+        Assert.Equal("user", messages[1].GetProperty("role").GetString());
+    }
+
+    [Fact]
     public async Task StreamChatAsync_YieldsContentDeltas_FromNdjsonLines()
     {
         var ndjson =

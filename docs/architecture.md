@@ -259,12 +259,25 @@ When injected context (board state + memory + card detail) exceeds the configura
 
 ### LLM Adapters
 
-| Adapter | Covers |
-|---|---|
-| `OpenAiCompatibleAdapter` | OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp, any OpenAI-compat endpoint |
-| `AnthropicAdapter` | Claude models — includes `cache_control` prompt caching blocks |
-| `OllamaAdapter` | Local Ollama server |
-| `DallEAdapter` / `StabilityAdapter` / `DiffusersAdapter` | Image generation |
+| Adapter | `AdapterType` value(s) | Covers |
+|---|---|---|
+| `OpenAiCompatibleAdapter` | `OpenAiCompatible` | OpenAI, Groq, DeepSeek, OpenRouter, vLLM, llama.cpp, any OpenAI-compat chat endpoint |
+| `AnthropicAdapter` | `Anthropic` | Claude models — `cache_control` ephemeral prompt-caching blocks, `/v1/messages` streaming |
+| `OllamaAdapter` | `Ollama` | Local Ollama server — no API key (`IKeyVault` not injected) |
+| `DallEAdapter` | `DallE` | OpenAI image generation — `/images/generations` + `/images/edits` inpaint |
+| `StabilityAiAdapter` | `StabilityAi` | Stability AI image generation |
+| `ComfyUiAdapter` | `ComfyUi`, `Diffusers` | Local/self-hosted workflow-API image generation (`/prompt` submit + `/history` poll, 2s poll interval, 5-min timeout). One adapter class serves both enum values — `Diffusers` setups speak the same workflow-API wire shape as ComfyUI, so `LlmClientFactory` maps both to the same registered instance (only one named `HttpClient`, `"comfyui"`). See D-62. |
+
+All adapters except `OllamaAdapter` decrypt their provider's API key via `IKeyVault` at call time (never cached in adapter state, see D-59).
+
+### Scheduled Jobs (Hangfire)
+
+Persistent recurring jobs run on Hangfire + `Hangfire.PostgreSql` (same Postgres instance the app already runs — no new infra service, see D-57). One recurring job exists today: `"ai-narrative-gen"`, calling `ProjectContextSnapshotService.GenerateAiNarrativeForAllActiveProjectsAsync` on the admin-configurable `SystemSettings.AiNarrativeGenerationTimeUtc` schedule (default midnight UTC). For every active (non-archived) project with an existing snapshot, it resolves a model via `IModelRouter`, streams a narrative from the project's `TemplateContent`, writes `ProjectContextSnapshot.AiNarrative` + `AiNarrativeGeneratedAt`, and records the call via `IUsageRecorder` (`UserId = Guid.Empty` — a system/batch identity, not a real user, so no `UserTokenBudget` is charged; only `TokenUsageRecord` is written for admin usage-dashboard visibility). Per-project failures are caught and logged; one project's failure never aborts the batch.
+
+- **Dashboard**: `/hangfire`, admin-only. JWT bearer auth reads the `auth_token` cookie for `/hangfire` paths (dashboard is a browser UI, not an API client) — `AdminRequiredAuthFilter` then checks `IsInRole("Admin")`.
+- **Registration timing**: the recurring job is registered from `app.Lifetime.ApplicationStarted.Register(...)`, reading `SystemSettings.AiNarrativeGenerationTimeUtc` once at startup — an admin changing the generation time takes effect on next server restart, not live.
+- **Test env gating**: both `AddHangfire(...)` and `UseHangfireDashboard(...)` are skipped when `IsEnvironment("Test")` — `Hangfire.PostgreSql` requires a real connection string that `WebApplicationFactory` test fixtures don't provide.
+- **Narrative display**: read-only, no edit path. Web UI "View Narrative" button (board header) → modal; TUI `v` key on the board screen → overlay viewer. See D-58.
 
 ---
 

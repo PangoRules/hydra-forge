@@ -314,6 +314,19 @@ public class BoardScreen(
                 await RenderAsync();
                 break;
 
+            case ConsoleKey.V:
+                _appState.PreviousScreen = this;
+                var narrativeScreen = new NarrativeViewerScreen(
+                    _apiClientFactory,
+                    _appState,
+                    _errorCollector,
+                    _projectId
+                );
+                _appState.CurrentScreen = narrativeScreen;
+                await narrativeScreen.OnEnterAsync();
+                await narrativeScreen.RenderAsync();
+                break;
+
             case ConsoleKey.Q:
                 var confirm = QuitConfirm.Show();
                 if (confirm)
@@ -342,6 +355,7 @@ public class BoardScreen(
                 ("r", "Reorder mode (j/k to place, Enter to confirm, Esc to cancel)"),
                 ("u", "Notifications"),
                 ("o", "Online users"),
+                ("v", "View AI narrative"),
                 ("Del", "Archive card"),
                 ("d", "Add dependency"),
                 ("x", "Error panel"),

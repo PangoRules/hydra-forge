@@ -16,10 +16,9 @@ public class FeatureRoutingConfigSeeder
 
     public async Task SeedAsync(CancellationToken ct = default)
     {
-        if (await _db.FeatureRoutingConfigs.AnyAsync(ct))
-        {
-            return;
-        }
+        var existingFeatures = await _db
+            .FeatureRoutingConfigs.Select(c => c.Feature)
+            .ToListAsync(ct);
 
         var configs = new[]
         {
@@ -89,9 +88,21 @@ public class FeatureRoutingConfigSeeder
                 DefaultTier = ModelTier.Economy,
                 MaxUserTier = ModelTier.Standard,
             },
+            new FeatureRoutingConfig
+            {
+                Feature = AiFeature.ProjectNarrative,
+                DefaultTier = ModelTier.Economy,
+                MaxUserTier = null,
+            },
         };
 
-        _db.FeatureRoutingConfigs.AddRange(configs);
+        var missing = configs.Where(c => !existingFeatures.Contains(c.Feature)).ToList();
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        _db.FeatureRoutingConfigs.AddRange(missing);
         await _db.SaveChangesAsync(ct);
     }
 }

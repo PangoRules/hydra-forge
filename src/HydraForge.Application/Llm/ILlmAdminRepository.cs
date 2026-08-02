@@ -33,6 +33,18 @@ public interface ILlmAdminRepository
         CancellationToken ct = default
     );
 
+    Task<List<FeatureAllowedModel>> ListAllowedModelsAsync(CancellationToken ct = default);
+    Task<List<FeatureAllowedModel>> ListAllowedModelsByFeatureAsync(
+        Guid featureRoutingConfigId,
+        CancellationToken ct = default
+    );
+    Task<ProviderModelConfig?> GetModelConfigByIdAsync(
+        Guid modelConfigId,
+        CancellationToken ct = default
+    );
+    void AddAllowedModel(FeatureAllowedModel model);
+    void RemoveAllowedModel(FeatureAllowedModel model);
+
     Task<(
         List<TokenUsageRecord> Items,
         int TotalCount,

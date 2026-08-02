@@ -128,6 +128,30 @@ public class ModelRouterTests
     }
 
     [Fact]
+    public async Task ResolveAsync_BumpedCandidateHasNullMaxTokens_TreatedAsUnlimited()
+    {
+        var stdProviderId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        // Default tier Economy has no models — must bump to Standard.
+        provider.AddRouting(AiFeature.ProjectNarrative, ModelTier.Economy, null);
+        provider.AddEnabledProvider(stdProviderId, "StdProvider", ModelTier.Standard);
+        // MaxTokens unset (null) — means "no configured limit", not "zero capacity".
+        provider.AddModel(Guid.NewGuid(), stdProviderId, "local-model", ModelTier.Standard);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(
+            AiFeature.ProjectNarrative,
+            Guid.NewGuid(),
+            null,
+            4000
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("local-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
     public async Task ResolveAsync_NoModelFitsAfterAllTiers_ReturnsContextWindowExceeded()
     {
         var ecoProviderId = Guid.NewGuid();
@@ -382,20 +406,153 @@ public class ModelRouterTests
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Llm.NoModelForFeature, result.Error.Code);
     }
+
+    [Fact]
+    public async Task ResolveAsync_AllowlistConfigured_IgnoresTierAndUsesPriorityOrder()
+    {
+        var providerId = Guid.NewGuid();
+        var lowPriorityModelId = Guid.NewGuid();
+        var highPriorityModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        // Tier says Premium, but an allowlist exists so tier is irrelevant to model choice.
+        provider.AddRouting(AiFeature.DeepResearch, ModelTier.Premium, null);
+        provider.AddEnabledProvider(providerId, "TestProvider", ModelTier.Economy);
+        provider.AddModel(
+            lowPriorityModelId,
+            providerId,
+            "economy-model",
+            ModelTier.Economy,
+            maxTokens: 8192
+        );
+        provider.AddModel(
+            highPriorityModelId,
+            providerId,
+            "another-economy-model",
+            ModelTier.Economy,
+            maxTokens: 8192
+        );
+        provider.AddAllowedModel(AiFeature.DeepResearch, highPriorityModelId, priority: 0);
+        provider.AddAllowedModel(AiFeature.DeepResearch, lowPriorityModelId, priority: 1);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(AiFeature.DeepResearch, Guid.NewGuid(), null, 1000);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("another-economy-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AllowlistConfigured_SkipsHigherPriorityModelWhenTooSmall()
+    {
+        var providerId = Guid.NewGuid();
+        var tooSmallModelId = Guid.NewGuid();
+        var fittingModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.DeepResearch, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerId, "TestProvider", ModelTier.Standard);
+        provider.AddModel(
+            tooSmallModelId,
+            providerId,
+            "small-model",
+            ModelTier.Standard,
+            maxTokens: 100
+        );
+        provider.AddModel(
+            fittingModelId,
+            providerId,
+            "big-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+        provider.AddAllowedModel(AiFeature.DeepResearch, tooSmallModelId, priority: 0);
+        provider.AddAllowedModel(AiFeature.DeepResearch, fittingModelId, priority: 1);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(AiFeature.DeepResearch, Guid.NewGuid(), null, 5000);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("big-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AllowlistConfigured_DisabledModelIsSkipped()
+    {
+        var providerId = Guid.NewGuid();
+        var disabledModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.DeepResearch, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerId, "TestProvider", ModelTier.Standard);
+        provider.AddModel(
+            disabledModelId,
+            providerId,
+            "disabled-model",
+            ModelTier.Standard,
+            maxTokens: 8192,
+            isEnabled: false
+        );
+        provider.AddAllowedModel(AiFeature.DeepResearch, disabledModelId, priority: 0);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(AiFeature.DeepResearch, Guid.NewGuid(), null, 1000);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.NoModelForFeature, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AllowlistConfigured_AllModelsTooSmall_ReturnsContextWindowExceeded()
+    {
+        var providerId = Guid.NewGuid();
+        var tooSmallModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.DeepResearch, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerId, "TestProvider", ModelTier.Standard);
+        provider.AddModel(
+            tooSmallModelId,
+            providerId,
+            "small-model",
+            ModelTier.Standard,
+            maxTokens: 100
+        );
+        provider.AddAllowedModel(AiFeature.DeepResearch, tooSmallModelId, priority: 0);
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(AiFeature.DeepResearch, Guid.NewGuid(), null, 5000);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.ContextWindowExceeded, result.Error.Code);
+    }
 }
 
 internal class FakeRoutingConfigProvider : IRoutingConfigProvider
 {
-    private readonly Dictionary<
-        AiFeature,
-        (ModelTier DefaultTier, ModelTier? MaxUserTier)
-    > _routing = new();
+    private readonly Dictionary<AiFeature, FeatureRoutingConfig> _routing = new();
     private readonly List<LlmProvider> _providers = new();
     private readonly List<ProviderModelConfig> _models = new();
+    private readonly List<(
+        Guid FeatureRoutingConfigId,
+        Guid ProviderModelConfigId,
+        int Priority
+    )> _allowedModels = new();
 
     public void AddRouting(AiFeature feature, ModelTier defaultTier, ModelTier? maxUserTier)
     {
-        _routing[feature] = (defaultTier, maxUserTier);
+        _routing[feature] = new FeatureRoutingConfig
+        {
+            Id = Guid.NewGuid(),
+            Feature = feature,
+            DefaultTier = defaultTier,
+            MaxUserTier = maxUserTier,
+        };
+    }
+
+    public void AddAllowedModel(AiFeature feature, Guid providerModelConfigId, int priority)
+    {
+        _allowedModels.Add((_routing[feature].Id, providerModelConfigId, priority));
     }
 
     public void AddEnabledProvider(
@@ -426,7 +583,8 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
         Guid providerId,
         string modelId,
         ModelTier tier,
-        int? maxTokens = null
+        int? maxTokens = null,
+        bool isEnabled = true
     )
     {
         _models.Add(
@@ -438,7 +596,7 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
                 Name = modelId,
                 Tier = tier,
                 MaxTokens = maxTokens,
-                IsEnabled = true,
+                IsEnabled = isEnabled,
             }
         );
     }
@@ -448,19 +606,7 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
         CancellationToken ct
     )
     {
-        if (_routing.TryGetValue(feature, out var cfg))
-        {
-            return Task.FromResult<FeatureRoutingConfig?>(
-                new FeatureRoutingConfig
-                {
-                    Id = Guid.NewGuid(),
-                    Feature = feature,
-                    DefaultTier = cfg.DefaultTier,
-                    MaxUserTier = cfg.MaxUserTier,
-                }
-            );
-        }
-        return Task.FromResult<FeatureRoutingConfig?>(null);
+        return Task.FromResult(_routing.TryGetValue(feature, out var cfg) ? cfg : null);
     }
 
     public Task<
@@ -500,6 +646,40 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
                 p => p.Id,
                 (m, p) => (m, p)
             )
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>>(
+            results
+        );
+    }
+
+    public Task<
+        IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>
+    > GetAllowedModelsAsync(Guid featureRoutingConfigId, CancellationToken ct)
+    {
+        var results = _allowedModels
+            .Where(a => a.FeatureRoutingConfigId == featureRoutingConfigId)
+            .OrderBy(a => a.Priority)
+            .Join(
+                _models,
+                a => a.ProviderModelConfigId,
+                m => m.Id,
+                (a, m) => new { a.Priority, Model = m }
+            )
+            .Join(
+                _providers,
+                x => x.Model.ProviderId,
+                p => p.Id,
+                (x, p) =>
+                    new
+                    {
+                        x.Priority,
+                        Model = x.Model,
+                        Provider = p,
+                    }
+            )
+            .OrderBy(x => x.Priority)
+            .Select(x => (x.Model, x.Provider))
             .ToList();
 
         return Task.FromResult<IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>>(
