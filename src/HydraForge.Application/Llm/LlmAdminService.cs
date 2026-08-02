@@ -589,6 +589,96 @@ public sealed class LlmAdminService : ILlmAdminService
         );
     }
 
+    // Account usage
+
+    public async Task<Result<AccountUsageResponse>> GetAccountUsageAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        var budget = await _repo.GetBudgetByUserIdAsync(userId, ct);
+
+        var periodStart = budget?.PeriodStart ?? DateTime.UtcNow;
+        var periodEnd = budget?.PeriodEnd ?? DateTime.UtcNow.AddMonths(1);
+        var tokensBudget = budget?.MonthlyTokenBudget ?? 0;
+        var imagesBudget = budget?.MonthlyImageBudget ?? 0;
+
+        var tokenResult = await _repo.QueryTokenUsageAsync(
+            userId,
+            null,
+            null,
+            null,
+            null,
+            periodStart,
+            periodEnd,
+            0,
+            20,
+            ct
+        );
+        var imageResult = await _repo.QueryImageUsageAsync(
+            userId,
+            null,
+            null,
+            null,
+            null,
+            periodStart,
+            periodEnd,
+            0,
+            20,
+            ct
+        );
+
+        var (tokenItems, _, totalInput, totalOutput, _) = tokenResult;
+        var (imageItems, _, totalImages, _) = imageResult;
+
+        var tokensUsed = totalInput + totalOutput;
+        var imagesUsed = totalImages;
+
+        var recentCalls = new List<RecentCallDto>();
+
+        foreach (var t in tokenItems)
+        {
+            recentCalls.Add(
+                new RecentCallDto(
+                    t.Feature.ToString(),
+                    t.ModelName,
+                    t.InputTokens + t.OutputTokens,
+                    0,
+                    t.Cost,
+                    t.CreatedAt
+                )
+            );
+        }
+
+        foreach (var i in imageItems)
+        {
+            recentCalls.Add(
+                new RecentCallDto(
+                    i.Feature.ToString(),
+                    i.ModelName,
+                    0,
+                    i.ImageCount,
+                    i.Cost,
+                    i.CreatedAt
+                )
+            );
+        }
+
+        var sorted = recentCalls.OrderByDescending(r => r.Timestamp).Take(20).ToList();
+
+        return Result<AccountUsageResponse>.Success(
+            new AccountUsageResponse(
+                tokensUsed,
+                tokensBudget,
+                imagesUsed,
+                imagesBudget,
+                periodStart,
+                periodEnd,
+                sorted
+            )
+        );
+    }
+
     // Budget
 
     public async Task<Result<UserBudgetDto>> GetBudgetAsync(
