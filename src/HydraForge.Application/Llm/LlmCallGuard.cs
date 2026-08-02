@@ -39,7 +39,10 @@ public sealed class LlmCallGuard
         )
         {
             return Result.Failure(
-                new Error(DomainErrorCodes.Llm.TokenBudgetExceeded, "Monthly token budget exceeded.")
+                new Error(
+                    DomainErrorCodes.Llm.TokenBudgetExceeded,
+                    "Monthly token budget exceeded."
+                )
             );
         }
 
@@ -70,7 +73,10 @@ public sealed class LlmCallGuard
         )
         {
             return Result.Failure(
-                new Error(DomainErrorCodes.Llm.ImageBudgetExceeded, "Monthly image budget exceeded.")
+                new Error(
+                    DomainErrorCodes.Llm.ImageBudgetExceeded,
+                    "Monthly image budget exceeded."
+                )
             );
         }
 

@@ -15,8 +15,10 @@ public class LlmCallGuardTests
         return (repo, recorder);
     }
 
-    private static LlmCallGuard CreateGuard(IUserTokenBudgetRepository repo, IUsageRecorder recorder) =>
-        new(repo, recorder);
+    private static LlmCallGuard CreateGuard(
+        IUserTokenBudgetRepository repo,
+        IUsageRecorder recorder
+    ) => new(repo, recorder);
 
     [Fact]
     public async Task CheckTokenBudgetAsync_UnderBudget_ReturnsSuccess()
@@ -24,14 +26,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyTokenBudget = 1000,
-                MonthlyTokenUsed = 500,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyTokenBudget = 1000,
+                    MonthlyTokenUsed = 500,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -46,14 +50,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyTokenBudget = 1000,
-                MonthlyTokenUsed = 900,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyTokenBudget = 1000,
+                    MonthlyTokenUsed = 900,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -69,14 +75,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyImageBudget = 10,
-                MonthlyImageUsed = 9,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyImageBudget = 10,
+                    MonthlyImageUsed = 9,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -92,14 +100,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyTokenBudget = 0,
-                MonthlyTokenUsed = 999999,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyTokenBudget = 0,
+                    MonthlyTokenUsed = 999999,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -128,14 +138,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyTokenBudget = 1000,
-                MonthlyTokenUsed = 999,
-                PeriodStart = DateTime.UtcNow.AddMonths(-2),
-                PeriodEnd = DateTime.UtcNow.AddMonths(-1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyTokenBudget = 1000,
+                    MonthlyTokenUsed = 999,
+                    PeriodStart = DateTime.UtcNow.AddMonths(-2),
+                    PeriodEnd = DateTime.UtcNow.AddMonths(-1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -150,7 +162,8 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         var usage = new UsageSnapshot(InputTokens: 100, OutputTokens: 50, CachedTokens: 10);
-        recorder.AccrueTokenUsageAsync(userId, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        recorder
+            .AccrueTokenUsageAsync(userId, Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(150);
 
         var guard = CreateGuard(repo, recorder);
@@ -167,14 +180,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyImageBudget = 10,
-                MonthlyImageUsed = 3,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyImageBudget = 10,
+                    MonthlyImageUsed = 3,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -189,14 +204,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyImageBudget = 0,
-                MonthlyImageUsed = 999,
-                PeriodStart = DateTime.UtcNow,
-                PeriodEnd = DateTime.UtcNow.AddMonths(1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyImageBudget = 0,
+                    MonthlyImageUsed = 999,
+                    PeriodStart = DateTime.UtcNow,
+                    PeriodEnd = DateTime.UtcNow.AddMonths(1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -225,14 +242,16 @@ public class LlmCallGuardTests
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
         repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>())
-            .Returns(new UserTokenBudget
-            {
-                UserId = userId,
-                MonthlyImageBudget = 10,
-                MonthlyImageUsed = 9,
-                PeriodStart = DateTime.UtcNow.AddMonths(-2),
-                PeriodEnd = DateTime.UtcNow.AddMonths(-1)
-            });
+            .Returns(
+                new UserTokenBudget
+                {
+                    UserId = userId,
+                    MonthlyImageBudget = 10,
+                    MonthlyImageUsed = 9,
+                    PeriodStart = DateTime.UtcNow.AddMonths(-2),
+                    PeriodEnd = DateTime.UtcNow.AddMonths(-1),
+                }
+            );
 
         var guard = CreateGuard(repo, recorder);
 
@@ -246,7 +265,8 @@ public class LlmCallGuardTests
     {
         var (repo, recorder) = CreateMocks();
         var userId = Guid.NewGuid();
-        recorder.AccrueTokenUsageAsync(userId, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        recorder
+            .AccrueTokenUsageAsync(userId, Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(0);
 
         var guard = CreateGuard(repo, recorder);
