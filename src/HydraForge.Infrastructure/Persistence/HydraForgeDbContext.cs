@@ -327,7 +327,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.ProviderId);
-                b.HasIndex(e => e.ModelId);
+                b.HasIndex(e => new { e.ProviderId, e.ModelId }).IsUnique();
             }
         );
 

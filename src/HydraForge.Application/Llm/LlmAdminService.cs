@@ -247,6 +247,28 @@ public sealed class LlmAdminService : ILlmAdminService
         return Result<IReadOnlyList<ProviderModelDto>>.Success(result.Value);
     }
 
+    public async Task<Result<IReadOnlyList<ProviderModelConfigDto>>> ListModelsAsync(
+        Guid providerId,
+        CancellationToken ct = default
+    )
+    {
+        var provider = await _repo.GetProviderByIdAsync(providerId, ct);
+        if (provider is null)
+        {
+            return Result<IReadOnlyList<ProviderModelConfigDto>>.Failure(
+                new Error(
+                    DomainErrorCodes.Llm.ProviderNotFound,
+                    $"Provider not found: {providerId}"
+                )
+            );
+        }
+
+        var configs = await _repo.ListModelConfigsAsync(providerId, ct);
+        return Result<IReadOnlyList<ProviderModelConfigDto>>.Success(
+            configs.Select(ToModelConfigDto).ToList()
+        );
+    }
+
     public async Task<Result<ProviderModelConfigDto>> CreateModelAsync(
         Guid providerId,
         CreateModelInput input,
@@ -260,6 +282,17 @@ public sealed class LlmAdminService : ILlmAdminService
                 new Error(
                     DomainErrorCodes.Llm.ProviderNotFound,
                     $"Provider not found: {providerId}"
+                )
+            );
+        }
+
+        var existingConfigs = await _repo.ListModelConfigsAsync(providerId, ct);
+        if (existingConfigs.Any(c => c.ModelId == input.ModelId))
+        {
+            return Result<ProviderModelConfigDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Llm.ModelAlreadyExists,
+                    $"Model '{input.ModelId}' is already configured for this provider"
                 )
             );
         }

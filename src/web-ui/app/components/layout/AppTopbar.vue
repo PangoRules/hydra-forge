@@ -7,7 +7,10 @@ const authStore = useAuthStore()
 
 const userMenuItems = computed(() => [
   [{ label: authStore.user?.username ?? '', type: 'label' as const }],
-  [{ label: 'Logout', icon: 'i-lucide-log-out', onSelect: () => logout() }]
+  [
+    { label: 'Usage', icon: 'i-lucide-bar-chart-3', to: '/account/usage' },
+    { label: 'Logout', icon: 'i-lucide-log-out', onSelect: () => logout() }
+  ]
 ])
 </script>
 

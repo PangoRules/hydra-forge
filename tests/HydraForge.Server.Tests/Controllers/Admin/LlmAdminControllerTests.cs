@@ -252,6 +252,77 @@ public class LlmAdminControllerTests
     }
 
     [Fact]
+    public async Task ListModels_ReturnsOk()
+    {
+        var mock = Substitute.For<ILlmAdminService>();
+        var providerId = Guid.NewGuid();
+        mock.ListModelsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(
+                Result<IReadOnlyList<ProviderModelConfigDto>>.Success(
+                    new List<ProviderModelConfigDto>
+                    {
+                        new(
+                            Guid.NewGuid(),
+                            providerId,
+                            "gpt-4o",
+                            "GPT-4o",
+                            "Standard",
+                            null,
+                            null,
+                            true
+                        ),
+                    }
+                )
+            );
+
+        using var factory = CreateFactory(mock);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            AdminToken
+        );
+
+        var response = await client.GetAsync(
+            $"api/admin/providers/{providerId}/models/configured",
+            CancellationToken.None
+        );
+
+        Assert.Equal(200, (int)response.StatusCode);
+        var dtos = await response.Content.ReadFromJsonAsync<IReadOnlyList<ProviderModelConfigDto>>(
+            CancellationToken.None
+        );
+        Assert.NotNull(dtos);
+        Assert.Single(dtos);
+        Assert.Equal("gpt-4o", dtos[0].ModelId);
+    }
+
+    [Fact]
+    public async Task ListModels_ProviderNotFound_ReturnsError()
+    {
+        var mock = Substitute.For<ILlmAdminService>();
+        mock.ListModelsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(
+                Result<IReadOnlyList<ProviderModelConfigDto>>.Failure(
+                    new Error("LLM_PROVIDER_NOT_FOUND", "Provider not found")
+                )
+            );
+
+        using var factory = CreateFactory(mock);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            AdminToken
+        );
+
+        var response = await client.GetAsync(
+            $"api/admin/providers/{Guid.NewGuid()}/models/configured",
+            CancellationToken.None
+        );
+
+        Assert.False(response.IsSuccessStatusCode);
+    }
+
+    [Fact]
     public async Task GetProvider_ReturnsOk()
     {
         var mock = Substitute.For<ILlmAdminService>();
@@ -494,6 +565,38 @@ public class LlmAdminControllerTests
         );
 
         Assert.Equal(404, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateModel_DuplicateModelId_Returns409()
+    {
+        var mock = Substitute.For<ILlmAdminService>();
+        mock.CreateModelAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<CreateModelInput>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(
+                Result<ProviderModelConfigDto>.Failure(
+                    new Error("MODEL_ALREADY_EXISTS", "Model already configured for this provider")
+                )
+            );
+
+        using var factory = CreateFactory(mock);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            AdminToken
+        );
+
+        var input = new CreateModelInput("gpt-4o", "GPT-4o", "Premium", 0.00001m, 128000, true);
+        var response = await client.PostAsJsonAsync(
+            $"api/admin/providers/{Guid.NewGuid()}/models",
+            input,
+            CancellationToken.None
+        );
+
+        Assert.Equal(409, (int)response.StatusCode);
     }
 
     [Fact]

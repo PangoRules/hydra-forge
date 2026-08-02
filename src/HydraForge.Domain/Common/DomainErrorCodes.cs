@@ -27,6 +27,7 @@ public static class DomainErrorCodes
         public const string ProviderUnavailable = "LLM_PROVIDER_UNAVAILABLE";
         public const string ProviderNotFound = "PROVIDER_NOT_FOUND";
         public const string ModelNotFound = "MODEL_NOT_FOUND";
+        public const string ModelAlreadyExists = "MODEL_ALREADY_EXISTS";
         public const string RoutingNotFound = "ROUTING_NOT_FOUND";
         public const string InvalidFeature = "INVALID_FEATURE";
     }

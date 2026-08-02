@@ -33,6 +33,11 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<AccountUsageResponse> UsageAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<NotificationResponse>> NotificationsAsync(int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -430,6 +435,127 @@ namespace HydraForge.Tui.Generated
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<AuditLogQueryResult> AuditLogAsync(System.Guid? projectId = null, System.Guid? actorId = null, string? entityType = null, string? action = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderPageDto> ProvidersGETAsync(int? skip = null, int? take = null, string? search = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderDto> ProvidersPOSTAsync(CreateProviderInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderDto> ProvidersGET2Async(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderDto> ProvidersPUTAsync(System.Guid id, UpdateProviderInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task ProvidersDELETEAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProviderModelDto>> ModelsAllAsync(System.Guid providerId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderModelConfigDto> ModelsPOSTAsync(System.Guid providerId, CreateModelInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProviderModelConfigDto>> ConfiguredAsync(System.Guid providerId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderModelConfigDto> ModelsGETAsync(System.Guid providerId, System.Guid modelId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProviderModelConfigDto> ModelsPUTAsync(System.Guid providerId, System.Guid modelId, UpdateModelInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task ModelsDELETEAsync(System.Guid providerId, System.Guid modelId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<FeatureRoutingDto>> RoutingAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FeatureRoutingDto> RoutingAsync(string feature, UpdateRoutingInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<TokenUsagePageDto> TokensAsync(System.Guid? userId = null, System.Guid? projectId = null, string? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ImageUsagePageDto> ImagesAsync(System.Guid? userId = null, System.Guid? projectId = null, string? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<UserBudgetDto> BudgetGETAsync(System.Guid userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<UserBudgetDto> BudgetPUTAsync(System.Guid userId, UpdateBudgetInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AccountUsageResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("tokensUsed", Required = Newtonsoft.Json.Required.Always)]
+        public long TokensUsed { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tokensBudget", Required = Newtonsoft.Json.Required.Always)]
+        public int TokensBudget { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("imagesUsed", Required = Newtonsoft.Json.Required.Always)]
+        public int ImagesUsed { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("imagesBudget", Required = Newtonsoft.Json.Required.Always)]
+        public int ImagesBudget { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("periodStart", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset PeriodStart { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("periodEnd", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset PeriodEnd { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("recentCalls", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<RecentCallDto> RecentCalls { get; set; } = new System.Collections.ObjectModel.Collection<RecentCallDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -451,6 +577,45 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AiFeature
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PersonalChat")]
+        PersonalChat = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ProjectChat")]
+        ProjectChat = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DeepResearch")]
+        DeepResearch = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AgentPipeline")]
+        AgentPipeline = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MemoryExtraction")]
+        MemoryExtraction = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NotesClassification")]
+        NotesClassification = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DocumentEditing")]
+        DocumentEditing = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CardReview")]
+        CardReview = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ImageChat")]
+        ImageChat = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ImageDocument")]
+        ImageDocument = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ImageGalleryEditor")]
+        ImageGalleryEditor = 10,
 
     }
 
@@ -1182,6 +1347,39 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateModelInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("modelId", Required = Newtonsoft.Json.Required.Always)]
+        public string ModelId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        public string Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.Always)]
+        public string Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("pricePerToken", Required = Newtonsoft.Json.Required.AllowNull)]
+        public double? PricePerToken { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("maxTokens", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MaxTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsEnabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreatePlanRequest
     {
 
@@ -1230,6 +1428,42 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("template", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public ColumnTemplate? Template { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateProviderInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        public string Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("baseUrl", Required = Newtonsoft.Json.Required.Always)]
+        public string BaseUrl { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("apiKey", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? ApiKey { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("adapterType", Required = Newtonsoft.Json.Required.Always)]
+        public string AdapterType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("providerType", Required = Newtonsoft.Json.Required.Always)]
+        public string ProviderType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.Always)]
+        public string Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("fallbackProviderId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? FallbackProviderId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1368,6 +1602,110 @@ namespace HydraForge.Tui.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"Report")]
         Report = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class FeatureRoutingDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("feature", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public AiFeature Feature { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("defaultTier", Required = Newtonsoft.Json.Required.Always)]
+        public string DefaultTier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("maxUserTier", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? MaxUserTier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("updatedAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset UpdatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ImageUsageDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("userId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid UserId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? ProjectId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("feature", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public AiFeature Feature { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("modelName", Required = Newtonsoft.Json.Required.Always)]
+        public string ModelName { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("imageCount", Required = Newtonsoft.Json.Required.Always)]
+        public int ImageCount { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("resolution", Required = Newtonsoft.Json.Required.Always)]
+        public string Resolution { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cost", Required = Newtonsoft.Json.Required.Always)]
+        public double Cost { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ImageUsagePageDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("items", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<ImageUsageDto> Items { get; set; } = new System.Collections.ObjectModel.Collection<ImageUsageDto>();
+
+        [Newtonsoft.Json.JsonProperty("totalCount", Required = Newtonsoft.Json.Required.Always)]
+        public int TotalCount { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("totalImageCount", Required = Newtonsoft.Json.Required.Always)]
+        public int TotalImageCount { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("totalCost", Required = Newtonsoft.Json.Required.Always)]
+        public double TotalCost { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
     }
 
@@ -1853,6 +2191,171 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProviderDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        public string Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("baseUrl", Required = Newtonsoft.Json.Required.Always)]
+        public string BaseUrl { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("adapterType", Required = Newtonsoft.Json.Required.Always)]
+        public string AdapterType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("providerType", Required = Newtonsoft.Json.Required.Always)]
+        public string ProviderType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.Always)]
+        public string Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("fallbackProviderId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? FallbackProviderId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsEnabled { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("updatedAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset UpdatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProviderModelConfigDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("providerId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid ProviderId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("modelId", Required = Newtonsoft.Json.Required.Always)]
+        public string ModelId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        public string Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.Always)]
+        public string Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("pricePerToken", Required = Newtonsoft.Json.Required.AllowNull)]
+        public double? PricePerToken { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("maxTokens", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MaxTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.Always)]
+        public bool IsEnabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProviderModelDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("modelId", Required = Newtonsoft.Json.Required.Always)]
+        public string ModelId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        public string Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Description { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("metadata", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Collections.Generic.IDictionary<string, string>? Metadata { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProviderPageDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("items", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<ProviderDto> Items { get; set; } = new System.Collections.ObjectModel.Collection<ProviderDto>();
+
+        [Newtonsoft.Json.JsonProperty("totalCount", Required = Newtonsoft.Json.Required.Always)]
+        public int TotalCount { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RecentCallDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("feature", Required = Newtonsoft.Json.Required.Always)]
+        public string Feature { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("model", Required = Newtonsoft.Json.Required.Always)]
+        public string Model { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tokens", Required = Newtonsoft.Json.Required.Always)]
+        public int Tokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("images", Required = Newtonsoft.Json.Required.Always)]
+        public int Images { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cost", Required = Newtonsoft.Json.Required.Always)]
+        public double Cost { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("timestamp", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset Timestamp { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class RefreshTokenResponse
     {
 
@@ -2143,11 +2646,114 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TokenUsageDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("userId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid UserId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? ProjectId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("feature", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public AiFeature Feature { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("modelName", Required = Newtonsoft.Json.Required.Always)]
+        public string ModelName { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("inputTokens", Required = Newtonsoft.Json.Required.Always)]
+        public int InputTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("outputTokens", Required = Newtonsoft.Json.Required.Always)]
+        public int OutputTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cachedTokens", Required = Newtonsoft.Json.Required.Always)]
+        public int CachedTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("cost", Required = Newtonsoft.Json.Required.Always)]
+        public double Cost { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TokenUsagePageDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("items", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<TokenUsageDto> Items { get; set; } = new System.Collections.ObjectModel.Collection<TokenUsageDto>();
+
+        [Newtonsoft.Json.JsonProperty("totalCount", Required = Newtonsoft.Json.Required.Always)]
+        public int TotalCount { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("totalInputTokens", Required = Newtonsoft.Json.Required.Always)]
+        public long TotalInputTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("totalOutputTokens", Required = Newtonsoft.Json.Required.Always)]
+        public long TotalOutputTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("totalCost", Required = Newtonsoft.Json.Required.Always)]
+        public double TotalCost { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UnreadCountResponse
     {
 
         [Newtonsoft.Json.JsonProperty("count", Required = Newtonsoft.Json.Required.Always)]
         public int Count { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateBudgetInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("dailyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? DailyLimit { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MonthlyLimit { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyTokenBudget", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MonthlyTokenBudget { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyImageBudget", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MonthlyImageBudget { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2277,6 +2883,36 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateModelInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("pricePerToken", Required = Newtonsoft.Json.Required.AllowNull)]
+        public double? PricePerToken { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("maxTokens", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MaxTokens { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.AllowNull)]
+        public bool? IsEnabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdatePlanRequest
     {
 
@@ -2315,6 +2951,60 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("gitProvider", Required = Newtonsoft.Json.Required.AllowNull)]
         public string? GitProvider { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateProviderInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Name { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("baseUrl", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? BaseUrl { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("apiKey", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? ApiKey { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Tier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("fallbackProviderId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? FallbackProviderId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.AllowNull)]
+        public bool? IsEnabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateRoutingInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("defaultTier", Required = Newtonsoft.Json.Required.Always)]
+        public string DefaultTier { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("maxUserTier", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? MaxUserTier { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2375,6 +3065,48 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("brandLogoUrl", Required = Newtonsoft.Json.Required.AllowNull)]
         public string? BrandLogoUrl { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UserBudgetDto
+    {
+
+        [Newtonsoft.Json.JsonProperty("userId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid UserId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("dailyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? DailyLimit { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
+        public int? MonthlyLimit { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyTokenBudget", Required = Newtonsoft.Json.Required.Always)]
+        public int MonthlyTokenBudget { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyTokenUsed", Required = Newtonsoft.Json.Required.Always)]
+        public int MonthlyTokenUsed { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyImageBudget", Required = Newtonsoft.Json.Required.Always)]
+        public int MonthlyImageBudget { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("monthlyImageUsed", Required = Newtonsoft.Json.Required.Always)]
+        public int MonthlyImageUsed { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("periodStart", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset PeriodStart { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("periodEnd", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset PeriodEnd { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

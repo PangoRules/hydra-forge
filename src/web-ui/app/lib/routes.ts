@@ -24,7 +24,11 @@ export const UiRoutes = {
     Home: '/admin',
     Users: '/admin/users',
     Settings: '/admin/settings',
-    AuditLog: '/admin/audit-log'
+    AuditLog: '/admin/audit-log',
+    Providers: '/admin/providers',
+    ProviderModels: '/admin/provider-models',
+    Routing: '/admin/routing',
+    Usage: '/admin/usage'
   }
 } as const
 
@@ -151,6 +155,30 @@ export const ApiRoutes = {
     projectGet: (projectId: string) => `/api/admin/projects/${projectId}`,
     settingsGet: () => '/api/admin/settings',
     settingsUpdate: () => '/api/admin/settings',
-    auditLog: () => '/api/admin/audit-log'
+    auditLog: () => '/api/admin/audit-log',
+    providers: {
+      list: () => '/api/admin/providers',
+      create: () => '/api/admin/providers',
+      detail: (id: string) => `/api/admin/providers/${id}`,
+      update: (id: string) => `/api/admin/providers/${id}`,
+      disable: (id: string) => `/api/admin/providers/${id}`,
+      probeModels: (id: string) => `/api/admin/providers/${id}/models`,
+      listModels: (id: string) => `/api/admin/providers/${id}/models/configured`,
+      createModel: (id: string) => `/api/admin/providers/${id}/models`,
+      updateModel: (id: string, modelId: string) => `/api/admin/providers/${id}/models/${modelId}`,
+      deleteModel: (id: string, modelId: string) => `/api/admin/providers/${id}/models/${modelId}`
+    },
+    routing: {
+      list: () => '/api/admin/routing',
+      update: (feature: string) => `/api/admin/routing/${feature}`
+    },
+    usage: {
+      tokens: (params: string) => `/api/admin/usage/tokens?${params}`,
+      images: (params: string) => `/api/admin/usage/images?${params}`
+    },
+    userBudget: {
+      get: (userId: string) => `/api/admin/users/${userId}/budget`,
+      update: (userId: string) => `/api/admin/users/${userId}/budget`
+    }
   }
 } as const

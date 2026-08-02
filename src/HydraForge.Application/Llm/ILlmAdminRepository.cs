@@ -15,6 +15,10 @@ public interface ILlmAdminRepository
     Task<LlmProvider?> GetProviderByIdAsync(Guid id, CancellationToken ct = default);
     void AddProvider(LlmProvider provider);
 
+    Task<List<ProviderModelConfig>> ListModelConfigsAsync(
+        Guid providerId,
+        CancellationToken ct = default
+    );
     Task<ProviderModelConfig?> GetModelConfigAsync(
         Guid providerId,
         Guid modelId,
