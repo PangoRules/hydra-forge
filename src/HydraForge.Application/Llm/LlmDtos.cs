@@ -153,4 +153,5 @@ public enum CacheBlockType
     SystemContext,
     ProjectSnapshot,
     Memory,
+    RagContext,
 }

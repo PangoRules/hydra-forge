@@ -637,4 +637,33 @@ public class AnthropicAdapterTests
         Assert.Equal("memory facts", blocks[0].GetProperty("text").GetString());
         Assert.False(blocks[0].TryGetProperty("cache_control", out _));
     }
+
+    [Fact]
+    public async Task StreamChatAsync_RagContextBlock_GoesToSystemArray_WithoutCacheControl()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault(), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-sonnet-4-20250514",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [new CacheBlock("retrieved chunk text", CacheBlockType.RagContext)],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var blocks = doc.RootElement.GetProperty("system").EnumerateArray().ToList();
+        Assert.Single(blocks);
+        Assert.Equal("retrieved chunk text", blocks[0].GetProperty("text").GetString());
+        Assert.False(blocks[0].TryGetProperty("cache_control", out _));
+    }
 }

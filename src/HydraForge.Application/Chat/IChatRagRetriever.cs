@@ -1,14 +1,14 @@
-using HydraForge.Domain.Entities.PersonalSpace;
+using HydraForge.Application.Llm;
 
 namespace HydraForge.Application.Chat;
 
 public interface IChatRagRetriever
 {
-    Task<IReadOnlyList<DocumentChunk>> RetrieveAsync(
+    Task<IReadOnlyList<CacheBlock>> RetrieveAsync(
         Guid sessionId,
-        ReadOnlyMemory<float> queryEmbedding,
+        string query,
         bool searchAllMyDocs,
-        int k,
+        int? k,
         CancellationToken ct = default
     );
 }

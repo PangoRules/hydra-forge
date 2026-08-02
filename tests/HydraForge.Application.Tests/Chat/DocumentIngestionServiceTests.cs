@@ -314,6 +314,14 @@ public class DocumentIngestionServiceTests
             CapturedChunks.AddRange(chunks);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<DocumentChunk>> SearchAsync(
+            Guid userId,
+            IReadOnlyList<Guid>? sessionDocumentIds,
+            ReadOnlyMemory<float> queryEmbedding,
+            int k,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<DocumentChunk>>([]);
     }
 
     private sealed class InMemoryFileStore : IFileStore
