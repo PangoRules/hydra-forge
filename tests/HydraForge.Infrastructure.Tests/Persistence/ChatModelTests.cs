@@ -108,7 +108,17 @@ public class ChatModelTests
         using var context = new HydraForgeDbContext(CreateOptions());
         var entity = context.Model.FindEntityType(typeof(PromptPreset));
         Assert.NotNull(entity);
-        AssertProperties(entity, "Id", "UserId", "GroupId", "Name", "Content", "CreatedAt", "UpdatedAt", "ArchivedAt");
+        AssertProperties(
+            entity,
+            "Id",
+            "UserId",
+            "GroupId",
+            "Name",
+            "Content",
+            "CreatedAt",
+            "UpdatedAt",
+            "ArchivedAt"
+        );
     }
 
     [Fact]
@@ -136,7 +146,9 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(ChatSession));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys().FirstOrDefault(f => f.Properties.Any(p => p.Name == "PersonalityId"));
+        var fk = entity
+            .GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "PersonalityId"));
         Assert.NotNull(fk);
         Assert.Equal(DeleteBehavior.SetNull, fk.DeleteBehavior);
         Assert.Contains(fk.Properties, p => p.Name == "PersonalityId");
@@ -160,9 +172,25 @@ public class ChatModelTests
         using var context = new HydraForgeDbContext(CreateOptions());
         var entity = context.Model.FindEntityType(typeof(ChatSession));
         Assert.NotNull(entity);
-        AssertProperties(entity, "Id", "FolderId", "OwnerId", "ProjectId", "Title", "IsShared",
-            "CreatedAt", "UpdatedAt", "ArchivedAt", "Status", "AiEditMode", "SearchAllMyDocs",
-            "PersonalityId", "OpenCardId", "ClosedAt", "Summary");
+        AssertProperties(
+            entity,
+            "Id",
+            "FolderId",
+            "OwnerId",
+            "ProjectId",
+            "Title",
+            "IsShared",
+            "CreatedAt",
+            "UpdatedAt",
+            "ArchivedAt",
+            "Status",
+            "AiEditMode",
+            "SearchAllMyDocs",
+            "PersonalityId",
+            "OpenCardId",
+            "ClosedAt",
+            "Summary"
+        );
     }
 
     [Fact]
@@ -171,8 +199,19 @@ public class ChatModelTests
         using var context = new HydraForgeDbContext(CreateOptions());
         var entity = context.Model.FindEntityType(typeof(ChatMessage));
         Assert.NotNull(entity);
-        AssertProperties(entity, "Id", "SessionId", "Role", "Content", "InputTokens", "OutputTokens",
-            "CachedTokens", "ModelName", "ImagesJson", "CreatedAt");
+        AssertProperties(
+            entity,
+            "Id",
+            "SessionId",
+            "Role",
+            "Content",
+            "InputTokens",
+            "OutputTokens",
+            "CachedTokens",
+            "ModelName",
+            "ImagesJson",
+            "CreatedAt"
+        );
     }
 
     [Fact]
@@ -182,9 +221,12 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(ChatSessionDocument));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes().FirstOrDefault(i =>
-            i.Properties.Any(p => p.Name == "SessionId")
-            && i.Properties.Any(p => p.Name == "DocumentId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i =>
+                i.Properties.Any(p => p.Name == "SessionId")
+                && i.Properties.Any(p => p.Name == "DocumentId")
+            );
 
         Assert.NotNull(index);
         Assert.True(index.IsUnique);
@@ -197,7 +239,9 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(ChatSessionDocument));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys().FirstOrDefault(f => f.Properties.Any(p => p.Name == "SessionId"));
+        var fk = entity
+            .GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "SessionId"));
         Assert.NotNull(fk);
         Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
     }
@@ -209,7 +253,9 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(PromptPresetGroup));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes().FirstOrDefault(i => i.Properties.Any(p => p.Name == "UserId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "UserId"));
         Assert.NotNull(index);
     }
 
@@ -220,7 +266,9 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(PromptPreset));
         Assert.NotNull(entity);
 
-        var index = entity.GetIndexes().FirstOrDefault(i => i.Properties.Any(p => p.Name == "UserId"));
+        var index = entity
+            .GetIndexes()
+            .FirstOrDefault(i => i.Properties.Any(p => p.Name == "UserId"));
         Assert.NotNull(index);
     }
 
@@ -231,7 +279,9 @@ public class ChatModelTests
         var entity = context.Model.FindEntityType(typeof(PromptPreset));
         Assert.NotNull(entity);
 
-        var fk = entity.GetForeignKeys().FirstOrDefault(f => f.Properties.Any(p => p.Name == "GroupId"));
+        var fk = entity
+            .GetForeignKeys()
+            .FirstOrDefault(f => f.Properties.Any(p => p.Name == "GroupId"));
         Assert.NotNull(fk);
         Assert.Equal(DeleteBehavior.Cascade, fk.DeleteBehavior);
     }

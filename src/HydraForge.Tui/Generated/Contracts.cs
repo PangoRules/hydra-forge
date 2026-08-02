@@ -2811,12 +2811,6 @@ namespace HydraForge.Tui.Generated
     public partial class UpdateBudgetInput
     {
 
-        [Newtonsoft.Json.JsonProperty("dailyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? DailyLimit { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("monthlyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? MonthlyLimit { get; set; } = default!;
-
         [Newtonsoft.Json.JsonProperty("monthlyTokenBudget", Required = Newtonsoft.Json.Required.AllowNull)]
         public int? MonthlyTokenBudget { get; set; } = default!;
 
@@ -3115,12 +3109,6 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("userId", Required = Newtonsoft.Json.Required.Always)]
         public System.Guid UserId { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("dailyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? DailyLimit { get; set; } = default!;
-
-        [Newtonsoft.Json.JsonProperty("monthlyLimit", Required = Newtonsoft.Json.Required.AllowNull)]
-        public int? MonthlyLimit { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("monthlyTokenBudget", Required = Newtonsoft.Json.Required.Always)]
         public int MonthlyTokenBudget { get; set; } = default!;
