@@ -54,7 +54,7 @@ public class GenerateAiNarrativeTests
             .ResolveAsync(
                 AiFeature.ProjectNarrative,
                 Guid.Empty,
-                projectId,
+                null,
                 4000,
                 Arg.Any<CancellationToken>()
             )
@@ -89,9 +89,11 @@ public class GenerateAiNarrativeTests
         Assert.NotNull(snapshotRepo.UpdatedSnapshots[0].AiNarrativeGeneratedAt);
         await usageRecorder
             .Received(1)
-            .RecordTokenAsync(
-                Arg.Is<TokenUsageRecordInput>(i =>
-                    i.ProjectId == projectId && i.Feature == AiFeature.ProjectNarrative
+            .RecordTokenBatchAsync(
+                Arg.Is<IReadOnlyList<TokenUsageRecordInput>>(list =>
+                    list.Count == 1
+                    && list[0].ProjectId == projectId
+                    && list[0].Feature == AiFeature.ProjectNarrative
                 ),
                 Arg.Any<CancellationToken>()
             );
@@ -279,7 +281,7 @@ public class GenerateAiNarrativeTests
             .ResolveAsync(
                 AiFeature.ProjectNarrative,
                 Guid.Empty,
-                projectId,
+                null,
                 4000,
                 Arg.Any<CancellationToken>()
             )

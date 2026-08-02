@@ -279,4 +279,90 @@ public class EfUsageRecorderTests
         var expectedCost = (1000 + 500 - 200) * 0.00001m;
         Assert.Equal(expectedCost, record.Cost);
     }
+
+    [Fact]
+    public async Task RecordTokenBatchAsync_EmptyList_DoesNotTouchDatabase()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var recorder = new EfUsageRecorder(context);
+
+        await recorder.RecordTokenBatchAsync(Array.Empty<TokenUsageRecordInput>());
+
+        Assert.Empty(context.TokenUsageRecords);
+    }
+
+    [Fact]
+    public async Task RecordTokenBatchAsync_PersistsAllRecordsInOneRoundTrip()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var configId = Guid.NewGuid();
+
+        context.ProviderModelConfigs.Add(
+            new ProviderModelConfig
+            {
+                Id = configId,
+                ProviderId = Guid.NewGuid(),
+                ModelId = "gpt-4o",
+                Name = "GPT-4o",
+                PricePerToken = 0.00001m,
+            }
+        );
+        await context.SaveChangesAsync();
+
+        var recorder = new EfUsageRecorder(context);
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
+        var inputs = new[]
+        {
+            new TokenUsageRecordInput(
+                UserId: userId1,
+                ProjectId: null,
+                Feature: AiFeature.ProjectNarrative,
+                ProviderModelConfigId: configId,
+                ProviderId: Guid.NewGuid(),
+                ModelId: "gpt-4o",
+                ModelName: "GPT-4o",
+                InputTokens: 1000,
+                OutputTokens: 500,
+                CachedTokens: 200,
+                PipelineRunId: null,
+                Cost: 0m
+            ),
+            new TokenUsageRecordInput(
+                UserId: userId2,
+                ProjectId: null,
+                Feature: AiFeature.ProjectNarrative,
+                ProviderModelConfigId: configId,
+                ProviderId: Guid.NewGuid(),
+                ModelId: "gpt-4o",
+                ModelName: "GPT-4o",
+                InputTokens: 200,
+                OutputTokens: 100,
+                CachedTokens: 0,
+                PipelineRunId: null,
+                Cost: 0m
+            ),
+        };
+
+        await recorder.RecordTokenBatchAsync(inputs);
+
+        var record1 = context.TokenUsageRecords.Single(r => r.UserId == userId1);
+        var record2 = context.TokenUsageRecords.Single(r => r.UserId == userId2);
+        Assert.Equal((1000 + 500 - 200) * 0.00001m, record1.Cost);
+        Assert.Equal((200 + 100 - 0) * 0.00001m, record2.Cost);
+    }
 }

@@ -177,7 +177,8 @@ export const ApiRoutes = {
     },
     routing: {
       list: () => '/api/admin/routing',
-      update: (feature: string) => `/api/admin/routing/${feature}`
+      update: (feature: string) => `/api/admin/routing/${feature}`,
+      setAllowedModels: (feature: string) => `/api/admin/routing/${feature}/allowed-models`
     },
     usage: {
       tokens: (params: string) => `/api/admin/usage/tokens?${params}`,

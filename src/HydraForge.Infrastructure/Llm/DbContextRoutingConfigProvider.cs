@@ -68,4 +68,38 @@ public sealed class DbContextRoutingConfigProvider : IRoutingConfigProvider
 
         return results.Select(x => (x.Model, x.Provider)).ToList();
     }
+
+    public async Task<
+        IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>
+    > GetAllowedModelsAsync(Guid featureRoutingConfigId, CancellationToken ct)
+    {
+        // Enabled/disabled filtering is left to the caller (ModelRouter) rather than the
+        // query, so callers can tell "no allowlist configured" (empty result here) apart
+        // from "allowlist configured but every entry is currently disabled".
+        var results = await _context
+            .FeatureAllowedModels.AsNoTracking()
+            .Where(a => a.FeatureRoutingConfigId == featureRoutingConfigId)
+            .Join(
+                _context.ProviderModelConfigs.AsNoTracking(),
+                a => a.ProviderModelConfigId,
+                m => m.Id,
+                (a, m) => new { a.Priority, Model = m }
+            )
+            .Join(
+                _context.LlmProviders.AsNoTracking(),
+                x => x.Model.ProviderId,
+                p => p.Id,
+                (x, p) =>
+                    new
+                    {
+                        x.Priority,
+                        Model = x.Model,
+                        Provider = p,
+                    }
+            )
+            .OrderBy(x => x.Priority)
+            .ToListAsync(ct);
+
+        return results.Select(x => (x.Model, x.Provider)).ToList();
+    }
 }

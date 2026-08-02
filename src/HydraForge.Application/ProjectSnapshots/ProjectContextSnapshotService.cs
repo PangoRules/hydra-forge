@@ -45,35 +45,31 @@ public class ProjectContextSnapshotService(
         var snapshots = await snapshotRepo.GetByProjectIdsAsync(projectIds, ct);
         var snapshotByProjectId = snapshots.ToDictionary(s => s.ProjectId);
 
-        // Phase 1 (sequential — HydraForgeDbContext is scoped to this job and is not
-        // thread-safe, so every DB-backed call, including ModelRouter's routing-config
-        // lookups, must run one at a time here rather than inside the parallel phase below).
-        var narrativeJobs = new List<NarrativeJob>();
-        foreach (var project in page.Items)
+        // Routing for AiFeature.ProjectNarrative does not vary per project — ModelRouter
+        // only consults feature/tier/token-budget, none of which differ across projects
+        // in this batch — so resolve once instead of once per project.
+        var routeResult = await modelRouter.ResolveAsync(
+            AiFeature.ProjectNarrative,
+            BatchJobUserId,
+            projectId: null,
+            estimatedTokens: 4000,
+            ct
+        );
+
+        if (routeResult.IsFailure)
         {
-            if (!snapshotByProjectId.TryGetValue(project.Id, out var snapshot))
-                continue;
-
-            var routeResult = await modelRouter.ResolveAsync(
-                AiFeature.ProjectNarrative,
-                BatchJobUserId,
-                project.Id,
-                estimatedTokens: 4000,
-                ct
+            logger.LogWarning(
+                "Failed to resolve model for AiFeature.ProjectNarrative: {Error}",
+                routeResult.Error.Message
             );
-
-            if (routeResult.IsFailure)
-            {
-                logger.LogWarning(
-                    "Failed to resolve model for project {ProjectId}: {Error}",
-                    project.Id,
-                    routeResult.Error.Message
-                );
-                continue;
-            }
-
-            narrativeJobs.Add(new NarrativeJob(project.Id, snapshot, routeResult.Value));
+            return;
         }
+
+        var route = routeResult.Value;
+        var narrativeJobs = page
+            .Items.Where(p => snapshotByProjectId.ContainsKey(p.Id))
+            .Select(p => new NarrativeJob(p.Id, snapshotByProjectId[p.Id], route))
+            .ToList();
 
         if (narrativeJobs.Count == 0)
             return;
@@ -194,11 +190,8 @@ public class ProjectContextSnapshotService(
             await snapshotRepo.UpdateRangeAsync(updatedSnapshots, ct);
         }
 
-        // Record usage for all completed generations.
-        foreach (var record in pendingUsageRecords)
-        {
-            await usageRecorder.RecordTokenAsync(record, ct);
-        }
+        // Record usage for all completed generations in one round-trip.
+        await usageRecorder.RecordTokenBatchAsync(pendingUsageRecords, ct);
     }
 
     public async Task RefreshAsync(Guid projectId, CancellationToken ct = default)

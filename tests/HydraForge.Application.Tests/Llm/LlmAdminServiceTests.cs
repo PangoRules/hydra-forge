@@ -470,4 +470,117 @@ public class LlmAdminServiceTests
         Assert.Equal(0, result.Value.ImagesBudget);
         Assert.Empty(result.Value.RecentCalls);
     }
+
+    [Fact]
+    public async Task SetAllowedModelsAsync_UnknownFeature_ReturnsInvalidFeature()
+    {
+        var repo = Substitute.For<ILlmAdminRepository>();
+        var service = CreateService(repo);
+
+        var result = await service.SetAllowedModelsAsync(
+            "NotARealFeature",
+            new SetAllowedModelsInput(Array.Empty<Guid>()),
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.InvalidFeature, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task SetAllowedModelsAsync_RoutingNotConfigured_ReturnsRoutingNotFound()
+    {
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetRoutingByFeatureAsync(AiFeature.PersonalChat, Arg.Any<CancellationToken>())
+            .Returns((FeatureRoutingConfig?)null);
+
+        var service = CreateService(repo);
+
+        var result = await service.SetAllowedModelsAsync(
+            "PersonalChat",
+            new SetAllowedModelsInput(Array.Empty<Guid>()),
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.RoutingNotFound, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task SetAllowedModelsAsync_UnknownModelConfigId_ReturnsModelNotFound()
+    {
+        var configId = Guid.NewGuid();
+        var unknownModelId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetRoutingByFeatureAsync(AiFeature.PersonalChat, Arg.Any<CancellationToken>())
+            .Returns(new FeatureRoutingConfig { Id = configId, Feature = AiFeature.PersonalChat });
+        repo.GetModelConfigByIdAsync(unknownModelId, Arg.Any<CancellationToken>())
+            .Returns((ProviderModelConfig?)null);
+
+        var service = CreateService(repo);
+
+        var result = await service.SetAllowedModelsAsync(
+            "PersonalChat",
+            new SetAllowedModelsInput(new[] { unknownModelId }),
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.ModelNotFound, result.Error.Code);
+        await repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SetAllowedModelsAsync_ValidIds_ReplacesExistingAndSetsPriorityByOrder()
+    {
+        var configId = Guid.NewGuid();
+        var providerId = Guid.NewGuid();
+        var oldAllowedModel = new FeatureAllowedModel
+        {
+            Id = Guid.NewGuid(),
+            FeatureRoutingConfigId = configId,
+            ProviderModelConfigId = Guid.NewGuid(),
+            Priority = 0,
+        };
+        var firstModelId = Guid.NewGuid();
+        var secondModelId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetRoutingByFeatureAsync(AiFeature.PersonalChat, Arg.Any<CancellationToken>())
+            .Returns(new FeatureRoutingConfig { Id = configId, Feature = AiFeature.PersonalChat });
+        repo.GetModelConfigByIdAsync(firstModelId, Arg.Any<CancellationToken>())
+            .Returns(new ProviderModelConfig { Id = firstModelId, ProviderId = providerId });
+        repo.GetModelConfigByIdAsync(secondModelId, Arg.Any<CancellationToken>())
+            .Returns(new ProviderModelConfig { Id = secondModelId, ProviderId = providerId });
+        repo.ListAllowedModelsByFeatureAsync(configId, Arg.Any<CancellationToken>())
+            .Returns(new List<FeatureAllowedModel> { oldAllowedModel });
+
+        var service = CreateService(repo);
+
+        var result = await service.SetAllowedModelsAsync(
+            "PersonalChat",
+            new SetAllowedModelsInput(new[] { firstModelId, secondModelId }),
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(new[] { firstModelId, secondModelId }, result.Value.AllowedModelConfigIds);
+        repo.Received(1).RemoveAllowedModel(oldAllowedModel);
+        repo.Received(1)
+            .AddAllowedModel(
+                Arg.Is<FeatureAllowedModel>(m =>
+                    m.ProviderModelConfigId == firstModelId
+                    && m.Priority == 0
+                    && m.FeatureRoutingConfigId == configId
+                )
+            );
+        repo.Received(1)
+            .AddAllowedModel(
+                Arg.Is<FeatureAllowedModel>(m =>
+                    m.ProviderModelConfigId == secondModelId
+                    && m.Priority == 1
+                    && m.FeatureRoutingConfigId == configId
+                )
+            );
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
 }

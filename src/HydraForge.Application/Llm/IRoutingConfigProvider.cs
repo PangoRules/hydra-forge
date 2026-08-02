@@ -13,4 +13,8 @@ public interface IRoutingConfigProvider
     Task<
         IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>
     > GetEnabledModelsAtTierForProviderAsync(ModelTier tier, Guid providerId, CancellationToken ct);
+    Task<IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)>> GetAllowedModelsAsync(
+        Guid featureRoutingConfigId,
+        CancellationToken ct
+    );
 }

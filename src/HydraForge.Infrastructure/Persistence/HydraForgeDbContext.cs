@@ -54,6 +54,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
     public DbSet<FeatureRoutingConfig> FeatureRoutingConfigs => Set<FeatureRoutingConfig>();
+    public DbSet<FeatureAllowedModel> FeatureAllowedModels => Set<FeatureAllowedModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -509,6 +510,25 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.Feature).IsUnique();
+            }
+        );
+
+        ConfigureEntity<FeatureAllowedModel>(
+            modelBuilder,
+            "feature_allowed_models",
+            b =>
+            {
+                b.HasIndex(e => e.FeatureRoutingConfigId);
+                b.HasIndex(e => new { e.FeatureRoutingConfigId, e.ProviderModelConfigId })
+                    .IsUnique();
+                b.HasOne<FeatureRoutingConfig>()
+                    .WithMany()
+                    .HasForeignKey(e => e.FeatureRoutingConfigId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasOne<ProviderModelConfig>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ProviderModelConfigId)
+                    .OnDelete(DeleteBehavior.Cascade);
             }
         );
 

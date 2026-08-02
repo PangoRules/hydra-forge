@@ -74,6 +74,32 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
         CancellationToken ct = default
     ) => _db.FeatureRoutingConfigs.FirstOrDefaultAsync(c => c.Feature == feature, ct);
 
+    public Task<List<FeatureAllowedModel>> ListAllowedModelsAsync(CancellationToken ct = default) =>
+        _db
+            .FeatureAllowedModels.AsNoTracking()
+            .OrderBy(a => a.FeatureRoutingConfigId)
+            .ThenBy(a => a.Priority)
+            .ToListAsync(ct);
+
+    public Task<List<FeatureAllowedModel>> ListAllowedModelsByFeatureAsync(
+        Guid featureRoutingConfigId,
+        CancellationToken ct = default
+    ) =>
+        _db
+            .FeatureAllowedModels.Where(a => a.FeatureRoutingConfigId == featureRoutingConfigId)
+            .OrderBy(a => a.Priority)
+            .ToListAsync(ct);
+
+    public Task<ProviderModelConfig?> GetModelConfigByIdAsync(
+        Guid modelConfigId,
+        CancellationToken ct = default
+    ) => _db.ProviderModelConfigs.FirstOrDefaultAsync(c => c.Id == modelConfigId, ct);
+
+    public void AddAllowedModel(FeatureAllowedModel model) => _db.FeatureAllowedModels.Add(model);
+
+    public void RemoveAllowedModel(FeatureAllowedModel model) =>
+        _db.FeatureAllowedModels.Remove(model);
+
     public async Task<(
         List<TokenUsageRecord> Items,
         int TotalCount,

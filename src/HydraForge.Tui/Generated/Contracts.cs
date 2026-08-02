@@ -503,6 +503,11 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FeatureRoutingDto> AllowedModelsAsync(string feature, SetAllowedModelsInput body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<TokenUsagePageDto> TokensAsync(System.Guid? userId = null, System.Guid? projectId = null, System.Collections.Generic.IEnumerable<string>? feature = null, System.Guid? providerId = null, string? modelId = null, System.DateTimeOffset? from = null, System.DateTimeOffset? to = null, int? skip = null, int? take = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1631,6 +1636,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("updatedAt", Required = Newtonsoft.Json.Required.Always)]
         public System.DateTimeOffset UpdatedAt { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("allowedModelConfigIds", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<System.Guid> AllowedModelConfigIds { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2529,6 +2537,24 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Always)]
         public int Version { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SetAllowedModelsInput
+    {
+
+        [Newtonsoft.Json.JsonProperty("modelConfigIds", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<System.Guid> ModelConfigIds { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

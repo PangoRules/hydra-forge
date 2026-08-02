@@ -83,10 +83,13 @@ public sealed record FeatureRoutingDto(
     string DefaultTier,
     string? MaxUserTier,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    IReadOnlyList<Guid> AllowedModelConfigIds
 );
 
 public sealed record UpdateRoutingInput(string DefaultTier, string? MaxUserTier);
+
+public sealed record SetAllowedModelsInput(IReadOnlyList<Guid> ModelConfigIds);
 
 // Usage DTOs
 

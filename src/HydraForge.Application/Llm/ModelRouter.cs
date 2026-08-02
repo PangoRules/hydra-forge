@@ -37,33 +37,65 @@ public sealed class ModelRouter : IModelRouter
             );
         }
 
-        var tier = routingConfig.DefaultTier;
+        var allowedModels = await _provider.GetAllowedModelsAsync(routingConfig.Id, ct);
 
-        if (routingConfig.MaxUserTier.HasValue && tier > routingConfig.MaxUserTier.Value)
+        Candidate? candidate;
+
+        if (allowedModels.Count > 0)
         {
-            tier = routingConfig.MaxUserTier.Value;
-        }
+            var enabledAllowedModels = allowedModels
+                .Where(x => x.Model.IsEnabled && x.Provider.IsEnabled)
+                .Select(x => new Candidate(x.Model, x.Provider))
+                .ToList();
 
-        var candidate = await FindModelAtTierAsync(tier, ct);
-        var hadModelAtInitialTier = candidate is not null;
-
-        if (candidate is null || estimatedTokens > candidate.Model.MaxTokens)
-        {
-            var (bumped, hadAnyModel) = await TryAutoBumpTierAsync(tier, estimatedTokens, ct);
-            candidate = bumped;
+            candidate = enabledAllowedModels.FirstOrDefault(c =>
+                c.Model.MaxTokens is null || c.Model.MaxTokens >= estimatedTokens
+            );
 
             if (candidate is null)
             {
                 var errorCode =
-                    (hadAnyModel || hadModelAtInitialTier)
+                    enabledAllowedModels.Count > 0
                         ? DomainErrorCodes.Llm.ContextWindowExceeded
                         : DomainErrorCodes.Llm.NoModelForFeature;
                 return Result<RouteDecision>.Failure(
                     new Error(
                         errorCode,
-                        $"No model found for feature {feature} with {estimatedTokens} tokens."
+                        $"No allowed model found for feature {feature} with {estimatedTokens} tokens."
                     )
                 );
+            }
+        }
+        else
+        {
+            var tier = routingConfig.DefaultTier;
+
+            if (routingConfig.MaxUserTier.HasValue && tier > routingConfig.MaxUserTier.Value)
+            {
+                tier = routingConfig.MaxUserTier.Value;
+            }
+
+            candidate = await FindModelAtTierAsync(tier, ct);
+            var hadModelAtInitialTier = candidate is not null;
+
+            if (candidate is null || estimatedTokens > candidate.Model.MaxTokens)
+            {
+                var (bumped, hadAnyModel) = await TryAutoBumpTierAsync(tier, estimatedTokens, ct);
+                candidate = bumped;
+
+                if (candidate is null)
+                {
+                    var errorCode =
+                        (hadAnyModel || hadModelAtInitialTier)
+                            ? DomainErrorCodes.Llm.ContextWindowExceeded
+                            : DomainErrorCodes.Llm.NoModelForFeature;
+                    return Result<RouteDecision>.Failure(
+                        new Error(
+                            errorCode,
+                            $"No model found for feature {feature} with {estimatedTokens} tokens."
+                        )
+                    );
+                }
             }
         }
 
