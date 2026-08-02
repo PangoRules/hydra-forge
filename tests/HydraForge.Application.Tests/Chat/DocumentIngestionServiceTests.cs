@@ -62,17 +62,25 @@ public class DocumentIngestionServiceTests
     [Fact]
     public async Task IngestAsync_MultiChunk_RespectsChunkBoundaries()
     {
-        // 4000 chars: chunk[0]=0..2000, chunk[1]=2000..4000 → 2 chunks
+        // 4000 chars with 400-char overlap: chunk[0]=[0,2000), chunk[1]=[1600,3600), chunk[2]=[3200,4000)
         var content = new string('x', 4000);
         var (service, _, mockChunkRepo, _, mockEmbeddingClient) = CreateSut();
-        SetupSuccessfulEmbedding(mockEmbeddingClient, 2);
+        SetupSuccessfulEmbedding(mockEmbeddingClient, 3);
 
         var result = await service.IngestAsync(Guid.NewGuid(), "Test", content, "text/plain");
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(2, mockChunkRepo.CapturedChunks.Count);
+        Assert.Equal(3, mockChunkRepo.CapturedChunks.Count);
         Assert.Equal(0, mockChunkRepo.CapturedChunks[0].ChunkIndex);
         Assert.Equal(1, mockChunkRepo.CapturedChunks[1].ChunkIndex);
+        Assert.Equal(2, mockChunkRepo.CapturedChunks[2].ChunkIndex);
+
+        // Verify 400-char overlap: last 400 chars of chunk 0 == first 400 chars of chunk 1
+        var chunk0 = mockChunkRepo.CapturedChunks[0].Content;
+        var chunk1 = mockChunkRepo.CapturedChunks[1].Content;
+        var chunk2 = mockChunkRepo.CapturedChunks[2].Content;
+        Assert.Equal(chunk0[^400..], chunk1[..400]);
+        Assert.Equal(chunk1[^400..], chunk2[..400]);
     }
 
     [Fact]

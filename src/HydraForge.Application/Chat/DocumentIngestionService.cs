@@ -6,7 +6,7 @@ using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Domain.Enums;
 
-public sealed class DocumentIngestionService
+public sealed class DocumentIngestionService : IDocumentIngestionService
 {
     private readonly IDocumentRepository _documentRepo;
     private readonly IDocumentChunkRepository _chunkRepo;
@@ -41,14 +41,18 @@ public sealed class DocumentIngestionService
         CancellationToken ct = default
     )
     {
+        Stream? seekableStream = null;
         if (stream is not null)
         {
-            using var ms = new MemoryStream();
+            var ms = new MemoryStream();
             await stream.CopyToAsync(ms, ct);
-            content = content ?? string.Empty;
-            content += ms.Length > 0
-                ? System.Text.Encoding.UTF8.GetString(ms.ToArray())
-                : string.Empty;
+            ms.Position = 0;
+            seekableStream = ms;
+
+            using var reader = new StreamReader(ms, System.Text.Encoding.UTF8, leaveOpen: true);
+            var fromStream = await reader.ReadToEndAsync();
+            ms.Position = 0;
+            content = (content ?? string.Empty) + fromStream;
         }
 
         if (string.IsNullOrWhiteSpace(content))
@@ -93,14 +97,24 @@ public sealed class DocumentIngestionService
 
         var vectors = embedResult.Value.Vectors;
 
+        if (vectors.Count != chunks.Count)
+        {
+            return Result<Document>.Failure(
+                new Error(
+                    DomainErrorCodes.Chat.EmbeddingFailed,
+                    $"Embedding returned {vectors.Count} vectors for {chunks.Count} chunks."
+                )
+            );
+        }
+
         var documentId = Guid.NewGuid();
         string? storagePath = null;
 
-        if (stream is not null)
+        if (seekableStream is not null)
         {
-            stream.Position = 0;
+            seekableStream.Position = 0;
             var key = $"{userId}/document/{documentId}/{Guid.NewGuid()}";
-            var storeResult = await _fileStore.StoreAsync(stream, contentType, key, ct);
+            var storeResult = await _fileStore.StoreAsync(seekableStream, contentType, key, ct);
             if (storeResult.IsFailure)
             {
                 return Result<Document>.Failure(storeResult.Error);
@@ -168,7 +182,7 @@ public sealed class DocumentIngestionService
                 }
             }
             chunks.Add(text[start..end]);
-            start = end;
+            start = end < text.Length ? end - OverlapChars : text.Length;
         }
 
         return chunks;
