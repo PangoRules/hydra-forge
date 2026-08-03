@@ -11,4 +11,21 @@ public class AgentPersonality
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
+
+    public void Update(string? name, string? description, string? systemPrompt)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+            Name = name;
+        if (description != null)
+            Description = description;
+        if (systemPrompt != null)
+            SystemPrompt = systemPrompt;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Archive()
+    {
+        IsDefault = false;
+        ArchivedAt = DateTime.UtcNow;
+    }
 }
