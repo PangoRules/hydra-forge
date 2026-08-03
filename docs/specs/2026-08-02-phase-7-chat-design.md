@@ -484,7 +484,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 14: ChatSummaryGenerator (one LLM call on close; `CHAT_SUMMARY_FAILED` fallback)
 - [x] Task 15: `ChatHub` + `IChatHub` (streaming transport, one-active-stream, cancel, usage recording, context compression)
 - [x] Task 16: REST controllers (sessions, messages, folders, presets, personalities, card-links, documents, search) + `Program.cs` wiring + rate limiting
-- [ ] Task 17: Web UI — `useChatStream` composable + `ChatSessionView` + `ChatMessageList`/`ChatMessageBubble`/`ChatInput` + streaming
+- [x] Task 17: Web UI — `useChatStream` composable + `ChatSessionView` + `ChatMessageList`/`ChatMessageBubble`/`ChatInput` + streaming
 - [ ] Task 18: Web UI — `ChatPanel` (project board rail) + F6 implicit close + auto-prompt pre-fill
 - [ ] Task 19: Web UI — `ChatSessionHeader` (scope toggle, personality, AI-edit mode, close) + `ChatDocAttach`
 - [ ] Task 20: Web UI — `CardChatLinkList` in card modal + `pages/chat/index.vue` + `pages/chat/[sessionId].vue`
