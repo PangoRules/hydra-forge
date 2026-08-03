@@ -37,6 +37,12 @@ public interface IPromptPresetService
         CancellationToken ct = default
     );
 
+    Task<Result<PromptPresetDto>> GetPresetByIdAsync(
+        Guid presetId,
+        Guid actorId,
+        CancellationToken ct = default
+    );
+
     Task<Result<PromptPresetGroupDto>> CreateGroupAsync(
         CreatePromptPresetGroupRequest request,
         Guid actorId,

@@ -359,6 +359,7 @@ public class ChatSessionServiceTests
 
         public Task<IReadOnlyList<Document>> ListByUserAsync(
             Guid userId,
+            string? q = null,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<Document>>([]);
 
@@ -1251,6 +1252,6 @@ public class ChatSessionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);
-        Assert.Equal(attachedId, result.Value[0].Id);
+        Assert.Equal(attachedId, result.Value[0].DocumentId);
     }
 }

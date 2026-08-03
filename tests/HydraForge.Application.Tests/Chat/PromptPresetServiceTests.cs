@@ -291,6 +291,56 @@ public class PromptPresetServiceTests
         Assert.Equal("InGroup", result.Value[0].Name);
     }
 
+    // ── Get Preset By Id ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetPresetByIdAsync_Owner_ReturnsPreset()
+    {
+        var (service, presetRepo, _) = CreateSut();
+        var actorId = NewId();
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P1",
+        };
+        presetRepo.Presets.Add(preset);
+
+        var result = await service.GetPresetByIdAsync(preset.Id, actorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(preset.Name, result.Value.Name);
+    }
+
+    [Fact]
+    public async Task GetPresetByIdAsync_NotOwner_ReturnsNotFound()
+    {
+        var (service, presetRepo, _) = CreateSut();
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = NewId(),
+            Name = "P1",
+        };
+        presetRepo.Presets.Add(preset);
+
+        var result = await service.GetPresetByIdAsync(preset.Id, NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.PresetNotOwner, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task GetPresetByIdAsync_Missing_ReturnsNotFound()
+    {
+        var (service, _, _) = CreateSut();
+
+        var result = await service.GetPresetByIdAsync(NewId(), NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.PresetNotFound, result.Error.Code);
+    }
+
     [Fact]
     public async Task ListPresetsAsync_ArchivedExcluded()
     {
