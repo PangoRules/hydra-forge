@@ -24,11 +24,7 @@ public class PromptPresetsController(IPromptPresetService presetService) : Contr
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        return CreatedAtAction(
-            nameof(GetById),
-            new { presetId = result.Value.Id },
-            result.Value
-        );
+        return CreatedAtAction(nameof(GetById), new { presetId = result.Value.Id }, result.Value);
     }
 
     [HttpGet]

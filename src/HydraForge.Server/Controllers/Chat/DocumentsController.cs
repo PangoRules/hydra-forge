@@ -91,11 +91,7 @@ public class DocumentsController(
                 return this.ToProblemResult(result.Error);
 
             var doc = result.Value;
-            return CreatedAtAction(
-                nameof(GetById),
-                new { documentId = doc.Id },
-                MapToDto(doc)
-            );
+            return CreatedAtAction(nameof(GetById), new { documentId = doc.Id }, MapToDto(doc));
         }
 
         // text path
@@ -110,11 +106,7 @@ public class DocumentsController(
             return this.ToProblemResult(ingestResult.Error);
 
         var created = ingestResult.Value;
-        return CreatedAtAction(
-            nameof(GetById),
-            new { documentId = created.Id },
-            MapToDto(created)
-        );
+        return CreatedAtAction(nameof(GetById), new { documentId = created.Id }, MapToDto(created));
     }
 
     [HttpGet]

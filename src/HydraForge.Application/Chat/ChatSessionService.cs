@@ -631,7 +631,10 @@ public class ChatSessionService(
             doc.ArchivedAt
         );
 
-    private static ChatSessionDocumentDto MapSessionDocumentToDto(ChatSessionDocument sd, Document doc) =>
+    private static ChatSessionDocumentDto MapSessionDocumentToDto(
+        ChatSessionDocument sd,
+        Document doc
+    ) =>
         new(
             sd.Id,
             sd.SessionId,

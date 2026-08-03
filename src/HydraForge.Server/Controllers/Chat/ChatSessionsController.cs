@@ -23,11 +23,7 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        return CreatedAtAction(
-            nameof(GetById),
-            new { sessionId = result.Value.Id },
-            result.Value
-        );
+        return CreatedAtAction(nameof(GetById), new { sessionId = result.Value.Id }, result.Value);
     }
 
     [HttpGet]
@@ -66,7 +62,10 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
     [ProducesResponseType(typeof(ChatSessionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update(Guid sessionId, [FromBody] UpdateChatSessionRequest request)
+    public async Task<IActionResult> Update(
+        Guid sessionId,
+        [FromBody] UpdateChatSessionRequest request
+    )
     {
         var userId = User.GetRequiredUserId();
         var result = await sessionService.UpdateAsync(sessionId, request, userId);
@@ -114,7 +113,11 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
     )
     {
         var userId = User.GetRequiredUserId();
-        var result = await sessionService.AttachDocumentAsync(sessionId, request.DocumentId, userId);
+        var result = await sessionService.AttachDocumentAsync(
+            sessionId,
+            request.DocumentId,
+            userId
+        );
 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);

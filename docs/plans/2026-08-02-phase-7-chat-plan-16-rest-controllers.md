@@ -29,7 +29,7 @@
 - [x] `ChatSearchController`: GET search
 - [x] Wire DI in `Program.cs`: register all services, repositories, `ChatHub`
 - [x] All controllers use `[Authorize(Policy = AuthPolicies.UserIdRequired)]`, `[ApiController]`, `[ProducesResponseType]`
-- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-16-rest-controllers-matrix.md` — `.http` smoke test per controller (per repo convention), verifying each resolved route matches what's documented in the spec
+- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-16-rest-controllers-matrix.md` — `.http` smoke test per controller (per repo convention), verifying each resolved route matches what's documented in the spec. **Not done** — no `.http` files or matrix exist for chat controllers despite this being marked complete. A route-introspection check during review (`IActionDescriptorCollectionProvider`, no DB needed) caught `ChatMessagesController`'s route resolving to `api/chat/messages/sessions/{sessionId}/messages` instead of the spec'd `api/chat/sessions/{sessionId}/messages` — exactly the class of bug this step exists to catch. Fixed in review, but the `.http` suite + matrix itself still needs to be written before this step can be honestly checked off.
 
 **Acceptance:**
 - `dotnet build`

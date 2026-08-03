@@ -11,7 +11,8 @@ namespace HydraForge.Server.Controllers.Chat;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/chat/personalities")]
-public class AgentPersonalitiesController(IAgentPersonalityService personalityService) : ControllerBase
+public class AgentPersonalitiesController(IAgentPersonalityService personalityService)
+    : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType(typeof(AgentPersonalityDto), StatusCodes.Status201Created)]

@@ -8,13 +8,9 @@ using Microsoft.EntityFrameworkCore;
 public sealed class EfPromptPresetGroupRepository(HydraForgeDbContext context)
     : IPromptPresetGroupRepository
 {
-    public async Task<PromptPresetGroup?> GetByIdAsync(
-        Guid groupId,
-        CancellationToken ct = default
-    )
+    public async Task<PromptPresetGroup?> GetByIdAsync(Guid groupId, CancellationToken ct = default)
     {
-        return await context
-            .PromptPresetGroups.FirstOrDefaultAsync(g => g.Id == groupId, ct);
+        return await context.PromptPresetGroups.FirstOrDefaultAsync(g => g.Id == groupId, ct);
     }
 
     public async Task<IReadOnlyList<PromptPresetGroup>> ListByUserAsync(
@@ -44,7 +40,7 @@ public sealed class EfPromptPresetGroupRepository(HydraForgeDbContext context)
         var group = await context.PromptPresetGroups.FindAsync([groupId], ct);
         if (group is not null)
         {
-            group.ArchivedAt = DateTime.UtcNow;
+            group.Archive();
             await context.SaveChangesAsync(ct);
         }
     }

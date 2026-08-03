@@ -14,4 +14,10 @@ public class PromptPresetGroup
         Name = name;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Archive()
+    {
+        ArchivedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

@@ -24,11 +24,7 @@ public class PromptPresetGroupsController(IPromptPresetService presetService) : 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
-        return CreatedAtAction(
-            nameof(GetById),
-            new { groupId = result.Value.Id },
-            result.Value
-        );
+        return CreatedAtAction(nameof(GetById), new { groupId = result.Value.Id }, result.Value);
     }
 
     [HttpGet]

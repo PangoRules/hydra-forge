@@ -55,10 +55,7 @@ public class ChatFoldersController(IChatFolderService folderService) : Controlle
         var folder = result.Value.FirstOrDefault(f => f.Id == folderId);
         if (folder is null)
             return this.ToProblemResult(
-                new Domain.Common.Error(
-                    DomainErrorCodes.Chat.FolderNotFound,
-                    "Folder not found."
-                )
+                new Domain.Common.Error(DomainErrorCodes.Chat.FolderNotFound, "Folder not found.")
             );
 
         return Ok(folder);

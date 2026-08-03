@@ -25,12 +25,11 @@ public sealed class EfDocumentRepository(HydraForgeDbContext context) : IDocumen
             var pattern = $"%{q}%";
             query = query.Where(d =>
                 EF.Functions.ILike(d.Title, pattern)
-                || (d.Language != null && EF.Functions.ILike(d.Language, pattern)));
+                || (d.Language != null && EF.Functions.ILike(d.Language, pattern))
+            );
         }
 
-        return await query
-            .OrderByDescending(d => d.UpdatedAt)
-            .ToListAsync(ct);
+        return await query.OrderByDescending(d => d.UpdatedAt).ToListAsync(ct);
     }
 
     public async Task AddAsync(Document document, CancellationToken ct = default)
