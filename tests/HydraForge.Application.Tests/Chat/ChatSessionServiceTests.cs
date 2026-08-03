@@ -76,6 +76,14 @@ public class ChatSessionServiceTests
         public Task UpdateAsync(ChatSession session, CancellationToken ct = default) =>
             Task.CompletedTask;
 
+        public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
+            Guid ownerId,
+            string query,
+            Guid? projectId,
+            int limit,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default)
         {
             CapturedLinks.Add(link);
@@ -106,6 +114,14 @@ public class ChatSessionServiceTests
             Messages.Add(message);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
+            Guid ownerId,
+            string query,
+            Guid? projectId,
+            int limit,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
     }
 
     private sealed class FakeSessionDocRepo : IChatSessionDocumentRepository
