@@ -19,6 +19,7 @@ public static class ChatServiceCollectionExtensions
 
         // Services
         services.AddScoped<IChatSessionService, ChatSessionService>();
+        services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IChatRagRetriever, ChatRagRetriever>();
 
         // Background queue

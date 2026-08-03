@@ -35,12 +35,18 @@ public class ChatMessageService(
 
         if (session.OwnerId != userId)
             return Result<ChatMessageDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the session owner can send messages.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the session owner can send messages."
+                )
             );
 
         if (session.Status != ChatSessionStatus.Active)
             return Result<ChatMessageDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionClosed, "Cannot send a message to a closed session.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionClosed,
+                    "Cannot send a message to a closed session."
+                )
             );
 
         var message = new Domain.Entities.Chat.ChatMessage

@@ -25,8 +25,8 @@ public sealed class EfChatMessageRepository(HydraForgeDbContext context) : IChat
         if (before.HasValue)
         {
             query = query.Where(m =>
-                m.CreatedAt < before.Value ||
-                (m.CreatedAt == before.Value && beforeId.HasValue && m.Id < beforeId.Value)
+                m.CreatedAt < before.Value
+                || (m.CreatedAt == before.Value && beforeId.HasValue && m.Id < beforeId.Value)
             );
         }
 

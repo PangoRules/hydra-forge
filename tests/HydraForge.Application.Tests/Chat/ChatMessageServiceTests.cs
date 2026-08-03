@@ -10,8 +10,6 @@ using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
 using ChatMessage = HydraForge.Domain.Entities.Chat.ChatMessage;
 
 public class ChatMessageServiceTests
@@ -75,8 +73,8 @@ public class ChatMessageServiceTests
             if (before.HasValue)
             {
                 query = query.Where(m =>
-                    m.CreatedAt < before.Value ||
-                    (m.CreatedAt == before.Value && beforeId.HasValue && m.Id < beforeId.Value)
+                    m.CreatedAt < before.Value
+                    || (m.CreatedAt == before.Value && beforeId.HasValue && m.Id < beforeId.Value)
                 );
             }
 
@@ -208,7 +206,6 @@ public class ChatMessageServiceTests
         var messageRepo = new FakeMessageRepo();
         var userRepo = new FakeUserRepo();
         var memberRepo = new FakeMemberRepo();
-        var logger = Substitute.For<ILogger<ChatMessageService>>();
 
         var service = new ChatMessageService(sessionRepo, messageRepo, userRepo, memberRepo);
 
@@ -230,11 +227,7 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        var result = await service.SendUserMessageAsync(
-            session.Id,
-            ownerId,
-            "Hello, AI!"
-        );
+        var result = await service.SendUserMessageAsync(session.Id, ownerId, "Hello, AI!");
 
         Assert.True(result.IsSuccess);
         Assert.Equal(MessageRole.User, result.Value.Role);
@@ -256,11 +249,7 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        var images = new List<ImageBlock>
-        {
-            new("key1", "image/png"),
-            new("key2", "image/jpeg"),
-        };
+        var images = new List<ImageBlock> { new("key1", "image/png"), new("key2", "image/jpeg") };
 
         var result = await service.SendUserMessageAsync(
             session.Id,
@@ -288,11 +277,7 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        var result = await service.SendUserMessageAsync(
-            session.Id,
-            ownerId,
-            "Hello"
-        );
+        var result = await service.SendUserMessageAsync(session.Id, ownerId, "Hello");
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.SessionClosed, result.Error.Code);
@@ -312,11 +297,7 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        var result = await service.SendUserMessageAsync(
-            session.Id,
-            callerId,
-            "Hello"
-        );
+        var result = await service.SendUserMessageAsync(session.Id, callerId, "Hello");
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
@@ -327,11 +308,7 @@ public class ChatMessageServiceTests
     {
         var (service, _, _) = CreateSut();
 
-        var result = await service.SendUserMessageAsync(
-            NewId(),
-            NewId(),
-            "Hello"
-        );
+        var result = await service.SendUserMessageAsync(NewId(), NewId(), "Hello");
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.SessionNotFound, result.Error.Code);
@@ -351,22 +328,26 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = sessionId,
-            Role = MessageRole.User,
-            Content = "First",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-2),
-        });
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = sessionId,
-            Role = MessageRole.Assistant,
-            Content = "Reply",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-1),
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "First",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-2),
+            }
+        );
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.Assistant,
+                Content = "Reply",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+            }
+        );
 
         var result = await service.GetHistoryAsync(sessionId, ownerId, beforeId: null);
 
@@ -413,14 +394,16 @@ public class ChatMessageServiceTests
         };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = sessionId,
-            Role = MessageRole.User,
-            Content = "Hello",
-            CreatedAt = DateTime.UtcNow,
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Hello",
+                CreatedAt = DateTime.UtcNow,
+            }
+        );
 
         var result = await service.GetHistoryAsync(sessionId, memberId, beforeId: null);
 
@@ -445,17 +428,25 @@ public class ChatMessageServiceTests
         var baseTime = DateTime.UtcNow;
         for (int i = 0; i < 5; i++)
         {
-            messageRepo.Messages.Add(new ChatMessage
-            {
-                Id = NewId(),
-                SessionId = sessionId,
-                Role = MessageRole.User,
-                Content = $"Message {i}",
-                CreatedAt = baseTime.AddMinutes(-i),
-            });
+            messageRepo.Messages.Add(
+                new ChatMessage
+                {
+                    Id = NewId(),
+                    SessionId = sessionId,
+                    Role = MessageRole.User,
+                    Content = $"Message {i}",
+                    CreatedAt = baseTime.AddMinutes(-i),
+                }
+            );
         }
 
-        var firstPage = await service.GetHistoryAsync(sessionId, ownerId, before: null, beforeId: null, limit: 2);
+        var firstPage = await service.GetHistoryAsync(
+            sessionId,
+            ownerId,
+            before: null,
+            beforeId: null,
+            limit: 2
+        );
         Assert.True(firstPage.IsSuccess);
         Assert.Equal(2, firstPage.Value.Items.Count);
 
@@ -504,8 +495,26 @@ public class ChatMessageServiceTests
         var baseTime = DateTime.UtcNow;
         var olderId = NewId();
         var newerId = NewId();
-        messageRepo.Messages.Add(new ChatMessage { Id = olderId, SessionId = sessionId, Role = MessageRole.User, Content = "Older", CreatedAt = baseTime });
-        messageRepo.Messages.Add(new ChatMessage { Id = newerId, SessionId = sessionId, Role = MessageRole.User, Content = "Newer", CreatedAt = baseTime });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = olderId,
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Older",
+                CreatedAt = baseTime,
+            }
+        );
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = newerId,
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Newer",
+                CreatedAt = baseTime,
+            }
+        );
 
         var firstPage = await service.GetHistoryAsync(sessionId, ownerId, beforeId: null, limit: 1);
         Assert.True(firstPage.IsSuccess);
