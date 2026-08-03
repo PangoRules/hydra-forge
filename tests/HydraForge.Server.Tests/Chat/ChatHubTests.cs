@@ -35,6 +35,7 @@ public class ChatHubTests
     private readonly ILlmClientFactory _llmClientFactory;
     private readonly IUsageRecorder _usageRecorder;
     private readonly LlmCallGuard _llmCallGuard;
+    private readonly IContextCompressor _contextCompressor;
     private readonly ILogger<ChatHub> _logger;
     private readonly IOptions<LlmOptions> _llmOptions;
     private readonly IChatHub _mockCaller;
@@ -51,6 +52,9 @@ public class ChatHubTests
         _modelRouter = Substitute.For<IModelRouter>();
         _llmClientFactory = Substitute.For<ILlmClientFactory>();
         _usageRecorder = Substitute.For<IUsageRecorder>();
+        _contextCompressor = Substitute.For<IContextCompressor>();
+        _contextCompressor.CompressAsync(Arg.Any<IReadOnlyList<CacheBlock>>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Result<CompressedContext>.Success(new CompressedContext([], 0, false)));
 
         var budgetRepo = Substitute.For<IUserTokenBudgetRepository>();
         budgetRepo.GetByUserIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
@@ -72,6 +76,7 @@ public class ChatHubTests
 
         var mockClients = Substitute.For<IHubCallerClients<IChatHub>>();
         mockClients.Caller.Returns(_mockCaller);
+        mockClients.Group(Arg.Any<string>()).Returns(_mockCaller);
 
         var mockGroups = Substitute.For<IGroupManager>();
 
@@ -86,6 +91,7 @@ public class ChatHubTests
             _llmClientFactory,
             _usageRecorder,
             _llmCallGuard,
+            _contextCompressor,
             _logger,
             _llmOptions
         )
@@ -244,23 +250,29 @@ public class ChatHubTests
         mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
         var streamBlock = new SemaphoreSlim(0, 1);
         var streamYielded = new SemaphoreSlim(0, 1);
+        var capturedCt = CancellationToken.None;
         mockClient.StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(MakeBlockingEnumerable(streamBlock, streamYielded));
+            .Returns(callInfo =>
+            {
+                capturedCt = callInfo.ArgAt<CancellationToken>(1);
+                return MakeBlockingEnumerable(streamBlock, streamYielded, capturedCt);
+            });
         _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
         _messageRepo.GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns((IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)new List<HydraForge.Domain.Entities.Chat.ChatMessage>());
 
-        // Start first stream — fire and forget, it will block on the stream
-        _ = _hub.SendMessage(SessionId, MessageId, null);
-        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5)); // wait until first chunk is yielded
+        // Start first stream and wait for it to block
+        var sendTask = _hub.SendMessage(SessionId, MessageId, null);
+        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // Try second send
+        // Try second send while first is blocked
         await _hub.SendMessage(SessionId, secondUserMessage.Id, null);
 
         await _mockCaller.Received(1).StreamError(secondUserMessage.Id, "CHAT_STREAM_IN_PROGRESS", Arg.Any<string>());
 
-        // Release the blocked stream
+        // Release the blocked stream and wait for completion
         streamBlock.Release();
+        await sendTask;
     }
 
     [Fact]
@@ -303,43 +315,44 @@ public class ChatHubTests
         mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
         var streamBlock = new SemaphoreSlim(0, 1);
         var streamYielded = new SemaphoreSlim(0, 1);
+        var capturedCt = CancellationToken.None;
         mockClient.StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(MakeBlockingEnumerable(streamBlock, streamYielded));
+            .Returns(callInfo =>
+            {
+                capturedCt = callInfo.ArgAt<CancellationToken>(1);
+                return MakeBlockingEnumerable(streamBlock, streamYielded, capturedCt);
+            });
         _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
         _messageRepo.GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns((IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)new List<HydraForge.Domain.Entities.Chat.ChatMessage>());
 
-        // Start stream
-        _ = _hub.SendMessage(SessionId, MessageId, null);
-        await Task.Delay(1000); // wait for the stream to start emitting
-
-        // Verify stream started
-        var allCalls1 = _mockCaller.ReceivedCalls().Select(c => $"{c.GetMethodInfo().Name}({string.Join(", ", c.GetArguments())})").ToList();
-        Assert.Contains(allCalls1, c => c.Contains("StreamStart"));
-        _mockCaller.ClearReceivedCalls();
+        // Start stream and wait for it to block
+        var sendTask = _hub.SendMessage(SessionId, MessageId, null);
+        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Cancel
         await _hub.CancelStream(SessionId);
 
-        // Add small delay to let cancellation propagate
-        await Task.Delay(500);
+        // Wait for SendMessage to complete (should emit StreamDone via OCE handler)
+        await sendTask;
 
-        var allCalls = _mockCaller.ReceivedCalls().Select(c => c.GetMethodInfo().Name).ToList();
-        Assert.Contains("StreamDone", allCalls);
-
-        // Release the blocked stream so it can clean up
-        streamBlock.Release();
+        // Assert StreamDone was emitted (with null values from OCE path)
+        var doneCalls = _mockCaller.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "StreamDone")
+            .ToList();
+        Assert.Single(doneCalls);
     }
 
     /// <summary>
-    /// Yields one chunk, signals it yielded, then blocks on a semaphore.
+    /// Yields one chunk, signals it yielded, then blocks until cancellation or semaphore release.
     /// </summary>
     private static async IAsyncEnumerable<ChatChunk> MakeBlockingEnumerable(
         SemaphoreSlim block,
-        SemaphoreSlim yielded)
+        SemaphoreSlim yielded,
+        CancellationToken cancellationToken)
     {
         yield return new ChatChunk("Hello", null, null);
         yielded.Release();
-        await block.WaitAsync();
+        await block.WaitAsync(cancellationToken);
     }
 }
