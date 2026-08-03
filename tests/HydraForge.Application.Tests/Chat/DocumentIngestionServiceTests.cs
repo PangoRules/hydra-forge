@@ -292,6 +292,7 @@ public class DocumentIngestionServiceTests
 
         public Task<IReadOnlyList<Document>> ListByUserAsync(
             Guid userId,
+            string? q = null,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<Document>>([]);
     }

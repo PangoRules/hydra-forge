@@ -158,4 +158,18 @@ public record ChatSearchResultDto(
     string? Snippet
 );
 
+public record ChatSessionDocumentDto(
+    Guid Id,
+    Guid SessionId,
+    Guid DocumentId,
+    Guid AddedByUserId,
+    DateTime AddedAt,
+    string Title,
+    string ContentType,
+    string? Language,
+    int Version,
+    DateTime CreatedAt,
+    DateTime UpdatedAt
+);
+
 public record ChatPermissionDto(bool Granted, AiEditMode Mode);

@@ -19,17 +19,17 @@
 
 **Steps:**
 
-- [ ] `ChatSessionsController`: `[Route("api/chat/[controller]")]`. POST create (F6 async close; body accepts `forkedFromSessionId?` for the fork action, spec §7), GET list, GET detail, PATCH update, POST close, DELETE archive, POST attach doc, GET list docs, DELETE detach doc, GET permission
-- [ ] `ChatMessagesController`: GET history, POST user message (persist only — hub streams)
-- [ ] `ChatFoldersController`: CRUD, max-depth-2
-- [ ] `PromptPresetsController` + `PromptPresetGroupsController`: CRUD, group archive nulls presets
-- [ ] `AgentPersonalitiesController`: CRUD, set-default
-- [ ] `CardChatLinksController`: GET by card, DELETE archive
-- [ ] `DocumentsController`: POST upload (multipart), GET list, DELETE archive
-- [ ] `ChatSearchController`: GET search
-- [ ] Wire DI in `Program.cs`: register all services, repositories, `ChatHub`
-- [ ] All controllers use `[Authorize(Policy = AuthPolicies.UserIdRequired)]`, `[ApiController]`, `[ProducesResponseType]`
-- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-16-rest-controllers-matrix.md` — `.http` smoke test per controller (per repo convention), verifying each resolved route matches what's documented in the spec
+- [x] `ChatSessionsController`: `[Route("api/chat/[controller]")]`. POST create (F6 async close; body accepts `forkedFromSessionId?` for the fork action, spec §7), GET list, GET detail, PATCH update, POST close, DELETE archive, POST attach doc, GET list docs, DELETE detach doc, GET permission
+- [x] `ChatMessagesController`: GET history, POST user message (persist only — hub streams)
+- [x] `ChatFoldersController`: CRUD, max-depth-2
+- [x] `PromptPresetsController` + `PromptPresetGroupsController`: CRUD, group archive nulls presets
+- [x] `AgentPersonalitiesController`: CRUD, set-default
+- [x] `CardChatLinksController`: GET by card, DELETE archive
+- [x] `DocumentsController`: POST upload (multipart), GET list, DELETE archive
+- [x] `ChatSearchController`: GET search
+- [x] Wire DI in `Program.cs`: register all services, repositories, `ChatHub`
+- [x] All controllers use `[Authorize(Policy = AuthPolicies.UserIdRequired)]`, `[ApiController]`, `[ProducesResponseType]`
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-16-rest-controllers-matrix.md` — `.http` smoke test per controller (per repo convention), verifying each resolved route matches what's documented in the spec
 
 **Acceptance:**
 - `dotnet build`

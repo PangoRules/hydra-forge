@@ -18,6 +18,7 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IDocumentChunkRepository, EfDocumentChunkRepository>();
         services.AddScoped<IChatFolderRepository, EfChatFolderRepository>();
         services.AddScoped<IPromptPresetRepository, EfPromptPresetRepository>();
+        services.AddScoped<IPromptPresetGroupRepository, EfPromptPresetGroupRepository>();
 
         // Services
         services.AddScoped<IChatSessionService, ChatSessionService>();
@@ -27,6 +28,11 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<ChatArchiveService>();
         services.AddScoped<IChatFolderService, ChatFolderService>();
         services.AddScoped<ICardChatLinkService, CardChatLinkService>();
+        services.AddScoped<IChatSearchService, ChatSearchService>();
+        services.AddScoped<IAgentPersonalityService, AgentPersonalityService>();
+        services.AddScoped<IPromptPresetService, PromptPresetService>();
+        services.AddScoped<IDocumentIngestionService, DocumentIngestionService>();
+        services.AddScoped<IDocumentService, DocumentService>();
 
         // Background queue
         services.AddSingleton<IBackgroundTaskQueue, HangfireBackgroundTaskQueue>();

@@ -439,7 +439,7 @@ public class ChatSessionService(
         );
     }
 
-    public async Task<Result<ChatSessionDto>> AttachDocumentAsync(
+    public async Task<Result<ChatSessionDocumentDto>> AttachDocumentAsync(
         Guid sessionId,
         Guid documentId,
         Guid actorId,
@@ -448,12 +448,12 @@ public class ChatSessionService(
     {
         var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
         if (session == null)
-            return Result<ChatSessionDto>.Failure(
+            return Result<ChatSessionDocumentDto>.Failure(
                 new Error(DomainErrorCodes.Chat.SessionNotFound, "Session not found.")
             );
 
         if (session.OwnerId != actorId)
-            return Result<ChatSessionDto>.Failure(
+            return Result<ChatSessionDocumentDto>.Failure(
                 new Error(
                     DomainErrorCodes.Chat.SessionNotOwner,
                     "Only the owner can attach documents."
@@ -462,12 +462,12 @@ public class ChatSessionService(
 
         var document = await _documentRepo.GetByIdAsync(documentId, ct);
         if (document == null)
-            return Result<ChatSessionDto>.Failure(
+            return Result<ChatSessionDocumentDto>.Failure(
                 new Error(DomainErrorCodes.Chat.SessionNotFound, "Document not found.")
             );
 
         if (document.UserId != actorId)
-            return Result<ChatSessionDto>.Failure(
+            return Result<ChatSessionDocumentDto>.Failure(
                 new Error(
                     DomainErrorCodes.Chat.DocumentNotOwned,
                     "Cannot attach a document you don't own."
@@ -475,7 +475,7 @@ public class ChatSessionService(
             );
 
         if (await _sessionDocRepo.ExistsAsync(sessionId, documentId, ct))
-            return Result<ChatSessionDto>.Failure(
+            return Result<ChatSessionDocumentDto>.Failure(
                 new Error(
                     DomainErrorCodes.Chat.DocumentAlreadyAttached,
                     "Document already attached."
@@ -492,7 +492,9 @@ public class ChatSessionService(
         };
         await _sessionDocRepo.AddAsync(sessionDoc, ct);
 
-        return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+        return Result<ChatSessionDocumentDto>.Success(
+            MapSessionDocumentToDto(sessionDoc, document)
+        );
     }
 
     public async Task<Result<ChatSessionDto>> DetachDocumentAsync(
@@ -521,7 +523,7 @@ public class ChatSessionService(
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
     }
 
-    public async Task<Result<IReadOnlyList<DocumentDto>>> ListDocumentsAsync(
+    public async Task<Result<IReadOnlyList<ChatSessionDocumentDto>>> ListDocumentsAsync(
         Guid sessionId,
         Guid actorId,
         CancellationToken ct = default
@@ -529,27 +531,26 @@ public class ChatSessionService(
     {
         var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
         if (session == null)
-            return Result<IReadOnlyList<DocumentDto>>.Failure(
+            return Result<IReadOnlyList<ChatSessionDocumentDto>>.Failure(
                 new Error(DomainErrorCodes.Chat.SessionNotFound, "Session not found.")
             );
 
         if (!await CanReadSessionAsync(session, actorId, ct))
-            return Result<IReadOnlyList<DocumentDto>>.Failure(
+            return Result<IReadOnlyList<ChatSessionDocumentDto>>.Failure(
                 new Error(DomainErrorCodes.Chat.SessionNotOwner, "Access denied.")
             );
 
         var sessionDocs = await _sessionDocRepo.GetBySessionAsync(sessionId, ct);
-        var documentIds = sessionDocs.Select(sd => sd.DocumentId).ToList();
+        var result = new List<ChatSessionDocumentDto>();
 
-        var documents = new List<DocumentDto>();
-        foreach (var docId in documentIds)
+        foreach (var sd in sessionDocs)
         {
-            var doc = await _documentRepo.GetByIdAsync(docId, ct);
+            var doc = await _documentRepo.GetByIdAsync(sd.DocumentId, ct);
             if (doc != null && doc.ArchivedAt == null)
-                documents.Add(MapDocumentToDto(doc));
+                result.Add(MapSessionDocumentToDto(sd, doc));
         }
 
-        return Result<IReadOnlyList<DocumentDto>>.Success(documents);
+        return Result<IReadOnlyList<ChatSessionDocumentDto>>.Success(result);
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────
@@ -628,5 +629,20 @@ public class ChatSessionService(
             doc.CreatedAt,
             doc.UpdatedAt,
             doc.ArchivedAt
+        );
+
+    private static ChatSessionDocumentDto MapSessionDocumentToDto(ChatSessionDocument sd, Document doc) =>
+        new(
+            sd.Id,
+            sd.SessionId,
+            sd.DocumentId,
+            sd.AddedByUserId,
+            sd.AddedAt,
+            doc.Title,
+            doc.ContentType,
+            doc.Language,
+            doc.Version,
+            doc.CreatedAt,
+            doc.UpdatedAt
         );
 }

@@ -159,5 +159,6 @@ public static class DomainErrorCodes
         public const string CardNotInProject = "CHAT_CARD_NOT_IN_PROJECT";
         public const string DocumentAlreadyAttached = "CHAT_DOCUMENT_ALREADY_ATTACHED";
         public const string EmbeddingFailed = "CHAT_EMBEDDING_FAILED";
+        public const string DocumentNotFound = "CHAT_DOCUMENT_NOT_FOUND";
     }
 }

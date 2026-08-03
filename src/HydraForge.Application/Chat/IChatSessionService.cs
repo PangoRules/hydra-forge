@@ -43,7 +43,7 @@ public interface IChatSessionService
         Guid actorId,
         CancellationToken ct = default
     );
-    Task<Result<ChatSessionDto>> AttachDocumentAsync(
+    Task<Result<ChatSessionDocumentDto>> AttachDocumentAsync(
         Guid sessionId,
         Guid documentId,
         Guid actorId,
@@ -55,7 +55,7 @@ public interface IChatSessionService
         Guid actorId,
         CancellationToken ct = default
     );
-    Task<Result<IReadOnlyList<DocumentDto>>> ListDocumentsAsync(
+    Task<Result<IReadOnlyList<ChatSessionDocumentDto>>> ListDocumentsAsync(
         Guid sessionId,
         Guid actorId,
         CancellationToken ct = default

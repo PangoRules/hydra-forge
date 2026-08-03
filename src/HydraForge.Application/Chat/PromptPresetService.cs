@@ -157,6 +157,26 @@ public class PromptPresetService(
         return Result<PromptPresetDto>.Success(MapToDto(preset));
     }
 
+    public async Task<Result<PromptPresetDto>> GetPresetByIdAsync(
+        Guid presetId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
+    {
+        var preset = await _presetRepo.GetByIdAsync(presetId, ct);
+        if (preset is null)
+            return Result<PromptPresetDto>.Failure(
+                new Error(DomainErrorCodes.Chat.PresetNotFound, "Preset not found.")
+            );
+
+        if (preset.UserId != actorId)
+            return Result<PromptPresetDto>.Failure(
+                new Error(DomainErrorCodes.Chat.PresetNotOwner, "Preset not found.")
+            );
+
+        return Result<PromptPresetDto>.Success(MapToDto(preset));
+    }
+
     public async Task<Result<PromptPresetGroupDto>> CreateGroupAsync(
         CreatePromptPresetGroupRequest request,
         Guid actorId,

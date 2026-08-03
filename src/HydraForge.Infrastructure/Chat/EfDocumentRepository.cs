@@ -14,11 +14,21 @@ public sealed class EfDocumentRepository(HydraForgeDbContext context) : IDocumen
 
     public async Task<IReadOnlyList<Document>> ListByUserAsync(
         Guid userId,
+        string? q = null,
         CancellationToken ct = default
     )
     {
-        return await context
-            .Documents.Where(d => d.UserId == userId && d.ArchivedAt == null)
+        var query = context.Documents.Where(d => d.UserId == userId && d.ArchivedAt == null);
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var pattern = $"%{q}%";
+            query = query.Where(d =>
+                EF.Functions.ILike(d.Title, pattern)
+                || (d.Language != null && EF.Functions.ILike(d.Language, pattern)));
+        }
+
+        return await query
             .OrderByDescending(d => d.UpdatedAt)
             .ToListAsync(ct);
     }
