@@ -12,11 +12,11 @@
 
 **Steps:**
 
-- [ ] Define `ICardChatLinkService`: `GetByCardAsync(cardId)`, `ArchiveAsync(linkId, userId)`
-- [ ] `GetByCardAsync`: return links with owner (id+username), summary, createdAt, archivedAt. Project members only
-- [ ] `ArchiveAsync`: owner-only soft-delete. Non-owner → `CHAT_SESSION_NOT_OWNER`
-- [ ] Write tests: project member can list, non-member 403, owner-only archive
-- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-12-card-chat-link-service-matrix.md` — closing a project chat with an open card produces a visible `CardChatLink` on that card for all project members
+- [x] Define `ICardChatLinkService`: `GetByCardAsync(cardId)`, `ArchiveAsync(linkId, userId)`
+- [x] `GetByCardAsync`: return links with owner (id+username), summary, createdAt, archivedAt. Project members only
+- [x] `ArchiveAsync`: owner-only soft-delete. Non-owner → `CHAT_SESSION_NOT_OWNER`
+- [x] Write tests: project member can list, non-member 403, owner-only archive
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-12-card-chat-link-service-matrix.md` — closing a project chat with an open card produces a visible `CardChatLink` on that card for all project members
 
 **Acceptance:**
 - `dotnet build`
