@@ -145,7 +145,7 @@ All routes are versioned under `/api`. Auth required. Controllers live under `sr
 
 | Method | Route | Body / Query | Returns | Notes |
 |---|---|---|---|---|
-| `GET` | `/api/chat/sessions/{sessionId}/messages` | `?before=&limit=` | `ChatMessagePageDto` | Paginated history (cursor = `CreatedAt` of oldest in page). Owner or project member. |
+| `GET` | `/api/chat/sessions/{sessionId}/messages` | `?before=&beforeId=&limit=` | `ChatMessagePageDto` | Paginated history. Composite cursor `(before, beforeId)` = `(CreatedAt, Id)` of oldest in page — `beforeId` disambiguates messages with identical `CreatedAt`. Owner or project member. |
 | `POST` | `/api/chat/sessions/{sessionId}/messages` | `{ content, images? }` | `201 ChatMessageDto` | Persists a `User` message and returns its `messageId`. This is the **only** path that persists a user message — the hub never persists on the client's behalf. **Client contract: call this first, then pass the returned `messageId` into `ChatHub.SendMessage` (§3.2).** That ordering is what makes the message durable if the client disconnects before the stream starts, and it's why every client (Web, TUI) must call both endpoints, not just the hub. |
 
 ### 2.3 ChatFolder
@@ -475,7 +475,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 5: Document upload + chunking + embedding ingestion service (`IEmbeddingClient` pipeline)
 - [x] Task 6: RAG retrieval service (scope toggle F1, pgvector similarity, cache-block assembly)
 - [x] Task 7: ChatSession service (CRUD, F6 implicit close, close-with-summary, permission-state read)
-- [ ] Task 8: ChatMessage service (history pagination, user-message persist)
+- [x] Task 8: ChatMessage service (history pagination, user-message persist)
 - [ ] Task 9: ChatFolder service (CRUD, max-depth-2, archive cascade via `ChatArchiveService`)
 - [ ] Task 10: PromptPreset + PromptPresetGroup services (CRUD, group-nulling on group archive)
 - [ ] Task 11: AgentPersonality service (CRUD, default management)

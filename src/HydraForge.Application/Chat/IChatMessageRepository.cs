@@ -8,6 +8,7 @@ public interface IChatMessageRepository
     Task<IReadOnlyList<ChatMessage>> GetBySessionAsync(
         Guid sessionId,
         DateTime? before,
+        Guid? beforeId,
         int limit,
         CancellationToken ct = default
     );

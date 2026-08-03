@@ -375,6 +375,7 @@ public class ChatRagRetrieverTests
         deps.MessageRepo.GetBySessionAsync(
                 SessionId,
                 Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<int>(),
                 Arg.Any<CancellationToken>()
             )
