@@ -476,7 +476,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 6: RAG retrieval service (scope toggle F1, pgvector similarity, cache-block assembly)
 - [x] Task 7: ChatSession service (CRUD, F6 implicit close, close-with-summary, permission-state read)
 - [x] Task 8: ChatMessage service (history pagination, user-message persist)
-- [ ] Task 9: ChatFolder service (CRUD, max-depth-2, archive cascade via `ChatArchiveService`)
+- [x] Task 9: ChatFolder service (CRUD, max-depth-2, archive cascade via `ChatArchiveService`)
 - [ ] Task 10: PromptPreset + PromptPresetGroup services (CRUD, group-nulling on group archive)
 - [ ] Task 11: AgentPersonality service (CRUD, default management)
 - [ ] Task 12: CardChatLink service (list per card, archive, owner-only delete)

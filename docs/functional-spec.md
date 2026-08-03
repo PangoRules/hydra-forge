@@ -610,7 +610,7 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 
 **General chats (personal, non-project):**
 - [ ] ChatSession CRUD + ChatMessage persistence
-- [ ] Chat folder system: max 2 levels, free-form naming
+- [x] Chat folder system: max 2 levels, free-form naming
 - [ ] Chat search: title + message content
 - [ ] Model selection per session (from admin-configured providers, respects tier ceilings)
 - [ ] File upload + vision in chat
@@ -631,7 +631,7 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 - [ ] Shared project chats: visible to all members read-only
 - [ ] "Summarize → start my own" fork action
 - [ ] Project archive → chat folder archived (revivable)
-- [ ] `ChatArchiveService.ArchiveFolder(folderId)`: sets `ChatFolder.ArchivedAt` and cascades to every child `ChatSession.ArchivedAt`. Invoked by `ProjectArchiveService` and by explicit user "archive folder" action.
+- [x] `ChatArchiveService.ArchiveFolder(folderId)`: sets `ChatFolder.ArchivedAt` and cascades to every child `ChatSession.ArchivedAt`. Invoked by `ProjectArchiveService` and by explicit user "archive folder" action.
 - [ ] TUI: chat mode for general chats + project chat panel
 
 > The AiNarrative nightly job and its Web UI/TUI display surface shipped in Phase 6 (see that section) — it doesn't depend on live chat and was pulled forward once the display-surface gap was found (D-58).

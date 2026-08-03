@@ -13,13 +13,13 @@
 
 **Steps:**
 
-- [ ] Define `IChatFolderService`: `CreateAsync`, `ListAsync`, `UpdateAsync`, `ArchiveAsync`
-- [ ] `CreateAsync`: validate max depth 2 (count parents). If `parentFolderId` set, verify parent depth ≤ 1
-- [ ] `ListAsync`: flat list with `ParentFolderId` (tree shape reconstructed client-side). Filter by `projectId`
-- [ ] `ArchiveAsync`: delegate to `ChatArchiveService.ArchiveFolder` — sets `ArchivedAt` on folder + all child sessions
-- [ ] `ChatArchiveService`: `ArchiveFolder(folderId)` → cascade archive sessions, `ArchiveSession(sessionId)` → soft-archive
-- [ ] Write tests: depth-3 rejection, archive cascade, empty folder archive
-- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-9-folder-service-matrix.md` — 3-level folder creation rejected; archiving a folder archives all its sessions
+- [x] Define `IChatFolderService`: `CreateAsync`, `ListAsync`, `UpdateAsync`, `ArchiveAsync`
+- [x] `CreateAsync`: validate max depth 2 (count parents). If `parentFolderId` set, verify parent depth ≤ 1
+- [x] `ListAsync`: flat list with `ParentFolderId` (tree shape reconstructed client-side). Filter by `projectId`
+- [x] `ArchiveAsync`: delegate to `ChatArchiveService.ArchiveFolder` — sets `ArchivedAt` on folder + all child sessions
+- [x] `ChatArchiveService`: `ArchiveFolder(folderId)` → cascade archive sessions, `ArchiveSession(sessionId)` → soft-archive
+- [x] Write tests: depth-3 rejection, archive cascade, empty folder archive
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-9-folder-service-matrix.md` — 3-level folder creation rejected; archiving a folder archives all its sessions
 
 **Acceptance:**
 - `dotnet build`
