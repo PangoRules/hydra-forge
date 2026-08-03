@@ -22,7 +22,7 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IChatSessionService, ChatSessionService>();
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IChatRagRetriever, ChatRagRetriever>();
-        services.AddScoped<IChatSummaryGenerator, StubChatSummaryGenerator>();
+        services.AddScoped<IChatSummaryGenerator, LlmChatSummaryGenerator>();
         services.AddScoped<ChatArchiveService>();
         services.AddScoped<IChatFolderService, ChatFolderService>();
         services.AddScoped<ICardChatLinkService, CardChatLinkService>();

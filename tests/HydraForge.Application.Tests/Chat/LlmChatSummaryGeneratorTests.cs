@@ -159,7 +159,7 @@ public class LlmChatSummaryGeneratorTests
     }
 
     [Fact]
-    async Task GenerateSummaryAsync_EmptyMessages_ReturnsSuccessNull()
+    async Task GenerateSummaryAsync_EmptyMessages_ReturnsEmptyString()
     {
         // Arrange
         var sessionRepo = new FakeSessionRepo();
