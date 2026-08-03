@@ -203,6 +203,8 @@ For detailed phase task lists, see [functional-spec.md](functional-spec.md) §13
 
 > **Before Phase 7:** `ILlmClient.StreamChatAsync` (`IAsyncEnumerable<ChatChunk>`) is built and drained server-side (D-64), but no transport forwards chunks to a live client yet. Decide the SignalR/SSE streaming shape for chat before building ChatSession/ChatMessage persistence on top of it.
 
+> **Before Phase 8:** Agent pipeline (Planner → Orchestrator → Developer → Reviewer → Documenter → Git Agent) splits into five sub-projects, each needing its own brainstorm/spec pass before implementation: **A. Execution & Edit Foundation** — resolved 2026-08-02, see `functional-spec.md` §25 (FR-195–201). **B. Orchestration & Agent Roles** — tool access per role, model tier mapping, gate conditions, retry/escalation — not yet brainstormed. **C. Review UX (TUI + Web)** — e2e human gate, branch/PR diff comparison in both interfaces, streaming agent output — not yet brainstormed. **D. Pipeline Memory & Context Strategy** — codebase-fact memory distinct from personal Brain/Memory, fits inside the existing `ContextCompressor`/prompt-caching from Phase 6 — not yet brainstormed. **E. Git/PR Mechanics** — commit granularity, PR body generation, branch model, review-before-PR vs after — not yet brainstormed.
+
 > **Before Phase 9:** Add `UserPreferences` and `UserTheme` entities to the data model before building any preference-related endpoints.
 
 > **Before Phase 12:** Choose feature flag storage. Recommendation: `AppSetting { Key, Value, UpdatedAt }` DB table so admin can toggle flags at runtime without a redeploy.

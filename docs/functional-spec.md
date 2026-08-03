@@ -31,7 +31,8 @@
 22. [Model Routing & Token Management](#22-model-routing--token-management)
 23. [Image Generation](#23-image-generation)
 24. [Non-Functional Requirements](#24-non-functional-requirements)
-25. [Development Phase Checklists](#25-development-phase-checklists)
+25. [Agent Pipeline — Execution & Edit Foundation](#25-agent-pipeline--execution--edit-foundation)
+26. [Development Phase Checklists](#26-development-phase-checklists)
 
 > ✅ = Confirmed | ❓ = Needs discussion | 🔜 = Future
 
@@ -431,7 +432,23 @@
 
 ---
 
-## 25. Development Phase Checklists
+## 25. Agent Pipeline — Execution & Edit Foundation
+
+> Decisions for Phase 8 sub-project A (of five: Execution & Edit Foundation / Orchestration & Agent Roles / Review UX / Pipeline Memory & Context Strategy / Git-PR Mechanics), captured 2026-08-02 brainstorm. This section covers only how a Developer/Reviewer agent touches a real checkout — not the agent roles, review UX, memory, or PR mechanics themselves. Those need their own brainstorm passes before Phase 8 implementation begins (see `scope.md` Pre-Phase Decision Points).
+
+| # | Requirement | Status |
+|---|---|---|
+| FR-195 | Agent pipeline executes server-side: server maintains a persistent git clone per linked project in a mounted workspace volume; each pipeline run (one task/card) gets an isolated git worktree off that clone, branch-per-task | ✅ |
+| FR-196 | Admin-configurable concurrency cap: N pipeline runs execute in parallel per project (each in its own worktree); runs beyond the cap queue until a slot frees | ✅ |
+| FR-197 | Per-project pipeline command config: build, test, and lint commands set once when the project's git remote is linked (or via a `.hydraforge/pipeline.json` in the target repo) — no stack auto-detection, no per-language special-casing in the server | ✅ |
+| FR-198 | Developer agent file edits are hash-anchored: an edit records the content hash of the region it read; the edit is rejected before being applied if the hash no longer matches (stale read, concurrent change, whitespace drift) | ✅ |
+| FR-199 | Generic LSP client tool, available to Developer/Reviewer agents, configured per-project (which language server binary/command to launch) — speaks standard LSP for navigation/rename/references against whatever server the project configures (Roslyn, typescript-language-server, gopls, pyright, rust-analyzer, etc.) — not hardcoded to any one stack, since HydraForge manages projects across multiple stacks | ✅ |
+| FR-200 | Reviewer agent runs the project's configured build/test/lint commands inside the task's worktree as part of its gate, in addition to diff review — not diff-review-only | ✅ |
+| FR-201 | Developer↔Reviewer cycle is bounded: max 3 review cycles before escalating to a human, same cap pattern as the existing opencode commander/reviewer loop | ✅ |
+
+---
+
+## 26. Development Phase Checklists
 
 ### Phase 1: Foundation 🏗️
 > Goal: running skeleton, auth, error handling infrastructure. Nothing user-facing yet.
@@ -621,6 +638,17 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 
 ### Phase 8: AI Features — Project Space 🤖
 > Goal: AI agents can operate on the board. Chat can create and mutate cards.
+
+**Execution & edit foundation (sub-project A, see §25):**
+- [ ] Server-hosted workspace volume: persistent per-project git clone + isolated git worktree per pipeline run (FR-195)
+- [ ] Admin-configurable per-project concurrency cap + run queue (FR-196)
+- [ ] Per-project pipeline command config (build/test/lint), set on git remote link (FR-197)
+- [ ] Hash-anchored edit tool for Developer agent (FR-198)
+- [ ] Generic per-project-configured LSP client tool for Developer/Reviewer agents (FR-199)
+- [ ] Reviewer agent runs build/test/lint in the worktree as part of its gate (FR-200)
+- [ ] Developer↔Reviewer bounded retry (max 3 cycles) before human escalation (FR-201)
+
+> Remaining Phase 8 sub-projects — Orchestration & Agent Roles, Review UX (TUI + Web, branch/PR diff comparison), Pipeline Memory & Context Strategy, Git/PR Mechanics — still need their own brainstorm passes. See `scope.md` Pre-Phase Decision Points.
 
 - [ ] Card creation from chat: AI proposes cards (title, type, column, description, dependencies) → bulk confirmation list → user approves all at once
 - [ ] Card creation auto-links to source card as `Relates` when created from card chat
