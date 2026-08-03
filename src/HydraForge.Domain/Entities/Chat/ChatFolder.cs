@@ -9,4 +9,12 @@ public class ChatFolder
     public Guid? ProjectId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
+
+    public void Rename(string name, Guid? parentFolderId)
+    {
+        Name = name;
+        ParentFolderId = parentFolderId;
+    }
+
+    public void Archive() => ArchivedAt = DateTime.UtcNow;
 }

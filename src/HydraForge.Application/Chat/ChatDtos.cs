@@ -27,6 +27,12 @@ public record UpdateChatSessionRequest(
 
 public record MoveChatSessionRequest(Guid? FolderId);
 
+// ── Folder Requests / Responses ─────────────────────────────────
+
+public record CreateChatFolderRequest(string Name, Guid? ParentFolderId, Guid? ProjectId);
+
+public record UpdateChatFolderRequest(string Name, Guid? ParentFolderId);
+
 // ── Responses ─────────────────────────────────────────────────
 
 public record ChatSessionDto(
