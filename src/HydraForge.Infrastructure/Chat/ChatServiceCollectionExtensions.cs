@@ -17,6 +17,7 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IAgentPersonalityRepository, EfAgentPersonalityRepository>();
         services.AddScoped<IDocumentChunkRepository, EfDocumentChunkRepository>();
         services.AddScoped<IChatFolderRepository, EfChatFolderRepository>();
+        services.AddScoped<IPromptPresetRepository, EfPromptPresetRepository>();
 
         // Services
         services.AddScoped<IChatSessionService, ChatSessionService>();

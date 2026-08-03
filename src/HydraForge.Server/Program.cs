@@ -273,6 +273,7 @@ builder
                         path.StartsWithSegments("/hubs/board")
                         || path.StartsWithSegments("/hubs/presence")
                         || path.StartsWithSegments("/hubs/notifications")
+                        || path.StartsWithSegments("/hubs/chat")
                     )
                 )
                 {
@@ -442,5 +443,6 @@ app.MapControllers();
 app.MapHub<BoardHub>("/hubs/board");
 app.MapHub<PresenceHub>("/hubs/presence");
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
