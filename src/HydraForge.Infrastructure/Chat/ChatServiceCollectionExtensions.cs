@@ -25,7 +25,7 @@ public static class ChatServiceCollectionExtensions
         services.AddSingleton<IBackgroundTaskQueue, HangfireBackgroundTaskQueue>();
 
         // Background jobs
-        services.AddScoped<CloseSessionJob>();
+        services.AddScoped<HydraForge.Application.Chat.CloseSessionJob>();
 
         return services;
     }

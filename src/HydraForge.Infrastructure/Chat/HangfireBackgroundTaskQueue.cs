@@ -16,7 +16,7 @@ public sealed class HangfireBackgroundTaskQueue : IBackgroundTaskQueue
         return Task.CompletedTask;
     }
 
-    public Task EnqueueJobAsync<TJob>(Expression<Action<TJob>> methodCall)
+    public Task EnqueueJobAsync<TJob>(Expression<Func<TJob, Task>> methodCall)
     {
         _jobClient.Enqueue(methodCall);
         return Task.CompletedTask;

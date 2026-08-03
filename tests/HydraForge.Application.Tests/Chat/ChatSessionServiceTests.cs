@@ -282,6 +282,11 @@ public class ChatSessionServiceTests
     private sealed class FakeBackgroundTaskQueue : IBackgroundTaskQueue
     {
         public List<Func<CancellationToken, Task>> CapturedWorkItems { get; } = [];
+        public List<Func<CancellationToken, Task>> CapturedJobDelegates { get; } = [];
+        public int EnqueueCount { get; private set; }
+        private object? _closeSessionJobInstance;
+
+        public void SetCloseSessionJobInstance(object job) => _closeSessionJobInstance = job;
 
         public Task EnqueueAsync(Func<CancellationToken, Task> workItem, CancellationToken ct = default)
         {
@@ -289,13 +294,15 @@ public class ChatSessionServiceTests
             return Task.CompletedTask;
         }
 
-        public Task EnqueueJobAsync<TJob>(Expression<Action<TJob>> methodCall)
+        public Task EnqueueJobAsync<TJob>(Expression<Func<TJob, Task>> methodCall)
         {
-            // Execute synchronously in tests so we can verify side-effects immediately.
-            var action = methodCall.Compile();
-            var job = (TJob?)_serviceProvider?.GetService(typeof(TJob));
-            if (job != null)
-                action(job);
+            EnqueueCount++;
+            var func = methodCall.Compile();
+            if (_closeSessionJobInstance is TJob job)
+            {
+                Func<CancellationToken, Task> del = async ct => { await func(job); };
+                CapturedJobDelegates.Add(del);
+            }
             return Task.CompletedTask;
         }
 
@@ -431,7 +438,7 @@ public class ChatSessionServiceTests
 
         // Register Application-layer CloseSessionJob so EnqueueJobAsync can resolve it.
         var closeSessionJob = new CloseSessionJob(serviceProvider);
-        serviceProvider.InjectService(closeSessionJob);
+        backgroundTaskQueue.SetCloseSessionJobInstance(closeSessionJob);
 
         return (service, sessionRepo, messageRepo, cardRepo, userRepo, memberRepo, personalityRepo, documentRepo, summaryGenerator, backgroundTaskQueue);
     }
@@ -441,7 +448,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_F6_ImplicitClose_EnqueuesBackgroundJob()
     {
-        var (service, sessionRepo, _, cardRepo, _, _, _, _, summaryGenerator, backgroundTaskQueue) = CreateSut();
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, backgroundTaskQueue) = CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var cardId = NewId();
@@ -459,8 +466,6 @@ public class ChatSessionServiceTests
 
         cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
 
-        // FakeBackgroundTaskQueue.EnqueueJobAsync executes synchronously, so the old
-        // session is closed by the time CreateAsync returns.
         var result = await service.CreateAsync(
             new CreateChatSessionRequest(
                 Title: "New Chat",
@@ -476,9 +481,53 @@ public class ChatSessionServiceTests
         );
 
         Assert.True(result.IsSuccess);
+        Assert.Equal(1, backgroundTaskQueue.EnqueueCount);
+        Assert.Equal(ChatSessionStatus.Active, existing.Status); // Not closed yet — only enqueued
         Assert.Equal(2, sessionRepo.Sessions.Count);
-        Assert.Equal(ChatSessionStatus.Closed, existing.Status); // Old session closed by background job
-        Assert.Contains(sessionRepo.Sessions, s => s.OwnerId == ownerId && s.ProjectId == projectId && s.OpenCardId == cardId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_F6_ImplicitClose_JobClosesOldSession()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, summaryGenerator, backgroundTaskQueue) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+
+        var existing = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(existing);
+
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+        summaryGenerator.GenerateSummaryImpl = (_, _) =>
+            Task.FromResult(Result<string>.Success("Test summary"));
+
+        await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "New Chat",
+                FolderId: null,
+                ProjectId: projectId,
+                OpenCardId: cardId,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            ownerId
+        );
+
+        // Explicitly invoke the captured work item to verify it closes the old session.
+        Assert.Single(backgroundTaskQueue.CapturedJobDelegates);
+        var workItem = backgroundTaskQueue.CapturedJobDelegates[0];
+        await workItem(CancellationToken.None);
+
+        Assert.Equal(ChatSessionStatus.Closed, existing.Status);
     }
 
     [Fact]
@@ -720,5 +769,45 @@ public class ChatSessionServiceTests
         Assert.Equal(session.Id, link.ChatSessionId);
         Assert.Equal(ownerId, link.OwnerId);
         Assert.Equal("Panel summary", link.Summary);
+    }
+
+    [Fact]
+    public async Task ArchiveAsync_NotOwner_ReturnsSessionNotOwner()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var callerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.ArchiveAsync(session.Id, callerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task DetachDocumentAsync_NotOwner_ReturnsSessionNotOwner()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var callerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.DetachDocumentAsync(session.Id, NewId(), callerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
     }
 }

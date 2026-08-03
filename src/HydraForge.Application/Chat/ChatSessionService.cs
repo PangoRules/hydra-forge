@@ -72,9 +72,7 @@ public class ChatSessionService(
 
         // Fork path: mutually exclusive with F6 panel tuple
         if (request.ForkedFromSessionId.HasValue)
-        {
-            return await CreateForkedAsync(request, actorId, ct);
-        }
+            return await CreateForkedAsync(request, actorId, (Guid)request.ForkedFromSessionId, ct);
 
         // F6: implicit close of existing active panel session
         if (request.ProjectId.HasValue && request.OpenCardId.HasValue)
@@ -88,9 +86,11 @@ public class ChatSessionService(
             if (existing != null)
             {
                 // Fire-and-forget: close old session in background (one LLM call for summary + CardChatLink)
+#pragma warning disable CS4014
                 await _backgroundTaskQueue.EnqueueJobAsync<CloseSessionJob>(
                     j => j.RunAsync(existing.Id, actorId, CancellationToken.None)
                 );
+#pragma warning restore CS4014
             }
         }
 
@@ -118,10 +118,11 @@ public class ChatSessionService(
     private async Task<Result<ChatSessionDto>> CreateForkedAsync(
         CreateChatSessionRequest request,
         Guid actorId,
+        Guid forkedId,
         CancellationToken ct
     )
     {
-        var source = await _sessionRepo.GetByIdAsync(request.ForkedFromSessionId.Value, ct);
+        var source = await _sessionRepo.GetByIdAsync(forkedId, ct);
         if (source == null)
             return Result<ChatSessionDto>.Failure(
                 new Error(DomainErrorCodes.Chat.SessionNotFound, "Source session not found.")
@@ -265,12 +266,13 @@ public class ChatSessionService(
                 new Error(DomainErrorCodes.Chat.SessionClosed, "Cannot update a closed session.")
             );
 
-        session.Title = request.Title;
-        session.FolderId = request.FolderId;
-        session.PersonalityId = request.PersonalityId;
-        session.AiEditMode = request.AiEditMode ?? session.AiEditMode;
-        session.SearchAllMyDocs = request.SearchAllMyDocs;
-        session.UpdatedAt = DateTime.UtcNow;
+        session.UpdateSettings(
+            request.Title,
+            request.FolderId,
+            request.PersonalityId,
+            request.AiEditMode,
+            request.SearchAllMyDocs
+        );
 
         await _sessionRepo.UpdateAsync(session, ct);
 
@@ -310,7 +312,6 @@ public class ChatSessionService(
         }
 
         session.Close(summary);
-        session.AiEditMode = AiEditMode.PerMutation; // Revoke AI edit
         await _sessionRepo.UpdateAsync(session, ct);
 
         // Create CardChatLink if panel session

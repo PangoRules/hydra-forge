@@ -9,5 +9,5 @@ public interface IBackgroundTaskQueue
 {
     Task EnqueueAsync(Func<CancellationToken, Task> workItem, CancellationToken ct = default);
 
-    Task EnqueueJobAsync<TJob>(Expression<Action<TJob>> methodCall);
+    Task EnqueueJobAsync<TJob>(Expression<Func<TJob, Task>> methodCall);
 }
