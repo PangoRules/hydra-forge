@@ -118,10 +118,7 @@ public class PromptPresetService(
                 );
         }
 
-        preset.Name = request.Name;
-        preset.Content = request.Content;
-        preset.GroupId = request.GroupId;
-        preset.UpdatedAt = DateTime.UtcNow;
+        preset.Update(request.Name, request.Content, request.GroupId);
 
         await _presetRepo.UpdateAsync(preset, ct);
         return Result<PromptPresetDto>.Success(MapToDto(preset));
@@ -221,8 +218,7 @@ public class PromptPresetService(
                 )
             );
 
-        group.Name = request.Name;
-        group.UpdatedAt = DateTime.UtcNow;
+        group.Rename(request.Name);
 
         await _groupRepo.UpdateAsync(group, ct);
 

@@ -10,4 +10,12 @@ public class PromptPreset
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
+
+    public void Update(string name, string content, Guid? groupId)
+    {
+        Name = name;
+        Content = content;
+        GroupId = groupId;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
