@@ -23,9 +23,13 @@ public class CardChatLinkServiceTests
         public Task<CardChatLink?> GetByIdAsync(Guid linkId, CancellationToken ct = default) =>
             Task.FromResult(Links.FirstOrDefault(l => l.Id == linkId));
 
-        public Task<IReadOnlyList<CardChatLink>> GetByCardAsync(Guid cardId, CancellationToken ct = default) =>
+        public Task<IReadOnlyList<CardChatLink>> GetByCardAsync(
+            Guid cardId,
+            CancellationToken ct = default
+        ) =>
             Task.FromResult<IReadOnlyList<CardChatLink>>(
-                Links.Where(l => l.CardId == cardId && l.ArchivedAt == null)
+                Links
+                    .Where(l => l.CardId == cardId && l.ArchivedAt == null)
                     .OrderByDescending(l => l.CreatedAt)
                     .ToList()
             );
@@ -57,7 +61,9 @@ public class CardChatLinkServiceTests
             CancellationToken ct = default
         ) =>
             Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
-                Cards.Where(kv => cardIds.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value)
+                Cards
+                    .Where(kv => cardIds.Contains(kv.Key))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value)
             );
 
         public Task<Card?> GetByProjectAndNumberAsync(
@@ -81,14 +87,12 @@ public class CardChatLinkServiceTests
             return Task.CompletedTask;
         }
 
-        public Task UpdateAsync(Card card, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task UpdateAsync(Card card, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DeleteAsync(Guid cardId, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task DeleteAsync(Guid cardId, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task CompactColumnPositionsAsync(
             Guid columnId,
@@ -99,8 +103,10 @@ public class CardChatLinkServiceTests
         public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
             Task.FromResult(0);
 
-        public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
-            Task.FromResult(0);
+        public Task<int> CountActiveChildrenAsync(
+            Guid parentCardId,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
     }
 
     private sealed class FakeUserRepo : IUserRepository
@@ -118,8 +124,7 @@ public class CardChatLinkServiceTests
                 Users.Where(kv => ids.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value)
             );
 
-        public Task<User?> FindByUsernameAsync(string username) =>
-            Task.FromResult<User?>(null);
+        public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
 
         public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
             IReadOnlyList<string> usernames,
@@ -128,16 +133,14 @@ public class CardChatLinkServiceTests
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
 
-        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) =>
-            Task.CompletedTask;
+        public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
 
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
 
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(false);
 
-        public Task CreateAsync(User user, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task<IReadOnlyList<User>> ListAsync(
             int skip,
@@ -149,8 +152,7 @@ public class CardChatLinkServiceTests
         public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
             Task.FromResult(0);
 
-        public Task UpdateAsync(User user, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeMemberRepo : IProjectMemberRepository
@@ -248,7 +250,12 @@ public class CardChatLinkServiceTests
         };
 
         userRepo.Users[ownerId] = User.Create(
-            "session_owner", "Session", "Owner", "owner@test.com", "hash", id: ownerId
+            "session_owner",
+            "Session",
+            "Owner",
+            "owner@test.com",
+            "hash",
+            id: ownerId
         );
 
         var link = new CardChatLink

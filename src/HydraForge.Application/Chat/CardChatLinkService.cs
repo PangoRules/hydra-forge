@@ -31,7 +31,13 @@ public sealed class CardChatLinkService(
             );
 
         if (
-            !await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, card.ProjectId, userId, ct)
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                card.ProjectId,
+                userId,
+                ct
+            )
         )
             return Result<IReadOnlyList<CardChatLinkDto>>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Project member required.")
@@ -42,19 +48,18 @@ public sealed class CardChatLinkService(
         var ownerIds = links.Select(l => l.OwnerId).Distinct().ToList();
         var owners = await _userRepo.FindByIdsAsync(ownerIds, ct);
 
-        var summaries = links.Select(
-            l =>
-                new CardChatLinkDto(
-                    l.Id,
-                    l.CardId,
-                    l.ChatSessionId,
-                    l.OwnerId,
-                    owners.TryGetValue(l.OwnerId, out var u) ? u.Username : "?",
-                    l.Summary.Length > 100 ? l.Summary[..100] : l.Summary,
-                    l.CreatedAt,
-                    l.ArchivedAt
-                )
-        ).ToList();
+        var summaries = links
+            .Select(l => new CardChatLinkDto(
+                l.Id,
+                l.CardId,
+                l.ChatSessionId,
+                l.OwnerId,
+                owners.TryGetValue(l.OwnerId, out var u) ? u.Username : "?",
+                l.Summary.Length > 100 ? l.Summary[..100] : l.Summary,
+                l.CreatedAt,
+                l.ArchivedAt
+            ))
+            .ToList();
 
         return Result<IReadOnlyList<CardChatLinkDto>>.Success(summaries);
     }
@@ -73,7 +78,10 @@ public sealed class CardChatLinkService(
 
         if (link.OwnerId != userId)
             return Result<CardChatLinkDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can archive this chat link.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can archive this chat link."
+                )
             );
 
         await _linkRepo.ArchiveAsync(linkId, ct);
