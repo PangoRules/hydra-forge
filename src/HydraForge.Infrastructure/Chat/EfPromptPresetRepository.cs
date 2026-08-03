@@ -12,9 +12,14 @@ public sealed class EfPromptPresetRepository(HydraForgeDbContext context) : IPro
         return await context.PromptPresets.FirstOrDefaultAsync(p => p.Id == presetId, ct);
     }
 
-    public async Task<IReadOnlyList<PromptPreset>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PromptPreset>> ListByUserAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        return await context.PromptPresets.Where(p => p.UserId == userId && p.ArchivedAt == null).ToListAsync(ct);
+        return await context
+            .PromptPresets.Where(p => p.UserId == userId && p.ArchivedAt == null)
+            .ToListAsync(ct);
     }
 
     public async Task AddAsync(PromptPreset preset, CancellationToken ct = default)
@@ -42,7 +47,8 @@ public sealed class EfPromptPresetRepository(HydraForgeDbContext context) : IPro
     public async Task NullifyGroupAsync(Guid groupId, CancellationToken ct = default)
     {
         var presets = await context.PromptPresets.Where(p => p.GroupId == groupId).ToListAsync(ct);
-        foreach (var p in presets) p.GroupId = null;
+        foreach (var p in presets)
+            p.GroupId = null;
         await context.SaveChangesAsync(ct);
     }
 }

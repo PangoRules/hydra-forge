@@ -4,7 +4,7 @@ using HydraForge.Application.Chat;
 using HydraForge.Application.Llm;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
-using HydraForge.Domain.Constants;
+using HydraForge.Domain.Common;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
@@ -17,6 +17,7 @@ namespace HydraForge.Infrastructure.Realtime;
 [Authorize]
 [EnableRateLimiting("SignalR")]
 public class ChatHub(
+    IUserRepository userRepo,
     IProjectMemberRepository memberRepo,
     IChatSessionRepository sessionRepo,
     IChatMessageRepository messageRepo,
@@ -29,8 +30,8 @@ public class ChatHub(
     LlmCallGuard llmCallGuard,
     IContextCompressor contextCompressor,
     ILogger<ChatHub> logger,
-    IOptions<LlmOptions> llmOptions)
-    : Hub<IChatHub>
+    IOptions<LlmOptions> llmOptions
+) : Hub<IChatHub>
 {
     private static readonly ConcurrentDictionary<Guid, StreamContext> ActiveStreams = new();
 
@@ -38,24 +39,37 @@ public class ChatHub(
 
     private record StreamContext(CancellationTokenSource Cts, Guid MessageId);
 
+    private async Task<bool> HasSessionAccessAsync(
+        Domain.Entities.Chat.ChatSession session,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        if (session.OwnerId == userId)
+            return true;
+
+        if (session.ProjectId.HasValue && session.IsShared)
+            return await MembershipGuard.HasAccessAsync(
+                userRepo,
+                memberRepo,
+                session.ProjectId.Value,
+                userId,
+                ct
+            );
+
+        return false;
+    }
+
     public async Task JoinSession(Guid sessionId)
     {
         var userId = Context.User!.GetRequiredUserId();
 
         var session = await sessionRepo.GetByIdAsync(sessionId);
         if (session is null)
-            throw new HubException("CHAT_SESSION_NOT_FOUND");
+            throw new HubException(DomainErrorCodes.Chat.SessionNotFound);
 
-        if (session.ProjectId.HasValue)
-        {
-            var isAdmin = Context.User!.IsInRole(Roles.Admin);
-            if (!isAdmin)
-            {
-                var membership = await memberRepo.GetByProjectAndUserAsync(session.ProjectId.Value, userId);
-                if (membership is null)
-                    throw new HubException("Access denied");
-            }
-        }
+        if (!await HasSessionAccessAsync(session, userId))
+            throw new HubException(DomainErrorCodes.Chat.SessionNotOwner);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, SessionGroup(sessionId));
     }
@@ -70,41 +84,68 @@ public class ChatHub(
         var userId = Context.User!.GetRequiredUserId();
 
         var userMessage = await messageRepo.GetByIdAsync(userMessageId);
-        if (userMessage is null || userMessage.SessionId != sessionId || userMessage.Role != MessageRole.User)
+        if (
+            userMessage is null
+            || userMessage.SessionId != sessionId
+            || userMessage.Role != MessageRole.User
+        )
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_MESSAGE_NOT_FOUND", "Message not found");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.MessageNotFound,
+                    "Message not found"
+                );
             return;
         }
 
         var session = await sessionRepo.GetByIdAsync(sessionId);
         if (session is null)
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_SESSION_NOT_FOUND", "Session not found");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.SessionNotFound,
+                    "Session not found"
+                );
             return;
         }
 
-        if (session.OwnerId != userId && session.ProjectId.HasValue && !session.IsShared)
+        if (!await HasSessionAccessAsync(session, userId))
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_SESSION_NOT_OWNER", "You do not own this session");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "You do not have access to this session"
+                );
             return;
         }
 
         if (session.Status != ChatSessionStatus.Active)
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_SESSION_CLOSED", "Session is closed");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.SessionClosed,
+                    "Session is closed"
+                );
             return;
         }
 
         if (session.ArchivedAt.HasValue)
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_SESSION_ARCHIVED", "Session has been archived");
-            return;
-        }
-
-        var budget = await llmCallGuard.CheckTokenBudgetAsync(userId, 0);
-        if (!budget.IsSuccess)
-        {
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, budget.Error.Code, budget.Error.Message);
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.SessionArchived,
+                    "Session has been archived"
+                );
             return;
         }
 
@@ -114,7 +155,13 @@ public class ChatHub(
         if (!ActiveStreams.TryAdd(sessionId, new StreamContext(cts, assistantMessageId)))
         {
             cts.Dispose();
-            await Clients.Group(SessionGroup(sessionId)).StreamError(userMessageId, "CHAT_STREAM_IN_PROGRESS", "A stream is already active for this session");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    userMessageId,
+                    DomainErrorCodes.Chat.StreamInProgress,
+                    "A stream is already active for this session"
+                );
             return;
         }
 
@@ -128,7 +175,8 @@ public class ChatHub(
                     userMessage.Content,
                     session.SearchAllMyDocs,
                     llmOptions.Value?.Rag?.TopK ?? 8,
-                    cts.Token);
+                    cts.Token
+                );
             }
             catch (OperationCanceledException)
             {
@@ -136,7 +184,11 @@ public class ChatHub(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "RAG retrieval failed for session {SessionId}, proceeding without context", sessionId);
+                logger.LogWarning(
+                    ex,
+                    "RAG retrieval failed for session {SessionId}, proceeding without context",
+                    sessionId
+                );
             }
 
             var chatMessages = new List<ChatMessage>();
@@ -156,11 +208,16 @@ public class ChatHub(
                 var preset = await presetRepo.GetByIdAsync(presetId.Value);
                 if (preset is { ArchivedAt: null } && preset.UserId == userId)
                 {
-                    presetContent = $"<preset>\n{preset.Content}\n</preset>\n\n{userMessage.Content}";
+                    presetContent =
+                        $"<preset>\n{preset.Content}\n</preset>\n\n{userMessage.Content}";
                 }
             }
 
-            var history = (await messageRepo.GetBySessionAsync(sessionId, null, null, 100, cts.Token)).Reverse().ToList();
+            var history = (
+                await messageRepo.GetBySessionAsync(sessionId, null, null, 100, cts.Token)
+            )
+                .Reverse()
+                .ToList();
             foreach (var msg in history)
             {
                 var role = msg.Role switch
@@ -169,36 +226,76 @@ public class ChatHub(
                     MessageRole.Assistant => ChatRole.Assistant,
                     MessageRole.System => ChatRole.System,
                     MessageRole.Tool => ChatRole.Tool,
-                    _ => ChatRole.User
+                    _ => ChatRole.User,
                 };
 
                 var images = ChatMessageMapper.ToApplicationImages(msg.ImagesJson);
 
                 if (presetId.HasValue && msg.Id == userMessageId && presetContent is not null)
                 {
-                    chatMessages.Add(new ChatMessage(role, presetContent, images.Length > 0 ? images : null));
+                    chatMessages.Add(
+                        new ChatMessage(role, presetContent, images.Length > 0 ? images : null)
+                    );
                 }
                 else
                 {
-                    chatMessages.Add(new ChatMessage(role, msg.Content, images.Length > 0 ? images : null));
+                    chatMessages.Add(
+                        new ChatMessage(role, msg.Content, images.Length > 0 ? images : null)
+                    );
                 }
             }
 
-            var feature = session.ProjectId.HasValue ? AiFeature.ProjectChat : AiFeature.PersonalChat;
+            var feature = session.ProjectId.HasValue
+                ? AiFeature.ProjectChat
+                : AiFeature.PersonalChat;
             var historyContent = string.Join("\n", history.Select(m => m.Content));
-            var estimatedTokens = TokenEstimator.EstimateTokens(userMessage.Content + (presetContent ?? string.Empty) + historyContent);
-            var routeResult = await modelRouter.ResolveAsync(feature, userId, session.ProjectId, estimatedTokens, cts.Token);
+            var estimatedTokens = TokenEstimator.EstimateTokens(
+                userMessage.Content + (presetContent ?? string.Empty) + historyContent
+            );
+
+            var budget = await llmCallGuard.CheckTokenBudgetAsync(
+                userId,
+                estimatedTokens,
+                cts.Token
+            );
+            if (!budget.IsSuccess)
+            {
+                await Clients
+                    .Group(SessionGroup(sessionId))
+                    .StreamError(assistantMessageId, budget.Error.Code, budget.Error.Message);
+                return;
+            }
+
+            var routeResult = await modelRouter.ResolveAsync(
+                feature,
+                userId,
+                session.ProjectId,
+                estimatedTokens,
+                cts.Token
+            );
             if (!routeResult.IsSuccess)
             {
-                await Clients.Group(SessionGroup(sessionId)).StreamError(assistantMessageId, routeResult.Error.Code, routeResult.Error.Message);
+                await Clients
+                    .Group(SessionGroup(sessionId))
+                    .StreamError(
+                        assistantMessageId,
+                        routeResult.Error.Code,
+                        routeResult.Error.Message
+                    );
                 return;
             }
 
             var route = routeResult.Value;
             var client = llmClientFactory.For(route.Provider!);
 
-            var compressedContext = await contextCompressor.CompressAsync(ragBlocks, route.Primary.MaxTokens ?? 4096, cts.Token);
-            var cacheBlocks = compressedContext.IsSuccess ? compressedContext.Value.Blocks : ragBlocks;
+            var compressedContext = await contextCompressor.CompressAsync(
+                ragBlocks,
+                route.Primary.MaxTokens ?? 4096,
+                cts.Token
+            );
+            var cacheBlocks = compressedContext.IsSuccess
+                ? compressedContext.Value.Blocks
+                : ragBlocks;
 
             var request = new ChatRequest(
                 route.Primary.Id,
@@ -210,7 +307,9 @@ public class ChatHub(
                 0.7m
             );
 
-            await Clients.Group(SessionGroup(sessionId)).StreamStart(assistantMessageId, route.Primary.ModelId, route.Primary.Name);
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamStart(assistantMessageId, route.Primary.ModelId, route.Primary.Name);
 
             string content = string.Empty;
             ChatChunk? lastChunk = null;
@@ -221,22 +320,35 @@ public class ChatHub(
                 {
                     lastChunk = chunk;
 
-                    if (chunk.FinishReason == ChatChunkFinishReason.Error || chunk.FinishReason == ChatChunkFinishReason.ContentFilter)
+                    if (
+                        chunk.FinishReason == ChatChunkFinishReason.Error
+                        || chunk.FinishReason == ChatChunkFinishReason.ContentFilter
+                    )
                     {
-                        await Clients.Group(SessionGroup(sessionId)).StreamError(assistantMessageId, "STREAM_ERROR", chunk.Delta ?? "Stream error");
+                        await Clients
+                            .Group(SessionGroup(sessionId))
+                            .StreamError(
+                                assistantMessageId,
+                                "STREAM_ERROR",
+                                chunk.Delta ?? "Stream error"
+                            );
                         return;
                     }
 
                     if (chunk.Delta is not null)
                     {
                         content += chunk.Delta;
-                        await Clients.Group(SessionGroup(sessionId)).StreamDelta(assistantMessageId, chunk.Delta);
+                        await Clients
+                            .Group(SessionGroup(sessionId))
+                            .StreamDelta(assistantMessageId, chunk.Delta);
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                await Clients.Group(SessionGroup(sessionId)).StreamDone(assistantMessageId, null, null, null, null);
+                await Clients
+                    .Group(SessionGroup(sessionId))
+                    .StreamDone(assistantMessageId, null, null, null, null);
                 return;
             }
 
@@ -250,7 +362,7 @@ public class ChatHub(
                 OutputTokens = lastChunk?.Usage?.OutputTokens ?? 0,
                 CachedTokens = lastChunk?.Usage?.CachedTokens ?? 0,
                 ModelName = route.Primary.Name,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
             };
             await messageRepo.AddAsync(assistantMessage);
 
@@ -269,23 +381,38 @@ public class ChatHub(
                 Cost: 0
             );
             await usageRecorder.RecordTokenAsync(recordInput, cts.Token);
-            await usageRecorder.AccrueTokenUsageAsync(userId, (lastChunk?.Usage?.InputTokens ?? 0) + (lastChunk?.Usage?.OutputTokens ?? 0), cts.Token);
+            await usageRecorder.AccrueTokenUsageAsync(
+                userId,
+                (lastChunk?.Usage?.InputTokens ?? 0) + (lastChunk?.Usage?.OutputTokens ?? 0),
+                cts.Token
+            );
 
-            await Clients.Group(SessionGroup(sessionId)).StreamDone(
-                assistantMessageId,
-                lastChunk?.Usage?.InputTokens,
-                lastChunk?.Usage?.OutputTokens,
-                lastChunk?.Usage?.CachedTokens,
-                route.Primary.Name);
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamDone(
+                    assistantMessageId,
+                    lastChunk?.Usage?.InputTokens,
+                    lastChunk?.Usage?.OutputTokens,
+                    lastChunk?.Usage?.CachedTokens,
+                    route.Primary.Name
+                );
         }
         catch (OperationCanceledException)
         {
-            await Clients.Group(SessionGroup(sessionId)).StreamDone(assistantMessageId, null, null, null, null);
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamDone(assistantMessageId, null, null, null, null);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "SendMessage failed for session {SessionId}", sessionId);
-            await Clients.Group(SessionGroup(sessionId)).StreamError(assistantMessageId, "INTERNAL_ERROR", "An internal error occurred while processing your message. Please try again.");
+            await Clients
+                .Group(SessionGroup(sessionId))
+                .StreamError(
+                    assistantMessageId,
+                    "INTERNAL_ERROR",
+                    "An internal error occurred while processing your message. Please try again."
+                );
         }
         finally
         {
@@ -299,7 +426,7 @@ public class ChatHub(
         var userId = Context.User!.GetRequiredUserId();
 
         var session = await sessionRepo.GetByIdAsync(sessionId);
-        if (session is null || session.OwnerId != userId)
+        if (session is null || !await HasSessionAccessAsync(session, userId))
         {
             return;
         }
