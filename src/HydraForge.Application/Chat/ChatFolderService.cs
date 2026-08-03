@@ -96,6 +96,11 @@ public class ChatFolderService(
         CancellationToken ct = default
     )
     {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Result<ChatFolderDto>.Failure(
+                new Error(DomainErrorCodes.Validation.Required, "Folder name is required.")
+            );
+
         var folder = await _folderRepo.GetByIdAsync(folderId, ct);
         if (folder == null)
             return Result<ChatFolderDto>.Failure(
@@ -153,8 +158,12 @@ public class ChatFolderService(
 
         await _archiveService.ArchiveFolderAsync(folder.Id, ct);
         folder = await _folderRepo.GetByIdAsync(folderId, ct);
+        if (folder == null)
+            return Result<ChatFolderDto>.Failure(
+                new Error(DomainErrorCodes.Chat.FolderNotFound, "Folder not found.")
+            );
 
-        return Result<ChatFolderDto>.Success(MapToDto(folder!));
+        return Result<ChatFolderDto>.Success(MapToDto(folder));
     }
 
     private async Task<int> ComputeDepthAsync(Guid folderId, CancellationToken ct)

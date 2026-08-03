@@ -16,6 +16,7 @@ public class ChatArchiveService(
             return;
 
         folder.ArchivedAt = DateTime.UtcNow;
+        await folderRepo.UpdateAsync(folder, ct);
 
         var sessions = await sessionRepo.ListAsync(
             ownerId: folder.OwnerId,
