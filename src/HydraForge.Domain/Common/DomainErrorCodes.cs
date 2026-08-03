@@ -155,6 +155,7 @@ public static class DomainErrorCodes
         public const string PresetNotFound = "CHAT_PRESET_NOT_FOUND";
         public const string PresetNotOwner = "CHAT_PRESET_NOT_OWNER";
         public const string PersonalityNotFound = "CHAT_PERSONALITY_NOT_FOUND";
+        public const string PersonalityNotOwner = "CHAT_PERSONALITY_NOT_OWNER";
         public const string CardNotInProject = "CHAT_CARD_NOT_IN_PROJECT";
         public const string DocumentAlreadyAttached = "CHAT_DOCUMENT_ALREADY_ATTACHED";
         public const string EmbeddingFailed = "CHAT_EMBEDDING_FAILED";

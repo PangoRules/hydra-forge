@@ -12,12 +12,12 @@
 
 **Steps:**
 
-- [ ] Define `IAgentPersonalityService`: `CreateAsync`, `ListAsync`, `UpdateAsync`, `ArchiveAsync`, `SetDefaultAsync`
-- [ ] `CreateAsync`: if `isDefault=true`, clear existing default for user
-- [ ] `SetDefaultAsync`: set `IsDefault=true` on target, clear all others for user
-- [ ] `ArchiveAsync`: soft-delete via `ArchivedAt`. FK `OnDelete: SetNull` only fires on hard-delete (housekeeping), not here
-- [ ] Write tests: default uniqueness, archive doesn't null session FK, CRUD ownership
-- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-11-agent-personality-service-matrix.md` — archive a personality in use by an Active session, confirm the session's next send silently drops the system prompt instead of erroring
+- [x] Define `IAgentPersonalityService`: `CreateAsync`, `ListAsync`, `UpdateAsync`, `ArchiveAsync`, `SetDefaultAsync`
+- [x] `CreateAsync`: if `isDefault=true`, clear existing default for user
+- [x] `SetDefaultAsync`: set `IsDefault=true` on target, clear all others for user
+- [x] `ArchiveAsync`: soft-delete via `ArchivedAt`. FK `OnDelete: SetNull` only fires on hard-delete (housekeeping), not here
+- [x] Write tests: default uniqueness, archive doesn't null session FK, CRUD ownership
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-11-agent-personality-service-matrix.md` — archive a personality in use by an Active session, confirm the session's next send silently drops the system prompt instead of erroring
 
 **Acceptance:**
 - `dotnet build`
