@@ -24,11 +24,19 @@ public class LlmChatSummaryGeneratorTests
             Task.FromResult(Sessions.FirstOrDefault(s => s.Id == sessionId));
 
         public Task<ChatSession?> GetActiveByPanelAsync(
-            Guid projectId, Guid? openCardId, Guid ownerId, CancellationToken ct = default
+            Guid projectId,
+            Guid? openCardId,
+            Guid ownerId,
+            CancellationToken ct = default
         ) => Task.FromResult<ChatSession?>(null);
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId, Guid? folderId, Guid? projectId, DateTime? before, int limit, CancellationToken ct = default
+            Guid ownerId,
+            Guid? folderId,
+            Guid? projectId,
+            DateTime? before,
+            int limit,
+            CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
@@ -41,7 +49,11 @@ public class LlmChatSummaryGeneratorTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId, string query, Guid? projectId, int limit, CancellationToken ct = default
+            Guid ownerId,
+            string query,
+            Guid? projectId,
+            int limit,
+            CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
@@ -56,13 +68,22 @@ public class LlmChatSummaryGeneratorTests
             Task.FromResult(Messages.FirstOrDefault(m => m.Id == messageId));
 
         public Task<IReadOnlyList<ChatMessage>> GetBySessionAsync(
-            Guid sessionId, DateTime? before, Guid? beforeId, int limit, CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyList<ChatMessage>>(
-            Messages.Where(m => m.SessionId == sessionId).Take(limit).ToList()
-        );
+            Guid sessionId,
+            DateTime? before,
+            Guid? beforeId,
+            int limit,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult<IReadOnlyList<ChatMessage>>(
+                Messages.Where(m => m.SessionId == sessionId).Take(limit).ToList()
+            );
 
         public Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
-            Guid ownerId, string query, Guid? projectId, int limit, CancellationToken ct = default
+            Guid ownerId,
+            string query,
+            Guid? projectId,
+            int limit,
+            CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
 
         public Task AddAsync(ChatMessage message, CancellationToken ct = default)
@@ -77,17 +98,25 @@ public class LlmChatSummaryGeneratorTests
         public Task RecordTokenAsync(TokenUsageRecordInput input, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task RecordTokenBatchAsync(IReadOnlyList<TokenUsageRecordInput> inputs, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task RecordTokenBatchAsync(
+            IReadOnlyList<TokenUsageRecordInput> inputs,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
 
         public Task RecordImageAsync(ImageUsageRecordInput input, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task<int> AccrueTokenUsageAsync(Guid userId, int tokens, CancellationToken ct = default) =>
-            Task.FromResult(0);
+        public Task<int> AccrueTokenUsageAsync(
+            Guid userId,
+            int tokens,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
 
-        public Task<int> AccrueImageUsageAsync(Guid userId, int count, CancellationToken ct = default) =>
-            Task.FromResult(0);
+        public Task<int> AccrueImageUsageAsync(
+            Guid userId,
+            int count,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
     }
 
     private static LlmChatSummaryGenerator CreateGenerator(
@@ -124,14 +153,57 @@ public class LlmChatSummaryGeneratorTests
         var session = new ChatSession { Id = sessionId, OwnerId = ownerId };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Hello" });
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.Assistant, Content = "Hi there" });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.Assistant,
+                Content = "Hi there",
+            }
+        );
 
-        var modelConfig = new ProviderModelConfigDto(configId, providerId, "gpt-4o", "GPT-4o", "Standard", 1m, 4096, true);
-        var provider = new ProviderDto(providerId, "OpenAI", "https://api.openai.com", "OpenAi", "OpenAI", "Standard", null, true, DateTime.UtcNow, DateTime.UtcNow);
+        var modelConfig = new ProviderModelConfigDto(
+            configId,
+            providerId,
+            "gpt-4o",
+            "GPT-4o",
+            "Standard",
+            1m,
+            4096,
+            true
+        );
+        var provider = new ProviderDto(
+            providerId,
+            "OpenAI",
+            "https://api.openai.com",
+            "OpenAi",
+            "OpenAI",
+            "Standard",
+            null,
+            true,
+            DateTime.UtcNow,
+            DateTime.UtcNow
+        );
         var routeDecision = new RouteDecision(modelConfig, provider, [], null);
 
-        router.ResolveAsync(AiFeature.PersonalChat, ownerId, null, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        router
+            .ResolveAsync(
+                AiFeature.PersonalChat,
+                ownerId,
+                null,
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var llmClient = Substitute.For<ILlmClient>();
@@ -143,7 +215,8 @@ public class LlmChatSummaryGeneratorTests
             new ChatChunk(null, ChatChunkFinishReason.Stop, new UsageSnapshot(10, 5, 0)),
         }.ToAsyncEnumerable();
 
-        llmClient.StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+        llmClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(chunks);
 
         clientFactory.For(Arg.Any<LlmProvider>()).Returns(llmClient);
@@ -183,7 +256,15 @@ public class LlmChatSummaryGeneratorTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(string.Empty, result.Value);
-        await router.Received(0).ResolveAsync(Arg.Any<AiFeature>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await router
+            .Received(0)
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                Arg.Any<Guid>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -202,9 +283,24 @@ public class LlmChatSummaryGeneratorTests
         var session = new ChatSession { Id = sessionId, OwnerId = ownerId };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Hello" });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
-        router.ResolveAsync(AiFeature.PersonalChat, ownerId, null, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        router
+            .ResolveAsync(
+                AiFeature.PersonalChat,
+                ownerId,
+                null,
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Result<RouteDecision>.Failure(new Error("ROUTING_ERROR", "Routing failed.")));
 
         var sut = CreateGenerator(sessionRepo, messageRepo, router, clientFactory, usageRecorder);
@@ -235,13 +331,48 @@ public class LlmChatSummaryGeneratorTests
         var session = new ChatSession { Id = sessionId, OwnerId = ownerId };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Hello" });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
-        var modelConfig = new ProviderModelConfigDto(configId, providerId, "gpt-4o", "GPT-4o", "Standard", 1m, 4096, true);
-        var provider = new ProviderDto(providerId, "OpenAI", "https://api.openai.com", "OpenAi", "OpenAI", "Standard", null, true, DateTime.UtcNow, DateTime.UtcNow);
+        var modelConfig = new ProviderModelConfigDto(
+            configId,
+            providerId,
+            "gpt-4o",
+            "GPT-4o",
+            "Standard",
+            1m,
+            4096,
+            true
+        );
+        var provider = new ProviderDto(
+            providerId,
+            "OpenAI",
+            "https://api.openai.com",
+            "OpenAi",
+            "OpenAI",
+            "Standard",
+            null,
+            true,
+            DateTime.UtcNow,
+            DateTime.UtcNow
+        );
         var routeDecision = new RouteDecision(modelConfig, provider, [], null);
 
-        router.ResolveAsync(AiFeature.PersonalChat, ownerId, null, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        router
+            .ResolveAsync(
+                AiFeature.PersonalChat,
+                ownerId,
+                null,
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var llmClient = Substitute.For<ILlmClient>();
@@ -251,7 +382,8 @@ public class LlmChatSummaryGeneratorTests
             new ChatChunk(null, ChatChunkFinishReason.Error, null),
         }.ToAsyncEnumerable();
 
-        llmClient.StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+        llmClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(chunks);
 
         clientFactory.For(Arg.Any<LlmProvider>()).Returns(llmClient);
@@ -284,13 +416,48 @@ public class LlmChatSummaryGeneratorTests
         var session = new ChatSession { Id = sessionId, OwnerId = ownerId };
         sessionRepo.Sessions.Add(session);
 
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Hello" });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = sessionId,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
-        var modelConfig = new ProviderModelConfigDto(configId, providerId, "gpt-4o", "GPT-4o", "Standard", 1m, 4096, true);
-        var provider = new ProviderDto(providerId, "OpenAI", "https://api.openai.com", "OpenAi", "OpenAI", "Standard", null, true, DateTime.UtcNow, DateTime.UtcNow);
+        var modelConfig = new ProviderModelConfigDto(
+            configId,
+            providerId,
+            "gpt-4o",
+            "GPT-4o",
+            "Standard",
+            1m,
+            4096,
+            true
+        );
+        var provider = new ProviderDto(
+            providerId,
+            "OpenAI",
+            "https://api.openai.com",
+            "OpenAi",
+            "OpenAI",
+            "Standard",
+            null,
+            true,
+            DateTime.UtcNow,
+            DateTime.UtcNow
+        );
         var routeDecision = new RouteDecision(modelConfig, provider, [], null);
 
-        router.ResolveAsync(AiFeature.PersonalChat, ownerId, null, Arg.Any<int>(), Arg.Any<CancellationToken>())
+        router
+            .ResolveAsync(
+                AiFeature.PersonalChat,
+                ownerId,
+                null,
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var llmClient = Substitute.For<ILlmClient>();
@@ -299,7 +466,8 @@ public class LlmChatSummaryGeneratorTests
             new ChatChunk(null, ChatChunkFinishReason.ContentFilter, null),
         }.ToAsyncEnumerable();
 
-        llmClient.StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+        llmClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
             .Returns(chunks);
 
         clientFactory.For(Arg.Any<LlmProvider>()).Returns(llmClient);
