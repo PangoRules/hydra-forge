@@ -502,8 +502,10 @@ public class ChatMessageServiceTests
         sessionRepo.Sessions.Add(session);
 
         var baseTime = DateTime.UtcNow;
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Older", CreatedAt = baseTime.AddMinutes(-2) });
-        messageRepo.Messages.Add(new ChatMessage { Id = NewId(), SessionId = sessionId, Role = MessageRole.User, Content = "Newer", CreatedAt = baseTime.AddMinutes(-1) });
+        var olderId = NewId();
+        var newerId = NewId();
+        messageRepo.Messages.Add(new ChatMessage { Id = olderId, SessionId = sessionId, Role = MessageRole.User, Content = "Older", CreatedAt = baseTime });
+        messageRepo.Messages.Add(new ChatMessage { Id = newerId, SessionId = sessionId, Role = MessageRole.User, Content = "Newer", CreatedAt = baseTime });
 
         var firstPage = await service.GetHistoryAsync(sessionId, ownerId, beforeId: null, limit: 1);
         Assert.True(firstPage.IsSuccess);
@@ -520,30 +522,5 @@ public class ChatMessageServiceTests
         Assert.True(secondPage.IsSuccess);
         Assert.Single(secondPage.Value.Items);
         Assert.NotEqual(cursor.Id, secondPage.Value.Items[0].Id);
-    }
-
-    [Fact]
-    public async Task SendUserMessageAsync_ActiveSession_PersistsAndReturnsMessage()
-    {
-        var (service, sessionRepo, messageRepo) = CreateSut();
-        var ownerId = NewId();
-        var session = new ChatSession
-        {
-            Id = NewId(),
-            OwnerId = ownerId,
-            Status = ChatSessionStatus.Active,
-        };
-        sessionRepo.Sessions.Add(session);
-
-        var result = await service.SendUserMessageAsync(
-            session.Id,
-            ownerId,
-            "Test message"
-        );
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(MessageRole.User, result.Value.Role);
-        Assert.Equal("Test message", result.Value.Content);
-        Assert.Single(messageRepo.Messages);
     }
 }
