@@ -353,34 +353,38 @@ public class ChatSessionService(
             ct
         );
         string? summary = null;
+        var summaryFailed = false;
 
         if (messages.Count > 0)
         {
             var summaryResult = await _summaryGenerator.GenerateSummaryAsync(sessionId, ct);
             if (summaryResult.IsSuccess)
                 summary = summaryResult.Value;
+            else
+                summaryFailed = true;
         }
 
         session.Close(summary);
         await _sessionRepo.UpdateAsync(session, ct);
 
-        // Create CardChatLink if panel session
-        if (
-            session.ProjectId.HasValue
-            && session.OpenCardId.HasValue
-            && !string.IsNullOrWhiteSpace(summary)
-        )
+        // Create CardChatLink if panel session with messages — fallback text when the
+        // summary LLM call failed, per design spec ("Summary LLM call fails" row).
+        if (session.ProjectId.HasValue && session.OpenCardId.HasValue && messages.Count > 0)
         {
-            var link = new CardChatLink
+            var linkSummary = summaryFailed ? "Chat closed (summary unavailable)" : summary;
+            if (!string.IsNullOrWhiteSpace(linkSummary))
             {
-                Id = Guid.NewGuid(),
-                CardId = session.OpenCardId.Value,
-                ChatSessionId = session.Id,
-                OwnerId = actorId,
-                Summary = summary,
-                CreatedAt = DateTime.UtcNow,
-            };
-            await _sessionRepo.AddCardChatLinkAsync(link, ct);
+                var link = new CardChatLink
+                {
+                    Id = Guid.NewGuid(),
+                    CardId = session.OpenCardId.Value,
+                    ChatSessionId = session.Id,
+                    OwnerId = actorId,
+                    Summary = linkSummary,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                await _sessionRepo.AddCardChatLinkAsync(link, ct);
+            }
         }
 
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));

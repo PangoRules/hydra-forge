@@ -835,6 +835,52 @@ public class ChatSessionServiceTests
     }
 
     [Fact]
+    public async Task CloseAsync_SummaryGenerationFails_ClosesWithNullSummaryAndFallbackCardChatLink()
+    {
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+            CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Title = "Panel Session",
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
+
+        summaryGenerator.GenerateSummaryImpl = (_, _) =>
+            Task.FromResult(
+                Result<string>.Failure(
+                    new Error(DomainErrorCodes.Chat.SummaryFailed, "LLM call failed.")
+                )
+            );
+
+        var result = await service.CloseAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value.Summary);
+        Assert.Equal(ChatSessionStatus.Closed, session.Status);
+        Assert.Single(sessionRepo.CapturedLinks);
+        var link = sessionRepo.CapturedLinks[0];
+        Assert.Equal(cardId, link.CardId);
+        Assert.Equal("Chat closed (summary unavailable)", link.Summary);
+    }
+
+    [Fact]
     public async Task ArchiveAsync_NotOwner_ReturnsSessionNotOwner()
     {
         var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();

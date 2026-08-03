@@ -481,7 +481,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 11: AgentPersonality service (CRUD, default management)
 - [x] Task 12: CardChatLink service (list per card, archive, owner-only delete)
 - [x] Task 13: Chat search service (title + message content)
-- [ ] Task 14: ChatSummaryGenerator (one LLM call on close; `CHAT_SUMMARY_FAILED` fallback)
+- [x] Task 14: ChatSummaryGenerator (one LLM call on close; `CHAT_SUMMARY_FAILED` fallback)
 - [ ] Task 15: `ChatHub` + `IChatHub` (streaming transport, one-active-stream, cancel, usage recording, context compression)
 - [ ] Task 16: REST controllers (sessions, messages, folders, presets, personalities, card-links, documents, search) + `Program.cs` wiring + rate limiting
 - [ ] Task 17: Web UI — `useChatStream` composable + `ChatSessionView` + `ChatMessageList`/`ChatMessageBubble`/`ChatInput` + streaming

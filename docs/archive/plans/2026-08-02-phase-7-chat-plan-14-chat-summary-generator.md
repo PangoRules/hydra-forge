@@ -1,0 +1,22 @@
+# Plan 14: ChatSummaryGenerator
+**Branch:** `task/chat-summary-generator`
+**Parent branch:** `feat/phase-7-chat`
+**Parent spec:** `2026-08-02-phase-7-chat-design.md` — Task 14
+
+**Goal:** One LLM call on close. `CHAT_SUMMARY_FAILED` fallback.
+
+**Files:**
+- Create: `src/HydraForge.Application/Chat/ChatSummaryGenerator.cs`
+- Create: `tests/HydraForge.Application.Tests/Chat/ChatSummaryGeneratorTests.cs`
+
+**Steps:**
+
+- [x] Implement `IChatSummaryGenerator.GenerateSummaryAsync(sessionId)`: fetch all messages, build prompt "Summarize this chat conversation in 2-3 sentences", route via `IModelRouter`, return summary string
+- [x] On LLM failure → return `Result.Failure(CHAT_SUMMARY_FAILED)`. Caller (ChatSessionService.CloseAsync) still closes session with `Summary=null`
+- [x] Empty session → skip LLM call, return `Result.Success(null)`
+- [x] Write tests: successful summary, empty session skip, LLM failure fallback
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-14-chat-summary-generator-matrix.md` — close a real session with messages and confirm a coherent 2-3 sentence summary lands on both `ChatSession.Summary` and `CardChatLink.Summary`
+
+**Acceptance:**
+- `dotnet build`
+- `dotnet test tests/HydraForge.Application.Tests --filter "FullyQualifiedName~ChatSummary"`
