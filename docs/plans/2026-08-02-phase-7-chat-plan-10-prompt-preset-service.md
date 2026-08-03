@@ -12,12 +12,12 @@
 
 **Steps:**
 
-- [ ] Define `IPromptPresetService`: `CreatePresetAsync`, `ListPresetsAsync(groupId?)`, `UpdatePresetAsync`, `ArchivePresetAsync`, `CreateGroupAsync`, `ListGroupsAsync`, `UpdateGroupAsync`, `ArchiveGroupAsync`
-- [ ] `ArchiveGroupAsync`: soft-archive group, set `GroupId = null` on all presets in group (presets kept, not archived — per §1.10)
-- [ ] `ListPresetsAsync`: `?groupId=` empty → ungrouped only; `?groupId=guid` → group's presets; no param → all
-- [ ] `CreatePresetAsync`: validate `groupId` exists if set, validate ownership
-- [ ] Write tests: group archive nulls presets, ungrouped preset CRUD, ownership validation
-- [ ] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-10-prompt-preset-service-matrix.md` — archiving a group leaves its presets intact and ungrouped, not deleted
+- [x] Define `IPromptPresetService`: `CreatePresetAsync`, `ListPresetsAsync(groupId?)`, `UpdatePresetAsync`, `ArchivePresetAsync`, `CreateGroupAsync`, `ListGroupsAsync`, `UpdateGroupAsync`, `ArchiveGroupAsync`
+- [x] `ArchiveGroupAsync`: soft-archive group, set `GroupId = null` on all presets in group (presets kept, not archived — per §1.10)
+- [x] `ListPresetsAsync`: `?groupId=` empty → ungrouped only; `?groupId=guid` → group's presets; no param → all
+- [x] `CreatePresetAsync`: validate `groupId` exists if set, validate ownership
+- [x] Write tests: group archive nulls presets, ungrouped preset CRUD, ownership validation
+- [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-10-prompt-preset-service-matrix.md` — archiving a group leaves its presets intact and ungrouped, not deleted
 
 **Acceptance:**
 - `dotnet build`
