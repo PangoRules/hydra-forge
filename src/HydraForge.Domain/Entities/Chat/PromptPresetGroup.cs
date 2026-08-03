@@ -8,4 +8,10 @@ public class PromptPresetGroup
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
+
+    public void Rename(string name)
+    {
+        Name = name;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
