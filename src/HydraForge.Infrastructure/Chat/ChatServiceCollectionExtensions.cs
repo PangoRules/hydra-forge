@@ -21,6 +21,7 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IChatSessionService, ChatSessionService>();
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IChatRagRetriever, ChatRagRetriever>();
+        services.AddScoped<IChatSummaryGenerator, StubChatSummaryGenerator>();
 
         // Background queue
         services.AddSingleton<IBackgroundTaskQueue, HangfireBackgroundTaskQueue>();
