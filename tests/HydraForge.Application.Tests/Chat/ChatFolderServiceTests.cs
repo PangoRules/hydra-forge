@@ -203,7 +203,7 @@ public class ChatFolderServiceTests
         var sessionRepo = new FakeSessionRepo();
         var userRepo = new FakeUserRepo();
         var memberRepo = new FakeMemberRepo();
-        var archiveService = new ChatArchiveService(sessionRepo);
+        var archiveService = new ChatArchiveService(folderRepo, sessionRepo);
         var service = new ChatFolderService(
             folderRepo,
             sessionRepo,
@@ -248,7 +248,7 @@ public class ChatFolderServiceTests
 
         var userRepo = new FakeUserRepo();
         var sessionRepo = new FakeSessionRepo();
-        var archiveService = new ChatArchiveService(sessionRepo);
+        var archiveService = new ChatArchiveService(folderRepo, sessionRepo);
         var denyService = new ChatFolderService(
             folderRepo,
             sessionRepo,
@@ -415,7 +415,7 @@ public class ChatFolderServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Chat.FolderMaxDepth, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Chat.FolderSelfParent, result.Error.Code);
     }
 
     [Fact]

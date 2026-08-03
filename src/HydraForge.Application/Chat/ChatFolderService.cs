@@ -26,6 +26,11 @@ public class ChatFolderService(
         CancellationToken ct = default
     )
     {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Result<ChatFolderDto>.Failure(
+                new Error(DomainErrorCodes.Validation.Required, "Folder name is required.")
+            );
+
         if (request.ProjectId.HasValue)
         {
             if (
@@ -44,6 +49,12 @@ public class ChatFolderService(
 
         if (request.ParentFolderId.HasValue)
         {
+            var parent = await _folderRepo.GetByIdAsync(request.ParentFolderId.Value, ct);
+            if (parent == null)
+                return Result<ChatFolderDto>.Failure(
+                    new Error(DomainErrorCodes.Chat.FolderNotFound, "Parent folder not found.")
+                );
+
             var depth = await ComputeDepthAsync(request.ParentFolderId.Value, ct);
             if (depth >= 2)
                 return Result<ChatFolderDto>.Failure(
@@ -72,7 +83,8 @@ public class ChatFolderService(
         CancellationToken ct = default
     )
     {
-        var folders = await _folderRepo.ListByOwnerAsync(actorId, projectId, ct);
+        var allFolders = await _folderRepo.ListByOwnerAsync(actorId, projectId, ct);
+        var folders = allFolders.Where(f => !f.ArchivedAt.HasValue);
         var dtos = folders.Select(MapToDto).ToList();
         return Result<IReadOnlyList<ChatFolderDto>>.Success(dtos);
     }
@@ -99,7 +111,13 @@ public class ChatFolderService(
         {
             if (request.ParentFolderId.Value == folderId)
                 return Result<ChatFolderDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.FolderMaxDepth, "A folder cannot be its own parent.")
+                    new Error(DomainErrorCodes.Chat.FolderSelfParent, "A folder cannot be its own parent.")
+                );
+
+            var parent = await _folderRepo.GetByIdAsync(request.ParentFolderId.Value, ct);
+            if (parent == null)
+                return Result<ChatFolderDto>.Failure(
+                    new Error(DomainErrorCodes.Chat.FolderNotFound, "Parent folder not found.")
                 );
 
             var depth = await ComputeDepthAsync(request.ParentFolderId.Value, ct);
@@ -133,10 +151,10 @@ public class ChatFolderService(
                 new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can archive the folder.")
             );
 
-        await _archiveService.ArchiveFolderAsync(folder, ct);
-        await _folderRepo.UpdateAsync(folder, ct);
+        await _archiveService.ArchiveFolderAsync(folder.Id, ct);
+        folder = await _folderRepo.GetByIdAsync(folderId, ct);
 
-        return Result<ChatFolderDto>.Success(MapToDto(folder));
+        return Result<ChatFolderDto>.Success(MapToDto(folder!));
     }
 
     private async Task<int> ComputeDepthAsync(Guid folderId, CancellationToken ct)
@@ -151,7 +169,7 @@ public class ChatFolderService(
             depth++;
             currentId = folder.ParentFolderId;
         }
-        return depth - 1; // root = 0, child of root = 1, grandchild = 2
+        return depth - 1;
     }
 
     private static ChatFolderDto MapToDto(ChatFolder folder) =>

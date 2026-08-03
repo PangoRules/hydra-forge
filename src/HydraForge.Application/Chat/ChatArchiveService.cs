@@ -2,13 +2,19 @@ using HydraForge.Domain.Entities.Chat;
 
 namespace HydraForge.Application.Chat;
 
-public class ChatArchiveService(IChatSessionRepository sessionRepo)
+public class ChatArchiveService(
+    IChatFolderRepository folderRepo,
+    IChatSessionRepository sessionRepo)
 {
     public async Task ArchiveFolderAsync(
-        ChatFolder folder,
+        Guid folderId,
         CancellationToken ct = default
     )
     {
+        var folder = await folderRepo.GetByIdAsync(folderId, ct);
+        if (folder == null)
+            return;
+
         folder.ArchivedAt = DateTime.UtcNow;
 
         var sessions = await sessionRepo.ListAsync(
@@ -20,14 +26,21 @@ public class ChatArchiveService(IChatSessionRepository sessionRepo)
             ct
         );
         foreach (var session in sessions)
+        {
             session.ArchivedAt = DateTime.UtcNow;
+            await sessionRepo.UpdateAsync(session, ct);
+        }
     }
 
     public async Task ArchiveSessionAsync(
-        ChatSession session,
+        Guid sessionId,
         CancellationToken ct = default
     )
     {
+        var session = await sessionRepo.GetByIdAsync(sessionId, ct);
+        if (session == null)
+            return;
+
         session.ArchivedAt = DateTime.UtcNow;
         await sessionRepo.UpdateAsync(session, ct);
     }
