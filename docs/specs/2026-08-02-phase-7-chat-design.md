@@ -474,7 +474,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 4: `Application.Llm.ChatMessage` `Images` extension + `ImageBlock` DTO + mapper (F5)
 - [x] Task 5: Document upload + chunking + embedding ingestion service (`IEmbeddingClient` pipeline)
 - [x] Task 6: RAG retrieval service (scope toggle F1, pgvector similarity, cache-block assembly)
-- [ ] Task 7: ChatSession service (CRUD, F6 implicit close, close-with-summary, permission-state read)
+- [x] Task 7: ChatSession service (CRUD, F6 implicit close, close-with-summary, permission-state read)
 - [ ] Task 8: ChatMessage service (history pagination, user-message persist)
 - [ ] Task 9: ChatFolder service (CRUD, max-depth-2, archive cascade via `ChatArchiveService`)
 - [ ] Task 10: PromptPreset + PromptPresetGroup services (CRUD, group-nulling on group archive)
