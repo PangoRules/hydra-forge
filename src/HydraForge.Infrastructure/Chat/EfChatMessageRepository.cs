@@ -54,14 +54,14 @@ public sealed class EfChatMessageRepository(HydraForgeDbContext context) : IChat
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var sessionIds = context.ChatSessions
-            .Where(s => s.OwnerId == ownerId)
+        var sessionIds = context
+            .ChatSessions.Where(s => s.OwnerId == ownerId)
             .Where(s => s.ArchivedAt == null)
             .Where(s => !projectId.HasValue || s.ProjectId == projectId.Value)
             .Select(s => s.Id);
 
-        return await context.ChatMessages
-            .Where(m => sessionIds.Contains(m.SessionId))
+        return await context
+            .ChatMessages.Where(m => sessionIds.Contains(m.SessionId))
             .Where(m => EF.Functions.ILike(m.Content, $"%{query}%"))
             .Take(limit)
             .ToListAsync(ct);

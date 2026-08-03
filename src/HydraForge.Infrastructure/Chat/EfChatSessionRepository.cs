@@ -74,8 +74,8 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var q = context.ChatSessions
-            .Where(s => s.OwnerId == ownerId && s.ArchivedAt == null)
+        var q = context
+            .ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null)
             .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"));
 
         if (projectId.HasValue)

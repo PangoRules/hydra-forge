@@ -21,8 +21,20 @@ public class ChatSearchService : IChatSearchService
         CancellationToken ct = default
     )
     {
-        var titleResults = await _sessionRepo.SearchByTitleAsync(userId, query, projectId, MaxResults, ct);
-        var contentResults = await _messageRepo.SearchByContentAsync(userId, query, projectId, MaxResults, ct);
+        var titleResults = await _sessionRepo.SearchByTitleAsync(
+            userId,
+            query,
+            projectId,
+            MaxResults,
+            ct
+        );
+        var contentResults = await _messageRepo.SearchByContentAsync(
+            userId,
+            query,
+            projectId,
+            MaxResults,
+            ct
+        );
 
         var seen = new HashSet<Guid>();
         var results = new List<ChatSearchResultDto>();
@@ -31,12 +43,14 @@ public class ChatSearchService : IChatSearchService
         {
             if (seen.Add(session.Id))
             {
-                results.Add(new ChatSearchResultDto(
-                    SessionId: session.Id,
-                    SessionTitle: session.Title,
-                    MatchedOn: "Title",
-                    Snippet: null
-                ));
+                results.Add(
+                    new ChatSearchResultDto(
+                        SessionId: session.Id,
+                        SessionTitle: session.Title,
+                        MatchedOn: "Title",
+                        Snippet: null
+                    )
+                );
             }
         }
 
@@ -58,16 +72,21 @@ public class ChatSearchService : IChatSearchService
             if (seen.Add(message.SessionId))
             {
                 var snippet = BuildSnippet(message.Content, query);
-                results.Add(new ChatSearchResultDto(
-                    SessionId: message.SessionId,
-                    SessionTitle: sessionTitles.GetValueOrDefault(message.SessionId, string.Empty),
-                    MatchedOn: "Content",
-                    Snippet: snippet
-                ));
+                results.Add(
+                    new ChatSearchResultDto(
+                        SessionId: message.SessionId,
+                        SessionTitle: sessionTitles.GetValueOrDefault(
+                            message.SessionId,
+                            string.Empty
+                        ),
+                        MatchedOn: "Content",
+                        Snippet: snippet
+                    )
+                );
             }
         }
 
-        return results;
+        return results.Take(MaxResults).ToList();
     }
 
     private static string BuildSnippet(string content, string query)

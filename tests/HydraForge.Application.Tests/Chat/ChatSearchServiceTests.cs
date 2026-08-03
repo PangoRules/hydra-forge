@@ -42,12 +42,15 @@ public class ChatSearchServiceTests
             if (string.IsNullOrWhiteSpace(query))
                 return Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
-            var results = Sessions.Where(s =>
-                s.OwnerId == ownerId
-                && s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
-                && s.ArchivedAt == null
-                && (!projectId.HasValue || s.ProjectId == projectId)
-            ).Take(limit).ToList();
+            var results = Sessions
+                .Where(s =>
+                    s.OwnerId == ownerId
+                    && s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    && s.ArchivedAt == null
+                    && (!projectId.HasValue || s.ProjectId == projectId)
+                )
+                .Take(limit)
+                .ToList();
             return Task.FromResult<IReadOnlyList<ChatSession>>(results);
         }
 
@@ -97,8 +100,12 @@ public class ChatSearchServiceTests
             if (string.IsNullOrWhiteSpace(query))
                 return Task.FromResult<IReadOnlyList<ChatMessage>>([]);
 
-            var sessionIds = _sessionRepo.Sessions
-                .Where(s => s.OwnerId == ownerId && s.ArchivedAt == null && (!projectId.HasValue || s.ProjectId == projectId))
+            var sessionIds = _sessionRepo
+                .Sessions.Where(s =>
+                    s.OwnerId == ownerId
+                    && s.ArchivedAt == null
+                    && (!projectId.HasValue || s.ProjectId == projectId)
+                )
                 .Select(s => s.Id)
                 .ToHashSet();
 
@@ -119,7 +126,11 @@ public class ChatSearchServiceTests
         }
     }
 
-    private static (ChatSearchService service, FakeSessionRepo sessionRepo, FakeMessageRepo messageRepo) CreateSut()
+    private static (
+        ChatSearchService service,
+        FakeSessionRepo sessionRepo,
+        FakeMessageRepo messageRepo
+    ) CreateSut()
     {
         var sessionRepo = new FakeSessionRepo();
         var messageRepo = new FakeMessageRepo(sessionRepo);
@@ -163,13 +174,15 @@ public class ChatSearchServiceTests
             Status = ChatSessionStatus.Active,
         };
         sessionRepo.Sessions.Add(session);
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = session.Id,
-            Role = MessageRole.User,
-            Content = "Tell me about the architecture of the system.",
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Tell me about the architecture of the system.",
+            }
+        );
 
         var results = await service.SearchAsync(userId, "architecture");
 
@@ -212,6 +225,52 @@ public class ChatSearchServiceTests
 
         Assert.Single(results);
         Assert.Equal(sessionA.Id, results[0].SessionId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_MoreThanMaxResults_CapsMergedListAtMaxResults()
+    {
+        var (service, sessionRepo, messageRepo) = CreateSut();
+        var userId = NewId();
+
+        for (var i = 0; i < 15; i++)
+        {
+            sessionRepo.Sessions.Add(
+                new ChatSession
+                {
+                    Id = NewId(),
+                    OwnerId = userId,
+                    Title = $"Widget session {i}",
+                    Status = ChatSessionStatus.Active,
+                }
+            );
+        }
+
+        for (var i = 0; i < 10; i++)
+        {
+            var session = new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = userId,
+                Title = $"Unrelated session {i}",
+                Status = ChatSessionStatus.Active,
+            };
+            sessionRepo.Sessions.Add(session);
+            messageRepo.Messages.Add(
+                new ChatMessage
+                {
+                    Id = NewId(),
+                    SessionId = session.Id,
+                    Role = MessageRole.User,
+                    Content = "Talking about the widget rollout.",
+                }
+            );
+        }
+
+        var results = await service.SearchAsync(userId, "widget");
+
+        Assert.Equal(20, results.Count);
+        Assert.Equal(20, results.Select(r => r.SessionId).Distinct().Count());
     }
 
     [Fact]
