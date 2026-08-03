@@ -29,11 +29,7 @@ public record MoveChatSessionRequest(Guid? FolderId);
 
 // ── Folder Requests / Responses ─────────────────────────────────
 
-public record CreateChatFolderRequest(
-    string Name,
-    Guid? ParentFolderId,
-    Guid? ProjectId
-);
+public record CreateChatFolderRequest(string Name, Guid? ParentFolderId, Guid? ProjectId);
 
 public record UpdateChatFolderRequest(string Name, Guid? ParentFolderId);
 

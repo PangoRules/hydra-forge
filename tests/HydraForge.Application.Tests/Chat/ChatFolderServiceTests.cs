@@ -101,8 +101,7 @@ public class ChatFolderServiceTests
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
 
-        public Task<User?> FindByUsernameAsync(string username) =>
-            Task.FromResult<User?>(null);
+        public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
 
         public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
             IReadOnlyList<string> usernames,
@@ -118,8 +117,7 @@ public class ChatFolderServiceTests
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(false);
 
-        public Task CreateAsync(User user, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task<IReadOnlyList<User>> ListAsync(
             int skip,
@@ -131,8 +129,7 @@ public class ChatFolderServiceTests
         public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
             Task.FromResult(0);
 
-        public Task UpdateAsync(User user, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeMemberRepo : IProjectMemberRepository
@@ -196,8 +193,11 @@ public class ChatFolderServiceTests
 
     // ── SUT factory ───────────────────────────────────────────────────────────
 
-    private static (ChatFolderService service, FakeFolderRepo folderRepo, FakeSessionRepo sessionRepo)
-        CreateSut()
+    private static (
+        ChatFolderService service,
+        FakeFolderRepo folderRepo,
+        FakeSessionRepo sessionRepo
+    ) CreateSut()
     {
         var folderRepo = new FakeFolderRepo();
         var sessionRepo = new FakeSessionRepo();
@@ -223,11 +223,7 @@ public class ChatFolderServiceTests
         var actorId = NewId();
 
         var result = await service.CreateAsync(
-            new CreateChatFolderRequest(
-                Name: "My Folder",
-                ParentFolderId: null,
-                ProjectId: null
-            ),
+            new CreateChatFolderRequest(Name: "My Folder", ParentFolderId: null, ProjectId: null),
             actorId
         );
 
@@ -277,7 +273,12 @@ public class ChatFolderServiceTests
         var actorId = NewId();
 
         // Root folder
-        var root = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Root" };
+        var root = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Root",
+        };
         folderRepo.Folders.Add(root);
 
         // Child folder (depth=1)
@@ -286,7 +287,7 @@ public class ChatFolderServiceTests
             Id = NewId(),
             OwnerId = actorId,
             Name = "Child",
-            ParentFolderId = root.Id
+            ParentFolderId = root.Id,
         };
         folderRepo.Folders.Add(child);
 
@@ -307,7 +308,12 @@ public class ChatFolderServiceTests
         var actorId = NewId();
 
         // Root (depth=0)
-        var root = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Root" };
+        var root = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Root",
+        };
         folderRepo.Folders.Add(root);
 
         // Child (depth=1)
@@ -316,7 +322,7 @@ public class ChatFolderServiceTests
             Id = NewId(),
             OwnerId = actorId,
             Name = "Child1",
-            ParentFolderId = root.Id
+            ParentFolderId = root.Id,
         };
         folderRepo.Folders.Add(child1);
 
@@ -326,7 +332,7 @@ public class ChatFolderServiceTests
             Id = NewId(),
             OwnerId = actorId,
             Name = "Child2",
-            ParentFolderId = child1.Id
+            ParentFolderId = child1.Id,
         };
         folderRepo.Folders.Add(child2);
 
@@ -346,15 +352,31 @@ public class ChatFolderServiceTests
         var (service, folderRepo, _) = CreateSut();
         var actorId = NewId();
 
-        folderRepo.Folders.Add(new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Folder1" });
-        folderRepo.Folders.Add(new ChatFolder
-        {
-            Id = NewId(),
-            OwnerId = actorId,
-            Name = "Folder2",
-            ArchivedAt = DateTime.UtcNow
-        });
-        folderRepo.Folders.Add(new ChatFolder { Id = NewId(), OwnerId = NewId(), Name = "Other" });
+        folderRepo.Folders.Add(
+            new ChatFolder
+            {
+                Id = NewId(),
+                OwnerId = actorId,
+                Name = "Folder1",
+            }
+        );
+        folderRepo.Folders.Add(
+            new ChatFolder
+            {
+                Id = NewId(),
+                OwnerId = actorId,
+                Name = "Folder2",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        folderRepo.Folders.Add(
+            new ChatFolder
+            {
+                Id = NewId(),
+                OwnerId = NewId(),
+                Name = "Other",
+            }
+        );
 
         var result = await service.ListAsync(actorId, projectId: null);
 
@@ -368,7 +390,12 @@ public class ChatFolderServiceTests
     {
         var (service, folderRepo, _) = CreateSut();
         var actorId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Old Name" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Old Name",
+        };
         folderRepo.Folders.Add(folder);
 
         var result = await service.UpdateAsync(
@@ -387,7 +414,12 @@ public class ChatFolderServiceTests
         var (service, folderRepo, _) = CreateSut();
         var ownerId = NewId();
         var otherId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = ownerId, Name = "Folder" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Name = "Folder",
+        };
         folderRepo.Folders.Add(folder);
 
         var result = await service.UpdateAsync(
@@ -405,7 +437,12 @@ public class ChatFolderServiceTests
     {
         var (service, folderRepo, _) = CreateSut();
         var actorId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Folder" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Folder",
+        };
         folderRepo.Folders.Add(folder);
 
         var result = await service.UpdateAsync(
@@ -423,7 +460,12 @@ public class ChatFolderServiceTests
     {
         var (service, folderRepo, _) = CreateSut();
         var actorId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Empty Folder" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Empty Folder",
+        };
         folderRepo.Folders.Add(folder);
 
         var result = await service.ArchiveAsync(folder.Id, actorId);
@@ -437,7 +479,12 @@ public class ChatFolderServiceTests
     {
         var (service, folderRepo, sessionRepo) = CreateSut();
         var actorId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = actorId, Name = "Folder With Sessions" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Folder With Sessions",
+        };
         folderRepo.Folders.Add(folder);
 
         var session1 = new ChatSession
@@ -473,7 +520,12 @@ public class ChatFolderServiceTests
         var (service, folderRepo, _) = CreateSut();
         var ownerId = NewId();
         var otherId = NewId();
-        var folder = new ChatFolder { Id = NewId(), OwnerId = ownerId, Name = "Folder" };
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Name = "Folder",
+        };
         folderRepo.Folders.Add(folder);
 
         var result = await service.ArchiveAsync(folder.Id, otherId);
@@ -491,5 +543,145 @@ public class ChatFolderServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.FolderNotFound, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ParentNotFound_ReturnsError()
+    {
+        var (service, _, _) = CreateSut();
+        var actorId = NewId();
+
+        var result = await service.CreateAsync(
+            new CreateChatFolderRequest("Orphan", NewId(), null),
+            actorId
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.FolderNotFound, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ParentOwnedByAnotherUser_Rejects()
+    {
+        var (service, folderRepo, _) = CreateSut();
+        var otherOwnerId = NewId();
+        var parent = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = otherOwnerId,
+            Name = "Someone Else's",
+        };
+        folderRepo.Folders.Add(parent);
+
+        var result = await service.CreateAsync(
+            new CreateChatFolderRequest("Mine", parent.Id, null),
+            NewId()
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.FolderInvalidParent, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ParentInDifferentProjectScope_Rejects()
+    {
+        var (service, folderRepo, _) = CreateSut();
+        var actorId = NewId();
+        var parent = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Project A Folder",
+            ProjectId = NewId(),
+        };
+        folderRepo.Folders.Add(parent);
+
+        var result = await service.CreateAsync(
+            new CreateChatFolderRequest("Personal", parent.Id, null),
+            actorId
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.FolderInvalidParent, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ParentNotFound_ReturnsError()
+    {
+        var (service, folderRepo, _) = CreateSut();
+        var actorId = NewId();
+        var folder = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "Folder",
+        };
+        folderRepo.Folders.Add(folder);
+
+        var result = await service.UpdateAsync(
+            folder.Id,
+            new UpdateChatFolderRequest("Folder", NewId()),
+            actorId
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.FolderNotFound, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReparentUnderDescendant_ExceedingMaxDepth_Rejects()
+    {
+        var (service, folderRepo, _) = CreateSut();
+        var actorId = NewId();
+
+        // RootA -> ChildA -> GrandA (depths 0/1/2)
+        var rootA = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "RootA",
+        };
+        var childA = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "ChildA",
+            ParentFolderId = rootA.Id,
+        };
+        var grandA = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "GrandA",
+            ParentFolderId = childA.Id,
+        };
+
+        // RootB -> ChildB (depths 0/1)
+        var rootB = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "RootB",
+        };
+        var childB = new ChatFolder
+        {
+            Id = NewId(),
+            OwnerId = actorId,
+            Name = "ChildB",
+            ParentFolderId = rootB.Id,
+        };
+
+        folderRepo.Folders.AddRange([rootA, childA, grandA, rootB, childB]);
+
+        // Moving ChildA (which still has GrandA beneath it) under ChildB would push
+        // GrandA to depth 3 — must be rejected even though ChildB itself is only depth 1.
+        var result = await service.UpdateAsync(
+            childA.Id,
+            new UpdateChatFolderRequest("ChildA", childB.Id),
+            actorId
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.FolderMaxDepth, result.Error.Code);
     }
 }

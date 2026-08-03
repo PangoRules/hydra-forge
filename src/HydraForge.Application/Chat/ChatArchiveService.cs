@@ -4,18 +4,16 @@ namespace HydraForge.Application.Chat;
 
 public class ChatArchiveService(
     IChatFolderRepository folderRepo,
-    IChatSessionRepository sessionRepo)
+    IChatSessionRepository sessionRepo
+)
 {
-    public async Task ArchiveFolderAsync(
-        Guid folderId,
-        CancellationToken ct = default
-    )
+    public async Task ArchiveFolderAsync(Guid folderId, CancellationToken ct = default)
     {
         var folder = await folderRepo.GetByIdAsync(folderId, ct);
         if (folder == null)
             return;
 
-        folder.ArchivedAt = DateTime.UtcNow;
+        folder.Archive();
         await folderRepo.UpdateAsync(folder, ct);
 
         var sessions = await sessionRepo.ListAsync(
@@ -28,21 +26,18 @@ public class ChatArchiveService(
         );
         foreach (var session in sessions)
         {
-            session.ArchivedAt = DateTime.UtcNow;
+            session.Archive();
             await sessionRepo.UpdateAsync(session, ct);
         }
     }
 
-    public async Task ArchiveSessionAsync(
-        Guid sessionId,
-        CancellationToken ct = default
-    )
+    public async Task ArchiveSessionAsync(Guid sessionId, CancellationToken ct = default)
     {
         var session = await sessionRepo.GetByIdAsync(sessionId, ct);
         if (session == null)
             return;
 
-        session.ArchivedAt = DateTime.UtcNow;
+        session.Archive();
         await sessionRepo.UpdateAsync(session, ct);
     }
 }

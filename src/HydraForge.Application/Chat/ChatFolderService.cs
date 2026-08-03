@@ -49,17 +49,14 @@ public class ChatFolderService(
 
         if (request.ParentFolderId.HasValue)
         {
-            var parent = await _folderRepo.GetByIdAsync(request.ParentFolderId.Value, ct);
-            if (parent == null)
-                return Result<ChatFolderDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.FolderNotFound, "Parent folder not found.")
-                );
-
-            var depth = await ComputeDepthAsync(request.ParentFolderId.Value, ct);
-            if (depth >= 2)
-                return Result<ChatFolderDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.FolderMaxDepth, "Max folder depth is 2.")
-                );
+            var parentCheck = await ValidateParentAsync(
+                request.ParentFolderId.Value,
+                actorId,
+                request.ProjectId,
+                ct
+            );
+            if (parentCheck.IsFailure)
+                return Result<ChatFolderDto>.Failure(parentCheck.Error);
         }
 
         var folder = new ChatFolder
@@ -109,31 +106,40 @@ public class ChatFolderService(
 
         if (folder.OwnerId != actorId)
             return Result<ChatFolderDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can update the folder.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can update the folder."
+                )
             );
 
         if (request.ParentFolderId.HasValue)
         {
             if (request.ParentFolderId.Value == folderId)
                 return Result<ChatFolderDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.FolderSelfParent, "A folder cannot be its own parent.")
+                    new Error(
+                        DomainErrorCodes.Chat.FolderSelfParent,
+                        "A folder cannot be its own parent."
+                    )
                 );
 
-            var parent = await _folderRepo.GetByIdAsync(request.ParentFolderId.Value, ct);
-            if (parent == null)
-                return Result<ChatFolderDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.FolderNotFound, "Parent folder not found.")
-                );
+            var parentCheck = await ValidateParentAsync(
+                request.ParentFolderId.Value,
+                actorId,
+                folder.ProjectId,
+                ct
+            );
+            if (parentCheck.IsFailure)
+                return Result<ChatFolderDto>.Failure(parentCheck.Error);
 
-            var depth = await ComputeDepthAsync(request.ParentFolderId.Value, ct);
-            if (depth >= 2)
+            var newOwnDepth = parentCheck.Value + 1;
+            var descendantDepth = await ComputeMaxDescendantDepthAsync(folder.Id, actorId, ct);
+            if (newOwnDepth + descendantDepth > 2)
                 return Result<ChatFolderDto>.Failure(
                     new Error(DomainErrorCodes.Chat.FolderMaxDepth, "Max folder depth is 2.")
                 );
         }
 
-        folder.Name = request.Name;
-        folder.ParentFolderId = request.ParentFolderId;
+        folder.Rename(request.Name, request.ParentFolderId);
         await _folderRepo.UpdateAsync(folder, ct);
 
         return Result<ChatFolderDto>.Success(MapToDto(folder));
@@ -153,7 +159,10 @@ public class ChatFolderService(
 
         if (folder.OwnerId != actorId)
             return Result<ChatFolderDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can archive the folder.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can archive the folder."
+                )
             );
 
         await _archiveService.ArchiveFolderAsync(folder.Id, ct);
@@ -179,6 +188,56 @@ public class ChatFolderService(
             currentId = folder.ParentFolderId;
         }
         return depth - 1;
+    }
+
+    // Validates that a prospective parent folder exists, is owned by the actor, and shares the
+    // same project scope. Returns the parent's own depth on success so callers can derive the
+    // child's resulting depth without a second tree walk.
+    private async Task<Result<int>> ValidateParentAsync(
+        Guid parentFolderId,
+        Guid actorId,
+        Guid? expectedProjectId,
+        CancellationToken ct
+    )
+    {
+        var parent = await _folderRepo.GetByIdAsync(parentFolderId, ct);
+        if (parent == null)
+            return Result<int>.Failure(
+                new Error(DomainErrorCodes.Chat.FolderNotFound, "Parent folder not found.")
+            );
+
+        if (parent.OwnerId != actorId || parent.ProjectId != expectedProjectId)
+            return Result<int>.Failure(
+                new Error(DomainErrorCodes.Chat.FolderInvalidParent, "Invalid parent folder.")
+            );
+
+        var depth = await ComputeDepthAsync(parentFolderId, ct);
+        if (depth >= 2)
+            return Result<int>.Failure(
+                new Error(DomainErrorCodes.Chat.FolderMaxDepth, "Max folder depth is 2.")
+            );
+
+        return Result<int>.Success(depth);
+    }
+
+    // Reparenting a folder can push its existing descendants past the depth limit even when the
+    // folder's own new depth is fine. Walks the owner's folder tree to find how many levels
+    // already exist below `folderId` so the caller can check the combined depth.
+    private async Task<int> ComputeMaxDescendantDepthAsync(
+        Guid folderId,
+        Guid ownerId,
+        CancellationToken ct
+    )
+    {
+        var allFolders = await _folderRepo.ListByOwnerAsync(ownerId, projectId: null, ct);
+        var childrenByParent = allFolders.ToLookup(f => f.ParentFolderId);
+        return MaxDepthBelow(folderId, childrenByParent);
+    }
+
+    private static int MaxDepthBelow(Guid folderId, ILookup<Guid?, ChatFolder> childrenByParent)
+    {
+        var children = childrenByParent[folderId];
+        return children.Any() ? 1 + children.Max(c => MaxDepthBelow(c.Id, childrenByParent)) : 0;
     }
 
     private static ChatFolderDto MapToDto(ChatFolder folder) =>

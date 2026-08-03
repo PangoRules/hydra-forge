@@ -16,12 +16,15 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
         services.AddScoped<IAgentPersonalityRepository, EfAgentPersonalityRepository>();
         services.AddScoped<IDocumentChunkRepository, EfDocumentChunkRepository>();
+        services.AddScoped<IChatFolderRepository, EfChatFolderRepository>();
 
         // Services
         services.AddScoped<IChatSessionService, ChatSessionService>();
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IChatRagRetriever, ChatRagRetriever>();
         services.AddScoped<IChatSummaryGenerator, StubChatSummaryGenerator>();
+        services.AddScoped<ChatArchiveService>();
+        services.AddScoped<IChatFolderService, ChatFolderService>();
 
         // Background queue
         services.AddSingleton<IBackgroundTaskQueue, HangfireBackgroundTaskQueue>();
