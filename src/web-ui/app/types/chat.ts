@@ -16,11 +16,6 @@ export enum AiEditMode {
   Blanket = 2
 }
 
-export interface ImageBlock {
-  Url: string
-  Base64?: string | null
-}
-
 export interface ChatMessageDto {
   id: string
   sessionId: string
@@ -56,6 +51,11 @@ export interface ChatSessionDetailDto extends ChatSessionDto {
   isShared: boolean
   closedAt: string | null
   messages: ChatMessageDto[]
+}
+
+export interface ChatSessionPageDto {
+  items: ChatSessionDto[]
+  totalCount: number
 }
 
 export interface CreateChatSessionRequest {

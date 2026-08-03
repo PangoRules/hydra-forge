@@ -62,7 +62,7 @@ async function fetchSession() {
   }
 }
 
-async function handleSend(content: string, images?: { url: string, base64?: string }[], presetId?: string | null) {
+async function handleSend(content: string, presetId?: string | null) {
   if (!session.value) return
 
   // Update selected preset ID when user picks one
@@ -80,13 +80,13 @@ async function handleSend(content: string, images?: { url: string, base64?: stri
     outputTokens: 0,
     cachedTokens: 0,
     modelName: null,
-    imagesJson: images ? JSON.stringify(images) : null,
+    imagesJson: null,
     createdAt: new Date().toISOString()
   }
   session.value.messages.push(userMsg)
 
   try {
-    await chatStream.send(props.sessionId, content, images, selectedPresetId.value ?? undefined)
+    await chatStream.send(props.sessionId, content, selectedPresetId.value ?? undefined)
   } catch (err) {
     // Remove optimistic user message on failure
     const idx = session.value.messages.findIndex(m => m.id === userMsg.id)

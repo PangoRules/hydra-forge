@@ -234,12 +234,7 @@ export function useChatStream() {
    * 1. POST to persist the user message → get messageId
    * 2. Invoke SendMessage on the hub to trigger streaming response
    */
-  async function send(
-    sessionId: string,
-    content: string,
-    images?: { url: string, base64?: string }[],
-    presetId?: string
-  ) {
+  async function send(sessionId: string, content: string, presetId?: string) {
     if (sendingLock.value) return
     if (!connection) throw new Error('Not connected')
     sendingLock.value = true
@@ -247,15 +242,7 @@ export function useChatStream() {
       // Step 1: persist user message
       const result = await api.POST<ChatMessageDto>(
         ApiRoutes.Chat.sessions.sendMessage(sessionId),
-        {
-          body: {
-            content,
-            images: images?.map(img => ({
-              Url: img.url,
-              Base64: img.base64 ?? null
-            }))
-          }
-        }
+        { body: { content } }
       )
       if (!result.data) throw new Error('Failed to send message: no response')
       const data = result.data
