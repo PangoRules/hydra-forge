@@ -151,6 +151,9 @@ public static class DomainErrorCodes
         public const string ModelNoVision = "CHAT_MODEL_NO_VISION";
         public const string SummaryFailed = "CHAT_SUMMARY_FAILED";
         public const string PresetGroupNotFound = "CHAT_PRESET_GROUP_NOT_FOUND";
+        public const string PresetGroupNotOwner = "CHAT_PRESET_GROUP_NOT_OWNER";
+        public const string PresetNotFound = "CHAT_PRESET_NOT_FOUND";
+        public const string PresetNotOwner = "CHAT_PRESET_NOT_OWNER";
         public const string PersonalityNotFound = "CHAT_PERSONALITY_NOT_FOUND";
         public const string CardNotInProject = "CHAT_CARD_NOT_IN_PROJECT";
         public const string DocumentAlreadyAttached = "CHAT_DOCUMENT_ALREADY_ATTACHED";
