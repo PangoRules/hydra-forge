@@ -63,6 +63,27 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         await context.SaveChangesAsync(ct);
     }
 
+    public async Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
+        Guid ownerId,
+        string query,
+        Guid? projectId,
+        int limit,
+        CancellationToken ct = default
+    )
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return [];
+
+        var q = context
+            .ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null)
+            .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"));
+
+        if (projectId.HasValue)
+            q = q.Where(s => s.ProjectId == projectId.Value);
+
+        return await q.Take(limit).ToListAsync(ct);
+    }
+
     public async Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default)
     {
         context.CardChatLinks.Add(link);

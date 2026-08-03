@@ -87,6 +87,14 @@ public class ChatFolderServiceTests
         public Task UpdateAsync(ChatSession session, CancellationToken ct = default) =>
             Task.CompletedTask;
 
+        public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
+            Guid ownerId,
+            string query,
+            Guid? projectId,
+            int limit,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
             Task.CompletedTask;
     }

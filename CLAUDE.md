@@ -198,6 +198,8 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - Card numbers are sequential per project (`CardNumber int`, unique per ProjectId) — never expose raw GUIDs to users
 - Archive is `ArchivedAt: DateTime?`, not `IsArchived: bool`. Default query filters use `.Where(x => x.ArchivedAt == null)` manually — no global query filter, so admin/audit views see archived rows by default
 - **EF Core 10 `HasSentinel()` for enum defaults:** When using `HasConversion<int>().HasDefaultValue(SomeEnum.Value)` on an enum property, also chain `.HasSentinel(default(SomeEnum))`. EF 10 treats the 0-value sentinel as the default unless explicitly overridden — without `HasSentinel`, the default value is silently overwritten by the sentinel. This bit `DocType` and `PlanStatus` in `HydraForgeDbContext` (fixed in `12f1f2a`).
+- **ArchivedAt filter parity in search subqueries:** When two query methods over different tables share a `sessionIds` filter subquery, ensure BOTH apply the same `ArchivedAt == null` filter. Found in Plan 13: `SearchByTitleAsync` had it, `SearchByContentAsync` didn't, causing archived sessions to leak into content-search results (fixed in `809f15e`).
+- **Avoid GetByIdAsync inside loops in search/merge services:** When merging results from two data sources (e.g. title hits + content hits), build a lookup dict from the first result set (no DB call) and only fetch items not already in the dict from the second set. Calling `GetByIdAsync` inside a loop over content results creates an N+1 query. Found in Plan 13 `ChatSearchService` (fixed in `809f15e`).
 
 **Code style:**
 - Readable like a newspaper — method names explain intent, no clever tricks

@@ -12,5 +12,12 @@ public interface IChatMessageRepository
         int limit,
         CancellationToken ct = default
     );
+    Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
+        Guid ownerId,
+        string query,
+        Guid? projectId,
+        int limit,
+        CancellationToken ct = default
+    );
     Task AddAsync(ChatMessage message, CancellationToken ct = default);
 }
