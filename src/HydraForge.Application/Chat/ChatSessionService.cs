@@ -21,7 +21,6 @@ public class ChatSessionService(
     IDocumentRepository documentRepo,
     IChatSummaryGenerator summaryGenerator,
     IBackgroundTaskQueue backgroundTaskQueue,
-    IServiceProvider serviceProvider,
     ILogger<ChatSessionService> logger
 ) : IChatSessionService
 {
@@ -35,7 +34,6 @@ public class ChatSessionService(
     private readonly IDocumentRepository _documentRepo = documentRepo;
     private readonly IChatSummaryGenerator _summaryGenerator = summaryGenerator;
     private readonly IBackgroundTaskQueue _backgroundTaskQueue = backgroundTaskQueue;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly ILogger<ChatSessionService> _logger = logger;
 
     public async Task<Result<ChatSessionDto>> CreateAsync(
@@ -475,15 +473,6 @@ public class ChatSessionService(
         }
 
         return Result<IReadOnlyList<DocumentDto>>.Success(documents);
-    }
-
-    // ── Background job (IBackgroundTaskQueue-enqueued) ───────────────────────
-
-    // Resolves ChatSessionService from IServiceProvider at execution time (Hangfire pattern).
-    private async Task CloseSessionJobAsync(Guid sessionId, Guid actorId, CancellationToken ct)
-    {
-        var svc = _serviceProvider.GetRequiredService<ChatSessionService>();
-        await svc.CloseAsync(sessionId, actorId, ct);
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────

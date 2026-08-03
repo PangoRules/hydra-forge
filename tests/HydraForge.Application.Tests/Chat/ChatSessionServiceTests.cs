@@ -429,7 +429,6 @@ public class ChatSessionServiceTests
             documentRepo,
             summaryGenerator,
             backgroundTaskQueue,
-            serviceProvider,
             logger
         );
 
