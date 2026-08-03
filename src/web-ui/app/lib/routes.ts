@@ -188,5 +188,66 @@ export const ApiRoutes = {
       get: (userId: string) => `/api/admin/users/${userId}/budget`,
       update: (userId: string) => `/api/admin/users/${userId}/budget`
     }
+  },
+
+  Chat: {
+    sessions: {
+      list: (folderId?: string, projectId?: string, before?: string, limit = 20) =>
+        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}limit=${limit}`,
+      create: () => '/api/chat/sessions',
+      detail: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
+      update: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
+      close: (sessionId: string) => `/api/chat/sessions/${sessionId}/close`,
+      archive: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
+      attachDocument: (sessionId: string) => `/api/chat/sessions/${sessionId}/documents`,
+      listDocuments: (sessionId: string) => `/api/chat/sessions/${sessionId}/documents`,
+      detachDocument: (sessionId: string, documentId: string) =>
+        `/api/chat/sessions/${sessionId}/documents/${documentId}`,
+      permission: (sessionId: string) => `/api/chat/sessions/${sessionId}/permission`,
+      messages: (sessionId: string, before?: string, beforeId?: string, limit = 50) =>
+        `/api/chat/sessions/${sessionId}/messages?${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
+      sendMessage: (sessionId: string) => `/api/chat/sessions/${sessionId}/messages`
+    },
+    folders: {
+      list: (projectId?: string) => `/api/chat/folders${projectId ? `?projectId=${projectId}` : ''}`,
+      create: () => '/api/chat/folders',
+      detail: (folderId: string) => `/api/chat/folders/${folderId}`,
+      update: (folderId: string) => `/api/chat/folders/${folderId}`,
+      archive: (folderId: string) => `/api/chat/folders/${folderId}`
+    },
+    presets: {
+      list: (groupId?: string) => `/api/chat/presets${groupId ? `?groupId=${groupId}` : ''}`,
+      create: () => '/api/chat/presets',
+      detail: (presetId: string) => `/api/chat/presets/${presetId}`,
+      update: (presetId: string) => `/api/chat/presets/${presetId}`,
+      archive: (presetId: string) => `/api/chat/presets/${presetId}`
+    },
+    presetGroups: {
+      list: () => '/api/chat/preset-groups',
+      create: () => '/api/chat/preset-groups',
+      detail: (groupId: string) => `/api/chat/preset-groups/${groupId}`,
+      update: (groupId: string) => `/api/chat/preset-groups/${groupId}`,
+      archive: (groupId: string) => `/api/chat/preset-groups/${groupId}`
+    },
+    personalities: {
+      list: () => '/api/chat/personalities',
+      create: () => '/api/chat/personalities',
+      detail: (personalityId: string) => `/api/chat/personalities/${personalityId}`,
+      update: (personalityId: string) => `/api/chat/personalities/${personalityId}`,
+      archive: (personalityId: string) => `/api/chat/personalities/${personalityId}`,
+      setDefault: (personalityId: string) => `/api/chat/personalities/${personalityId}/default`
+    },
+    cardLinks: {
+      byCard: (cardId: string) => `/api/cards/${cardId}/chat-links`,
+      archive: (linkId: string) => `/api/chat/card-links/${linkId}`
+    },
+    documents: {
+      list: (q?: string) => `/api/Documents${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+      create: () => '/api/Documents',
+      detail: (documentId: string) => `/api/Documents/${documentId}`,
+      archive: (documentId: string) => `/api/Documents/${documentId}`
+    },
+    search: (q: string, projectId?: string) =>
+      `/api/chat/search?q=${encodeURIComponent(q)}${projectId ? `&projectId=${projectId}` : ''}`
   }
 } as const
