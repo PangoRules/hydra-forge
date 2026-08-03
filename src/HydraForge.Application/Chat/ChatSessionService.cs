@@ -228,6 +228,7 @@ public class ChatSessionService(
         var messages = await _messageRepo.GetBySessionAsync(
             sessionId,
             before: null,
+            beforeId: null,
             limit: 1000,
             ct
         );
@@ -344,7 +345,7 @@ public class ChatSessionService(
             return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
 
         // Empty session → close without summary or CardChatLink
-        var messages = await _messageRepo.GetBySessionAsync(sessionId, before: null, limit: 1, ct);
+        var messages = await _messageRepo.GetBySessionAsync(sessionId, before: null, beforeId: null, limit: 1, ct);
         string? summary = null;
 
         if (messages.Count > 0)

@@ -60,6 +60,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
         var priorMessages = await _messageRepo.GetBySessionAsync(
             sessionId,
             before: null,
+            beforeId: null,
             limit: 1,
             ct
         );
