@@ -10,6 +10,11 @@ export default defineNuxtConfig({
   devtools: {
     enabled: true
   },
+  app: {
+    head: {
+      title: 'HydraForge'
+    }
+  },
 
   css: ['~/assets/css/main.css'],
 

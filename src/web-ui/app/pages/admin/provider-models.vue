@@ -82,6 +82,21 @@ const showProbeModal = ref(false)
 const probeResults = ref<ProbedModelDto[]>([])
 const probeLoading = ref(false)
 const probeError = ref<string | null>(null)
+const probeFilter = ref('')
+
+const filteredProbeResults = computed(() => {
+  const q = probeFilter.value.trim().toLowerCase()
+  if (!q) return probeResults.value
+  return probeResults.value.filter(
+    m => m.modelId.toLowerCase().includes(q) || (m.name ?? '').toLowerCase().includes(q)
+  )
+})
+
+const probeColumns = [
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'modelId', header: 'Model ID' },
+  { accessorKey: 'actions', header: '', enableSorting: false }
+]
 
 const configuredModelIds = computed(() => new Set(models.value.map(m => m.modelId)))
 
@@ -234,6 +249,7 @@ async function discoverModels() {
   probeLoading.value = true
   probeError.value = null
   probeResults.value = []
+  probeFilter.value = ''
   showProbeModal.value = true
   try {
     const { data, error } = await api.GET<ProbedModelDto[]>(
@@ -474,7 +490,7 @@ onMounted(() => loadProviders())
     <AppModal
       v-model:open="showProbeModal"
       title="Discovered Models"
-      width="sm:max-w-xl"
+      width="sm:max-w-2xl"
       :loading="probeLoading"
       :error="probeError"
       @close="showProbeModal = false"
@@ -486,38 +502,55 @@ onMounted(() => loadProviders())
         >
           No models discovered.
         </div>
-        <ul
+        <div
           v-else-if="!probeLoading && !probeError"
-          class="divide-y divide-muted max-h-96 overflow-y-auto"
+          class="flex flex-col gap-3 p-4"
         >
-          <li
-            v-for="model in probeResults"
-            :key="model.modelId"
-            class="p-3 flex items-center justify-between gap-2"
-          >
-            <div class="min-w-0">
-              <p class="font-medium text-sm truncate">
-                {{ model.name || model.modelId }}
-              </p>
-              <code class="text-xs text-muted">{{ model.modelId }}</code>
-            </div>
-            <UBadge
-              v-if="configuredModelIds.has(model.modelId)"
-              color="neutral"
-              variant="subtle"
+          <UInput
+            v-model="probeFilter"
+            icon="i-lucide-search"
+            placeholder="Filter by name or model ID..."
+            class="w-full"
+          />
+          <p class="text-xs text-muted">
+            {{ filteredProbeResults.length }} of {{ probeResults.length }} models
+          </p>
+          <div class="max-h-96 overflow-y-auto">
+            <UTable
+              :data="filteredProbeResults"
+              :columns="probeColumns"
+              :get-row-id="(m: ProbedModelDto) => m.modelId"
+              sticky="header"
+              class="w-full"
             >
-              Already added
-            </UBadge>
-            <UButton
-              v-else
-              size="xs"
-              color="neutral"
-              @click="addProbedModel(model)"
-            >
-              Add
-            </UButton>
-          </li>
-        </ul>
+              <template #modelId-cell="{ row }">
+                <code class="text-xs">{{ row.original.modelId }}</code>
+              </template>
+              <template #name-cell="{ row }">
+                {{ row.original.name || row.original.modelId }}
+              </template>
+              <template #actions-cell="{ row }">
+                <div class="flex justify-end">
+                  <UBadge
+                    v-if="configuredModelIds.has(row.original.modelId)"
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    Already added
+                  </UBadge>
+                  <UButton
+                    v-else
+                    size="xs"
+                    color="neutral"
+                    @click="addProbedModel(row.original)"
+                  >
+                    Add
+                  </UButton>
+                </div>
+              </template>
+            </UTable>
+          </div>
+        </div>
       </template>
       <template #footer>
         <UButton

@@ -340,5 +340,6 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/glossary.md` — terminology
 - `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-50)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
+- `docs/admin-llm-providers.md` — how-to: registering LLM providers (OpenRouter, Ollama, etc.) via the admin UI
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.
