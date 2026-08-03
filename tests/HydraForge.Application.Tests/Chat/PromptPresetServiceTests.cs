@@ -21,7 +21,8 @@ public class PromptPresetServiceTests
         public Task ArchiveAsync(Guid presetId, CancellationToken ct = default)
         {
             var p = Presets.FirstOrDefault(x => x.Id == presetId);
-            if (p != null) p.ArchivedAt = DateTime.UtcNow;
+            if (p != null)
+                p.ArchivedAt = DateTime.UtcNow;
             return Task.CompletedTask;
         }
 
@@ -60,12 +61,15 @@ public class PromptPresetServiceTests
         public Task ArchiveAsync(Guid groupId, CancellationToken ct = default)
         {
             var g = Groups.FirstOrDefault(x => x.Id == groupId);
-            if (g != null) g.ArchivedAt = DateTime.UtcNow;
+            if (g != null)
+                g.ArchivedAt = DateTime.UtcNow;
             return Task.CompletedTask;
         }
 
-        public Task<PromptPresetGroup?> GetByIdAsync(Guid groupId, CancellationToken ct = default) =>
-            Task.FromResult(Groups.FirstOrDefault(g => g.Id == groupId));
+        public Task<PromptPresetGroup?> GetByIdAsync(
+            Guid groupId,
+            CancellationToken ct = default
+        ) => Task.FromResult(Groups.FirstOrDefault(g => g.Id == groupId));
 
         public Task<IReadOnlyList<PromptPresetGroup>> ListByUserAsync(
             Guid userId,
@@ -79,7 +83,11 @@ public class PromptPresetServiceTests
             Task.CompletedTask;
     }
 
-    private static (PromptPresetService service, FakePresetRepo presetRepo, FakeGroupRepo groupRepo) CreateSut()
+    private static (
+        PromptPresetService service,
+        FakePresetRepo presetRepo,
+        FakeGroupRepo groupRepo
+    ) CreateSut()
     {
         var presetRepo = new FakePresetRepo();
         var groupRepo = new FakeGroupRepo();
@@ -112,7 +120,14 @@ public class PromptPresetServiceTests
         var (service, _, groupRepo) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = actorId, Name = "Group" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = actorId,
+                Name = "Group",
+            }
+        );
 
         var result = await service.CreatePresetAsync(
             new CreatePromptPresetRequest("P", "C", groupId),
@@ -143,7 +158,14 @@ public class PromptPresetServiceTests
         var ownerId = NewId();
         var otherId = NewId();
         var groupId = NewId();
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = ownerId, Name = "Group" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = ownerId,
+                Name = "Group",
+            }
+        );
 
         var result = await service.CreatePresetAsync(
             new CreatePromptPresetRequest("P", "C", groupId),
@@ -175,9 +197,31 @@ public class PromptPresetServiceTests
     {
         var (service, presetRepo, _) = CreateSut();
         var actorId = NewId();
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "P1" });
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "P2", GroupId = NewId() });
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = NewId(), Name = "Other" });
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "P1",
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "P2",
+                GroupId = NewId(),
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = NewId(),
+                Name = "Other",
+            }
+        );
 
         var result = await service.ListPresetsAsync(actorId, null);
 
@@ -191,8 +235,23 @@ public class PromptPresetServiceTests
         var (service, presetRepo, _) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "Ungrouped" });
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "InGroup", GroupId = groupId });
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "Ungrouped",
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "InGroup",
+                GroupId = groupId,
+            }
+        );
 
         var result = await service.ListPresetsAsync(actorId, Guid.Empty);
 
@@ -207,8 +266,23 @@ public class PromptPresetServiceTests
         var (service, presetRepo, _) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "Ungrouped" });
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "InGroup", GroupId = groupId });
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "Ungrouped",
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "InGroup",
+                GroupId = groupId,
+            }
+        );
 
         var result = await service.ListPresetsAsync(actorId, groupId);
 
@@ -222,14 +296,23 @@ public class PromptPresetServiceTests
     {
         var (service, presetRepo, _) = CreateSut();
         var actorId = NewId();
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "Active" });
-        presetRepo.Presets.Add(new PromptPreset
-        {
-            Id = NewId(),
-            UserId = actorId,
-            Name = "Archived",
-            ArchivedAt = DateTime.UtcNow
-        });
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "Active",
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "Archived",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
 
         var result = await service.ListPresetsAsync(actorId, null);
 
@@ -245,7 +328,13 @@ public class PromptPresetServiceTests
     {
         var (service, _, _) = CreateSut();
         var actorId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = actorId, Name = "Old", Content = "OldC" };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "Old",
+            Content = "OldC",
+        };
         var presetRepo = new FakePresetRepo();
         presetRepo.Presets.Add(preset);
         var groupRepo = new FakeGroupRepo();
@@ -268,7 +357,12 @@ public class PromptPresetServiceTests
         var (service, _, _) = CreateSut();
         var ownerId = NewId();
         var otherId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = ownerId, Name = "Old" };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = ownerId,
+            Name = "Old",
+        };
         var presetRepo = new FakePresetRepo();
         presetRepo.Presets.Add(preset);
         var groupRepo = new FakeGroupRepo();
@@ -306,11 +400,23 @@ public class PromptPresetServiceTests
         var actorId = NewId();
         var otherOwnerId = NewId();
         var groupId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = actorId, Name = "P" };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P",
+        };
         var presetRepo = new FakePresetRepo();
         presetRepo.Presets.Add(preset);
         var groupRepo = new FakeGroupRepo();
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = otherOwnerId, Name = "G" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = otherOwnerId,
+                Name = "G",
+            }
+        );
         var svc = new PromptPresetService(presetRepo, groupRepo);
 
         var result = await svc.UpdatePresetAsync(
@@ -330,7 +436,12 @@ public class PromptPresetServiceTests
     {
         var (service, _, _) = CreateSut();
         var actorId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = actorId, Name = "P" };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P",
+        };
         var presetRepo = new FakePresetRepo();
         presetRepo.Presets.Add(preset);
         var groupRepo = new FakeGroupRepo();
@@ -348,7 +459,12 @@ public class PromptPresetServiceTests
         var (service, _, _) = CreateSut();
         var ownerId = NewId();
         var otherId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = ownerId, Name = "P" };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = ownerId,
+            Name = "P",
+        };
         var presetRepo = new FakePresetRepo();
         presetRepo.Presets.Add(preset);
         var groupRepo = new FakeGroupRepo();
@@ -400,16 +516,40 @@ public class PromptPresetServiceTests
         var (service, presetRepo, groupRepo) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = actorId, Name = "G1" });
-        groupRepo.Groups.Add(new PromptPresetGroup
-        {
-            Id = NewId(),
-            UserId = actorId,
-            Name = "Archived",
-            ArchivedAt = DateTime.UtcNow
-        });
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = NewId(), UserId = NewId(), Name = "Other" });
-        presetRepo.Presets.Add(new PromptPreset { Id = NewId(), UserId = actorId, Name = "P1", GroupId = groupId });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = actorId,
+                Name = "G1",
+            }
+        );
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "Archived",
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = NewId(),
+                UserId = NewId(),
+                Name = "Other",
+            }
+        );
+        presetRepo.Presets.Add(
+            new PromptPreset
+            {
+                Id = NewId(),
+                UserId = actorId,
+                Name = "P1",
+                GroupId = groupId,
+            }
+        );
 
         var result = await service.ListGroupsAsync(actorId);
 
@@ -427,7 +567,12 @@ public class PromptPresetServiceTests
     {
         var (service, _, _) = CreateSut();
         var actorId = NewId();
-        var group = new PromptPresetGroup { Id = NewId(), UserId = actorId, Name = "Old" };
+        var group = new PromptPresetGroup
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "Old",
+        };
         var presetRepo = new FakePresetRepo();
         var groupRepo = new FakeGroupRepo();
         groupRepo.Groups.Add(group);
@@ -449,7 +594,12 @@ public class PromptPresetServiceTests
         var (service, _, _) = CreateSut();
         var ownerId = NewId();
         var otherId = NewId();
-        var group = new PromptPresetGroup { Id = NewId(), UserId = ownerId, Name = "G" };
+        var group = new PromptPresetGroup
+        {
+            Id = NewId(),
+            UserId = ownerId,
+            Name = "G",
+        };
         var presetRepo = new FakePresetRepo();
         var groupRepo = new FakeGroupRepo();
         groupRepo.Groups.Add(group);
@@ -488,11 +638,30 @@ public class PromptPresetServiceTests
         var (service, presetRepo, groupRepo) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        var preset1 = new PromptPreset { Id = NewId(), UserId = actorId, Name = "P1", GroupId = groupId };
-        var preset2 = new PromptPreset { Id = NewId(), UserId = actorId, Name = "P2", GroupId = groupId };
+        var preset1 = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P1",
+            GroupId = groupId,
+        };
+        var preset2 = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P2",
+            GroupId = groupId,
+        };
         presetRepo.Presets.Add(preset1);
         presetRepo.Presets.Add(preset2);
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = actorId, Name = "G" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = actorId,
+                Name = "G",
+            }
+        );
 
         var result = await service.ArchiveGroupAsync(groupId, actorId);
 
@@ -509,7 +678,14 @@ public class PromptPresetServiceTests
         var ownerId = NewId();
         var otherId = NewId();
         var groupId = NewId();
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = ownerId, Name = "G" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = ownerId,
+                Name = "G",
+            }
+        );
 
         var result = await service.ArchiveGroupAsync(groupId, otherId);
 
@@ -534,9 +710,22 @@ public class PromptPresetServiceTests
         var (service, presetRepo, groupRepo) = CreateSut();
         var actorId = NewId();
         var groupId = NewId();
-        var preset = new PromptPreset { Id = NewId(), UserId = actorId, Name = "P", GroupId = groupId };
+        var preset = new PromptPreset
+        {
+            Id = NewId(),
+            UserId = actorId,
+            Name = "P",
+            GroupId = groupId,
+        };
         presetRepo.Presets.Add(preset);
-        groupRepo.Groups.Add(new PromptPresetGroup { Id = groupId, UserId = actorId, Name = "G" });
+        groupRepo.Groups.Add(
+            new PromptPresetGroup
+            {
+                Id = groupId,
+                UserId = actorId,
+                Name = "G",
+            }
+        );
 
         await service.ArchiveGroupAsync(groupId, actorId);
 

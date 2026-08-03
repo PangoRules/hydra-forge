@@ -99,7 +99,10 @@ public class PromptPresetService(
 
         if (preset.UserId != actorId)
             return Result<PromptPresetDto>.Failure(
-                new Error(DomainErrorCodes.Chat.PresetNotOwner, "Only the owner can update the preset.")
+                new Error(
+                    DomainErrorCodes.Chat.PresetNotOwner,
+                    "Only the owner can update the preset."
+                )
             );
 
         if (request.GroupId.HasValue)
@@ -138,7 +141,10 @@ public class PromptPresetService(
 
         if (preset.UserId != actorId)
             return Result<PromptPresetDto>.Failure(
-                new Error(DomainErrorCodes.Chat.PresetNotOwner, "Only the owner can archive the preset.")
+                new Error(
+                    DomainErrorCodes.Chat.PresetNotOwner,
+                    "Only the owner can archive the preset."
+                )
             );
 
         await _presetRepo.ArchiveAsync(presetId, ct);
@@ -270,26 +276,10 @@ public class PromptPresetService(
     }
 
     private static PromptPresetDto MapToDto(PromptPreset p) =>
-        new(
-            p.Id,
-            p.GroupId,
-            p.Name,
-            p.Content,
-            p.CreatedAt,
-            p.UpdatedAt,
-            p.ArchivedAt
-        );
+        new(p.Id, p.GroupId, p.Name, p.Content, p.CreatedAt, p.UpdatedAt, p.ArchivedAt);
 
     private static PromptPresetGroupDto MapGroupToDto(
         PromptPresetGroup g,
         IReadOnlyList<PromptPresetDto> presets
-    ) =>
-        new(
-            g.Id,
-            g.Name,
-            g.CreatedAt,
-            g.UpdatedAt,
-            g.ArchivedAt,
-            presets
-        );
+    ) => new(g.Id, g.Name, g.CreatedAt, g.UpdatedAt, g.ArchivedAt, presets);
 }

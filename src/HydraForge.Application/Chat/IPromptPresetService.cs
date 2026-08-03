@@ -3,8 +3,11 @@ using HydraForge.Domain.Common;
 namespace HydraForge.Application.Chat;
 
 public record CreatePromptPresetRequest(string Name, string Content, Guid? GroupId);
+
 public record UpdatePromptPresetRequest(string Name, string Content, Guid? GroupId);
+
 public record CreatePromptPresetGroupRequest(string Name);
+
 public record UpdatePromptPresetGroupRequest(string Name);
 
 public interface IPromptPresetService
