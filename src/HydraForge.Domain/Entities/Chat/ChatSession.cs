@@ -42,6 +42,37 @@ public class ChatSession
         ClosedAt = DateTime.UtcNow;
         Summary = summary;
         UpdatedAt = DateTime.UtcNow;
+        RevokeAiEdit();
+    }
+
+    public void UpdateSettings(
+        string? title,
+        Guid? folderId,
+        Guid? personalityId,
+        AiEditMode? aiEditMode,
+        bool? searchAllMyDocs
+    )
+    {
+        if (Status != ChatSessionStatus.Active)
+            throw new InvalidOperationException("Cannot update settings on a closed session.");
+
+        if (title != null)
+            Title = title;
+        if (folderId != null)
+            FolderId = folderId;
+        if (personalityId != null)
+            PersonalityId = personalityId;
+        if (aiEditMode != null)
+            AiEditMode = aiEditMode.Value;
+        if (searchAllMyDocs != null)
+            SearchAllMyDocs = searchAllMyDocs.Value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RevokeAiEdit()
+    {
+        AiEditMode = AiEditMode.PerMutation;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void ToggleSearchAllMyDocs(bool value)
@@ -59,6 +90,12 @@ public class ChatSession
             throw new InvalidOperationException("Cannot change AI edit mode on a closed session.");
 
         AiEditMode = mode;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Archive()
+    {
+        ArchivedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 }

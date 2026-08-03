@@ -68,6 +68,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   2. Create a shared `Test<PortName>` stub in `tests/HydraForge.Server.Tests/` and register it in every factory's `ConfigureServices`.
   3. Skipping this resolves the real Infrastructure implementation in tests — it fails as a `500` from the endpoint, not a DI exception, so it's easy to misdiagnose as an application bug instead of missing test wiring.
 - HTTP `.http` smoke test files must be self-contained: auth → setup (create project, add members, add data) → test cases → cleanup. Never depend on variable values from other `.http` files. Each `.http` file runs in isolation.
+- **Fake repo dictionary pattern** — When a test fake repo needs to look up entities by ID (e.g. `FakeCardRepo`), use a `Dictionary<Guid, T>` field instead of a single nullable `T?` field. This supports multiple entities, lookup by ID from the service under test, and avoids `null`-checking boilerplate. Register test entities via `repo.Cards[cardId] = card` before calling the service.
 
 ## API Documentation
 

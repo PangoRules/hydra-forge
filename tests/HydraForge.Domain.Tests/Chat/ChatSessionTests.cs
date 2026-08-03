@@ -121,4 +121,70 @@ public class ChatSessionTests
 
         Assert.Throws<InvalidOperationException>(act);
     }
+
+    [Fact]
+    public void Close_RevokesAiEditMode()
+    {
+        var session = new ChatSession();
+        session.SetAiEditMode(AiEditMode.Blanket);
+
+        session.Close(null);
+
+        Assert.Equal(AiEditMode.PerMutation, session.AiEditMode);
+    }
+
+    [Fact]
+    public void UpdateSettings_UpdatesProvidedFields()
+    {
+        var session = new ChatSession { Title = "Old" };
+        var folderId = Guid.NewGuid();
+        var personalityId = Guid.NewGuid();
+
+        session.UpdateSettings("New", folderId, personalityId, AiEditMode.Blanket, true);
+
+        Assert.Equal("New", session.Title);
+        Assert.Equal(folderId, session.FolderId);
+        Assert.Equal(personalityId, session.PersonalityId);
+        Assert.Equal(AiEditMode.Blanket, session.AiEditMode);
+        Assert.True(session.SearchAllMyDocs);
+    }
+
+    [Fact]
+    public void UpdateSettings_LeavesUnspecifiedFieldsUnchanged()
+    {
+        var folderId = Guid.NewGuid();
+        var session = new ChatSession
+        {
+            Title = "Keep",
+            FolderId = folderId,
+            SearchAllMyDocs = true,
+        };
+
+        session.UpdateSettings(null, null, null, null, null);
+
+        Assert.Equal("Keep", session.Title);
+        Assert.Equal(folderId, session.FolderId);
+        Assert.True(session.SearchAllMyDocs);
+    }
+
+    [Fact]
+    public void UpdateSettings_RejectedWhenClosed()
+    {
+        var session = new ChatSession();
+        session.Close(null);
+
+        var act = () => session.UpdateSettings("New", null, null, null, null);
+
+        Assert.Throws<InvalidOperationException>(act);
+    }
+
+    [Fact]
+    public void Archive_SetsArchivedAt()
+    {
+        var session = new ChatSession();
+
+        session.Archive();
+
+        Assert.NotNull(session.ArchivedAt);
+    }
 }
