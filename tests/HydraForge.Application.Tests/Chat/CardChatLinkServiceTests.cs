@@ -297,7 +297,7 @@ public class CardChatLinkServiceTests
         var result = await denyService.GetByCardAsync(cardId, NewId());
 
         Assert.True(result.IsFailure);
-        Assert.Equal("PROJECT_MEMBER_REQUIRED", result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
     }
 
     [Fact]

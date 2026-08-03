@@ -34,7 +34,7 @@ public sealed class CardChatLinkService(
             !await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, card.ProjectId, userId, ct)
         )
             return Result<IReadOnlyList<CardChatLinkDto>>.Failure(
-                new Error("PROJECT_MEMBER_REQUIRED", "Project member required.")
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Project member required.")
             );
 
         var links = await _linkRepo.GetByCardAsync(cardId, ct);
@@ -73,10 +73,9 @@ public sealed class CardChatLinkService(
 
         if (link.OwnerId != userId)
             return Result<CardChatLinkDto>.Failure(
-                new Error("CHAT_SESSION_NOT_OWNER", "Only the owner can archive this chat link.")
+                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can archive this chat link.")
             );
 
-        link.ArchivedAt = DateTime.UtcNow;
         await _linkRepo.ArchiveAsync(linkId, ct);
 
         var owners = await _userRepo.FindByIdsAsync([link.OwnerId], ct);
