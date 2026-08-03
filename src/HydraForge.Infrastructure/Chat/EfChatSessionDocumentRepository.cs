@@ -13,8 +13,8 @@ public sealed class EfChatSessionDocumentRepository(HydraForgeDbContext context)
         CancellationToken ct = default
     )
     {
-        return await context.ChatSessionDocuments
-            .Where(sd => sd.SessionId == sessionId)
+        return await context
+            .ChatSessionDocuments.Where(sd => sd.SessionId == sessionId)
             .OrderByDescending(sd => sd.AddedAt)
             .ToListAsync(ct);
     }
@@ -27,8 +27,10 @@ public sealed class EfChatSessionDocumentRepository(HydraForgeDbContext context)
 
     public async Task RemoveAsync(Guid sessionId, Guid documentId, CancellationToken ct = default)
     {
-        var link = await context.ChatSessionDocuments
-            .FirstOrDefaultAsync(sd => sd.SessionId == sessionId && sd.DocumentId == documentId, ct);
+        var link = await context.ChatSessionDocuments.FirstOrDefaultAsync(
+            sd => sd.SessionId == sessionId && sd.DocumentId == documentId,
+            ct
+        );
         if (link != null)
         {
             context.ChatSessionDocuments.Remove(link);
@@ -36,9 +38,15 @@ public sealed class EfChatSessionDocumentRepository(HydraForgeDbContext context)
         }
     }
 
-    public async Task<bool> ExistsAsync(Guid sessionId, Guid documentId, CancellationToken ct = default)
+    public async Task<bool> ExistsAsync(
+        Guid sessionId,
+        Guid documentId,
+        CancellationToken ct = default
+    )
     {
-        return await context.ChatSessionDocuments
-            .AnyAsync(sd => sd.SessionId == sessionId && sd.DocumentId == documentId, ct);
+        return await context.ChatSessionDocuments.AnyAsync(
+            sd => sd.SessionId == sessionId && sd.DocumentId == documentId,
+            ct
+        );
     }
 }

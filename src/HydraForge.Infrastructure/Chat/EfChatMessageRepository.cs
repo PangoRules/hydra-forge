@@ -5,8 +5,7 @@ using HydraForge.Domain.Entities.Chat;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-public sealed class EfChatMessageRepository(HydraForgeDbContext context)
-    : IChatMessageRepository
+public sealed class EfChatMessageRepository(HydraForgeDbContext context) : IChatMessageRepository
 {
     public async Task<ChatMessage?> GetByIdAsync(Guid messageId, CancellationToken ct = default)
     {
@@ -20,16 +19,12 @@ public sealed class EfChatMessageRepository(HydraForgeDbContext context)
         CancellationToken ct = default
     )
     {
-        var query = context.ChatMessages
-            .Where(m => m.SessionId == sessionId);
+        var query = context.ChatMessages.Where(m => m.SessionId == sessionId);
 
         if (before.HasValue)
             query = query.Where(m => m.CreatedAt < before.Value);
 
-        return await query
-            .OrderByDescending(m => m.CreatedAt)
-            .Take(limit)
-            .ToListAsync(ct);
+        return await query.OrderByDescending(m => m.CreatedAt).Take(limit).ToListAsync(ct);
     }
 
     public async Task AddAsync(ChatMessage message, CancellationToken ct = default)

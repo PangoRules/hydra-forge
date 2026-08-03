@@ -44,7 +44,15 @@ public class ChatSessionService(
     {
         if (request.ProjectId.HasValue)
         {
-            if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, request.ProjectId.Value, actorId, ct))
+            if (
+                !await MembershipGuard.HasAccessAsync(
+                    _userRepo,
+                    _memberRepo,
+                    request.ProjectId.Value,
+                    actorId,
+                    ct
+                )
+            )
                 return Result<ChatSessionDto>.Failure(
                     new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
                 );
@@ -54,7 +62,10 @@ public class ChatSessionService(
         {
             if (!request.ProjectId.HasValue)
                 return Result<ChatSessionDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.CardNotInProject, "OpenCardId requires ProjectId.")
+                    new Error(
+                        DomainErrorCodes.Chat.CardNotInProject,
+                        "OpenCardId requires ProjectId."
+                    )
                 );
 
             var card = await _cardRepo.GetByIdAsync(request.OpenCardId.Value, ct);
@@ -64,7 +75,10 @@ public class ChatSessionService(
                 );
             if (card.ProjectId != request.ProjectId.Value)
                 return Result<ChatSessionDto>.Failure(
-                    new Error(DomainErrorCodes.Chat.CardNotInProject, "Card is in a different project.")
+                    new Error(
+                        DomainErrorCodes.Chat.CardNotInProject,
+                        "Card is in a different project."
+                    )
                 );
         }
 
@@ -83,12 +97,11 @@ public class ChatSessionService(
             );
             if (existing != null)
             {
-                // Fire-and-forget: close old session in background (one LLM call for summary + CardChatLink)
-#pragma warning disable CS4014
-                await _backgroundTaskQueue.EnqueueJobAsync<CloseSessionJob>(
-                    j => j.RunAsync(existing.Id, actorId, CancellationToken.None)
+                // Enqueue background close of old session (summary + CardChatLink, one LLM call);
+                // the new session is returned immediately without waiting for it to run.
+                await _backgroundTaskQueue.EnqueueJobAsync<CloseSessionJob>(j =>
+                    j.RunAsync(existing.Id, actorId, CancellationToken.None)
                 );
-#pragma warning restore CS4014
             }
         }
 
@@ -129,10 +142,21 @@ public class ChatSessionService(
         // Caller must be able to read the source session
         if (!source.ProjectId.HasValue || !source.IsShared)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Cannot fork: only shared project sessions can be forked.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Cannot fork: only shared project sessions can be forked."
+                )
             );
 
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, source.ProjectId.Value, actorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                source.ProjectId.Value,
+                actorId,
+                ct
+            )
+        )
             return Result<ChatSessionDto>.Failure(
                 new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
             );
@@ -141,7 +165,10 @@ public class ChatSessionService(
         var summaryResult = await _summaryGenerator.GenerateSummaryAsync(source.Id, ct);
         if (!summaryResult.IsSuccess)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SummaryFailed, "Failed to generate session summary.")
+                new Error(
+                    DomainErrorCodes.Chat.SummaryFailed,
+                    "Failed to generate session summary."
+                )
             );
         var summaryText = summaryResult.Value;
 
@@ -198,7 +225,12 @@ public class ChatSessionService(
                 new Error(DomainErrorCodes.Chat.SessionNotOwner, "Access denied.")
             );
 
-        var messages = await _messageRepo.GetBySessionAsync(sessionId, before: null, limit: 1000, ct);
+        var messages = await _messageRepo.GetBySessionAsync(
+            sessionId,
+            before: null,
+            limit: 1000,
+            ct
+        );
 
         return Result<ChatSessionDetailDto>.Success(
             new ChatSessionDetailDto(
@@ -233,7 +265,14 @@ public class ChatSessionService(
         CancellationToken ct = default
     )
     {
-        var sessions = await _sessionRepo.ListAsync(actorId, folderId, projectId, before, limit, ct);
+        var sessions = await _sessionRepo.ListAsync(
+            actorId,
+            folderId,
+            projectId,
+            before,
+            limit,
+            ct
+        );
         var dtos = new List<ChatSessionDto>();
         foreach (var session in sessions)
             dtos.Add(await MapToDtoAsync(session, ct));
@@ -256,7 +295,10 @@ public class ChatSessionService(
 
         if (session.OwnerId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can update the session.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can update the session."
+                )
             );
 
         if (session.Status != ChatSessionStatus.Active)
@@ -291,7 +333,10 @@ public class ChatSessionService(
 
         if (session.OwnerId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can close the session.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can close the session."
+                )
             );
 
         // Idempotent: already closed
@@ -313,7 +358,11 @@ public class ChatSessionService(
         await _sessionRepo.UpdateAsync(session, ct);
 
         // Create CardChatLink if panel session
-        if (session.ProjectId.HasValue && session.OpenCardId.HasValue && !string.IsNullOrWhiteSpace(summary))
+        if (
+            session.ProjectId.HasValue
+            && session.OpenCardId.HasValue
+            && !string.IsNullOrWhiteSpace(summary)
+        )
         {
             var link = new CardChatLink
             {
@@ -344,7 +393,10 @@ public class ChatSessionService(
 
         if (session.OwnerId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can archive the session.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can archive the session."
+                )
             );
 
         session.Archive();
@@ -371,7 +423,9 @@ public class ChatSessionService(
             );
 
         var granted = session.Status == ChatSessionStatus.Active && session.ProjectId.HasValue;
-        return Result<ChatPermissionDto>.Success(new ChatPermissionDto(granted, session.AiEditMode));
+        return Result<ChatPermissionDto>.Success(
+            new ChatPermissionDto(granted, session.AiEditMode)
+        );
     }
 
     public async Task<Result<ChatSessionDto>> AttachDocumentAsync(
@@ -389,7 +443,10 @@ public class ChatSessionService(
 
         if (session.OwnerId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can attach documents.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can attach documents."
+                )
             );
 
         var document = await _documentRepo.GetByIdAsync(documentId, ct);
@@ -400,12 +457,18 @@ public class ChatSessionService(
 
         if (document.UserId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.DocumentNotOwned, "Cannot attach a document you don't own.")
+                new Error(
+                    DomainErrorCodes.Chat.DocumentNotOwned,
+                    "Cannot attach a document you don't own."
+                )
             );
 
         if (await _sessionDocRepo.ExistsAsync(sessionId, documentId, ct))
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.DocumentAlreadyAttached, "Document already attached.")
+                new Error(
+                    DomainErrorCodes.Chat.DocumentAlreadyAttached,
+                    "Document already attached."
+                )
             );
 
         var sessionDoc = new ChatSessionDocument
@@ -436,7 +499,10 @@ public class ChatSessionService(
 
         if (session.OwnerId != actorId)
             return Result<ChatSessionDto>.Failure(
-                new Error(DomainErrorCodes.Chat.SessionNotOwner, "Only the owner can detach documents.")
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can detach documents."
+                )
             );
 
         await _sessionDocRepo.RemoveAsync(sessionId, documentId, ct);
@@ -477,13 +543,23 @@ public class ChatSessionService(
 
     // ── Private helpers ────────────────────────────────────────────────────────
 
-    private async Task<bool> CanReadSessionAsync(ChatSession session, Guid actorId, CancellationToken ct)
+    private async Task<bool> CanReadSessionAsync(
+        ChatSession session,
+        Guid actorId,
+        CancellationToken ct
+    )
     {
         if (session.OwnerId == actorId)
             return true;
 
         if (session.ProjectId.HasValue && session.IsShared)
-            return await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, session.ProjectId.Value, actorId, ct);
+            return await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                session.ProjectId.Value,
+                actorId,
+                ct
+            );
 
         return false;
     }
@@ -517,27 +593,29 @@ public class ChatSessionService(
         );
     }
 
-    private static ChatMessageDto MapMessageToDto(ChatMessage message) => new(
-        message.Id,
-        message.SessionId,
-        message.Role,
-        message.Content,
-        message.InputTokens,
-        message.OutputTokens,
-        message.CachedTokens,
-        message.ModelName,
-        message.ImagesJson,
-        message.CreatedAt
-    );
+    private static ChatMessageDto MapMessageToDto(ChatMessage message) =>
+        new(
+            message.Id,
+            message.SessionId,
+            message.Role,
+            message.Content,
+            message.InputTokens,
+            message.OutputTokens,
+            message.CachedTokens,
+            message.ModelName,
+            message.ImagesJson,
+            message.CreatedAt
+        );
 
-    private static DocumentDto MapDocumentToDto(Document doc) => new(
-        doc.Id,
-        doc.Title,
-        doc.ContentType,
-        doc.Language,
-        doc.Version,
-        doc.CreatedAt,
-        doc.UpdatedAt,
-        doc.ArchivedAt
-    );
+    private static DocumentDto MapDocumentToDto(Document doc) =>
+        new(
+            doc.Id,
+            doc.Title,
+            doc.ContentType,
+            doc.Language,
+            doc.Version,
+            doc.CreatedAt,
+            doc.UpdatedAt,
+            doc.ArchivedAt
+        );
 }

@@ -5,18 +5,20 @@ using HydraForge.Domain.Entities.PersonalSpace;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-public sealed class EfDocumentRepository(HydraForgeDbContext context)
-    : IDocumentRepository
+public sealed class EfDocumentRepository(HydraForgeDbContext context) : IDocumentRepository
 {
     public async Task<Document?> GetByIdAsync(Guid documentId, CancellationToken ct = default)
     {
         return await context.Documents.FirstOrDefaultAsync(d => d.Id == documentId, ct);
     }
 
-    public async Task<IReadOnlyList<Document>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Document>> ListByUserAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        return await context.Documents
-            .Where(d => d.UserId == userId && d.ArchivedAt == null)
+        return await context
+            .Documents.Where(d => d.UserId == userId && d.ArchivedAt == null)
             .OrderByDescending(d => d.UpdatedAt)
             .ToListAsync(ct);
     }

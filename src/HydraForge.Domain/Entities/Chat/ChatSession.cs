@@ -45,7 +45,13 @@ public class ChatSession
         RevokeAiEdit();
     }
 
-    public void UpdateSettings(string? title, Guid? folderId, Guid? personalityId, AiEditMode? aiEditMode, bool? searchAllMyDocs)
+    public void UpdateSettings(
+        string? title,
+        Guid? folderId,
+        Guid? personalityId,
+        AiEditMode? aiEditMode,
+        bool? searchAllMyDocs
+    )
     {
         if (Status != ChatSessionStatus.Active)
             throw new InvalidOperationException("Cannot update settings on a closed session.");

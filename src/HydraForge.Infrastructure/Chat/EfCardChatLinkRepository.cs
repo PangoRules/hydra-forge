@@ -5,18 +5,20 @@ using HydraForge.Domain.Entities.Chat;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-public sealed class EfCardChatLinkRepository(HydraForgeDbContext context)
-    : ICardChatLinkRepository
+public sealed class EfCardChatLinkRepository(HydraForgeDbContext context) : ICardChatLinkRepository
 {
     public async Task<CardChatLink?> GetByIdAsync(Guid linkId, CancellationToken ct = default)
     {
         return await context.CardChatLinks.FirstOrDefaultAsync(l => l.Id == linkId, ct);
     }
 
-    public async Task<IReadOnlyList<CardChatLink>> GetByCardAsync(Guid cardId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<CardChatLink>> GetByCardAsync(
+        Guid cardId,
+        CancellationToken ct = default
+    )
     {
-        return await context.CardChatLinks
-            .Where(l => l.CardId == cardId && l.ArchivedAt == null)
+        return await context
+            .CardChatLinks.Where(l => l.CardId == cardId && l.ArchivedAt == null)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
     }

@@ -36,11 +36,14 @@ public class ChatSessionServiceTests
             Guid ownerId,
             CancellationToken ct = default
         ) =>
-            Task.FromResult(Sessions.FirstOrDefault(s =>
-                s.OwnerId == ownerId &&
-                s.ProjectId == projectId &&
-                s.OpenCardId == openCardId &&
-                s.Status == ChatSessionStatus.Active));
+            Task.FromResult(
+                Sessions.FirstOrDefault(s =>
+                    s.OwnerId == ownerId
+                    && s.ProjectId == projectId
+                    && s.OpenCardId == openCardId
+                    && s.Status == ChatSessionStatus.Active
+                )
+            );
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
             Guid ownerId,
@@ -49,7 +52,20 @@ public class ChatSessionServiceTests
             DateTime? before,
             int limit,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+        )
+        {
+            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            if (folderId.HasValue)
+                query = query.Where(s => s.FolderId == folderId.Value);
+            if (projectId.HasValue)
+                query = query.Where(s => s.ProjectId == projectId.Value);
+            if (before.HasValue)
+                query = query.Where(s => s.CreatedAt < before.Value);
+
+            return Task.FromResult<IReadOnlyList<ChatSession>>(
+                query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
+            );
+        }
 
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {
@@ -81,7 +97,8 @@ public class ChatSessionServiceTests
             CancellationToken ct = default
         ) =>
             Task.FromResult<IReadOnlyList<ChatMessage>>(
-                Messages.Where(m => m.SessionId == sessionId).ToList());
+                Messages.Where(m => m.SessionId == sessionId).ToList()
+            );
 
         public Task AddAsync(ChatMessage message, CancellationToken ct = default)
         {
@@ -92,19 +109,36 @@ public class ChatSessionServiceTests
 
     private sealed class FakeSessionDocRepo : IChatSessionDocumentRepository
     {
+        public List<ChatSessionDocument> SessionDocs { get; } = [];
+
         public Task<IReadOnlyList<ChatSessionDocument>> GetBySessionAsync(
             Guid sessionId,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyList<ChatSessionDocument>>([]);
+        ) =>
+            Task.FromResult<IReadOnlyList<ChatSessionDocument>>(
+                SessionDocs.Where(sd => sd.SessionId == sessionId).ToList()
+            );
 
-        public Task AddAsync(ChatSessionDocument sessionDocument, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task AddAsync(ChatSessionDocument sessionDocument, CancellationToken ct = default)
+        {
+            SessionDocs.Add(sessionDocument);
+            return Task.CompletedTask;
+        }
 
-        public Task RemoveAsync(Guid sessionId, Guid documentId, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task RemoveAsync(Guid sessionId, Guid documentId, CancellationToken ct = default)
+        {
+            SessionDocs.RemoveAll(sd => sd.SessionId == sessionId && sd.DocumentId == documentId);
+            return Task.CompletedTask;
+        }
 
-        public Task<bool> ExistsAsync(Guid sessionId, Guid documentId, CancellationToken ct = default) =>
-            Task.FromResult(false);
+        public Task<bool> ExistsAsync(
+            Guid sessionId,
+            Guid documentId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                SessionDocs.Any(sd => sd.SessionId == sessionId && sd.DocumentId == documentId)
+            );
     }
 
     private sealed class FakeCardRepo : ICardRepository
@@ -120,10 +154,12 @@ public class ChatSessionServiceTests
         public Task<IReadOnlyDictionary<Guid, Card>> GetByIdsAsync(
             IReadOnlyList<Guid> cardIds,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
-            _card != null && cardIds.Contains(_card.Id)
-                ? new Dictionary<Guid, Card> { [_card.Id] = _card }
-                : new Dictionary<Guid, Card>());
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, Card>>(
+                _card != null && cardIds.Contains(_card.Id)
+                    ? new Dictionary<Guid, Card> { [_card.Id] = _card }
+                    : new Dictionary<Guid, Card>()
+            );
 
         public Task<Card?> GetByProjectAndNumberAsync(
             Guid projectId,
@@ -141,55 +177,74 @@ public class ChatSessionServiceTests
             Task.FromResult(0);
 
         public Task AddAsync(Card card, CancellationToken ct = default) => Task.CompletedTask;
+
         public Task UpdateAsync(Card card, CancellationToken ct = default) => Task.CompletedTask;
+
         public Task UpdateRangeAsync(IReadOnlyList<Card> cards, CancellationToken ct = default) =>
             Task.CompletedTask;
+
         public Task DeleteAsync(Guid cardId, CancellationToken ct = default) => Task.CompletedTask;
+
         public Task CompactColumnPositionsAsync(
             Guid columnId,
             int exceptPosition,
             CancellationToken ct = default
         ) => Task.CompletedTask;
+
         public Task<int> CountByColumnIdAsync(Guid columnId, CancellationToken ct = default) =>
             Task.FromResult(0);
-        public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
-            Task.FromResult(0);
+
+        public Task<int> CountActiveChildrenAsync(
+            Guid parentCardId,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
     }
 
     private sealed class FakeUserRepo : IUserRepository
     {
         public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
             Task.FromResult<User?>(null);
+
         public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
             IReadOnlyList<Guid> ids,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyDictionary<Guid, User>>(new Dictionary<Guid, User>());
-        public Task<User?> FindByUsernameAsync(string username) =>
-            Task.FromResult<User?>(null);
+
+        public Task<User?> FindByUsernameAsync(string username) => Task.FromResult<User?>(null);
+
         public Task<IReadOnlyDictionary<string, User>> FindByUsernamesAsync(
             IReadOnlyList<string> usernames,
             string? searchTerm = null,
             int maxResults = 10,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyDictionary<string, User>>(new Dictionary<string, User>());
+
         public Task UpdateLastLoginAsync(Guid userId, DateTime loginAt) => Task.CompletedTask;
+
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
+
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(false);
+
         public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+
         public Task<IReadOnlyList<User>> ListAsync(
             int skip,
             int take,
             string? search,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<User>>([]);
+
         public Task<int> CountAsync(string? search, CancellationToken ct = default) =>
             Task.FromResult(0);
+
         public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeMemberRepo : IProjectMemberRepository
     {
+        public bool DenyAccess { get; set; }
+
         public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             Task.FromResult<ProjectMember?>(null);
 
@@ -197,9 +252,18 @@ public class ChatSessionServiceTests
             Guid projectId,
             Guid userId,
             CancellationToken ct = default
-        ) => Task.FromResult<ProjectMember?>(
-            new ProjectMember { Id = Guid.NewGuid(), ProjectId = projectId, UserId = userId, Role = MemberRole.Owner }
-        );
+        ) =>
+            Task.FromResult<ProjectMember?>(
+                DenyAccess
+                    ? null
+                    : new ProjectMember
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = projectId,
+                        UserId = userId,
+                        Role = MemberRole.Owner,
+                    }
+            );
 
         public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
             Guid projectId,
@@ -215,8 +279,10 @@ public class ChatSessionServiceTests
             IEnumerable<Guid> projectIds,
             Guid userId,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(
-            projectIds.ToDictionary(id => id, _ => MemberRole.Owner));
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(
+                projectIds.ToDictionary(id => id, _ => MemberRole.Owner)
+            );
 
         public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) =>
             Task.CompletedTask;
@@ -236,16 +302,20 @@ public class ChatSessionServiceTests
 
     private sealed class FakePersonalityRepo : IAgentPersonalityRepository
     {
-        public Task<AgentPersonality?> GetByIdAsync(Guid personalityId, CancellationToken ct = default) =>
-            Task.FromResult<AgentPersonality?>(null);
+        public Task<AgentPersonality?> GetByIdAsync(
+            Guid personalityId,
+            CancellationToken ct = default
+        ) => Task.FromResult<AgentPersonality?>(null);
 
         public Task<IReadOnlyList<AgentPersonality>> ListByUserAsync(
             Guid userId,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<AgentPersonality>>([]);
 
-        public Task<AgentPersonality?> GetDefaultAsync(Guid userId, CancellationToken ct = default) =>
-            Task.FromResult<AgentPersonality?>(null);
+        public Task<AgentPersonality?> GetDefaultAsync(
+            Guid userId,
+            CancellationToken ct = default
+        ) => Task.FromResult<AgentPersonality?>(null);
 
         public Task AddAsync(AgentPersonality personality, CancellationToken ct = default) =>
             Task.CompletedTask;
@@ -256,21 +326,24 @@ public class ChatSessionServiceTests
         public Task ArchiveAsync(Guid personalityId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task SetDefaultAsync(Guid personalityId, Guid userId, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task SetDefaultAsync(
+            Guid personalityId,
+            Guid userId,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
     }
 
     private sealed class FakeDocumentRepo : IDocumentRepository
     {
-        private readonly Document? _document;
-
-        public FakeDocumentRepo(Document? document = null) => _document = document;
+        public Dictionary<Guid, Document> Documents { get; } = [];
 
         public Task<Document?> GetByIdAsync(Guid documentId, CancellationToken ct = default) =>
-            Task.FromResult(_document);
+            Task.FromResult(Documents.TryGetValue(documentId, out var d) ? d : null);
 
-        public Task<IReadOnlyList<Document>> ListByUserAsync(Guid userId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Document>>([]);
+        public Task<IReadOnlyList<Document>> ListByUserAsync(
+            Guid userId,
+            CancellationToken ct = default
+        ) => Task.FromResult<IReadOnlyList<Document>>([]);
 
         public Task AddAsync(Document document, CancellationToken ct = default) =>
             Task.CompletedTask;
@@ -288,7 +361,10 @@ public class ChatSessionServiceTests
 
         public void SetCloseSessionJobInstance(object job) => _closeSessionJobInstance = job;
 
-        public Task EnqueueAsync(Func<CancellationToken, Task> workItem, CancellationToken ct = default)
+        public Task EnqueueAsync(
+            Func<CancellationToken, Task> workItem,
+            CancellationToken ct = default
+        )
         {
             CapturedWorkItems.Add(workItem);
             return Task.CompletedTask;
@@ -300,72 +376,28 @@ public class ChatSessionServiceTests
             var func = methodCall.Compile();
             if (_closeSessionJobInstance is TJob job)
             {
-                Func<CancellationToken, Task> del = async ct => { await func(job); };
+                Func<CancellationToken, Task> del = async ct =>
+                {
+                    await func(job);
+                };
                 CapturedJobDelegates.Add(del);
             }
             return Task.CompletedTask;
         }
-
-        private IServiceProvider? _serviceProvider;
-
-        public void SetServiceProvider(IServiceProvider? sp) => _serviceProvider = sp;
-    }
-
-    private sealed class FakeServiceProvider : IServiceProvider
-    {
-        private readonly Dictionary<Type, object> _services = new();
-        private readonly object? _chatSessionService;
-
-        public FakeServiceProvider(
-            ChatSessionService? chatSessionService,
-            IChatSessionRepository? sessionRepo = null,
-            IChatMessageRepository? messageRepo = null,
-            IChatSessionDocumentRepository? sessionDocRepo = null,
-            ICardRepository? cardRepo = null,
-            IUserRepository? userRepo = null,
-            IProjectMemberRepository? memberRepo = null,
-            IAgentPersonalityRepository? personalityRepo = null,
-            IDocumentRepository? documentRepo = null,
-            IChatSummaryGenerator? summaryGenerator = null,
-            IBackgroundTaskQueue? backgroundTaskQueue = null
-        )
-        {
-            _chatSessionService = chatSessionService;
-            if (sessionRepo != null) _services[typeof(IChatSessionRepository)] = sessionRepo;
-            if (messageRepo != null) _services[typeof(IChatMessageRepository)] = messageRepo;
-            if (sessionDocRepo != null) _services[typeof(IChatSessionDocumentRepository)] = sessionDocRepo;
-            if (cardRepo != null) _services[typeof(ICardRepository)] = cardRepo;
-            if (userRepo != null) _services[typeof(IUserRepository)] = userRepo;
-            if (memberRepo != null) _services[typeof(IProjectMemberRepository)] = memberRepo;
-            if (personalityRepo != null) _services[typeof(IAgentPersonalityRepository)] = personalityRepo;
-            if (documentRepo != null) _services[typeof(IDocumentRepository)] = documentRepo;
-            if (summaryGenerator != null) _services[typeof(IChatSummaryGenerator)] = summaryGenerator;
-            if (backgroundTaskQueue != null) _services[typeof(IBackgroundTaskQueue)] = backgroundTaskQueue;
-        }
-
-        public object? GetService(Type serviceType)
-        {
-            if (_services.TryGetValue(serviceType, out var svc))
-                return svc;
-            if (serviceType == typeof(ChatSessionService))
-                return _chatSessionService;
-            return null;
-        }
-
-        // Test-only method to inject the real ChatSessionService after construction.
-        public void InjectChatSessionServiceForTesting(ChatSessionService svc) =>
-            _services[typeof(ChatSessionService)] = svc;
-
-        // Test-only method to inject any service after construction.
-        public void InjectService<T>(T svc) where T : class =>
-            _services[typeof(T)] = svc;
     }
 
     private sealed class FakeSummaryGenerator : IChatSummaryGenerator
     {
-        public Func<Guid, CancellationToken, Task<Result<string>>>? GenerateSummaryImpl { get; set; }
+        public Func<
+            Guid,
+            CancellationToken,
+            Task<Result<string>>
+        >? GenerateSummaryImpl { get; set; }
 
-        public Task<Result<string>> GenerateSummaryAsync(Guid sessionId, CancellationToken ct = default)
+        public Task<Result<string>> GenerateSummaryAsync(
+            Guid sessionId,
+            CancellationToken ct = default
+        )
         {
             if (GenerateSummaryImpl != null)
                 return GenerateSummaryImpl(sessionId, ct);
@@ -385,7 +417,8 @@ public class ChatSessionServiceTests
         FakePersonalityRepo personalityRepo,
         FakeDocumentRepo documentRepo,
         FakeSummaryGenerator summaryGenerator,
-        FakeBackgroundTaskQueue backgroundTaskQueue
+        FakeBackgroundTaskQueue backgroundTaskQueue,
+        FakeSessionDocRepo sessionDocRepo
     ) CreateSut()
     {
         var sessionRepo = new FakeSessionRepo();
@@ -399,24 +432,6 @@ public class ChatSessionServiceTests
         var summaryGenerator = new FakeSummaryGenerator();
         var backgroundTaskQueue = new FakeBackgroundTaskQueue();
         var logger = Substitute.For<ILogger<ChatSessionService>>();
-
-        // Build FakeServiceProvider with all fakes so CloseSessionJob can resolve ChatSessionService.
-        var serviceProvider = new FakeServiceProvider(
-            chatSessionService: null, // ChatSessionService resolved via GetService override below
-            sessionRepo: sessionRepo,
-            messageRepo: messageRepo,
-            sessionDocRepo: sessionDocRepo,
-            cardRepo: cardRepo,
-            userRepo: userRepo,
-            memberRepo: memberRepo,
-            personalityRepo: personalityRepo,
-            documentRepo: documentRepo,
-            summaryGenerator: summaryGenerator,
-            backgroundTaskQueue: backgroundTaskQueue
-        );
-
-        // Hook the queue into the provider so EnqueueJobAsync can resolve job types.
-        backgroundTaskQueue.SetServiceProvider(serviceProvider);
 
         var service = new ChatSessionService(
             sessionRepo,
@@ -432,14 +447,24 @@ public class ChatSessionServiceTests
             logger
         );
 
-        // Now wire the service into FakeServiceProvider so CloseSessionJob can use it.
-        serviceProvider.InjectChatSessionServiceForTesting(service);
-
-        // Register Application-layer CloseSessionJob so EnqueueJobAsync can resolve it.
-        var closeSessionJob = new CloseSessionJob(serviceProvider);
+        // CloseSessionJob takes IChatSessionService directly — mirrors production DI wiring
+        // (only IChatSessionService is registered, not the concrete ChatSessionService type).
+        var closeSessionJob = new CloseSessionJob(service);
         backgroundTaskQueue.SetCloseSessionJobInstance(closeSessionJob);
 
-        return (service, sessionRepo, messageRepo, cardRepo, userRepo, memberRepo, personalityRepo, documentRepo, summaryGenerator, backgroundTaskQueue);
+        return (
+            service,
+            sessionRepo,
+            messageRepo,
+            cardRepo,
+            userRepo,
+            memberRepo,
+            personalityRepo,
+            documentRepo,
+            summaryGenerator,
+            backgroundTaskQueue,
+            sessionDocRepo
+        );
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -447,7 +472,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_F6_ImplicitClose_EnqueuesBackgroundJob()
     {
-        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, backgroundTaskQueue) = CreateSut();
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, backgroundTaskQueue, _) =
+            CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var cardId = NewId();
@@ -488,7 +514,19 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_F6_ImplicitClose_JobClosesOldSession()
     {
-        var (service, sessionRepo, _, cardRepo, _, _, _, _, summaryGenerator, backgroundTaskQueue) = CreateSut();
+        var (
+            service,
+            sessionRepo,
+            _,
+            cardRepo,
+            _,
+            _,
+            _,
+            _,
+            summaryGenerator,
+            backgroundTaskQueue,
+            _
+        ) = CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var cardId = NewId();
@@ -532,7 +570,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_Idempotent_ReturnsSameSessionTwice()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+            CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -542,13 +581,15 @@ public class ChatSessionServiceTests
             Status = ChatSessionStatus.Active,
         };
         sessionRepo.Sessions.Add(session);
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = session.Id,
-            Role = MessageRole.User,
-            Content = "Hello"
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
         summaryGenerator.GenerateSummaryImpl = (_, _) =>
             Task.FromResult(Result<string>.Success("Summary"));
@@ -566,7 +607,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_EmptySession_NoSummaryNoCardChatLink()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -589,7 +630,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task UpdateAsync_ClosedSession_ReturnsSessionClosedError()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -619,7 +660,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_Fork_CreatesIndependentSessionOwnedByCaller()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+            CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var projectId = NewId();
@@ -635,13 +677,15 @@ public class ChatSessionServiceTests
             Title = "Source Session",
         };
         sessionRepo.Sessions.Add(source);
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = source.Id,
-            Role = MessageRole.User,
-            Content = "Hello"
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = source.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
         summaryGenerator.GenerateSummaryImpl = (_, _) =>
             Task.FromResult(Result<string>.Success("Forked summary"));
@@ -669,8 +713,8 @@ public class ChatSessionServiceTests
         Assert.Equal(ChatSessionStatus.Active, forked.Status);
 
         // Verify pre-populated summary message was added
-        var summaryMessages = messageRepo.Messages
-            .Where(m => m.SessionId == forked.Id && m.Role == MessageRole.Assistant)
+        var summaryMessages = messageRepo
+            .Messages.Where(m => m.SessionId == forked.Id && m.Role == MessageRole.Assistant)
             .ToList();
         Assert.Single(summaryMessages);
         Assert.Contains("Forked summary", summaryMessages[0].Content);
@@ -679,7 +723,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetPermissionAsync_Granted_WhenActiveProjectSession()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -699,7 +743,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetPermissionAsync_Denied_WhenPersonalOrClosed()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
 
         // Personal session (no project) — denied
@@ -734,7 +778,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_WithMessages_CreatesCardChatLink()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+            CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var cardId = NewId();
@@ -748,13 +793,15 @@ public class ChatSessionServiceTests
             Status = ChatSessionStatus.Active,
         };
         sessionRepo.Sessions.Add(session);
-        messageRepo.Messages.Add(new ChatMessage
-        {
-            Id = NewId(),
-            SessionId = session.Id,
-            Role = MessageRole.User,
-            Content = "Hello"
-        });
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
 
         summaryGenerator.GenerateSummaryImpl = (_, _) =>
             Task.FromResult(Result<string>.Success("Panel summary"));
@@ -773,7 +820,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task ArchiveAsync_NotOwner_ReturnsSessionNotOwner()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -793,7 +840,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task DetachDocumentAsync_NotOwner_ReturnsSessionNotOwner()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -808,5 +855,339 @@ public class ChatSessionServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NoProjectNoFork_CreatesPersonalSession()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Personal Chat",
+                FolderId: null,
+                ProjectId: null,
+                OpenCardId: null,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            ownerId
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ChatSessionStatus.Active, result.Value.Status);
+        Assert.Single(sessionRepo.Sessions);
+    }
+
+    [Fact]
+    public async Task CreateAsync_MembershipDenied_ReturnsError()
+    {
+        var (service, _, _, _, _, memberRepo, _, _, _, _, _) = CreateSut();
+        memberRepo.DenyAccess = true;
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Chat",
+                FolderId: null,
+                ProjectId: NewId(),
+                OpenCardId: null,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            NewId()
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OpenCardWithoutProject_ReturnsError()
+    {
+        var (service, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Chat",
+                FolderId: null,
+                ProjectId: null,
+                OpenCardId: NewId(),
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            NewId()
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.CardNotInProject, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CardInDifferentProject_ReturnsError()
+    {
+        var (service, _, _, cardRepo, _, _, _, _, _, _, _) = CreateSut();
+        var projectId = NewId();
+        var otherProjectId = NewId();
+        var cardId = NewId();
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = otherProjectId };
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Chat",
+                FolderId: null,
+                ProjectId: projectId,
+                OpenCardId: cardId,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            NewId()
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.CardNotInProject, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task GetAsync_Owner_ReturnsDetailWithMessages()
+    {
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Title = "Chat",
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hi",
+            }
+        );
+
+        var result = await service.GetAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(session.Id, result.Value.Id);
+        Assert.Single(result.Value.Messages);
+    }
+
+    [Fact]
+    public async Task GetAsync_NotOwnerNotShared_ReturnsAccessDenied()
+    {
+        var (service, sessionRepo, _, _, _, memberRepo, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            IsShared = false,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.GetAsync(session.Id, NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task ListAsync_ReturnsOnlyCallersNonArchivedSessions()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var otherOwnerId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                ArchivedAt = DateTime.UtcNow,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = otherOwnerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+
+        var result = await service.ListAsync(
+            ownerId,
+            folderId: null,
+            projectId: null,
+            before: null,
+            limit: 50
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task AttachDocumentAsync_OwnedDocument_AttachesSuccessfully()
+    {
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var ownerId = NewId();
+        var documentId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        documentRepo.Documents[documentId] = new Document
+        {
+            Id = documentId,
+            UserId = ownerId,
+            Title = "Doc",
+        };
+
+        var result = await service.AttachDocumentAsync(session.Id, documentId, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(sessionDocRepo.SessionDocs);
+        Assert.Equal(documentId, sessionDocRepo.SessionDocs[0].DocumentId);
+    }
+
+    [Fact]
+    public async Task AttachDocumentAsync_NotOwnedDocument_ReturnsError()
+    {
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var documentId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        documentRepo.Documents[documentId] = new Document
+        {
+            Id = documentId,
+            UserId = NewId(),
+            Title = "Doc",
+        };
+
+        var result = await service.AttachDocumentAsync(session.Id, documentId, ownerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.DocumentNotOwned, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task AttachDocumentAsync_AlreadyAttached_ReturnsError()
+    {
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var ownerId = NewId();
+        var documentId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        documentRepo.Documents[documentId] = new Document
+        {
+            Id = documentId,
+            UserId = ownerId,
+            Title = "Doc",
+        };
+        sessionDocRepo.SessionDocs.Add(
+            new ChatSessionDocument
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                DocumentId = documentId,
+                AddedByUserId = ownerId,
+            }
+        );
+
+        var result = await service.AttachDocumentAsync(session.Id, documentId, ownerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.DocumentAlreadyAttached, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task ListDocumentsAsync_ReturnsAttachedNonArchivedDocuments()
+    {
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var ownerId = NewId();
+        var attachedId = NewId();
+        var archivedId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        documentRepo.Documents[attachedId] = new Document
+        {
+            Id = attachedId,
+            UserId = ownerId,
+            Title = "Kept",
+        };
+        documentRepo.Documents[archivedId] = new Document
+        {
+            Id = archivedId,
+            UserId = ownerId,
+            Title = "Archived",
+            ArchivedAt = DateTime.UtcNow,
+        };
+        sessionDocRepo.SessionDocs.Add(
+            new ChatSessionDocument
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                DocumentId = attachedId,
+                AddedByUserId = ownerId,
+            }
+        );
+        sessionDocRepo.SessionDocs.Add(
+            new ChatSessionDocument
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                DocumentId = archivedId,
+                AddedByUserId = ownerId,
+            }
+        );
+
+        var result = await service.ListDocumentsAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value);
+        Assert.Equal(attachedId, result.Value[0].Id);
     }
 }

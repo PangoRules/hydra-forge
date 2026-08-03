@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 public sealed class EfAgentPersonalityRepository(HydraForgeDbContext context)
     : IAgentPersonalityRepository
 {
-    public async Task<AgentPersonality?> GetByIdAsync(Guid personalityId, CancellationToken ct = default)
+    public async Task<AgentPersonality?> GetByIdAsync(
+        Guid personalityId,
+        CancellationToken ct = default
+    )
     {
         return await context.AgentPersonalities.FirstOrDefaultAsync(p => p.Id == personalityId, ct);
     }
@@ -18,16 +21,21 @@ public sealed class EfAgentPersonalityRepository(HydraForgeDbContext context)
         CancellationToken ct = default
     )
     {
-        return await context.AgentPersonalities
-            .Where(p => p.UserId == userId && p.ArchivedAt == null)
+        return await context
+            .AgentPersonalities.Where(p => p.UserId == userId && p.ArchivedAt == null)
             .OrderByDescending(p => p.UpdatedAt)
             .ToListAsync(ct);
     }
 
-    public async Task<AgentPersonality?> GetDefaultAsync(Guid userId, CancellationToken ct = default)
+    public async Task<AgentPersonality?> GetDefaultAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        return await context.AgentPersonalities
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.IsDefault && p.ArchivedAt == null, ct);
+        return await context.AgentPersonalities.FirstOrDefaultAsync(
+            p => p.UserId == userId && p.IsDefault && p.ArchivedAt == null,
+            ct
+        );
     }
 
     public async Task AddAsync(AgentPersonality personality, CancellationToken ct = default)
@@ -44,7 +52,10 @@ public sealed class EfAgentPersonalityRepository(HydraForgeDbContext context)
 
     public async Task ArchiveAsync(Guid personalityId, CancellationToken ct = default)
     {
-        var personality = await context.AgentPersonalities.FirstOrDefaultAsync(p => p.Id == personalityId, ct);
+        var personality = await context.AgentPersonalities.FirstOrDefaultAsync(
+            p => p.Id == personalityId,
+            ct
+        );
         if (personality != null)
         {
             personality.ArchivedAt = DateTime.UtcNow;
@@ -52,10 +63,14 @@ public sealed class EfAgentPersonalityRepository(HydraForgeDbContext context)
         }
     }
 
-    public async Task SetDefaultAsync(Guid personalityId, Guid userId, CancellationToken ct = default)
+    public async Task SetDefaultAsync(
+        Guid personalityId,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
-        var personalities = await context.AgentPersonalities
-            .Where(p => p.UserId == userId)
+        var personalities = await context
+            .AgentPersonalities.Where(p => p.UserId == userId)
             .ToListAsync(ct);
 
         foreach (var p in personalities)

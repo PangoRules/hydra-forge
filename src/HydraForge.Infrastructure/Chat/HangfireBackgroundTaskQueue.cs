@@ -1,8 +1,8 @@
 namespace HydraForge.Infrastructure.Chat;
 
-using HydraForge.Application.Chat;
-using Hangfire;
 using System.Linq.Expressions;
+using Hangfire;
+using HydraForge.Application.Chat;
 
 public sealed class HangfireBackgroundTaskQueue : IBackgroundTaskQueue
 {
@@ -22,7 +22,10 @@ public sealed class HangfireBackgroundTaskQueue : IBackgroundTaskQueue
         return Task.CompletedTask;
     }
 
-    public static async Task InvokeWorkItem(Func<CancellationToken, Task> workItem, CancellationToken ct)
+    public static async Task InvokeWorkItem(
+        Func<CancellationToken, Task> workItem,
+        CancellationToken ct
+    )
     {
         await workItem(ct);
     }

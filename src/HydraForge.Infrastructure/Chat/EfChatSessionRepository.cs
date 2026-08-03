@@ -6,8 +6,7 @@ using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-public sealed class EfChatSessionRepository(HydraForgeDbContext context)
-    : IChatSessionRepository
+public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChatSessionRepository
 {
     public async Task<ChatSession?> GetByIdAsync(Guid sessionId, CancellationToken ct = default)
     {
@@ -23,10 +22,10 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context)
     {
         return await context.ChatSessions.FirstOrDefaultAsync(
             s =>
-                s.OwnerId == ownerId &&
-                s.ProjectId == projectId &&
-                s.OpenCardId == openCardId &&
-                s.Status == ChatSessionStatus.Active,
+                s.OwnerId == ownerId
+                && s.ProjectId == projectId
+                && s.OpenCardId == openCardId
+                && s.Status == ChatSessionStatus.Active,
             ct
         );
     }
@@ -40,8 +39,7 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context)
         CancellationToken ct = default
     )
     {
-        var query = context.ChatSessions
-            .Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+        var query = context.ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -50,10 +48,7 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context)
         if (before.HasValue)
             query = query.Where(s => s.CreatedAt < before.Value);
 
-        return await query
-            .OrderByDescending(s => s.UpdatedAt)
-            .Take(limit)
-            .ToListAsync(ct);
+        return await query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToListAsync(ct);
     }
 
     public async Task AddAsync(ChatSession session, CancellationToken ct = default)
