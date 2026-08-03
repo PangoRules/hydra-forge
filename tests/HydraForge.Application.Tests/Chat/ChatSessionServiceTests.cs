@@ -1,5 +1,6 @@
 namespace HydraForge.Application.Tests.Chat;
 
+using System.Linq.Expressions;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Chat;
@@ -287,16 +288,70 @@ public class ChatSessionServiceTests
             CapturedWorkItems.Add(workItem);
             return Task.CompletedTask;
         }
+
+        public Task EnqueueJobAsync<TJob>(Expression<Action<TJob>> methodCall)
+        {
+            // Execute synchronously in tests so we can verify side-effects immediately.
+            var action = methodCall.Compile();
+            var job = (TJob?)_serviceProvider?.GetService(typeof(TJob));
+            if (job != null)
+                action(job);
+            return Task.CompletedTask;
+        }
+
+        private IServiceProvider? _serviceProvider;
+
+        public void SetServiceProvider(IServiceProvider? sp) => _serviceProvider = sp;
     }
 
     private sealed class FakeServiceProvider : IServiceProvider
     {
+        private readonly Dictionary<Type, object> _services = new();
         private readonly object? _chatSessionService;
 
-        public FakeServiceProvider(object? chatSessionService = null) => _chatSessionService = chatSessionService;
+        public FakeServiceProvider(
+            ChatSessionService? chatSessionService,
+            IChatSessionRepository? sessionRepo = null,
+            IChatMessageRepository? messageRepo = null,
+            IChatSessionDocumentRepository? sessionDocRepo = null,
+            ICardRepository? cardRepo = null,
+            IUserRepository? userRepo = null,
+            IProjectMemberRepository? memberRepo = null,
+            IAgentPersonalityRepository? personalityRepo = null,
+            IDocumentRepository? documentRepo = null,
+            IChatSummaryGenerator? summaryGenerator = null,
+            IBackgroundTaskQueue? backgroundTaskQueue = null
+        )
+        {
+            _chatSessionService = chatSessionService;
+            if (sessionRepo != null) _services[typeof(IChatSessionRepository)] = sessionRepo;
+            if (messageRepo != null) _services[typeof(IChatMessageRepository)] = messageRepo;
+            if (sessionDocRepo != null) _services[typeof(IChatSessionDocumentRepository)] = sessionDocRepo;
+            if (cardRepo != null) _services[typeof(ICardRepository)] = cardRepo;
+            if (userRepo != null) _services[typeof(IUserRepository)] = userRepo;
+            if (memberRepo != null) _services[typeof(IProjectMemberRepository)] = memberRepo;
+            if (personalityRepo != null) _services[typeof(IAgentPersonalityRepository)] = personalityRepo;
+            if (documentRepo != null) _services[typeof(IDocumentRepository)] = documentRepo;
+            if (summaryGenerator != null) _services[typeof(IChatSummaryGenerator)] = summaryGenerator;
+            if (backgroundTaskQueue != null) _services[typeof(IBackgroundTaskQueue)] = backgroundTaskQueue;
+        }
 
-        public object? GetService(Type serviceType) =>
-            serviceType == typeof(ChatSessionService) ? _chatSessionService : null;
+        public object? GetService(Type serviceType)
+        {
+            if (_services.TryGetValue(serviceType, out var svc))
+                return svc;
+            if (serviceType == typeof(ChatSessionService))
+                return _chatSessionService;
+            return null;
+        }
+
+        // Test-only method to inject the real ChatSessionService after construction.
+        public void InjectChatSessionServiceForTesting(ChatSessionService svc) =>
+            _services[typeof(ChatSessionService)] = svc;
+
+        // Test-only method to inject any service after construction.
+        public void InjectService<T>(T svc) where T : class =>
+            _services[typeof(T)] = svc;
     }
 
     private sealed class FakeSummaryGenerator : IChatSummaryGenerator
@@ -338,6 +393,24 @@ public class ChatSessionServiceTests
         var backgroundTaskQueue = new FakeBackgroundTaskQueue();
         var logger = Substitute.For<ILogger<ChatSessionService>>();
 
+        // Build FakeServiceProvider with all fakes so CloseSessionJob can resolve ChatSessionService.
+        var serviceProvider = new FakeServiceProvider(
+            chatSessionService: null, // ChatSessionService resolved via GetService override below
+            sessionRepo: sessionRepo,
+            messageRepo: messageRepo,
+            sessionDocRepo: sessionDocRepo,
+            cardRepo: cardRepo,
+            userRepo: userRepo,
+            memberRepo: memberRepo,
+            personalityRepo: personalityRepo,
+            documentRepo: documentRepo,
+            summaryGenerator: summaryGenerator,
+            backgroundTaskQueue: backgroundTaskQueue
+        );
+
+        // Hook the queue into the provider so EnqueueJobAsync can resolve job types.
+        backgroundTaskQueue.SetServiceProvider(serviceProvider);
+
         var service = new ChatSessionService(
             sessionRepo,
             messageRepo,
@@ -349,9 +422,16 @@ public class ChatSessionServiceTests
             documentRepo,
             summaryGenerator,
             backgroundTaskQueue,
-            new FakeServiceProvider(null),
+            serviceProvider,
             logger
         );
+
+        // Now wire the service into FakeServiceProvider so CloseSessionJob can use it.
+        serviceProvider.InjectChatSessionServiceForTesting(service);
+
+        // Register Application-layer CloseSessionJob so EnqueueJobAsync can resolve it.
+        var closeSessionJob = new CloseSessionJob(serviceProvider);
+        serviceProvider.InjectService(closeSessionJob);
 
         return (service, sessionRepo, messageRepo, cardRepo, userRepo, memberRepo, personalityRepo, documentRepo, summaryGenerator, backgroundTaskQueue);
     }
@@ -361,7 +441,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_F6_ImplicitClose_EnqueuesBackgroundJob()
     {
-        var (service, sessionRepo, _, cardRepo, _, _, _, _, summaryGenerator, _) = CreateSut();
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, summaryGenerator, backgroundTaskQueue) = CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var cardId = NewId();
@@ -379,8 +459,8 @@ public class ChatSessionServiceTests
 
         cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
 
-        // Hangfire is not available in unit tests — we verify the old session stays Active
-        // and the new session is created (fire-and-forget behavior verified by state)
+        // FakeBackgroundTaskQueue.EnqueueJobAsync executes synchronously, so the old
+        // session is closed by the time CreateAsync returns.
         var result = await service.CreateAsync(
             new CreateChatSessionRequest(
                 Title: "New Chat",
@@ -397,7 +477,7 @@ public class ChatSessionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, sessionRepo.Sessions.Count);
-        Assert.Contains(sessionRepo.Sessions, s => s.Id == existing.Id && s.Status == ChatSessionStatus.Active);
+        Assert.Equal(ChatSessionStatus.Closed, existing.Status); // Old session closed by background job
         Assert.Contains(sessionRepo.Sessions, s => s.OwnerId == ownerId && s.ProjectId == projectId && s.OpenCardId == cardId);
     }
 
@@ -546,6 +626,61 @@ public class ChatSessionServiceTests
             .ToList();
         Assert.Single(summaryMessages);
         Assert.Contains("Forked summary", summaryMessages[0].Content);
+    }
+
+    [Fact]
+    public async Task GetPermissionAsync_Granted_WhenActiveProjectSession()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = NewId(),
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.GetPermissionAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.Granted);
+    }
+
+    [Fact]
+    public async Task GetPermissionAsync_Denied_WhenPersonalOrClosed()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+
+        // Personal session (no project) — denied
+        var personal = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = null,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(personal);
+
+        var resultPersonal = await service.GetPermissionAsync(personal.Id, ownerId);
+        Assert.True(resultPersonal.IsSuccess);
+        Assert.False(resultPersonal.Value.Granted);
+
+        // Closed project session — denied
+        var closed = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = NewId(),
+            Status = ChatSessionStatus.Closed,
+        };
+        sessionRepo.Sessions.Add(closed);
+
+        var resultClosed = await service.GetPermissionAsync(closed.Id, ownerId);
+        Assert.True(resultClosed.IsSuccess);
+        Assert.False(resultClosed.Value.Granted);
     }
 
     [Fact]

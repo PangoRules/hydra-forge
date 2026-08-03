@@ -21,4 +21,5 @@ public interface IChatSessionRepository
     );
     Task AddAsync(ChatSession session, CancellationToken ct = default);
     Task UpdateAsync(ChatSession session, CancellationToken ct = default);
+    Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default);
 }

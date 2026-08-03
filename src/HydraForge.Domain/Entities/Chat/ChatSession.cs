@@ -61,4 +61,10 @@ public class ChatSession
         AiEditMode = mode;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Archive()
+    {
+        ArchivedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
