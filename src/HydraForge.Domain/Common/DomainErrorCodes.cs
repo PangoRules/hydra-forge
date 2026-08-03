@@ -142,6 +142,7 @@ public static class DomainErrorCodes
         public const string SessionClosed = "CHAT_SESSION_CLOSED";
         public const string SessionArchived = "CHAT_SESSION_ARCHIVED";
         public const string SessionNotOwner = "CHAT_SESSION_NOT_OWNER";
+        public const string FolderNotFound = "CHAT_FOLDER_NOT_FOUND";
         public const string FolderMaxDepth = "CHAT_FOLDER_MAX_DEPTH";
         public const string DocumentNotOwned = "CHAT_DOCUMENT_NOT_OWNED";
         public const string StreamInProgress = "CHAT_STREAM_IN_PROGRESS";
