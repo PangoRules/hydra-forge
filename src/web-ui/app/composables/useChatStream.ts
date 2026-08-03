@@ -27,6 +27,7 @@ export function useChatStream() {
   const isStreaming = ref(false)
   const isConnected = ref(false)
   const isReconnecting = ref(false)
+  const sendingLock = ref(false)
 
   // Callbacks set by the consumer
   let onStreamStart: ((messageId: string, modelId: string, modelName: string) => void) | null = null
@@ -106,6 +107,7 @@ export function useChatStream() {
     conn.onclose(() => {
       isConnected.value = false
       isReconnecting.value = false
+      scheduleReconnect()
     })
 
     conn.on('StreamStart', (messageId: string, modelId: string, modelName: string) => {
@@ -172,9 +174,12 @@ export function useChatStream() {
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null
       if (connection?.state === signalR.HubConnectionState.Disconnected) {
-        connection.start().then(() => {
+        connection.start().then(async () => {
           isConnected.value = true
           backoffIndex = 0
+          if (currentSessionId) {
+            await connection!.invoke('JoinSession', currentSessionId)
+          }
         }).catch(() => {
           scheduleReconnect()
         })
@@ -235,33 +240,36 @@ export function useChatStream() {
     images?: { url: string, base64?: string }[],
     presetId?: string
   ) {
+    if (sendingLock.value) return
     if (!connection) throw new Error('Not connected')
-
-    // Step 1: persist user message
-    const { data, error } = await api.POST<ChatMessageDto>(
-      ApiRoutes.Chat.sessions.sendMessage(sessionId),
-      {
-        body: {
-          content,
-          images: images?.map(img => ({
-            Url: img.url,
-            Base64: img.base64 ?? null
-          }))
+    sendingLock.value = true
+    try {
+      // Step 1: persist user message
+      const result = await api.POST<ChatMessageDto>(
+        ApiRoutes.Chat.sessions.sendMessage(sessionId),
+        {
+          body: {
+            content,
+            images: images?.map(img => ({
+              Url: img.url,
+              Base64: img.base64 ?? null
+            }))
+          }
         }
-      }
-    )
+      )
+      if (!result.data) throw new Error('Failed to send message: no response')
+      const data = result.data
 
-    if (error || !data) {
-      throw new Error(error?.title ?? 'Failed to send message')
+      // Step 2: invoke streaming — pass presetId as raw string, not Guid wrapper
+      await connection.invoke(
+        'SendMessage',
+        sessionId,
+        data.id,
+        presetId ?? null
+      )
+    } finally {
+      sendingLock.value = false
     }
-
-    // Step 2: invoke streaming
-    await connection.invoke(
-      'SendMessage',
-      sessionId,
-      data.id,
-      presetId ? new Guid(presetId) : null
-    )
   }
 
   async function cancel(sessionId: string) {
@@ -272,6 +280,7 @@ export function useChatStream() {
       /* best effort */
     }
     clearStreaming()
+    sendingLock.value = false
   }
 
   return {
@@ -289,13 +298,5 @@ export function useChatStream() {
     onStreamDelta: onStreamDeltaCb,
     onStreamDone: onStreamDoneCb,
     onStreamError: onStreamErrorCb
-  }
-}
-
-// Minimal Guid helper for SignalR invoke — avoids a dep on the Guid package
-class Guid {
-  constructor(readonly value: string) {}
-  toString() {
-    return this.value
   }
 }

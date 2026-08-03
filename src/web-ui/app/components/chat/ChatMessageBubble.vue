@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { marked } from 'marked'
+import { marked, Renderer } from 'marked'
 import type { ChatMessageDto } from '~/types/chat'
 
 const props = defineProps<{
@@ -23,10 +23,33 @@ const images = computed<ParsedImage[]>(() => {
 
 const renderedContent = computed(() => {
   if (!props.message.content) return ''
-  return marked.parse(props.message.content, { async: false, breaks: true }) as string
+  // Strip raw HTML by providing a no-op html renderer
+  const renderer = new Renderer()
+  renderer.html = () => ''
+  let html = marked.parse(props.message.content, { async: false, breaks: true, renderer }) as string
+  // Strip javascript: and data: link protocols to prevent XSS
+  html = html.replace(/href=["'](?:javascript|data):/gi, 'href="#blocked-')
+  return html
 })
 
 const isUser = computed(() => props.message.role === 'User')
+
+function getImageSrc(img: ParsedImage): string {
+  if (img.base64) {
+    if (img.base64.startsWith('data:')) return img.base64
+    const ext = img.url.split('.').pop()?.toLowerCase()
+    const mimeMap: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif'
+    }
+    const mime = ext ? (mimeMap[ext] ?? 'image/png') : 'image/png'
+    return `data:${mime};base64,${img.base64}`
+  }
+  return img.url
+}
 </script>
 
 <template>
@@ -61,7 +84,7 @@ const isUser = computed(() => props.message.role === 'User')
           class="block"
         >
           <img
-            :src="img.base64 ?? img.url"
+            :src="getImageSrc(img)"
             class="h-20 w-20 object-cover rounded-md border border-gray-200 dark:border-gray-700 hover:opacity-90 transition-opacity"
             alt="Attached image"
           >

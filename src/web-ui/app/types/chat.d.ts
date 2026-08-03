@@ -12,8 +12,8 @@ export enum MessageRole {
 }
 
 export enum AiEditMode {
-  Write = 'Write',
-  Edit = 'Edit'
+  PerMutation = 1,
+  Blanket = 2
 }
 
 export interface ImageBlock {

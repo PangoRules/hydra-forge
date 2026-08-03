@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ApiError } from '~/lib/api-error'
 import { ApiRoutes } from '~/lib/routes'
 import type { ChatMessageDto, ChatSessionDetailDto } from '~/types/chat'
 import { MessageRole } from '~/types/chat'
@@ -26,6 +27,9 @@ const chatStream = useChatStream()
 // look up its content for streaming display
 const streamingMessageId = ref<string | null>(null)
 
+// Track the selected preset/personality ID for the chat session
+const selectedPresetId = ref<string | null>(null)
+
 // Register stream callbacks
 chatStream.onStreamStart((messageId) => {
   streamingMessageId.value = messageId
@@ -45,23 +49,26 @@ async function fetchSession() {
   loading.value = true
   error.value = null
   try {
-    const { data, error: apiError } = await api.GET<ChatSessionDetailDto>(
+    const { data } = await api.GET<ChatSessionDetailDto>(
       ApiRoutes.Chat.sessions.detail(props.sessionId)
     )
-    if (apiError) {
-      error.value = apiError.title ?? 'Failed to load chat'
-      return
-    }
     session.value = data as ChatSessionDetailDto
-  } catch {
-    error.value = 'Failed to load chat session'
+    // API returns newest-first; sort chronologically for display
+    session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Failed to load chat session'
   } finally {
     loading.value = false
   }
 }
 
-async function handleSend(content: string, images?: { url: string, base64?: string }[]) {
+async function handleSend(content: string, images?: { url: string, base64?: string }[], presetId?: string | null) {
   if (!session.value) return
+
+  // Update selected preset ID when user picks one
+  if (presetId !== undefined) {
+    selectedPresetId.value = presetId
+  }
 
   // Add user message optimistically
   const userMsg: ChatMessageDto = {
@@ -79,7 +86,7 @@ async function handleSend(content: string, images?: { url: string, base64?: stri
   session.value.messages.push(userMsg)
 
   try {
-    await chatStream.send(props.sessionId, content, images)
+    await chatStream.send(props.sessionId, content, images, selectedPresetId.value ?? undefined)
   } catch (err) {
     // Remove optimistic user message on failure
     const idx = session.value.messages.findIndex(m => m.id === userMsg.id)
@@ -128,7 +135,7 @@ onUnmounted(() => {
         <!-- Input -->
         <ChatInput
           :disabled="chatStream.isStreaming.value || session?.status !== 'Active'"
-          :preset-id="session?.personalityId"
+          :preset-id="selectedPresetId"
           @send="handleSend"
           @cancel="handleCancel"
         >

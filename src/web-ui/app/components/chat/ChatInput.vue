@@ -13,7 +13,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  send: [content: string, images?: { url: string, base64?: string }[]]
+  send: [content: string, images?: { url: string, base64?: string }[], presetId?: string | null]
   cancel: []
 }>()
 
@@ -32,13 +32,15 @@ function handleKeydown(e: KeyboardEvent) {
 function submit() {
   const trimmed = content.value.trim()
   if (!trimmed || props.disabled) return
-  emit('send', trimmed, attachedImages.value.length > 0 ? attachedImages.value : undefined)
+  emit('send', trimmed, attachedImages.value.length > 0 ? attachedImages.value : undefined, props.presetId)
   content.value = ''
+  for (const img of attachedImages.value) URL.revokeObjectURL(img.url)
   attachedImages.value = []
 }
 
 function removeImage(idx: number) {
-  attachedImages.value.splice(idx, 1)
+  const [removed] = attachedImages.value.splice(idx, 1)
+  if (removed) URL.revokeObjectURL(removed.url)
 }
 
 function handleFileChange(e: Event) {
@@ -61,6 +63,10 @@ function handleFileChange(e: Event) {
   // Reset so same file can be re-selected
   input.value = ''
 }
+
+onUnmounted(() => {
+  for (const img of attachedImages.value) URL.revokeObjectURL(img.url)
+})
 </script>
 
 <template>

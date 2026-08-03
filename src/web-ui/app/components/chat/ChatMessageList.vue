@@ -2,6 +2,8 @@
 import type { ChatMessageDto } from '~/types/chat'
 import type { StreamingMessage } from '~/composables/useChatStream'
 
+const MESSAGE_WINDOW_SIZE = 50
+
 const props = withDefaults(
   defineProps<{
     messages: ChatMessageDto[]
@@ -13,13 +15,26 @@ const props = withDefaults(
 )
 
 const listRef = ref<HTMLElement | null>(null)
+const sentinelRef = ref<HTMLElement | null>(null)
+const windowStart = ref(0)
+const isAtBottom = ref(true)
+
+const visibleMessages = computed(() => {
+  const start = Math.max(0, props.messages.length - MESSAGE_WINDOW_SIZE - windowStart.value)
+  const end = props.messages.length
+  return props.messages.slice(start, end)
+})
+
+const hasOlderMessages = computed(() => windowStart.value < props.messages.length - MESSAGE_WINDOW_SIZE)
 
 watch(
   () => props.messages.length,
   () => {
     nextTick(() => {
       if (listRef.value) {
-        listRef.value.scrollTop = listRef.value.scrollHeight
+        if (isAtBottom.value) {
+          listRef.value.scrollTop = listRef.value.scrollHeight
+        }
       }
     })
   }
@@ -30,17 +45,66 @@ watch(
   () => {
     nextTick(() => {
       if (listRef.value) {
-        listRef.value.scrollTop = listRef.value.scrollHeight
+        if (isAtBottom.value) {
+          listRef.value.scrollTop = listRef.value.scrollHeight
+        }
       }
     })
   }
 )
+
+function onScroll() {
+  if (!listRef.value) return
+  const { scrollTop, scrollHeight, clientHeight } = listRef.value
+  isAtBottom.value = scrollHeight - scrollTop - clientHeight < 50
+
+  if (scrollTop < 100 && hasOlderMessages.value) {
+    const prevScrollHeight = listRef.value.scrollHeight
+    const prevScrollTop = listRef.value.scrollTop
+    windowStart.value = Math.min(
+      windowStart.value + MESSAGE_WINDOW_SIZE,
+      props.messages.length - MESSAGE_WINDOW_SIZE
+    )
+    nextTick(() => {
+      if (listRef.value) {
+        listRef.value.scrollTop = listRef.value.scrollHeight - prevScrollHeight + prevScrollTop
+      }
+    })
+  }
+}
+
+onMounted(() => {
+  if (sentinelRef.value) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry?.isIntersecting && hasOlderMessages.value && listRef.value) {
+          const prevScrollHeight = listRef.value.scrollHeight
+          const prevScrollTop = listRef.value.scrollTop
+          windowStart.value = Math.min(
+            windowStart.value + MESSAGE_WINDOW_SIZE,
+            props.messages.length - MESSAGE_WINDOW_SIZE
+          )
+          nextTick(() => {
+            if (listRef.value) {
+              listRef.value.scrollTop = listRef.value.scrollHeight - prevScrollHeight + prevScrollTop
+            }
+          })
+        }
+      },
+      { root: listRef.value }
+    )
+    observer.observe(sentinelRef.value)
+    onUnmounted(() => observer.disconnect())
+  }
+})
 </script>
 
 <template>
   <div
     ref="listRef"
     class="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+    @scroll="onScroll"
   >
     <template v-if="messages.length === 0 && !streamingMessage">
       <div class="text-center text-muted text-sm py-12">
@@ -49,8 +113,15 @@ watch(
     </template>
 
     <template v-else>
+      <!-- Sentinel/anchor for older messages trigger -->
+      <div
+        v-if="hasOlderMessages"
+        ref="sentinelRef"
+        class="h-1 w-full"
+      />
+
       <ChatMessageBubble
-        v-for="message in messages"
+        v-for="message in visibleMessages"
         :key="message.id"
         :message="message"
         :is-streaming="streamingMessage?.messageId === message.id"
