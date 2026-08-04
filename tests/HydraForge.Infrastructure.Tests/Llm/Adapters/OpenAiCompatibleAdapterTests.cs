@@ -162,6 +162,57 @@ public class OpenAiCompatibleAdapterTests
     }
 
     [Fact]
+    public async Task StreamChatAsync_ReasoningEffort_MapsToReasoningEffortField()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var adapter = new OpenAiCompatibleAdapter(http, new FakeKeyVault("test-key"), provider);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gpt-5",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            1024,
+            0.7m,
+            "medium"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.Equal("medium", doc.RootElement.GetProperty("reasoning_effort").GetString());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_NoReasoningEffort_OmitsReasoningEffortField()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var adapter = new OpenAiCompatibleAdapter(http, new FakeKeyVault("test-key"), provider);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gpt-5",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            1024,
+            0.7m
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.False(doc.RootElement.TryGetProperty("reasoning_effort", out _));
+    }
+
+    [Fact]
     public async Task StreamChatAsync_SendsCachedBlocksAsSystemMessages()
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");

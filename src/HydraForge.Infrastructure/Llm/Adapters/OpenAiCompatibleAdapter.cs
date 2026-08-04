@@ -73,6 +73,7 @@ public sealed class OpenAiCompatibleAdapter(
                         }),
                     ]
                     : null,
+            ReasoningEffort = request.ReasoningEffort,
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions")
@@ -336,6 +337,9 @@ public sealed class OpenAiCompatibleAdapter(
 
         [JsonPropertyName("tools")]
         public List<OpenAiTool>? Tools { get; set; }
+
+        [JsonPropertyName("reasoning_effort")]
+        public string? ReasoningEffort { get; set; }
     }
 
     private sealed class OpenAiMessage
