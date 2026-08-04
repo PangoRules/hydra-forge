@@ -77,7 +77,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
           :expanded="expanded ?? {}"
           :sticky="fillHeight ? 'header' : undefined"
           class="w-full"
-          :class="[$slots.card ? 'hidden md:block' : '', fillHeight ? '[&_td:not([colspan])]:max-w-64 [&_td:not([colspan])]:truncate' : '']"
+          :class="[$slots.card ? 'hidden md:block' : '', fillHeight ? 'h-full [&_td:not([colspan])]:max-w-64 [&_td:not([colspan])]:truncate' : '']"
           :meta="{ class: { tr: selectable ? 'cursor-pointer' : '' } }"
           @select="(_e, row) => emit('select', row.original)"
           @update:expanded="emit('update:expanded', $event as Record<string, boolean>)"

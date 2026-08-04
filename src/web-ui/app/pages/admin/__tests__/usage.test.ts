@@ -53,7 +53,7 @@ describe('admin/usage.vue', () => {
     expect(mockGET).toHaveBeenCalledWith(expect.stringContaining('/api/admin/usage/tokens'))
     expect(wrapper.text()).toContain('testuser1')
     expect(wrapper.text()).toContain('gpt-5')
-    expect(wrapper.text()).toContain('Total Cost: $0.0100')
+    expect(wrapper.text()).toContain('Total Cost: $0.01')
   })
 
   it('switching to Image Usage tab queries the images endpoint', async () => {

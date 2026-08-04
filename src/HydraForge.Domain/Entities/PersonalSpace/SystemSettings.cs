@@ -13,6 +13,7 @@ public class SystemSettings
     public string? BrandName { get; set; }
     public string? BrandLogoUrl { get; set; }
     public TimeSpan? AiNarrativeGenerationTimeUtc { get; set; } = TimeSpan.Zero;
+    public TimeSpan? HousekeepingRunTimeUtc { get; set; } = new TimeSpan(3, 0, 0);
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -49,6 +50,12 @@ public class SystemSettings
     public void SetAiNarrativeGenerationTime(TimeSpan? value)
     {
         AiNarrativeGenerationTimeUtc = value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetHousekeepingRunTime(TimeSpan? value)
+    {
+        HousekeepingRunTimeUtc = value;
         UpdatedAt = DateTime.UtcNow;
     }
 }

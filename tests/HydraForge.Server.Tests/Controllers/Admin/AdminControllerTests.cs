@@ -146,6 +146,32 @@ public class AdminControllerTests
     }
 
     [Fact]
+    public async Task UpdateSettings_Admin_SetsHousekeepingRunTime_RoundTrips()
+    {
+        var factory = new AdminTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var token = AdminTestWebApplicationFactory.IssueToken(
+            Guid.NewGuid(),
+            "admin",
+            isAdmin: true
+        );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var request = new { housekeepingRunTimeUtc = "04:30:00" };
+        using var putReq = new HttpRequestMessage(HttpMethod.Put, "/api/admin/settings")
+        {
+            Content = JsonContent.Create(request),
+        };
+        var putResp = await client.SendAsync(putReq);
+        Assert.Equal(HttpStatusCode.OK, putResp.StatusCode);
+
+        var getResp = await client.GetAsync("/api/admin/settings");
+        var json = await getResp.Content.ReadFromJsonAsync<SettingsResponse>();
+        Assert.NotNull(json);
+        Assert.Equal(new TimeSpan(4, 30, 0), json.HousekeepingRunTimeUtc);
+    }
+
+    [Fact]
     public async Task GetAuditLog_Unauthenticated_Returns401()
     {
         var factory = new AdminTestWebApplicationFactory();
@@ -198,7 +224,8 @@ public class AdminControllerTests
         string? NtfyServerUrl,
         string? SearXngUrl,
         string? BrandName,
-        string? BrandLogoUrl
+        string? BrandLogoUrl,
+        TimeSpan? HousekeepingRunTimeUtc
     );
 
     private record MessageResponse(string Message);
@@ -376,11 +403,19 @@ internal class TestPasswordHasher : IPasswordHasher
 
 internal class TestSettingsRepository : ISettingsRepository
 {
-    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default) =>
-        Task.FromResult(new SystemSettings());
+    // Holds state across calls (a fresh SystemSettings() per GetSingletonAsync call meant
+    // every PUT silently vanished on the next GET) — needed so tests can round-trip a
+    // saved setting instead of only asserting on the PUT response.
+    private SystemSettings _settings = new();
 
-    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default) =>
-        Task.CompletedTask;
+    public Task<SystemSettings> GetSingletonAsync(CancellationToken ct = default) =>
+        Task.FromResult(_settings);
+
+    public Task UpdateAsync(SystemSettings settings, CancellationToken ct = default)
+    {
+        _settings = settings;
+        return Task.CompletedTask;
+    }
 }
 
 internal class TestCachedSettingsProvider(ISettingsRepository repo) : ISettingsProvider

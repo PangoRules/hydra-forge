@@ -461,7 +461,8 @@ public class HydraForgeDbContextModelTests
             systemSettings,
             "ArchivedItemRetentionDays",
             "AuditLogRetentionDays",
-            "NotificationRetentionDays"
+            "NotificationRetentionDays",
+            "HousekeepingRunTimeUtc"
         );
     }
 

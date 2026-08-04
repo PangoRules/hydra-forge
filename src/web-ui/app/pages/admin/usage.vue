@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { formatCost } from '~/lib/money'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
 import CollapsibleFilterPanel from '~/components/shared/CollapsibleFilterPanel.vue'
@@ -95,16 +96,19 @@ const totalCount = ref(0)
 const totalCost = ref(0)
 const loading = ref(false)
 
+// Input/Output/Cached tokens move into the expand-row detail panel (same
+// pattern as audit-log.vue's diff view) instead of their own columns —
+// three numeric columns were the main reason this table forced horizontal
+// scroll before reaching a usable vertical scrollbar.
 const tokenColumns: TableColumn<TokenUsageRecord>[] = [
   { accessorKey: 'createdAt', header: 'Timestamp' },
   { accessorKey: 'userName', header: 'User' },
   { accessorKey: 'feature', header: 'Feature' },
   { accessorKey: 'modelName', header: 'Model' },
-  { accessorKey: 'inputTokens', header: 'Input Tokens' },
-  { accessorKey: 'outputTokens', header: 'Output Tokens' },
-  { accessorKey: 'cachedTokens', header: 'Cached Tokens' },
-  { accessorKey: 'cost', header: 'Cost' }
+  { accessorKey: 'cost', header: 'Cost' },
+  { accessorKey: 'id', header: '' }
 ]
+const expandedTokenRow = ref<Record<string, boolean>>({})
 
 const imageColumns: TableColumn<ImageUsageRecord>[] = [
   { accessorKey: 'createdAt', header: 'Timestamp' },
@@ -379,6 +383,7 @@ onMounted(() => loadRecords())
       <!-- Token Table -->
       <DataTable
         v-if="activeTab === 'tokens'"
+        v-model:expanded="expandedTokenRow"
         :data="tokenRecords"
         :columns="tokenColumns"
         :loading="loading"
@@ -406,21 +411,37 @@ onMounted(() => loadRecords())
             {{ row.original.feature }}
           </UBadge>
         </template>
-        <template #inputTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.inputTokens.toLocaleString() }}</span>
-        </template>
-        <template #outputTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.outputTokens.toLocaleString() }}</span>
-        </template>
-        <template #cachedTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.cachedTokens.toLocaleString() }}</span>
-        </template>
         <template #cost-cell="{ row }">
-          <span class="text-sm tabular-nums">${{ row.original.cost.toFixed(4) }}</span>
+          <span class="text-sm tabular-nums">{{ formatCost(row.original.cost) }}</span>
+        </template>
+        <template #id-cell="{ row }">
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="expandedTokenRow[row.original.id] ? 'Collapse' : 'Details'"
+            @click="row.toggleExpanded()"
+          />
+        </template>
+        <template #expanded="{ row }">
+          <div class="flex flex-wrap gap-x-8 gap-y-2 p-4 text-sm">
+            <div>
+              <span class="text-muted">Input Tokens: </span>
+              <span class="tabular-nums">{{ row.original.inputTokens.toLocaleString() }}</span>
+            </div>
+            <div>
+              <span class="text-muted">Output Tokens: </span>
+              <span class="tabular-nums">{{ row.original.outputTokens.toLocaleString() }}</span>
+            </div>
+            <div>
+              <span class="text-muted">Cached Tokens: </span>
+              <span class="tabular-nums">{{ row.original.cachedTokens.toLocaleString() }}</span>
+            </div>
+          </div>
         </template>
         <template #footer>
           <div class="flex justify-end px-4 py-2 text-sm font-semibold border-t border-muted">
-            <span>Total Cost: ${{ totalCost.toFixed(4) }}</span>
+            <span>Total Cost: {{ formatCost(totalCost) }}</span>
           </div>
         </template>
       </DataTable>
@@ -462,11 +483,11 @@ onMounted(() => loadRecords())
           <span class="text-sm">{{ row.original.resolution }}</span>
         </template>
         <template #cost-cell="{ row }">
-          <span class="text-sm tabular-nums">${{ row.original.cost.toFixed(4) }}</span>
+          <span class="text-sm tabular-nums">{{ formatCost(row.original.cost) }}</span>
         </template>
         <template #footer>
           <div class="flex justify-end px-4 py-2 text-sm font-semibold border-t border-muted">
-            <span>Total Cost: ${{ totalCost.toFixed(4) }}</span>
+            <span>Total Cost: {{ formatCost(totalCost) }}</span>
           </div>
         </template>
       </DataTable>

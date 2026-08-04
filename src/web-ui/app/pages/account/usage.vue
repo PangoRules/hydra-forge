@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { formatCost } from '~/lib/money'
 import type { TableColumn } from '@nuxt/ui'
 
 definePageMeta({ middleware: ['auth'] })
@@ -168,7 +169,7 @@ onMounted(() => loadUsage())
             <span class="tabular-nums">{{ row.original.images.toLocaleString() }}</span>
           </template>
           <template #cost-cell="{ row }">
-            <span class="tabular-nums">${{ row.original.cost.toFixed(4) }}</span>
+            <span class="tabular-nums">{{ formatCost(row.original.cost) }}</span>
           </template>
         </UTable>
       </div>

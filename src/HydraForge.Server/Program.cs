@@ -7,6 +7,7 @@ using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.Housekeeping;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Constants;
@@ -18,6 +19,7 @@ using HydraForge.Infrastructure.Chat;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Housekeeping;
 using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
@@ -153,6 +155,7 @@ builder.Services.AddSpecServices();
 builder.Services.AddPlanServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
+builder.Services.AddHousekeepingServices();
 
 if (!builder.Environment.IsEnvironment("Test"))
 {
@@ -428,12 +431,19 @@ if (!app.Environment.IsEnvironment("Test"))
                 svc => svc.GenerateAiNarrativeForAllActiveProjectsAsync(default),
                 () => Cron.Daily(narrativeTime.Hours, narrativeTime.Minutes)
             );
+
+            var housekeepingTime = systemSettings.HousekeepingRunTimeUtc ?? new TimeSpan(3, 0, 0);
+            RecurringJob.AddOrUpdate<HousekeepingJob>(
+                "housekeeping",
+                job => job.RunAsync(default),
+                () => Cron.Daily(housekeepingTime.Hours, housekeepingTime.Minutes)
+            );
         }
         catch (Exception ex)
         {
             var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("Hangfire");
-            logger.LogError(ex, "Failed to register ai-narrative-gen recurring job");
+            logger.LogError(ex, "Failed to register recurring jobs");
         }
     });
 }

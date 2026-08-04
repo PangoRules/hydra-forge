@@ -131,6 +131,18 @@ const formPricePerToken = ref<number | null>(null)
 const formMaxTokens = ref<number | null>(null)
 const formEnabled = ref(true)
 
+// $/token values for real-world models are tiny (often < 1e-6) and render in
+// ugly scientific notation ("7.6e-7") in a plain number input. Editing in
+// $/1M-tokens — the unit every provider actually quotes pricing in — keeps
+// the field a normal-looking decimal while `formPricePerToken` (submitted to
+// the API) stays the source of truth.
+const formPricePerMillionTokens = computed({
+  get: () => formPricePerToken.value === null ? null : formPricePerToken.value * 1_000_000,
+  set: (val: number | null) => {
+    formPricePerToken.value = val === null ? null : val / 1_000_000
+  }
+})
+
 // Delete confirm
 const deleteTargetId = ref<string | null>(null)
 
@@ -410,14 +422,15 @@ onMounted(() => loadProviders())
           <div class="flex gap-1">
             <UButton
               size="xs"
-              :color="row.original.isEnabled ? 'error' : 'success'"
-              variant="soft"
+              variant="subtle"
+              :color="row.original.isEnabled ? 'warning' : 'success'"
               @click="toggleModelEnabled(row.original)"
             >
               {{ row.original.isEnabled ? 'Disable' : 'Enable' }}
             </UButton>
             <UButton
               size="xs"
+              variant="subtle"
               color="neutral"
               @click="openEditModal(row.original)"
             >
@@ -425,6 +438,7 @@ onMounted(() => loadProviders())
             </UButton>
             <UButton
               size="xs"
+              variant="solid"
               color="error"
               @click="deleteTargetId = row.original.id"
             >
@@ -448,14 +462,15 @@ onMounted(() => loadProviders())
               <div class="flex gap-1">
                 <UButton
                   size="xs"
-                  :color="item.isEnabled ? 'error' : 'success'"
-                  variant="soft"
+                  variant="subtle"
+                  :color="item.isEnabled ? 'warning' : 'success'"
                   @click="toggleModelEnabled(item)"
                 >
                   {{ item.isEnabled ? 'Disable' : 'Enable' }}
                 </UButton>
                 <UButton
                   size="xs"
+                  variant="subtle"
                   color="neutral"
                   @click="openEditModal(item)"
                 >
@@ -463,6 +478,7 @@ onMounted(() => loadProviders())
                 </UButton>
                 <UButton
                   size="xs"
+                  variant="solid"
                   color="error"
                   @click="deleteTargetId = item.id"
                 >
@@ -527,11 +543,14 @@ onMounted(() => loadProviders())
           </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Price per Token ($)">
+            <UFormField
+              label="Price per 1M Tokens ($)"
+              description="What providers quote — stored internally as $/token"
+            >
               <UInput
-                v-model.number="formPricePerToken"
+                v-model.number="formPricePerMillionTokens"
                 type="number"
-                step="0.000001"
+                step="0.01"
                 min="0"
                 placeholder="0.0"
                 class="w-full"

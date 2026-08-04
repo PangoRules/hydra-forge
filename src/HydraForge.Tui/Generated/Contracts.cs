@@ -671,6 +671,11 @@ namespace HydraForge.Tui.Generated
         System.Threading.Tasks.Task ProvidersDELETEAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task PermanentAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProviderModelDto>> ModelsAll2Async(System.Guid providerId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
@@ -4167,6 +4172,12 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("apiKey", Required = Newtonsoft.Json.Required.AllowNull)]
         public string? ApiKey { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("adapterType", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? AdapterType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("providerType", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? ProviderType { get; set; } = default!;
 
         [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.AllowNull)]
         public string? Tier { get; set; } = default!;

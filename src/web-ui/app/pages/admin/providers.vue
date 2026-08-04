@@ -230,6 +230,7 @@ onMounted(() => loadProviders())
           <div class="flex gap-1">
             <UButton
               size="xs"
+              variant="subtle"
               color="neutral"
               @click="openEditModal(row.original)"
             >
@@ -237,6 +238,7 @@ onMounted(() => loadProviders())
             </UButton>
             <UButton
               size="xs"
+              variant="subtle"
               color="neutral"
               @click="probeModels(row.original.id)"
             >
@@ -245,7 +247,8 @@ onMounted(() => loadProviders())
             <UButton
               v-if="row.original.isEnabled"
               size="xs"
-              color="error"
+              variant="subtle"
+              color="warning"
               @click="showDisableConfirm(row.original)"
             >
               Disable
@@ -253,6 +256,7 @@ onMounted(() => loadProviders())
             <UButton
               v-else
               size="xs"
+              variant="subtle"
               color="success"
               @click="showDisableConfirm(row.original)"
             >
@@ -260,8 +264,8 @@ onMounted(() => loadProviders())
             </UButton>
             <UButton
               size="xs"
+              variant="solid"
               color="error"
-              variant="outline"
               @click="deleteTarget = row.original"
             >
               Delete
@@ -284,6 +288,7 @@ onMounted(() => loadProviders())
               <div class="flex gap-1">
                 <UButton
                   size="xs"
+                  variant="subtle"
                   color="neutral"
                   @click="openEditModal(item)"
                 >
@@ -291,6 +296,7 @@ onMounted(() => loadProviders())
                 </UButton>
                 <UButton
                   size="xs"
+                  variant="subtle"
                   color="neutral"
                   @click="probeModels(item.id)"
                 >
@@ -299,7 +305,8 @@ onMounted(() => loadProviders())
                 <UButton
                   v-if="item.isEnabled"
                   size="xs"
-                  color="error"
+                  variant="subtle"
+                  color="warning"
                   @click="showDisableConfirm(item)"
                 >
                   Disable
@@ -307,6 +314,7 @@ onMounted(() => loadProviders())
                 <UButton
                   v-else
                   size="xs"
+                  variant="subtle"
                   color="success"
                   @click="showDisableConfirm(item)"
                 >
@@ -314,8 +322,8 @@ onMounted(() => loadProviders())
                 </UButton>
                 <UButton
                   size="xs"
+                  variant="solid"
                   color="error"
-                  variant="outline"
                   @click="deleteTarget = item"
                 >
                   Delete
@@ -407,7 +415,7 @@ onMounted(() => loadProviders())
             Cancel
           </UButton>
           <UButton
-            :color="confirmCurrentEnabled ? 'error' : 'success'"
+            :color="confirmCurrentEnabled ? 'warning' : 'success'"
             @click="confirmToggleDisable"
           >
             {{ confirmCurrentEnabled ? 'Disable' : 'Enable' }}
