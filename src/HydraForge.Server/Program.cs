@@ -413,6 +413,8 @@ if (initResult.IsFailure)
 // forwarded-headers to run first in the pipeline.
 app.UseForwardedHeaders();
 
+app.UseMiddleware<HydraForge.Server.Middleware.SecurityHeadersMiddleware>();
+
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
