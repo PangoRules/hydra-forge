@@ -207,7 +207,8 @@ chatStream.onReconnected(() => {
 async function handleSend(
   content: string,
   presetId?: string | null,
-  preferredModelId?: string | null
+  preferredModelId?: string | null,
+  reasoningEffort?: string | null
 ) {
   if (!session.value) return
 
@@ -233,7 +234,8 @@ async function handleSend(
       props.sessionId,
       content,
       presetId ?? undefined,
-      preferredModelId ?? undefined
+      preferredModelId ?? undefined,
+      reasoningEffort ?? undefined
     )
     // undefined only when another send was already in flight (sendingLock) —
     // the optimistic message stays as-is, nothing to reconcile.

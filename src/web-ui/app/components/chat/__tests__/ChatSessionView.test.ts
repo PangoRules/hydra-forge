@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import ChatSessionView from '~/components/chat/ChatSessionView.vue'
+import ChatInput from '~/components/chat/ChatInput.vue'
 import { ChatSessionStatus, AiEditMode } from '~/types/chat'
 
 const mockGET = vi.fn()
@@ -265,5 +266,29 @@ describe('ChatSessionView — find in conversation', () => {
     await wrapper.find('[title="Close find"]').trigger('click')
     expect(wrapper.find('input[data-testid="find-input"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('')
+  })
+})
+
+describe('ChatSessionView — send with reasoning effort', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({ data: { ...baseSession }, error: undefined })
+    mockChatStream.send.mockReset()
+    mockChatStream.send.mockResolvedValue({
+      userMessage: { id: 'm1', sessionId: 's1', role: 'User', content: 'hello' },
+      streamStarted: true
+    })
+  })
+
+  it('passes the selected reasoning effort through to chatStream.send', async () => {
+    const wrapper = await mountView()
+    const chatInput = wrapper.findComponent(ChatInput)
+
+    await chatInput.vm.$emit('send', 'hello', null, 'model-1', 'high')
+    await flushPromises()
+
+    // handleSend normalizes a null presetId to undefined (`presetId ?? undefined`,
+    // pre-existing behavior unrelated to reasoningEffort) before calling chatStream.send.
+    expect(mockChatStream.send).toHaveBeenCalledWith('s1', 'hello', undefined, 'model-1', 'high')
   })
 })

@@ -16,7 +16,12 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  send: [content: string, presetId?: string | null, preferredModelId?: string | null]
+  send: [
+    content: string,
+    presetId?: string | null,
+    preferredModelId?: string | null,
+    reasoningEffort?: string | null
+  ]
   cancel: []
 }>()
 
@@ -27,6 +32,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const presets = ref<PromptPresetDto[]>([])
 const selectedPresetId = ref<string | null>(null)
 const selectedModelId = ref<string | null>(null)
+const selectedEffort = ref<string | null>(null)
 
 const selectedPresetName = computed(
   () => presets.value.find(p => p.id === selectedPresetId.value)?.name ?? null
@@ -65,7 +71,7 @@ function handleKeydown(e: KeyboardEvent) {
 function submit() {
   const trimmed = content.value.trim()
   if (!trimmed || props.disabled) return
-  emit('send', trimmed, selectedPresetId.value, selectedModelId.value)
+  emit('send', trimmed, selectedPresetId.value, selectedModelId.value, selectedEffort.value)
   content.value = ''
   if (textareaRef.value) {
     textareaRef.value.style.height = 'auto'
@@ -142,6 +148,7 @@ defineExpose({ setContent })
 
           <ChatModelPicker
             v-model="selectedModelId"
+            v-model:effort="selectedEffort"
             :feature="feature"
             :disabled="disabled"
           />

@@ -339,7 +339,8 @@ export function useChatStream() {
     sessionId: string,
     content: string,
     presetId?: string,
-    preferredProviderModelConfigId?: string
+    preferredProviderModelConfigId?: string,
+    reasoningEffort?: string | null
   ): Promise<{ userMessage: ChatMessageDto, streamStarted: boolean } | undefined> {
     if (sendingLock.value) return
     sendingLock.value = true
@@ -355,7 +356,8 @@ export function useChatStream() {
         await api.POST(ApiRoutes.Chat.sessions.generateReply(sessionId, userMessage.id), {
           body: {
             presetId: presetId ?? null,
-            preferredProviderModelConfigId: preferredProviderModelConfigId ?? null
+            preferredProviderModelConfigId: preferredProviderModelConfigId ?? null,
+            reasoningEffort: reasoningEffort ?? null
           },
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
         })
@@ -377,7 +379,8 @@ export function useChatStream() {
     sessionId: string,
     userMessageId: string,
     presetId?: string,
-    preferredProviderModelConfigId?: string
+    preferredProviderModelConfigId?: string,
+    reasoningEffort?: string | null
   ) {
     if (sendingLock.value) return
     sendingLock.value = true
@@ -385,7 +388,8 @@ export function useChatStream() {
       await api.POST(ApiRoutes.Chat.sessions.generateReply(sessionId, userMessageId), {
         body: {
           presetId: presetId ?? null,
-          preferredProviderModelConfigId: preferredProviderModelConfigId ?? null
+          preferredProviderModelConfigId: preferredProviderModelConfigId ?? null,
+          reasoningEffort: reasoningEffort ?? null
         },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
       })
