@@ -3,7 +3,7 @@ import { ApiError } from '~/lib/api-error'
 import { randomId } from '~/lib/id'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import type { ChatMessageDto, ChatSessionDetailDto } from '~/types/chat'
+import type { ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
 import { MessageRole } from '~/types/chat'
 
 const props = defineProps<{
@@ -45,6 +45,10 @@ const isRollingBack = ref(false)
 const showRollbackConfirm = ref(false)
 const rollbackTarget = ref<ChatMessageDto | null>(null)
 const rollbackDiscardCount = ref(0)
+
+const isEditingTitle = ref(false)
+const editedTitle = ref('')
+const titleInputRef = ref<HTMLInputElement | null>(null)
 
 // True from the moment a reply is successfully triggered (a REST call, see
 // useChatStream.send's doc comment) until it's known to be done — via a live
@@ -207,6 +211,49 @@ async function handleCancel() {
   awaitingReply.value = false
 }
 
+function startEditTitle() {
+  if (!session.value) return
+  editedTitle.value = session.value.title
+  isEditingTitle.value = true
+  nextTick(() => titleInputRef.value?.focus())
+}
+
+function cancelTitleEdit() {
+  isEditingTitle.value = false
+}
+
+async function submitTitleEdit() {
+  if (!isEditingTitle.value || !session.value) return
+  isEditingTitle.value = false
+
+  const newTitle = editedTitle.value.trim()
+  if (!newTitle || newTitle === session.value.title) return
+
+  const previousTitle = session.value.title
+  session.value.title = newTitle
+  try {
+    const { data } = await api.PATCH<ChatSessionDto>(
+      ApiRoutes.Chat.sessions.update(props.sessionId),
+      {
+        body: {
+          title: newTitle,
+          folderId: session.value.folderId,
+          personalityId: session.value.personalityId,
+          aiEditMode: session.value.aiEditMode,
+          searchAllMyDocs: session.value.searchAllMyDocs
+        }
+      }
+    )
+    if (data && session.value) {
+      session.value.title = data.title
+      emit('sessionRefreshed', session.value.id, data.title, session.value.status)
+    }
+  } catch (err) {
+    if (session.value) session.value.title = previousTitle
+    toast.error(err instanceof Error ? err.message : 'Failed to rename chat')
+  }
+}
+
 function handleRollbackRequest(message: ChatMessageDto) {
   if (!session.value) return
   const idx = session.value.messages.findIndex(m => m.id === message.id)
@@ -290,10 +337,30 @@ onUnmounted(() => {
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-      <h2 class="font-semibold truncate">
-        {{ session?.title ?? 'Chat' }}
-      </h2>
+    <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
+      <input
+        v-if="isEditingTitle"
+        ref="titleInputRef"
+        v-model="editedTitle"
+        data-testid="title-input"
+        class="flex-1 min-w-0 font-semibold bg-transparent border-b border-primary focus-visible:outline-none"
+        @keydown.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
+        @keydown.esc="cancelTitleEdit"
+        @blur="submitTitleEdit"
+      >
+      <template v-else>
+        <h2 class="font-semibold truncate flex-1 min-w-0">
+          {{ session?.title ?? 'Chat' }}
+        </h2>
+        <UButton
+          icon="i-lucide-pencil"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          title="Rename chat"
+          @click="startEditTitle"
+        />
+      </template>
     </div>
 
     <div
