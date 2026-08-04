@@ -83,6 +83,60 @@ public class LlmAdminServiceTests
     }
 
     [Fact]
+    public async Task CreateModelAsync_SupportsReasoningTrue_PersistsFlag()
+    {
+        var providerId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns(new LlmProvider { Id = providerId, Name = "Anthropic" });
+        repo.ListModelConfigsAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns(new List<ProviderModelConfig>());
+
+        var service = CreateService(repo);
+        var input = new CreateModelInput(
+            "claude-opus-5",
+            "Claude Opus 5",
+            "Premium",
+            null,
+            null,
+            true,
+            SupportsReasoning: true
+        );
+
+        var result = await service.CreateModelAsync(providerId, input, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.SupportsReasoning);
+    }
+
+    [Fact]
+    public async Task UpdateModelAsync_SupportsReasoningToggled_UpdatesFlag()
+    {
+        var providerId = Guid.NewGuid();
+        var modelId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        var config = new ProviderModelConfig
+        {
+            Id = modelId,
+            ProviderId = providerId,
+            ModelId = "gpt-5",
+            Name = "GPT-5",
+            Tier = ModelTier.Standard,
+            SupportsReasoning = false,
+        };
+        repo.GetModelConfigAsync(providerId, modelId, Arg.Any<CancellationToken>()).Returns(config);
+
+        var service = CreateService(repo);
+        var input = new UpdateModelInput(null, null, null, null, null, SupportsReasoning: true);
+
+        var result = await service.UpdateModelAsync(providerId, modelId, input, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.SupportsReasoning);
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task QueryTokenUsageAsync_MultipleFeatures_ParsesAllAndPassesToRepo()
     {
         var repo = Substitute.For<ILlmAdminRepository>();

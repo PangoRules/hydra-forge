@@ -374,6 +374,7 @@ public sealed class LlmAdminService : ILlmAdminService
             PricePerToken = input.PricePerToken,
             MaxTokens = input.MaxTokens,
             IsEnabled = input.IsEnabled,
+            SupportsReasoning = input.SupportsReasoning,
         };
 
         _repo.AddModelConfig(config);
@@ -444,6 +445,11 @@ public sealed class LlmAdminService : ILlmAdminService
         if (input.IsEnabled.HasValue)
         {
             config.IsEnabled = input.IsEnabled.Value;
+        }
+
+        if (input.SupportsReasoning.HasValue)
+        {
+            config.SupportsReasoning = input.SupportsReasoning.Value;
         }
 
         config.UpdatedAt = DateTime.UtcNow;
@@ -978,7 +984,8 @@ public sealed class LlmAdminService : ILlmAdminService
             c.Tier.ToString(),
             c.PricePerToken,
             c.MaxTokens,
-            c.IsEnabled
+            c.IsEnabled,
+            c.SupportsReasoning
         );
 
     private static FeatureRoutingDto ToRoutingDto(
