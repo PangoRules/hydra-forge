@@ -67,17 +67,10 @@ watch(findQuery, () => {
   findIndex.value = 0
 })
 
-watch(findMatches, () => {
-  scrollToCurrentMatch()
-})
-
-function scrollToCurrentMatch() {
-  const id = highlightMessageId.value
-  if (!id) return
-  nextTick(() => {
-    document.getElementById(`chat-message-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
+// Scrolling to the current match is ChatMessageList's job, not this
+// component's — it owns the message-window (only the last 50 messages are
+// rendered) and expands that window before scrolling when the match falls
+// outside it. This component only tracks which message id is "current".
 
 function toggleFind() {
   findOpen.value = !findOpen.value
@@ -98,13 +91,11 @@ function closeFind() {
 function nextMatch() {
   if (!findMatches.value.length) return
   findIndex.value = (findIndex.value + 1) % findMatches.value.length
-  scrollToCurrentMatch()
 }
 
 function prevMatch() {
   if (!findMatches.value.length) return
   findIndex.value = (findIndex.value - 1 + findMatches.value.length) % findMatches.value.length
-  scrollToCurrentMatch()
 }
 
 // True from the moment a reply is successfully triggered (a REST call, see
@@ -438,6 +429,7 @@ onUnmounted(() => {
           color="neutral"
           size="xs"
           title="Rename chat"
+          :disabled="session?.status !== 'Active'"
           @click="startEditTitle"
         />
         <UButton

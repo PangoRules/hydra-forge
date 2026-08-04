@@ -74,6 +74,32 @@ watch(
   }
 )
 
+// Find-in-conversation can land on a match older than the currently-rendered
+// window (only the last MESSAGE_WINDOW_SIZE messages are mounted — see
+// visibleMessages above). Widen the window to include the highlighted
+// message before trying to scroll to it, otherwise document.getElementById
+// silently returns null and the highlight/scroll both no-op.
+watch(
+  () => props.highlightMessageId,
+  (id) => {
+    if (!id) return
+    const index = props.messages.findIndex(m => m.id === id)
+    if (index === -1) return
+
+    const currentStart = Math.max(0, props.messages.length - MESSAGE_WINDOW_SIZE - windowStart.value)
+    if (index < currentStart) {
+      windowStart.value = Math.min(
+        Math.max(0, props.messages.length - MESSAGE_WINDOW_SIZE - index),
+        Math.max(0, props.messages.length - MESSAGE_WINDOW_SIZE)
+      )
+    }
+
+    nextTick(() => {
+      document.getElementById(`chat-message-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+)
+
 function onScroll() {
   if (!listRef.value) return
   const { scrollTop, scrollHeight, clientHeight } = listRef.value

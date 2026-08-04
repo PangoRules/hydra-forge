@@ -139,6 +139,20 @@ describe('ChatSessionView — rename', () => {
 
     expect(mockPATCH).not.toHaveBeenCalled()
   })
+
+  it('disables the rename button when the session is not Active', async () => {
+    mockGET.mockResolvedValue({
+      data: { ...baseSession, status: ChatSessionStatus.Closed },
+      error: undefined
+    })
+    const wrapper = await mountView()
+    expect(wrapper.find('[title="Rename chat"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('leaves the rename button enabled when the session is Active', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.find('[title="Rename chat"]').attributes('disabled')).toBeUndefined()
+  })
 })
 
 describe('ChatSessionView — export', () => {
