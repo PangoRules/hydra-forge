@@ -40,6 +40,7 @@ public static class ChatServiceCollectionExtensions
 
         // Background jobs
         services.AddScoped<HydraForge.Application.Chat.CloseSessionJob>();
+        services.AddScoped<ChatReplyGenerator>();
 
         return services;
     }

@@ -10,7 +10,10 @@ namespace HydraForge.Server.Controllers.Chat;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/chat/sessions/{sessionId:guid}/messages")]
-public class ChatMessagesController(IChatMessageService messageService) : ControllerBase
+public class ChatMessagesController(
+    IChatMessageService messageService,
+    IBackgroundTaskQueue backgroundTaskQueue
+) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(ChatMessagePageDto), StatusCodes.Status200OK)]
@@ -59,6 +62,40 @@ public class ChatMessagesController(IChatMessageService messageService) : Contro
         return CreatedAtAction(nameof(GetHistory), new { sessionId }, result.Value);
     }
 
+    /// <summary>
+    /// Triggers the AI reply for an already-persisted user message. Plain REST, on purpose —
+    /// unlike the SignalR hub's SendMessage, this doesn't need a live WebSocket connection to
+    /// even fire (mobile SignalR handshakes have been observed taking 90-170s+ over some
+    /// networks, which made "wait for the socket, then trigger" fail outright). The request
+    /// only needs to survive long enough to enqueue the Hangfire job — generation itself runs
+    /// decoupled from this request's lifetime, so a dropped connection right after doesn't
+    /// cancel a reply that would otherwise have completed. Clients pick up the result via
+    /// SignalR if connected, or their next REST fetch of the session either way.
+    /// </summary>
+    [HttpPost("{messageId:guid}/generate")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public async Task<IActionResult> GenerateReply(
+        Guid sessionId,
+        Guid messageId,
+        [FromBody] GenerateReplyRequest? request
+    )
+    {
+        var userId = User.GetRequiredUserId();
+        var presetId = request?.PresetId;
+        var preferredProviderModelConfigId = request?.PreferredProviderModelConfigId;
+        await backgroundTaskQueue.EnqueueJobAsync<ChatReplyGenerator>(g =>
+            g.GenerateAsync(
+                sessionId,
+                messageId,
+                userId,
+                presetId,
+                preferredProviderModelConfigId,
+                CancellationToken.None
+            )
+        );
+        return Accepted();
+    }
+
     [HttpPost("{messageId:guid}/rollback")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -77,4 +114,9 @@ public class ChatMessagesController(IChatMessageService messageService) : Contro
 public record SendMessageRequest(
     string Content,
     IReadOnlyList<Application.Llm.ImageBlock>? Images = null
+);
+
+public record GenerateReplyRequest(
+    Guid? PresetId = null,
+    Guid? PreferredProviderModelConfigId = null
 );

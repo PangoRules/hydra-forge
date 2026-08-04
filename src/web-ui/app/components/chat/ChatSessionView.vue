@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiError } from '~/lib/api-error'
+import { randomId } from '~/lib/id'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import type { ChatMessageDto, ChatSessionDetailDto } from '~/types/chat'
@@ -45,6 +46,21 @@ const showRollbackConfirm = ref(false)
 const rollbackTarget = ref<ChatMessageDto | null>(null)
 const rollbackDiscardCount = ref(0)
 
+// True from the moment a reply is successfully triggered (a REST call, see
+// useChatStream.send's doc comment) until it's known to be done — via a live
+// SignalR StreamDone/StreamError if connected, or the recovery poll below
+// either way. Independent of chatStream.isStreaming (which only ever
+// becomes true if a live StreamStart actually arrives) so the input stays
+// disabled and the poll runs even when no SignalR connection ever comes up.
+const awaitingReply = ref(false)
+let awaitingBaselineCount = 0
+
+function finishAwaiting() {
+  awaitingReply.value = false
+  streamingMessageId.value = null
+  chatStream.clearStreaming()
+}
+
 // Register stream callbacks
 chatStream.onStreamStart((messageId) => {
   streamingMessageId.value = messageId
@@ -52,18 +68,19 @@ chatStream.onStreamStart((messageId) => {
 })
 
 chatStream.onStreamDone((_messageId) => {
-  streamingMessageId.value = null
+  finishAwaiting()
   // Refresh session to get the persisted assistant message
   fetchSession()
 })
 
 chatStream.onStreamError((_messageId, _code, message) => {
+  awaitingReply.value = false
   streamingMessageId.value = null
   streamError.value = message
 })
 
-async function fetchSession() {
-  loading.value = true
+async function fetchSession(silent = false) {
+  if (!silent) loading.value = true
   error.value = null
   try {
     const { data } = await api.GET<ChatSessionDetailDto>(
@@ -74,11 +91,66 @@ async function fetchSession() {
     session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
   } catch (err) {
-    error.value = err instanceof ApiError ? err.message : 'Failed to load chat session'
+    if (!silent) error.value = err instanceof ApiError ? err.message : 'Failed to load chat session'
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
+
+// Reply generation is now triggered over plain REST and runs as a background
+// job entirely decoupled from any client connection (see useChatStream.send's
+// doc comment) — so it isn't just mobile reconnects-mid-stream that can miss
+// the live SignalR events, a connection that never comes up at all (observed:
+// handshakes taking 90-170s+ on some networks) misses ALL of them. Polling
+// REST while a reply is in flight is what actually recovers it either way —
+// the assistant message is fully persisted server-side by the time it would
+// have broadcast StreamDone, regardless of whether anyone was connected to
+// hear it. Runs on every reconnect (fast path, in case SignalR does connect)
+// and on a fixed interval as the real safety net. Capped so a genuinely
+// stuck/failed generation surfaces an error instead of polling forever.
+const STALL_POLL_MS = 5000
+const STALL_MAX_ATTEMPTS = 60 // 5 minutes
+
+let stallTimer: ReturnType<typeof setInterval> | null = null
+let stallAttempts = 0
+
+async function recoverIfReplyLanded() {
+  if (!awaitingReply.value) return
+  await fetchSession(true)
+  if ((session.value?.messages.length ?? 0) > awaitingBaselineCount) {
+    finishAwaiting()
+    return
+  }
+  stallAttempts++
+  if (stallAttempts >= STALL_MAX_ATTEMPTS) {
+    awaitingReply.value = false
+    streamError.value = 'The reply is taking unusually long — it may still finish in the background. Try reopening this chat in a bit.'
+  }
+}
+
+function startStallWatch() {
+  stopStallWatch()
+  stallAttempts = 0
+  stallTimer = setInterval(() => {
+    void recoverIfReplyLanded()
+  }, STALL_POLL_MS)
+}
+
+function stopStallWatch() {
+  if (stallTimer) {
+    clearInterval(stallTimer)
+    stallTimer = null
+  }
+}
+
+watch(awaitingReply, (waiting) => {
+  if (waiting) startStallWatch()
+  else stopStallWatch()
+})
+
+chatStream.onReconnected(() => {
+  void recoverIfReplyLanded()
+})
 
 async function handleSend(
   content: string,
@@ -91,7 +163,7 @@ async function handleSend(
 
   // Add user message optimistically
   const userMsg: ChatMessageDto = {
-    id: crypto.randomUUID(),
+    id: randomId(),
     sessionId: props.sessionId,
     role: MessageRole.User,
     content,
@@ -116,6 +188,10 @@ async function handleSend(
     if (result) {
       const idx = session.value.messages.findIndex(m => m.id === userMsg.id)
       if (idx !== -1) session.value.messages[idx] = result.userMessage
+      if (result.streamStarted) {
+        awaitingBaselineCount = session.value.messages.length
+        awaitingReply.value = true
+      }
     }
   } catch (err) {
     // Only reached if persisting the message itself failed — a failed/slow
@@ -128,6 +204,7 @@ async function handleSend(
 
 async function handleCancel() {
   await chatStream.cancel(props.sessionId)
+  awaitingReply.value = false
 }
 
 function handleRollbackRequest(message: ChatMessageDto) {
@@ -146,8 +223,9 @@ async function confirmRollback() {
 
   isRollingBack.value = true
   try {
-    if (chatStream.isStreaming.value) {
+    if (awaitingReply.value) {
       await chatStream.cancel(props.sessionId)
+      awaitingReply.value = false
     }
 
     await api.POST(ApiRoutes.Chat.sessions.rollbackMessage(props.sessionId, message.id))
@@ -162,6 +240,8 @@ async function confirmRollback() {
       const precedingUserMessage = session.value.messages.at(-1)
       if (precedingUserMessage) {
         await chatStream.resend(props.sessionId, precedingUserMessage.id)
+        awaitingBaselineCount = session.value.messages.length
+        awaitingReply.value = true
       }
     }
   } catch (err) {
@@ -174,14 +254,7 @@ async function confirmRollback() {
 
 onMounted(async () => {
   await fetchSession()
-  // Neither awaited: connect() can take a long time to resolve on a slow/
-  // retrying network (observed 9-67s over some Tailscale paths), and join()
-  // now waits internally for the connection too (bounded). Awaiting either
-  // here would block the first message send behind that same wait — send()
-  // doesn't need either of them for persisting the message, only for
-  // triggering the reply, which it waits for internally on its own.
-  void chatStream.connect()
-  void chatStream.join(props.sessionId)
+
   if (props.initialMessage) {
     // Tell the parent to forget this pending message before sending — the
     // parent owns the one-shot bookkeeping (this component gets recreated
@@ -193,9 +266,23 @@ onMounted(async () => {
     emit('initialMessageSent')
     await handleSend(message, presetId, modelId)
   }
+
+  // Connect *after* the message above, not before/alongside it. A SignalR
+  // handshake that takes a long time to negotiate (observed 90-170s+ on some
+  // networks) opens/holds a connection under HTTP/1.1's small per-origin
+  // browser connection cap while it retries — started earlier, it can starve
+  // the plain REST calls above of a free connection and leave them stuck
+  // pending indefinitely with no error surfaced (the request never even
+  // leaves the browser, so there's nothing to catch or toast). Connect is
+  // purely for optional live-typing display now — send()/resend() don't
+  // need it (see useChatStream.send's doc comment) — so it's safe to let it
+  // start last and lose that race.
+  void chatStream.connect()
+  void chatStream.join(props.sessionId)
 })
 
 onUnmounted(() => {
+  stopStallWatch()
   chatStream.leave()
   chatStream.disconnect()
 })
@@ -226,18 +313,19 @@ onUnmounted(() => {
         :messages="session?.messages ?? []"
         :streaming-message="chatStream.streamingMessage.value"
         :stream-error="streamError"
-        :rollback-disabled="isRollingBack || chatStream.isStreaming.value"
+        :awaiting-reply="awaitingReply"
+        :rollback-disabled="isRollingBack || awaitingReply"
         @rollback="handleRollbackRequest"
       />
 
       <ChatInput
         ref="chatInputRef"
-        :disabled="chatStream.isStreaming.value || session?.status !== 'Active'"
+        :disabled="awaitingReply || session?.status !== 'Active'"
         @send="handleSend"
         @cancel="handleCancel"
       >
         <template
-          v-if="chatStream.isStreaming.value"
+          v-if="awaitingReply"
           #cancel
         >
           <UButton

@@ -12,6 +12,7 @@ public static class RealtimeServiceCollectionExtensions
         services.AddScoped<IProjectBoardEventPublisher, SignalRProjectBoardEventPublisher>();
         services.AddScoped<INotificationHubBus, SignalRNotificationHubBus>();
         services.AddSingleton<IChatStreamRegistry, ChatStreamRegistry>();
+        services.AddScoped<IChatBroadcaster, SignalRChatBroadcaster>();
         return services;
     }
 }

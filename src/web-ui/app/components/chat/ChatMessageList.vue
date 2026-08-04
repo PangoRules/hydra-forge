@@ -10,11 +10,17 @@ const props = withDefaults(
     messages: ChatMessageDto[]
     streamingMessage?: StreamingMessage | null
     streamError?: string | null
+    /** A reply was triggered and hasn't landed yet, but no live SignalR content has arrived
+     * to show (either not connected, or connected but no delta yet) — show a generic
+     * "thinking…" bubble instead of nothing so the UI doesn't look inert while the reply
+     * generates entirely server-side. */
+    awaitingReply?: boolean
     rollbackDisabled?: boolean
   }>(),
   {
     streamingMessage: null,
     streamError: null,
+    awaitingReply: false,
     rollbackDisabled: false
   }
 )
@@ -145,7 +151,7 @@ onMounted(() => {
       class="flex-1 overflow-y-auto px-4 py-4 space-y-4"
       @scroll="onScroll"
     >
-      <template v-if="messages.length === 0 && !streamingMessage">
+      <template v-if="messages.length === 0 && !streamingMessage && !awaitingReply">
         <div class="text-center text-muted text-sm py-12">
           No messages yet. Start the conversation!
         </div>
@@ -194,6 +200,32 @@ onMounted(() => {
                 v-else
                 class="inline-flex gap-1"
               >
+                <span
+                  v-for="i in 3"
+                  :key="i"
+                  class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  :style="{ animationDelay: `${(i - 1) * 150}ms` }"
+                />
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- No live SignalR content yet, but a reply is known to be in flight
+             (triggered over REST, may be generating with nobody connected to
+             hear it) — generic indicator so the UI doesn't look inert. -->
+        <div
+          v-else-if="awaitingReply"
+          class="flex gap-3"
+        >
+          <UAvatar
+            icon="i-lucide-bot"
+            class="bg-gray-300 dark:bg-gray-600 shrink-0 mt-0.5"
+            size="sm"
+          />
+          <div class="flex flex-col gap-1 max-w-[80%]">
+            <div class="px-4 py-2 rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-sm leading-relaxed">
+              <span class="inline-flex gap-1">
                 <span
                   v-for="i in 3"
                   :key="i"
