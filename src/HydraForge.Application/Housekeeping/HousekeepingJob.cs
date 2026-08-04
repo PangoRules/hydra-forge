@@ -36,23 +36,27 @@ public sealed class HousekeepingJob(
 
         var result = await repository.RunAsync(cutoffs, ct);
 
-        foreach (var path in result.FilePathsToDelete)
-        {
-            try
+        await Parallel.ForEachAsync(
+            result.FilePathsToDelete,
+            new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = ct },
+            async (path, token) =>
             {
-                var deleteResult = await fileStore.DeleteAsync(path, ct);
-                if (deleteResult.IsFailure)
+                try
+                {
+                    var deleteResult = await fileStore.DeleteAsync(path, token);
+                    if (deleteResult.IsFailure)
+                        _warnLogger.LogWarning(
+                            $"Housekeeping: failed to delete file blob '{path}': {deleteResult.Error.Message}"
+                        );
+                }
+                catch (Exception ex)
+                {
                     _warnLogger.LogWarning(
-                        $"Housekeeping: failed to delete file blob '{path}': {deleteResult.Error.Message}"
+                        $"Housekeeping: failed to delete file blob '{path}': {ex.Message}"
                     );
+                }
             }
-            catch (Exception ex)
-            {
-                _warnLogger.LogWarning(
-                    $"Housekeeping: failed to delete file blob '{path}': {ex.Message}"
-                );
-            }
-        }
+        );
 
         var auditResult = await auditLogWriter.WriteAsync(
             new AuditLogRequest(
