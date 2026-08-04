@@ -1,7 +1,14 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
+    logging: *default-logging
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -30,6 +37,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -58,6 +66,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,6 +135,7 @@ services:
       context: src/web-ui
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       server:
         condition: service_healthy
@@ -160,6 +170,7 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    logging: *default-logging
     # Without this, nginx can start before server/web register their network
     # aliases in Docker's embedded DNS — its static `upstream {}` blocks resolve
     # hostnames once at startup (not per-request), so losing that race is a hard
@@ -217,6 +228,7 @@ services:
     # and set SearXng__BaseUrl=http://searxng:8080 in .env
     image: searxng/searxng:latest
     restart: unless-stopped
+    logging: *default-logging
     profiles: ["search"]
     ports:
       - "${SEARXNG_PORT:-8082}:8080"
@@ -224,6 +236,7 @@ services:
   ntfy:
     image: binwiederhier/ntfy:v2.11.0
     restart: unless-stopped
+    logging: *default-logging
     profiles: ["notifications"]
     command: serve
     environment:
