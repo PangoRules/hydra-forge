@@ -12,7 +12,8 @@ public sealed record ChatRequest(
     IReadOnlyList<CacheBlock> CacheBlocks,
     IReadOnlyList<ToolDefinition> Tools,
     int? MaxOutputTokens,
-    decimal? Temperature
+    decimal? Temperature,
+    string? ReasoningEffort = null
 );
 
 public sealed record ImageBlock(string StorageKey, string MediaType);
@@ -100,7 +101,8 @@ public sealed record AvailableModelDto(
     Guid ProviderModelConfigId,
     string ModelName,
     string ProviderName,
-    string Tier
+    string Tier,
+    bool SupportsReasoning
 );
 
 // Context compression

@@ -180,7 +180,8 @@ public sealed class ModelRouter : IModelRouter
                 x.Model.Id,
                 x.Model.Name,
                 x.Provider.Name,
-                x.Model.Tier.ToString()
+                x.Model.Tier.ToString(),
+                x.Model.SupportsReasoning
             ))
             .ToList();
 
