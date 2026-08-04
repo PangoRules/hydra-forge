@@ -103,6 +103,15 @@ services:
 
   nginx:
     image: nginx:alpine
+    # Without this, nginx can start before server/web register their network
+    # aliases in Docker's embedded DNS — its static `upstream {}` blocks resolve
+    # hostnames once at startup (not per-request), so losing that race is a hard
+    # crash (`host not found in upstream "server:8080"`), not a transient retry.
+    depends_on:
+      server:
+        condition: service_started
+      web:
+        condition: service_started
     ports:
       # Off the default :80/:443 on purpose — leaves the bare hostname/IP free
       # for anything else you want to run on this box later. Override
