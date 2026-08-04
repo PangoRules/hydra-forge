@@ -12,7 +12,7 @@ export interface StreamingMessage {
 }
 
 export function useChatStream() {
-  const { getToken } = useAuthToken()
+  const authStore = useAuthStore()
   const config = useRuntimeConfig()
   const toast = useAppToast()
   const api = useApi()
@@ -77,7 +77,7 @@ export function useChatStream() {
   }
 
   function buildConnection(): signalR.HubConnection {
-    const token = getToken()
+    const token = authStore.token
     if (!token) throw new Error('No auth token')
 
     const hubUrl = `${config.public.signalrBaseUrl}/hubs/chat`
@@ -86,6 +86,7 @@ export function useChatStream() {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Warning)
       .build()
 
     conn.onreconnecting(() => {
@@ -153,8 +154,7 @@ export function useChatStream() {
   async function connect() {
     if (connection) return
 
-    const token = getToken()
-    if (!token) return
+    if (!authStore.token) return
 
     connection = buildConnection()
 
@@ -162,6 +162,16 @@ export function useChatStream() {
       await connection.start()
       isConnected.value = true
       backoffIndex = 0
+      // join()'s own wait may already have given up by the time a slow
+      // initial handshake finally lands — catch up here, same as
+      // onreconnected() does for a connection that drops and comes back.
+      if (currentSessionId) {
+        try {
+          await connection.invoke('JoinSession', currentSessionId)
+        } catch {
+          /* silent — matches join()'s own failure handling */
+        }
+      }
     } catch {
       scheduleReconnect()
     }
@@ -209,9 +219,37 @@ export function useChatStream() {
     clearStreaming()
   }
 
+  // Polls connection.state rather than awaiting connect()'s own promise —
+  // callers (join/send/resend) may run before, during, or well after the
+  // initial connect() attempt, including through slow/retrying handshakes
+  // (seen in practice: 60s+ over some Tailscale paths). Bounded so a stalled
+  // connection surfaces a clear error instead of hanging the caller forever.
+  // 90s default: observed real handshake times of 9-67s over some Tailscale
+  // paths (server-measured, not a guess) — a shorter bound would give up on
+  // triggering the reply before a legitimately-slow-but-working connection
+  // ever lands.
+  function waitForConnected(timeoutMs = 90000): Promise<boolean> {
+    return new Promise((resolve) => {
+      const start = Date.now()
+      const check = () => {
+        if (connection?.state === signalR.HubConnectionState.Connected) {
+          resolve(true)
+          return
+        }
+        if (Date.now() - start >= timeoutMs) {
+          resolve(false)
+          return
+        }
+        setTimeout(check, 250)
+      }
+      check()
+    })
+  }
+
   async function join(sessionId: string) {
-    if (!connection) return
     currentSessionId = sessionId
+    const connected = await waitForConnected()
+    if (!connected || !connection) return
     try {
       await connection.invoke('JoinSession', sessionId)
     } catch {
@@ -231,36 +269,49 @@ export function useChatStream() {
 
   /**
    * Send a user message:
-   * 1. POST to persist the user message → get messageId
-   * 2. Invoke SendMessage on the hub to trigger streaming response
+   * 1. POST to persist the user message — plain REST, doesn't need the hub,
+   *    so the message is never lost even if the hub is slow/still connecting.
+   * 2. Invoke SendMessage on the hub to trigger the streaming reply, waiting
+   *    (bounded) for the connection if it isn't ready yet. If that wait or
+   *    the invoke fails, the message is still saved — streamStarted:false
+   *    tells the caller the reply didn't start so it can say so.
    */
   async function send(
     sessionId: string,
     content: string,
     presetId?: string,
     preferredProviderModelConfigId?: string
-  ) {
+  ): Promise<{ userMessage: ChatMessageDto, streamStarted: boolean } | undefined> {
     if (sendingLock.value) return
-    if (!connection) throw new Error('Not connected')
     sendingLock.value = true
     try {
-      // Step 1: persist user message
       const result = await api.POST<ChatMessageDto>(
         ApiRoutes.Chat.sessions.sendMessage(sessionId),
         { body: { content } }
       )
       if (!result.data) throw new Error('Failed to send message: no response')
-      const data = result.data
+      const userMessage = result.data
 
-      // Step 2: invoke streaming — presetId/preferredProviderModelConfigId as raw
-      // strings, not Guid wrappers
-      await connection.invoke(
-        'SendMessage',
-        sessionId,
-        data.id,
-        presetId ?? null,
-        preferredProviderModelConfigId ?? null
-      )
+      const connected = await waitForConnected()
+      if (!connected || !connection) {
+        toast.error('Message saved, but the connection is too slow to start a reply — try again in a moment.')
+        return { userMessage, streamStarted: false }
+      }
+
+      try {
+        // presetId/preferredProviderModelConfigId as raw strings, not Guid wrappers
+        await connection.invoke(
+          'SendMessage',
+          sessionId,
+          userMessage.id,
+          presetId ?? null,
+          preferredProviderModelConfigId ?? null
+        )
+        return { userMessage, streamStarted: true }
+      } catch {
+        toast.error('Message saved, but the AI reply could not start — try again from the message.')
+        return { userMessage, streamStarted: false }
+      }
     } finally {
       sendingLock.value = false
     }
@@ -277,9 +328,13 @@ export function useChatStream() {
     preferredProviderModelConfigId?: string
   ) {
     if (sendingLock.value) return
-    if (!connection) throw new Error('Not connected')
     sendingLock.value = true
     try {
+      const connected = await waitForConnected()
+      if (!connected || !connection) {
+        toast.error('Connection is too slow right now — try again in a moment.')
+        return
+      }
       await connection.invoke(
         'SendMessage',
         sessionId,
@@ -287,6 +342,8 @@ export function useChatStream() {
         presetId ?? null,
         preferredProviderModelConfigId ?? null
       )
+    } catch {
+      toast.error('Could not start the reply — try again.')
     } finally {
       sendingLock.value = false
     }

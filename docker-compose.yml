@@ -58,8 +58,13 @@ services:
       FileStorage__S3__BucketName: ${MINIO_BUCKET:-hydraforge-attachments}
       FileStorage__S3__Region: ${MINIO_REGION:-us-east-1}
       FileStorage__S3__ForcePathStyle: "true"
-      # Allow both nginx (port 80) and direct Nuxt access (port 3000) as origins.
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:3000}
+      # Allow both nginx (port 8080) and direct Nuxt access (port 3000) as origins.
+      # Only matters for genuinely cross-origin browser calls — same-origin access
+      # through nginx (including by IP, e.g. a Tailscale address) never needs this,
+      # the browser doesn't enforce CORS on same-origin requests regardless of what
+      # this list contains. Set CORS_ALLOWED_ORIGINS in .env to silence the harmless
+      # "CORS policy execution failed" log noise for a specific non-default origin.
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:8080,http://localhost:3000}
     ports:
       # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
       - "5000:8080"
@@ -80,16 +85,24 @@ services:
     environment:
       NUXT_API_BASE_URL: http://server:8080
       NUXT_PUBLIC_AUTH_COOKIE_SECURE: "false"
-      # Point SignalR at nginx so /hubs/ gets proxied even if user hits port 3000 directly.
-      # Override in .env if nginx is on a non-standard port.
-      NUXT_PUBLIC_SIGNALR_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      # Leave NUXT_PUBLIC_SIGNALR_BASE_URL unset → empty string → relative
+      # /hubs/... URLs, resolved by the browser against whatever origin it's
+      # actually on (nginx proxies /hubs/ there for any host/IP). A fixed
+      # absolute value here (e.g. http://localhost) gets baked into the page
+      # for every client regardless of how they reached it — breaks any
+      # client that isn't the Docker host itself (LAN IP, Tailscale, etc).
+      # Only set this if you deliberately want clients to bypass nginx and
+      # hit :3000 directly for everything except SignalR.
     ports:
       - "3000:3000"
 
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
+      # Off the default :80 on purpose — leaves the bare hostname/IP free for
+      # anything else you want to run on this box later. Change the host-side
+      # number here if you'd rather use a different port.
+      - "8080:80"
     environment:
       # Full Docker stack defaults. For hybrid mode (API + UI running locally),
       # set in .env: BACKEND_HOST=host.docker.internal:5000  NUXT_HOST=host.docker.internal:3000

@@ -105,14 +105,21 @@ async function handleSend(
   session.value.messages.push(userMsg)
 
   try {
-    await chatStream.send(
+    const result = await chatStream.send(
       props.sessionId,
       content,
       presetId ?? undefined,
       preferredModelId ?? undefined
     )
+    // undefined only when another send was already in flight (sendingLock) —
+    // the optimistic message stays as-is, nothing to reconcile.
+    if (result) {
+      const idx = session.value.messages.findIndex(m => m.id === userMsg.id)
+      if (idx !== -1) session.value.messages[idx] = result.userMessage
+    }
   } catch (err) {
-    // Remove optimistic user message on failure
+    // Only reached if persisting the message itself failed — a failed/slow
+    // reply (streamStarted: false) is not an error, the message was saved.
     const idx = session.value.messages.findIndex(m => m.id === userMsg.id)
     if (idx !== -1) session.value.messages.splice(idx, 1)
     toast.error(err instanceof Error ? err.message : 'Failed to send message')
@@ -167,8 +174,14 @@ async function confirmRollback() {
 
 onMounted(async () => {
   await fetchSession()
-  await chatStream.connect()
-  await chatStream.join(props.sessionId)
+  // Neither awaited: connect() can take a long time to resolve on a slow/
+  // retrying network (observed 9-67s over some Tailscale paths), and join()
+  // now waits internally for the connection too (bounded). Awaiting either
+  // here would block the first message send behind that same wait — send()
+  // doesn't need either of them for persisting the message, only for
+  // triggering the reply, which it waits for internally on its own.
+  void chatStream.connect()
+  void chatStream.join(props.sessionId)
   if (props.initialMessage) {
     // Tell the parent to forget this pending message before sending — the
     // parent owns the one-shot bookkeeping (this component gets recreated
