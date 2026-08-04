@@ -3,6 +3,17 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# The cert only covers this machine's tailnet hostname — localhost/127.0.0.1 (used
+# for same-machine local dev/debugging) can never get a trusted cert from it, so
+# redirecting them to HTTPS just replaces "it works" with a cert warning for no
+# security benefit (still the same machine either way). Anything else — the real
+# tailnet hostname, a LAN IP, whatever — does get redirected and served over TLS.
+map $host $should_redirect_to_https {
+    default   1;
+    localhost 0;
+    127.0.0.1 0;
+}
+
 upstream backend {
     server ${BACKEND_HOST};
 }
@@ -14,11 +25,16 @@ upstream nuxt {
 server {
     listen 80;
     server_name _;
-    # $host has no port — nginx inside the container has no way to know the
-    # host maps 443 to a non-default external port (8443 by default in
-    # docker-compose.yml), so it has to be told explicitly or every redirect
-    # sends the browser to a port nothing's listening on externally.
-    return 301 https://$host:${HTTPS_PORT}$request_uri;
+
+    if ($should_redirect_to_https) {
+        # $host has no port — nginx inside the container has no way to know the
+        # host maps 443 to a non-default external port (8443 by default in
+        # docker-compose.yml), so it has to be told explicitly or every redirect
+        # sends the browser to a port nothing's listening on externally.
+        return 301 https://$host:${HTTPS_PORT}$request_uri;
+    }
+
+    include /etc/nginx/hydraforge-templates/locations.conf;
 }
 
 server {
@@ -32,60 +48,5 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    # Nuxt Icon's own runtime icon-fetch API — must win over the /api/ block
-    # below (longest-prefix match) since it lives under /api/ but is served
-    # by Nuxt itself, not the .NET backend. Without this, any icon not in the
-    # client-bundled sprite 404s (misrouted to the backend, which has no such
-    # route) instead of being fetched from Nuxt.
-    location /api/_nuxt_icon/ {
-        proxy_pass http://nuxt;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # REST API — direct to .NET, no hop through Nuxt
-    location /api/ {
-        proxy_pass http://backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # SignalR hubs — WebSocket + SSE + long-polling all work natively
-    location /hubs/ {
-        proxy_pass http://backend;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400s;
-        proxy_buffering off;
-    }
-
-    # Hangfire dashboard
-    location /hangfire {
-        proxy_pass http://backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Nuxt frontend — pass through WebSocket headers for HMR in dev builds
-    location / {
-        proxy_pass http://nuxt;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    include /etc/nginx/hydraforge-templates/locations.conf;
 }

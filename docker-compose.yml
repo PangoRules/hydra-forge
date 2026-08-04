@@ -130,6 +130,7 @@ services:
       # (duplicate `listen 80`).
       - ./nginx/http.conf.template:/etc/nginx/hydraforge-templates/http.conf.template:ro
       - ./nginx/https.conf.template:/etc/nginx/hydraforge-templates/https.conf.template:ro
+      - ./nginx/locations.conf:/etc/nginx/hydraforge-templates/locations.conf:ro
       - ./nginx/docker-entrypoint-wrapper.sh:/hydraforge-entrypoint.sh:ro
       # Populated by deploy/tailscale-https-setup.sh — harmless (and expected)
       # for this to just be an empty directory when HTTPS hasn't been set up.
