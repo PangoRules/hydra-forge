@@ -446,6 +446,11 @@ namespace HydraForge.Tui.Generated
         System.Threading.Tasks.Task<ChatMessageDto> MessagesPOSTAsync(System.Guid sessionId, SendMessageRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Accepted</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task GenerateAsync(System.Guid sessionId, System.Guid messageId, GenerateReplyRequest? body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task RollbackAsync(System.Guid sessionId, System.Guid messageId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
@@ -2526,6 +2531,27 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("allowedModelConfigIds", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<System.Guid> AllowedModelConfigIds { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GenerateReplyRequest
+    {
+
+        [Newtonsoft.Json.JsonProperty("presetId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid? PresetId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredProviderModelConfigId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid? PreferredProviderModelConfigId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
