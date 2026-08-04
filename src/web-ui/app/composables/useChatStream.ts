@@ -266,6 +266,32 @@ export function useChatStream() {
     }
   }
 
+  /**
+   * Re-invoke streaming for an already-persisted user message — used by
+   * "regenerate" after a rollback truncates the assistant reply that followed it.
+   */
+  async function resend(
+    sessionId: string,
+    userMessageId: string,
+    presetId?: string,
+    preferredProviderModelConfigId?: string
+  ) {
+    if (sendingLock.value) return
+    if (!connection) throw new Error('Not connected')
+    sendingLock.value = true
+    try {
+      await connection.invoke(
+        'SendMessage',
+        sessionId,
+        userMessageId,
+        presetId ?? null,
+        preferredProviderModelConfigId ?? null
+      )
+    } finally {
+      sendingLock.value = false
+    }
+  }
+
   async function cancel(sessionId: string) {
     if (!connection) return
     try {
@@ -283,6 +309,7 @@ export function useChatStream() {
     join,
     leave,
     send,
+    resend,
     cancel,
     streamingMessage,
     isStreaming,

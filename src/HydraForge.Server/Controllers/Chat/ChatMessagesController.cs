@@ -58,6 +58,20 @@ public class ChatMessagesController(IChatMessageService messageService) : Contro
 
         return CreatedAtAction(nameof(GetHistory), new { sessionId }, result.Value);
     }
+
+    [HttpPost("{messageId:guid}/rollback")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Rollback(Guid sessionId, Guid messageId)
+    {
+        var userId = User.GetRequiredUserId();
+        var result = await messageService.RollbackAsync(sessionId, userId, messageId);
+
+        if (result.IsFailure)
+            return this.ToProblemResult(result.Error);
+
+        return NoContent();
+    }
 }
 
 public record SendMessageRequest(

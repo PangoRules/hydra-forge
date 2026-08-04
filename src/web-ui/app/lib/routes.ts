@@ -206,7 +206,9 @@ export const ApiRoutes = {
       permission: (sessionId: string) => `/api/chat/sessions/${sessionId}/permission`,
       messages: (sessionId: string, before?: string, beforeId?: string, limit = 50) =>
         `/api/chat/sessions/${sessionId}/messages?${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
-      sendMessage: (sessionId: string) => `/api/chat/sessions/${sessionId}/messages`
+      sendMessage: (sessionId: string) => `/api/chat/sessions/${sessionId}/messages`,
+      rollbackMessage: (sessionId: string, messageId: string) =>
+        `/api/chat/sessions/${sessionId}/messages/${messageId}/rollback`
     },
     folders: {
       list: (projectId?: string) => `/api/chat/folders${projectId ? `?projectId=${projectId}` : ''}`,

@@ -20,4 +20,7 @@ public interface IChatMessageRepository
         CancellationToken ct = default
     );
     Task AddAsync(ChatMessage message, CancellationToken ct = default);
+
+    // Deletes messageId and every message chronologically after it in the session.
+    Task<bool> DeleteFromAsync(Guid sessionId, Guid messageId, CancellationToken ct = default);
 }

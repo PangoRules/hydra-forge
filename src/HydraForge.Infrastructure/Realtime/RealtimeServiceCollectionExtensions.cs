@@ -1,3 +1,4 @@
+using HydraForge.Application.Chat;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Realtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,7 @@ public static class RealtimeServiceCollectionExtensions
     {
         services.AddScoped<IProjectBoardEventPublisher, SignalRProjectBoardEventPublisher>();
         services.AddScoped<INotificationHubBus, SignalRNotificationHubBus>();
+        services.AddSingleton<IChatStreamRegistry, ChatStreamRegistry>();
         return services;
     }
 }

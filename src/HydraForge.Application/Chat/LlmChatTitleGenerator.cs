@@ -86,7 +86,9 @@ public sealed class LlmChatTitleGenerator : IChatTitleGenerator
                     || chunk.FinishReason == ChatChunkFinishReason.ContentFilter
                 )
                 {
-                    _logger.LogWarning("LLM returned an error/content-filter finish reason for chat title generation");
+                    _logger.LogWarning(
+                        "LLM returned an error/content-filter finish reason for chat title generation"
+                    );
                     return Result<string>.Failure(
                         new Error(DomainErrorCodes.Chat.TitleFailed, "LLM returned an error.")
                     );

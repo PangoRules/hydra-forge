@@ -160,7 +160,9 @@ public sealed class ModelRouter : IModelRouter
         if (allowedModels.Count > 0)
         {
             // Already priority-ordered by DbContextRoutingConfigProvider.GetAllowedModelsAsync.
-            candidates = allowedModels.Where(x => x.Model.IsEnabled && x.Provider.IsEnabled).ToList();
+            candidates = allowedModels
+                .Where(x => x.Model.IsEnabled && x.Provider.IsEnabled)
+                .ToList();
         }
         else
         {

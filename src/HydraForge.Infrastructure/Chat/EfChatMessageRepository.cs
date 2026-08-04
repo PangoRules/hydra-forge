@@ -43,6 +43,32 @@ public sealed class EfChatMessageRepository(HydraForgeDbContext context) : IChat
         await context.SaveChangesAsync(ct);
     }
 
+    public async Task<bool> DeleteFromAsync(
+        Guid sessionId,
+        Guid messageId,
+        CancellationToken ct = default
+    )
+    {
+        var target = await context.ChatMessages.FirstOrDefaultAsync(
+            m => m.Id == messageId && m.SessionId == sessionId,
+            ct
+        );
+        if (target is null)
+            return false;
+
+        await context
+            .ChatMessages.Where(m =>
+                m.SessionId == sessionId
+                && (
+                    m.CreatedAt > target.CreatedAt
+                    || (m.CreatedAt == target.CreatedAt && m.Id >= target.Id)
+                )
+            )
+            .ExecuteDeleteAsync(ct);
+
+        return true;
+    }
+
     public async Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
         Guid ownerId,
         string query,

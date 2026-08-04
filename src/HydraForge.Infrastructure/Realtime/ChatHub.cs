@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Chat;
 using HydraForge.Application.Llm;
@@ -30,15 +29,12 @@ public class ChatHub(
     LlmCallGuard llmCallGuard,
     IContextCompressor contextCompressor,
     IChatTitleGenerator titleGenerator,
+    IChatStreamRegistry streamRegistry,
     ILogger<ChatHub> logger,
     IOptions<LlmOptions> llmOptions
 ) : Hub<IChatHub>
 {
-    private static readonly ConcurrentDictionary<Guid, StreamContext> ActiveStreams = new();
-
     private static string SessionGroup(Guid sessionId) => $"chat-{sessionId}";
-
-    private record StreamContext(CancellationTokenSource Cts, Guid MessageId);
 
     private async Task<bool> HasSessionAccessAsync(
         Domain.Entities.Chat.ChatSession session,
@@ -158,7 +154,7 @@ public class ChatHub(
         var cts = new CancellationTokenSource();
         var assistantMessageId = Guid.NewGuid();
 
-        if (!ActiveStreams.TryAdd(sessionId, new StreamContext(cts, assistantMessageId)))
+        if (!streamRegistry.TryRegister(sessionId, cts))
         {
             cts.Dispose();
             await Clients
@@ -392,7 +388,11 @@ public class ChatHub(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Chat title generation failed for session {SessionId}", sessionId);
+                    logger.LogWarning(
+                        ex,
+                        "Chat title generation failed for session {SessionId}",
+                        sessionId
+                    );
                 }
             }
 
@@ -446,7 +446,7 @@ public class ChatHub(
         }
         finally
         {
-            ActiveStreams.TryRemove(sessionId, out _);
+            streamRegistry.Remove(sessionId);
             cts.Dispose();
         }
     }
@@ -461,9 +461,6 @@ public class ChatHub(
             return;
         }
 
-        if (ActiveStreams.TryGetValue(sessionId, out var ctx))
-        {
-            ctx.Cts.Cancel();
-        }
+        streamRegistry.TryCancel(sessionId);
     }
 }

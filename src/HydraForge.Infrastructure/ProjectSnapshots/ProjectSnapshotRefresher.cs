@@ -9,10 +9,7 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
 {
     public async Task RefreshAsync(Guid projectId, CancellationToken ct = default)
     {
-        var project = await context.Projects.FirstOrDefaultAsync(
-            p => p.Id == projectId,
-            ct
-        );
+        var project = await context.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct);
 
         var columns = await context
             .Columns.Where(c => c.ProjectId == projectId)

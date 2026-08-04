@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiError } from '~/lib/api-error'
 import { ApiRoutes } from '~/lib/routes'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import type { ChatMessageDto, ChatSessionDetailDto } from '~/types/chat'
 import { MessageRole } from '~/types/chat'
 
@@ -37,6 +38,12 @@ const streamingMessageId = ref<string | null>(null)
 
 // Last stream failure, shown inline in the message list until the next send
 const streamError = ref<string | null>(null)
+
+const chatInputRef = ref<{ setContent: (text: string) => void } | null>(null)
+const isRollingBack = ref(false)
+const showRollbackConfirm = ref(false)
+const rollbackTarget = ref<ChatMessageDto | null>(null)
+const rollbackDiscardCount = ref(0)
 
 // Register stream callbacks
 chatStream.onStreamStart((messageId) => {
@@ -116,6 +123,48 @@ async function handleCancel() {
   await chatStream.cancel(props.sessionId)
 }
 
+function handleRollbackRequest(message: ChatMessageDto) {
+  if (!session.value) return
+  const idx = session.value.messages.findIndex(m => m.id === message.id)
+  if (idx === -1) return
+
+  rollbackTarget.value = message
+  rollbackDiscardCount.value = session.value.messages.length - idx - 1
+  showRollbackConfirm.value = true
+}
+
+async function confirmRollback() {
+  const message = rollbackTarget.value
+  if (!message || !session.value) return
+
+  isRollingBack.value = true
+  try {
+    if (chatStream.isStreaming.value) {
+      await chatStream.cancel(props.sessionId)
+    }
+
+    await api.POST(ApiRoutes.Chat.sessions.rollbackMessage(props.sessionId, message.id))
+
+    const idx = session.value.messages.findIndex(m => m.id === message.id)
+    if (idx === -1) return
+    session.value.messages.splice(idx)
+
+    if (message.role === MessageRole.User) {
+      chatInputRef.value?.setContent(message.content)
+    } else {
+      const precedingUserMessage = session.value.messages.at(-1)
+      if (precedingUserMessage) {
+        await chatStream.resend(props.sessionId, precedingUserMessage.id)
+      }
+    }
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to roll back message')
+  } finally {
+    isRollingBack.value = false
+    rollbackTarget.value = null
+  }
+}
+
 onMounted(async () => {
   await fetchSession()
   await chatStream.connect()
@@ -164,9 +213,12 @@ onUnmounted(() => {
         :messages="session?.messages ?? []"
         :streaming-message="chatStream.streamingMessage.value"
         :stream-error="streamError"
+        :rollback-disabled="isRollingBack || chatStream.isStreaming.value"
+        @rollback="handleRollbackRequest"
       />
 
       <ChatInput
+        ref="chatInputRef"
         :disabled="chatStream.isStreaming.value || session?.status !== 'Active'"
         @send="handleSend"
         @cancel="handleCancel"
@@ -185,5 +237,20 @@ onUnmounted(() => {
         </template>
       </ChatInput>
     </template>
+
+    <ConfirmDialog
+      v-model:open="showRollbackConfirm"
+      :title="rollbackTarget?.role === MessageRole.User ? 'Edit and resend' : 'Regenerate reply'"
+      :message="
+        rollbackDiscardCount > 0
+          ? `This will discard ${rollbackDiscardCount} message${rollbackDiscardCount === 1 ? '' : 's'} after this point. This cannot be undone.`
+          : (rollbackTarget?.role === MessageRole.User
+            ? 'Edit this message and resend?'
+            : 'Regenerate this reply?')
+      "
+      :confirm-text="rollbackTarget?.role === MessageRole.User ? 'Edit' : 'Regenerate'"
+      confirm-color="primary"
+      @confirm="confirmRollback"
+    />
   </div>
 </template>

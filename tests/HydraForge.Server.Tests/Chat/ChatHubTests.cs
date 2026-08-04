@@ -39,6 +39,7 @@ public class ChatHubTests
     private readonly IUserTokenBudgetRepository _budgetRepo;
     private readonly IContextCompressor _contextCompressor;
     private readonly IChatTitleGenerator _titleGenerator;
+    private readonly IChatStreamRegistry _streamRegistry;
     private readonly ILogger<ChatHub> _logger;
     private readonly IOptions<LlmOptions> _llmOptions;
     private readonly IChatHub _mockCaller;
@@ -80,6 +81,7 @@ public class ChatHubTests
                 Arg.Any<CancellationToken>()
             )
             .Returns(Result<string>.Failure(new Error("TEST_NO_TITLE", "not configured in test")));
+        _streamRegistry = new ChatStreamRegistry();
         _logger = Substitute.For<ILogger<ChatHub>>();
         _llmOptions = Substitute.For<IOptions<LlmOptions>>();
         _llmOptions.Value.Returns(new LlmOptions());
@@ -117,6 +119,7 @@ public class ChatHubTests
             _llmCallGuard,
             _contextCompressor,
             _titleGenerator,
+            _streamRegistry,
             _logger,
             _llmOptions
         )

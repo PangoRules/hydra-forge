@@ -179,7 +179,13 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, relationships);
+        var result = ProjectContextSnapshotRenderer.Render(
+            "Test Project",
+            "",
+            columns,
+            cards,
+            relationships
+        );
 
         using var doc = JsonDocument.Parse(result);
         // Card1 is blocked by Card2. Card2 is archived, so blockers should be empty.
@@ -244,7 +250,13 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, relationships);
+        var result = ProjectContextSnapshotRenderer.Render(
+            "Test Project",
+            "",
+            columns,
+            cards,
+            relationships
+        );
 
         Assert.Contains("#1", result);
     }

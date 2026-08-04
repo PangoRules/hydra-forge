@@ -73,6 +73,19 @@ function submit() {
 }
 
 onMounted(fetchPresets)
+
+function setContent(text: string) {
+  content.value = text
+  nextTick(() => {
+    if (textareaRef.value) {
+      textareaRef.value.style.height = 'auto'
+      textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 160) + 'px'
+      textareaRef.value.focus()
+    }
+  })
+}
+
+defineExpose({ setContent })
 </script>
 
 <template>

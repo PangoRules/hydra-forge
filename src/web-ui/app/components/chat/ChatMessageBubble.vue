@@ -3,9 +3,20 @@ import { marked, Renderer } from 'marked'
 import type { ChatMessageDto } from '~/types/chat'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
 
-const props = defineProps<{
-  message: ChatMessageDto
-  isStreaming?: boolean
+const props = withDefaults(
+  defineProps<{
+    message: ChatMessageDto
+    isStreaming?: boolean
+    rollbackDisabled?: boolean
+  }>(),
+  {
+    isStreaming: false,
+    rollbackDisabled: false
+  }
+)
+
+const emit = defineEmits<{
+  rollback: [message: ChatMessageDto]
 }>()
 
 const authStore = useAuthStore()
@@ -60,7 +71,7 @@ function getImageSrc(img: ParsedImage): string {
 
 <template>
   <div
-    class="flex gap-3"
+    class="group flex gap-3"
     :class="isUser ? 'flex-row-reverse' : 'flex-row'"
   >
     <!-- Avatar -->
@@ -110,13 +121,28 @@ function getImageSrc(img: ParsedImage): string {
         v-html="renderedContent"
       />
 
-      <!-- Timestamp (+ model name for assistant replies) -->
-      <span class="text-xs text-muted px-1">
-        {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-        <template v-if="!isUser && message.modelName">
-          · {{ message.modelName }}
-        </template>
-      </span>
+      <!-- Timestamp (+ model name for assistant replies) + rollback action -->
+      <div
+        class="flex items-center gap-1 px-1"
+        :class="isUser ? 'flex-row-reverse' : 'flex-row'"
+      >
+        <span class="text-xs text-muted">
+          {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+          <template v-if="!isUser && message.modelName">
+            · {{ message.modelName }}
+          </template>
+        </span>
+        <UButton
+          :icon="isUser ? 'i-lucide-pencil' : 'i-lucide-rotate-ccw'"
+          :title="isUser ? 'Edit and resend' : 'Regenerate'"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          :disabled="rollbackDisabled"
+          class="opacity-0 group-hover:opacity-100 transition-opacity"
+          @click="emit('rollback', message)"
+        />
+      </div>
     </div>
   </div>
 </template>

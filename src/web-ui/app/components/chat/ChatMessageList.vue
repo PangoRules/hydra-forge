@@ -10,12 +10,18 @@ const props = withDefaults(
     messages: ChatMessageDto[]
     streamingMessage?: StreamingMessage | null
     streamError?: string | null
+    rollbackDisabled?: boolean
   }>(),
   {
     streamingMessage: null,
-    streamError: null
+    streamError: null,
+    rollbackDisabled: false
   }
 )
+
+const emit = defineEmits<{
+  rollback: [message: ChatMessageDto]
+}>()
 
 const streamingModelIcon = computed(() => getModelIcon(props.streamingMessage?.modelName))
 const streamingModelInitials = computed(() => getInitials(props.streamingMessage?.modelName, 'AI'))
@@ -158,6 +164,8 @@ onMounted(() => {
           :key="message.id"
           :message="message"
           :is-streaming="streamingMessage?.messageId === message.id"
+          :rollback-disabled="rollbackDisabled"
+          @rollback="emit('rollback', $event)"
         />
 
         <!-- Live typing bubble for in-flight assistant response -->
