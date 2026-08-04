@@ -515,6 +515,102 @@ public class ChatReplyGeneratorTests
         Assert.Single(doneCalls);
     }
 
+    [Fact]
+    public async Task GenerateAsync_ReasoningEffort_PassedThroughToChatRequest()
+    {
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<ChatMessage>)new List<ChatMessage>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "anthropic",
+            AdapterType = AdapterType.Anthropic,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "claude-opus-5",
+                "Claude Opus 5",
+                "premium",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "anthropic",
+                "https://api.anthropic.com",
+                "anthropic",
+                "cloud",
+                "premium",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.Anthropic);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null, "high");
+
+        mockClient
+            .Received(1)
+            .StreamChatAsync(
+                Arg.Is<ChatRequest>(r => r.ReasoningEffort == "high"),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
     /// <summary>
     /// Yields one chunk, signals it yielded, then blocks until cancellation or semaphore release.
     /// </summary>

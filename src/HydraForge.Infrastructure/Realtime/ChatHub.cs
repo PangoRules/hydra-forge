@@ -90,6 +90,7 @@ public class ChatHub(
                 userId,
                 presetId,
                 preferredProviderModelConfigId,
+                null,
                 CancellationToken.None
             )
         );

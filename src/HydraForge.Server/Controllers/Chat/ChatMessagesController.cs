@@ -83,6 +83,7 @@ public class ChatMessagesController(
         var userId = User.GetRequiredUserId();
         var presetId = request?.PresetId;
         var preferredProviderModelConfigId = request?.PreferredProviderModelConfigId;
+        var reasoningEffort = request?.ReasoningEffort;
         await backgroundTaskQueue.EnqueueJobAsync<ChatReplyGenerator>(g =>
             g.GenerateAsync(
                 sessionId,
@@ -90,6 +91,7 @@ public class ChatMessagesController(
                 userId,
                 presetId,
                 preferredProviderModelConfigId,
+                reasoningEffort,
                 CancellationToken.None
             )
         );
@@ -118,5 +120,6 @@ public record SendMessageRequest(
 
 public record GenerateReplyRequest(
     Guid? PresetId = null,
-    Guid? PreferredProviderModelConfigId = null
+    Guid? PreferredProviderModelConfigId = null,
+    string? ReasoningEffort = null
 );

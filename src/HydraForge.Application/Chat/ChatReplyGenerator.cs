@@ -70,6 +70,7 @@ public sealed class ChatReplyGenerator(
         Guid userId,
         Guid? presetId,
         Guid? preferredProviderModelConfigId,
+        string? reasoningEffort = null,
         CancellationToken ct = default
     )
     {
@@ -286,7 +287,8 @@ public sealed class ChatReplyGenerator(
                 cacheBlocks,
                 [],
                 4096,
-                0.7m
+                0.7m,
+                reasoningEffort
             );
 
             await group.StreamStart(assistantMessageId, route.Primary.ModelId, route.Primary.Name);
