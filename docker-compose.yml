@@ -21,6 +21,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -42,6 +47,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
 
   server:
     build:
@@ -105,6 +115,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.5"
 
   web:
     build:
@@ -136,6 +151,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
 
   nginx:
     image: nginx:alpine
@@ -184,6 +204,11 @@ services:
     command: ["sh", "/hydraforge-entrypoint.sh"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
 
   searxng:
     # Only needed if Odysseus (or another SearXNG instance) is NOT running.
