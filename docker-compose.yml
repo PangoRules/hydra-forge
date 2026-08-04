@@ -86,6 +86,25 @@ services:
       # Allows the container to reach services on the Docker host, including
       # Odysseus's SearXNG at http://host.docker.internal:8080.
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      # No curl in the aspnet base image (verified via `docker compose run
+      # --entrypoint sh server -c "which curl"` — not found) — raw /dev/tcp
+      # HTTP request instead of adding a package just for this. CMD-SHELL
+      # always runs via /bin/sh, which is dash (no /dev/tcp) on this Ubuntu
+      # base — wrap in `bash -c` explicitly (bash is present at /usr/bin/bash).
+      # Path is /Health, not /api/Health — HealthController has no [controller]
+      # prefix beyond its own route (Route("[controller]") → class name minus
+      # "Controller"); confirmed via a manual request against the running
+      # container before wiring this in.
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c \"exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /Health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200' <&3\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   web:
     build:
@@ -94,7 +113,7 @@ services:
     restart: unless-stopped
     depends_on:
       server:
-        condition: service_started
+        condition: service_healthy
     environment:
       NUXT_API_BASE_URL: http://server:8080
       # Was hardcoded "false" — now reads from .env so deploy/tailscale-https-setup.sh's
@@ -111,6 +130,12 @@ services:
       # hit :3000 directly for everything except SignalR.
     ports:
       - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   nginx:
     image: nginx:alpine
