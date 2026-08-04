@@ -66,8 +66,10 @@ services:
       # "CORS policy execution failed" log noise for a specific non-default origin.
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:8080,http://localhost:3000}
     ports:
-      # 5000 on host → 8080 in container. Host 8080 is taken by Odysseus SearXNG.
-      - "5000:8080"
+      # ${SERVER_PORT:-5000} on host → 8080 in container. Host 8080 is taken by
+      # Odysseus SearXNG on this box — override in .env if it collides with
+      # something else on yours.
+      - "${SERVER_PORT:-5000}:8080"
     volumes:
       - hydraforge-attachments:/data/hydraforge/attachments
     extra_hosts:
@@ -97,16 +99,18 @@ services:
       # Only set this if you deliberately want clients to bypass nginx and
       # hit :3000 directly for everything except SignalR.
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
 
   nginx:
     image: nginx:alpine
     ports:
       # Off the default :80/:443 on purpose — leaves the bare hostname/IP free
-      # for anything else you want to run on this box later. Change the
-      # host-side numbers here if you'd rather use different ones.
-      - "8080:80"
-      - "8443:443"
+      # for anything else you want to run on this box later. Override
+      # HTTP_PORT/HTTPS_PORT in .env if these collide with something else —
+      # HTTPS_PORT is also the port the plain-HTTP redirect target uses
+      # internally (below), so it's the single source of truth for both.
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
     environment:
       # Full Docker stack defaults. For hybrid mode (API + UI running locally),
       # set in .env: BACKEND_HOST=host.docker.internal:5000  NUXT_HOST=host.docker.internal:3000
@@ -142,7 +146,7 @@ services:
     image: searxng/searxng:latest
     profiles: ["search"]
     ports:
-      - "8082:8080"
+      - "${SEARXNG_PORT:-8082}:8080"
 
   ntfy:
     image: binwiederhier/ntfy:v2.11.0
@@ -157,7 +161,7 @@ services:
     volumes:
       - ntfy-data:/var/lib/ntfy
     ports:
-      - "8083:80"
+      - "${NTFY_PORT:-8083}:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "http://localhost:80/v1/health"]
       interval: 30s
