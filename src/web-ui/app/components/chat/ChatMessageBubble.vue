@@ -9,10 +9,12 @@ const props = withDefaults(
     message: ChatMessageDto
     isStreaming?: boolean
     rollbackDisabled?: boolean
+    highlighted?: boolean
   }>(),
   {
     isStreaming: false,
-    rollbackDisabled: false
+    rollbackDisabled: false,
+    highlighted: false
   }
 )
 
@@ -89,8 +91,9 @@ async function copyMessage() {
 
 <template>
   <div
-    class="group flex gap-3"
-    :class="isUser ? 'flex-row-reverse' : 'flex-row'"
+    :id="`chat-message-${message.id}`"
+    class="group flex gap-3 rounded-lg"
+    :class="[isUser ? 'flex-row-reverse' : 'flex-row', highlighted ? 'ring-2 ring-primary' : '']"
   >
     <!-- Avatar -->
     <UAvatar

@@ -16,12 +16,14 @@ const props = withDefaults(
      * generates entirely server-side. */
     awaitingReply?: boolean
     rollbackDisabled?: boolean
+    highlightMessageId?: string | null
   }>(),
   {
     streamingMessage: null,
     streamError: null,
     awaitingReply: false,
-    rollbackDisabled: false
+    rollbackDisabled: false,
+    highlightMessageId: null
   }
 )
 
@@ -171,6 +173,7 @@ onMounted(() => {
           :message="message"
           :is-streaming="streamingMessage?.messageId === message.id"
           :rollback-disabled="rollbackDisabled"
+          :highlighted="message.id === highlightMessageId"
           @rollback="emit('rollback', $event)"
         />
 

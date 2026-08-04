@@ -60,3 +60,19 @@ describe('ChatMessageBubble — copy', () => {
     )
   })
 })
+
+describe('ChatMessageBubble — highlight', () => {
+  it('applies a highlight ring class when highlighted is true', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: { message: baseMessage, highlighted: true }
+    })
+    expect(wrapper.find(`#chat-message-${baseMessage.id}`).classes()).toContain('ring-2')
+  })
+
+  it('does not apply the highlight ring class by default', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: { message: baseMessage }
+    })
+    expect(wrapper.find(`#chat-message-${baseMessage.id}`).classes()).not.toContain('ring-2')
+  })
+})

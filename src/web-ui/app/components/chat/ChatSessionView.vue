@@ -50,6 +50,63 @@ const isEditingTitle = ref(false)
 const editedTitle = ref('')
 const titleInputRef = ref<HTMLInputElement | null>(null)
 
+const findOpen = ref(false)
+const findQuery = ref('')
+const findIndex = ref(0)
+const findInputRef = ref<HTMLInputElement | null>(null)
+
+const findMatches = computed(() => {
+  const q = findQuery.value.trim().toLowerCase()
+  if (!q || !session.value) return []
+  return session.value.messages.filter(m => m.content.toLowerCase().includes(q))
+})
+
+const highlightMessageId = computed(() => findMatches.value[findIndex.value]?.id ?? null)
+
+watch(findQuery, () => {
+  findIndex.value = 0
+})
+
+watch(findMatches, () => {
+  scrollToCurrentMatch()
+})
+
+function scrollToCurrentMatch() {
+  const id = highlightMessageId.value
+  if (!id) return
+  nextTick(() => {
+    document.getElementById(`chat-message-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
+function toggleFind() {
+  findOpen.value = !findOpen.value
+  if (findOpen.value) {
+    nextTick(() => findInputRef.value?.focus())
+  } else {
+    findQuery.value = ''
+    findIndex.value = 0
+  }
+}
+
+function closeFind() {
+  findOpen.value = false
+  findQuery.value = ''
+  findIndex.value = 0
+}
+
+function nextMatch() {
+  if (!findMatches.value.length) return
+  findIndex.value = (findIndex.value + 1) % findMatches.value.length
+  scrollToCurrentMatch()
+}
+
+function prevMatch() {
+  if (!findMatches.value.length) return
+  findIndex.value = (findIndex.value - 1 + findMatches.value.length) % findMatches.value.length
+  scrollToCurrentMatch()
+}
+
 // True from the moment a reply is successfully triggered (a REST call, see
 // useChatStream.send's doc comment) until it's known to be done — via a live
 // SignalR StreamDone/StreamError if connected, or the recovery poll below
@@ -391,7 +448,59 @@ onUnmounted(() => {
           title="Export chat"
           @click="exportChat"
         />
+        <UButton
+          icon="i-lucide-search"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          title="Find in conversation"
+          @click="toggleFind"
+        />
       </template>
+    </div>
+
+    <div
+      v-if="findOpen"
+      class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2"
+    >
+      <input
+        ref="findInputRef"
+        v-model="findQuery"
+        data-testid="find-input"
+        placeholder="Find in conversation"
+        class="flex-1 min-w-0 text-sm bg-transparent focus-visible:outline-none"
+        @keydown.esc="closeFind"
+      >
+      <span
+        v-if="findQuery"
+        data-testid="find-count"
+        class="text-xs text-muted shrink-0"
+      >
+        {{ findMatches.length ? `${findIndex + 1}/${findMatches.length}` : '0/0' }}
+      </span>
+      <UButton
+        icon="i-lucide-chevron-up"
+        variant="ghost"
+        size="xs"
+        title="Previous match"
+        :disabled="!findMatches.length"
+        @click="prevMatch"
+      />
+      <UButton
+        icon="i-lucide-chevron-down"
+        variant="ghost"
+        size="xs"
+        title="Next match"
+        :disabled="!findMatches.length"
+        @click="nextMatch"
+      />
+      <UButton
+        icon="i-lucide-x"
+        variant="ghost"
+        size="xs"
+        title="Close find"
+        @click="closeFind"
+      />
     </div>
 
     <div
@@ -413,6 +522,7 @@ onUnmounted(() => {
         :stream-error="streamError"
         :awaiting-reply="awaitingReply"
         :rollback-disabled="isRollingBack || awaitingReply"
+        :highlight-message-id="highlightMessageId"
         @rollback="handleRollbackRequest"
       />
 

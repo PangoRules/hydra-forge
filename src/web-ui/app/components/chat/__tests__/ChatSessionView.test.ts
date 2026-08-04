@@ -183,3 +183,73 @@ describe('ChatSessionView — export', () => {
     vi.restoreAllMocks()
   })
 })
+
+describe('ChatSessionView — find in conversation', () => {
+  const ChatMessageListStub = {
+    props: ['messages', 'streamingMessage', 'streamError', 'awaitingReply', 'rollbackDisabled', 'highlightMessageId'],
+    template: '<div data-testid="message-list" :data-highlight="highlightMessageId ?? \'\'" />'
+  }
+
+  const messages = [
+    { id: 'm1', sessionId: 's1', role: 'User', content: 'find the needle here', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:00:00Z' },
+    { id: 'm2', sessionId: 's1', role: 'Assistant', content: 'no match', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:01:00Z' },
+    { id: 'm3', sessionId: 's1', role: 'User', content: 'another needle', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:02:00Z' }
+  ]
+
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({ data: { ...baseSession, messages }, error: undefined })
+  })
+
+  async function mountWithFindStub() {
+    const wrapper = await mountSuspended(ChatSessionView, {
+      props: { sessionId: 's1' },
+      global: { stubs: { ...stubs, ChatMessageList: ChatMessageListStub } }
+    })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('opens a search input when the find button is clicked', async () => {
+    const wrapper = await mountWithFindStub()
+    await wrapper.find('[title="Find in conversation"]').trigger('click')
+    expect(wrapper.find('input[data-testid="find-input"]').exists()).toBe(true)
+  })
+
+  it('typing a query highlights the first match and shows a 1 of N counter', async () => {
+    const wrapper = await mountWithFindStub()
+    await wrapper.find('[title="Find in conversation"]').trigger('click')
+    await wrapper.find('input[data-testid="find-input"]').setValue('needle')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="find-count"]').text()).toBe('1/2')
+    expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('m1')
+  })
+
+  it('next/prev cycle through matches and wrap around', async () => {
+    const wrapper = await mountWithFindStub()
+    await wrapper.find('[title="Find in conversation"]').trigger('click')
+    await wrapper.find('input[data-testid="find-input"]').setValue('needle')
+    await flushPromises()
+
+    await wrapper.find('[title="Next match"]').trigger('click')
+    expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('m3')
+
+    await wrapper.find('[title="Next match"]').trigger('click')
+    expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('m1')
+
+    await wrapper.find('[title="Previous match"]').trigger('click')
+    expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('m3')
+  })
+
+  it('closing find clears the query and highlight', async () => {
+    const wrapper = await mountWithFindStub()
+    await wrapper.find('[title="Find in conversation"]').trigger('click')
+    await wrapper.find('input[data-testid="find-input"]').setValue('needle')
+    await flushPromises()
+
+    await wrapper.find('[title="Close find"]').trigger('click')
+    expect(wrapper.find('input[data-testid="find-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="message-list"]').attributes('data-highlight')).toBe('')
+  })
+})
