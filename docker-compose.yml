@@ -84,7 +84,10 @@ services:
         condition: service_started
     environment:
       NUXT_API_BASE_URL: http://server:8080
-      NUXT_PUBLIC_AUTH_COOKIE_SECURE: "false"
+      # Was hardcoded "false" — now reads from .env so deploy/tailscale-https-setup.sh's
+      # printed reminder (set this to true once HTTPS is up) actually takes effect.
+      # Defaults to "false" (today's plain-HTTP behavior) for anyone who hasn't run it.
+      NUXT_PUBLIC_AUTH_COOKIE_SECURE: ${NUXT_PUBLIC_AUTH_COOKIE_SECURE:-false}
       # Leave NUXT_PUBLIC_SIGNALR_BASE_URL unset → empty string → relative
       # /hubs/... URLs, resolved by the browser against whatever origin it's
       # actually on (nginx proxies /hubs/ there for any host/IP). A fixed
