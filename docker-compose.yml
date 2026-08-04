@@ -6,8 +6,13 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      # Loopback-only — server/web reach MinIO over the internal Docker network
+      # regardless of these host bindings, which exist only for local debugging
+      # with an S3 client from this machine. Without 127.0.0.1, anyone on the
+      # same network (Tailscale, LAN) could hit MinIO directly with the
+      # credentials from .env, bypassing the app and its auth entirely.
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
     healthcheck:
@@ -24,8 +29,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       # ${POSTGRES_PORT:-5433} on host → 5432 in container. Avoids conflict with
-      # local postgres or any other service using 5432 on the host.
-      - "${POSTGRES_PORT:-5433}:5432"
+      # local postgres or any other service using 5432 on the host. Loopback-only
+      # for the same reason as MinIO below — server reaches Postgres over the
+      # internal Docker network, this binding is only for local `psql`/dotnet ef.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
