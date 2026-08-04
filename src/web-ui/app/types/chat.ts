@@ -63,6 +63,7 @@ export interface AvailableModelDto {
   modelName: string
   providerName: string
   tier: string
+  supportsReasoning: boolean
 }
 
 export interface PromptPresetDto {

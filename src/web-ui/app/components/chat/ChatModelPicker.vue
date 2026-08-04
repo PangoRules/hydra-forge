@@ -14,6 +14,13 @@ const props = withDefaults(
 )
 
 const modelId = defineModel<string | null>({ default: null })
+const effort = defineModel<string | null>('effort', { default: null })
+
+const EFFORT_LEVELS = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' }
+]
 
 const api = useApi()
 const models = ref<AvailableModelDto[]>([])
@@ -21,6 +28,7 @@ const loading = ref(true)
 const open = ref(false)
 
 const storageKey = computed(() => `hydraforge:chat:preferredModel:${props.feature}`)
+const effortStorageKey = computed(() => `hydraforge:chat:preferredEffort:${props.feature}`)
 
 const selectedModel = computed(
   () => models.value.find(m => m.providerModelConfigId === modelId.value) ?? null
@@ -45,11 +53,29 @@ const groups = computed(() => {
   }))
 })
 
+function applyEffortForModel(id: string) {
+  const model = models.value.find(m => m.providerModelConfigId === id)
+  if (model?.supportsReasoning) {
+    const saved = import.meta.client ? localStorage.getItem(effortStorageKey.value) : null
+    effort.value = saved ?? 'medium'
+  } else {
+    effort.value = null
+  }
+}
+
+function selectEffort(value: string) {
+  effort.value = value
+  if (import.meta.client) {
+    localStorage.setItem(effortStorageKey.value, value)
+  }
+}
+
 function selectModel(id: string) {
   modelId.value = id
   if (import.meta.client) {
     localStorage.setItem(storageKey.value, id)
   }
+  applyEffortForModel(id)
   open.value = false
 }
 
@@ -63,6 +89,7 @@ async function fetchModels() {
     const saved = import.meta.client ? localStorage.getItem(storageKey.value) : null
     const savedIsValid = !!saved && models.value.some(m => m.providerModelConfigId === saved)
     modelId.value = savedIsValid ? saved! : models.value[0]!.providerModelConfigId
+    applyEffortForModel(modelId.value)
   } catch {
     // No models configured/reachable — chat falls back to server-side tier routing
   } finally {
@@ -97,6 +124,24 @@ onMounted(fetchModels)
         class="w-80 max-h-96"
         :ui="{ input: 'text-sm' }"
       />
+      <div
+        v-if="selectedModel?.supportsReasoning"
+        data-testid="reasoning-effort-row"
+        class="flex items-center gap-1 border-t border-gray-200 dark:border-gray-700 px-3 py-2"
+      >
+        <span class="text-xs text-muted mr-1">Effort:</span>
+        <UButton
+          v-for="level in EFFORT_LEVELS"
+          :key="level.value"
+          :data-testid="`effort-option-${level.value}`"
+          size="xs"
+          :variant="effort === level.value ? 'solid' : 'ghost'"
+          :color="effort === level.value ? 'primary' : 'neutral'"
+          @click="selectEffort(level.value)"
+        >
+          {{ level.label }}
+        </UButton>
+      </div>
     </template>
   </UPopover>
 </template>
