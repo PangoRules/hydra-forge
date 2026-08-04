@@ -99,17 +99,35 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      # Off the default :80 on purpose — leaves the bare hostname/IP free for
-      # anything else you want to run on this box later. Change the host-side
-      # number here if you'd rather use a different port.
+      # Off the default :80/:443 on purpose — leaves the bare hostname/IP free
+      # for anything else you want to run on this box later. Change the
+      # host-side numbers here if you'd rather use different ones.
       - "8080:80"
+      - "8443:443"
     environment:
       # Full Docker stack defaults. For hybrid mode (API + UI running locally),
       # set in .env: BACKEND_HOST=host.docker.internal:5000  NUXT_HOST=host.docker.internal:3000
       BACKEND_HOST: ${BACKEND_HOST:-server:8080}
       NUXT_HOST: ${NUXT_HOST:-web:3000}
+      # Must match the host-side port in this file's own "8443:443" mapping
+      # below — used only by the HTTPS redirect (http.conf.template doesn't
+      # reference it). Override in .env if you change that port mapping.
+      HTTPS_PORT: ${HTTPS_PORT:-8443}
     volumes:
-      - ./nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # Two templates + a small wrapper (see docker-entrypoint-wrapper.sh)
+      # choose HTTP-only vs HTTPS+redirect at container start based on
+      # whether /etc/nginx/certs has a cert — no manual config either way.
+      # Deliberately NOT under /etc/nginx/templates/: that path is
+      # auto-processed by the base image's own entrypoint before ours runs,
+      # which would render both templates and load them simultaneously
+      # (duplicate `listen 80`).
+      - ./nginx/http.conf.template:/etc/nginx/hydraforge-templates/http.conf.template:ro
+      - ./nginx/https.conf.template:/etc/nginx/hydraforge-templates/https.conf.template:ro
+      - ./nginx/docker-entrypoint-wrapper.sh:/hydraforge-entrypoint.sh:ro
+      # Populated by deploy/tailscale-https-setup.sh — harmless (and expected)
+      # for this to just be an empty directory when HTTPS hasn't been set up.
+      - /etc/hydraforge/tailscale-certs:/etc/nginx/certs:ro
+    command: ["sh", "/hydraforge-entrypoint.sh"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
