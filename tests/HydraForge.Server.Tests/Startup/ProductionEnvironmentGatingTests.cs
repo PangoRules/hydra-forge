@@ -10,6 +10,7 @@ public class ProductionEnvironmentGatingTests
         {
             builder.UseSetting("Environment", environment);
             builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+            builder.UseSetting("Hangfire:Enabled", "false");
             builder.UseSetting(
                 "Jwt:SigningKey",
                 "test-secret-key-that-is-at-least-32-chars-long-for-hs256"

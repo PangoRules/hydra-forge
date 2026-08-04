@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { marked, Renderer } from 'marked'
+import DOMPurify from 'dompurify'
 import type { ChatMessageDto } from '~/types/chat'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
 
@@ -43,10 +44,12 @@ const renderedContent = computed(() => {
   // Strip raw HTML by providing a no-op html renderer
   const renderer = new Renderer()
   renderer.html = () => ''
-  let html = marked.parse(props.message.content, { async: false, breaks: true, renderer }) as string
-  // Strip javascript: and data: link protocols to prevent XSS
-  html = html.replace(/href=["'](?:javascript|data):/gi, 'href="#blocked-')
-  return html
+  const html = marked.parse(props.message.content, { async: false, breaks: true, renderer }) as string
+  // DOMPurify needs a real DOM — no-op on the server, marked's html-stripping
+  // renderer above is what keeps SSR output safe; the client re-render below
+  // is the actual XSS defense (blocks javascript:/data: URIs, dangerous attrs, etc.)
+  if (!import.meta.client) return html
+  return DOMPurify.sanitize(html)
 })
 
 const isUser = computed(() => props.message.role === 'User')
@@ -110,6 +113,7 @@ function getImageSrc(img: ParsedImage): string {
       </div>
 
       <!-- Message bubble -->
+      <!-- eslint-disable vue/no-v-html -- renderedContent is DOMPurify-sanitized above -->
       <div
         class="px-4 py-2 rounded-2xl text-sm leading-relaxed"
         :class="[
@@ -120,6 +124,7 @@ function getImageSrc(img: ParsedImage): string {
         ]"
         v-html="renderedContent"
       />
+      <!-- eslint-enable vue/no-v-html -->
 
       <!-- Timestamp (+ model name for assistant replies) + rollback action -->
       <div

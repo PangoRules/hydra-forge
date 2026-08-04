@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import type { ChatSessionDto, ChatSessionPageDto } from '~/types/chat'
 
 definePageMeta({ middleware: ['auth'] })
@@ -94,6 +95,26 @@ function syncSession(id: string, title: string, status: string) {
   }
 }
 
+const archiveTargetId = ref<string | null>(null)
+
+function requestArchive(id: string) {
+  archiveTargetId.value = id
+}
+
+async function confirmArchive() {
+  const id = archiveTargetId.value
+  if (!id) return
+  try {
+    await api.DELETE(ApiRoutes.Chat.sessions.archive(id))
+    sessions.value = sessions.value.filter(s => s.id !== id)
+    if (activeSessionId.value === id) activeSessionId.value = null
+  } catch {
+    toast.error('Failed to archive chat')
+  } finally {
+    archiveTargetId.value = null
+  }
+}
+
 onMounted(fetchSessions)
 </script>
 
@@ -136,19 +157,34 @@ onMounted(fetchSessions)
           <li
             v-for="s in sessions"
             :key="s.id"
+            class="group relative"
           >
             <button
-              class="w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+              class="w-full text-left px-4 py-3 pr-9 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
               :class="s.id === activeSessionId ? 'bg-gray-100 dark:bg-gray-800' : ''"
               @click="selectSession(s.id)"
             >
               <p class="truncate text-sm font-medium">
                 {{ s.title }}
               </p>
-              <p class="text-xs text-muted">
+              <!-- "Active" is every session's default state pre-close — showing it for
+                   everything is just noise. Only surface the badge once it's meaningful. -->
+              <p
+                v-if="s.status !== 'Active'"
+                class="text-xs text-muted"
+              >
                 {{ s.status }}
               </p>
             </button>
+            <UButton
+              icon="i-lucide-archive"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              title="Archive chat"
+              class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+              @click.stop="requestArchive(s.id)"
+            />
           </li>
         </ul>
       </div>
@@ -188,5 +224,15 @@ onMounted(fetchSessions)
         @send="startNewChat"
       />
     </div>
+
+    <ConfirmDialog
+      :open="archiveTargetId !== null"
+      title="Archive chat"
+      message="This chat will be archived and removed from your list. This can't be undone from here."
+      confirm-text="Archive"
+      confirm-color="error"
+      @update:open="(v: boolean) => { if (!v) archiveTargetId = null }"
+      @confirm="confirmArchive"
+    />
   </div>
 </template>

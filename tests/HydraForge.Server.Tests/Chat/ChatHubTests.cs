@@ -89,7 +89,7 @@ public class ChatHubTests
 
         await _hub.JoinSession(SessionId);
 
-        _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
+        _ = _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class ChatHubTests
 
         await _hub.JoinSession(SessionId);
 
-        _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
+        _ = _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
     }
 
     [Fact]

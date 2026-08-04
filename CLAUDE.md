@@ -274,7 +274,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 7 in progress (Tasks 1–16 done, Tasks 17–24 remaining)
+## Current Phase — Phase 7 in progress (Tasks 1–17 done, Tasks 18–24 remaining)
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 

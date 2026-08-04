@@ -157,6 +157,13 @@ builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
 builder.Services.AddHousekeepingServices();
 
+// AddHangfire's storage configuration is lazy (only opens a Postgres connection when
+// JobStorage is actually resolved, e.g. by UseHangfireDashboard or AddHangfireServer's
+// hosted service) — safe to register unconditionally so IBackgroundJobClient stays
+// resolvable for HangfireBackgroundTaskQueue/ChatSessionService. hangfireEnabled=false
+// (test-only, see ProductionEnvironmentGatingTests) additionally skips AddHangfireServer
+// and UseHangfireDashboard below, which are what would actually touch Postgres.
+var hangfireEnabled = builder.Configuration.GetValue("Hangfire:Enabled", true);
 if (!builder.Environment.IsEnvironment("Test"))
 {
     var connectionString =
@@ -167,7 +174,11 @@ if (!builder.Environment.IsEnvironment("Test"))
     builder.Services.AddHangfire(c =>
         c.UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString))
     );
-    builder.Services.AddHangfireServer();
+
+    if (hangfireEnabled)
+    {
+        builder.Services.AddHangfireServer();
+    }
 }
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
@@ -436,7 +447,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (!app.Environment.IsEnvironment("Test"))
+if (!app.Environment.IsEnvironment("Test") && hangfireEnabled)
 {
     app.UseHangfireDashboard(
         "/hangfire",
