@@ -24,4 +24,7 @@ COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 3000
 
+# Built into the node:alpine base image — not created here, just switched to.
+USER node
+
 CMD ["node", ".output/server/index.mjs"]
