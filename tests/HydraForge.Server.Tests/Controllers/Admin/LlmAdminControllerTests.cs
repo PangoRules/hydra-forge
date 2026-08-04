@@ -423,6 +423,8 @@ public class LlmAdminControllerTests
             "New Name",
             "https://api.new.com",
             null,
+            null,
+            null,
             "Premium",
             null,
             null
@@ -457,7 +459,7 @@ public class LlmAdminControllerTests
             AdminToken
         );
 
-        var input = new UpdateProviderInput("New Name", null, null, null, null, null);
+        var input = new UpdateProviderInput("New Name", null, null, null, null, null, null, null);
         var response = await client.PutAsJsonAsync(
             $"api/admin/providers/{Guid.NewGuid()}",
             input,

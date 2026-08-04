@@ -33,6 +33,8 @@ public sealed record UpdateProviderInput(
     string? Name,
     string? BaseUrl,
     string? ApiKey,
+    string? AdapterType,
+    string? ProviderType,
     string? Tier,
     Guid? FallbackProviderId,
     bool? IsEnabled

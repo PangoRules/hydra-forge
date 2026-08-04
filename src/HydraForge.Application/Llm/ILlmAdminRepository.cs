@@ -14,6 +14,9 @@ public interface ILlmAdminRepository
     Task<int> CountProvidersAsync(string? search, CancellationToken ct = default);
     Task<LlmProvider?> GetProviderByIdAsync(Guid id, CancellationToken ct = default);
     void AddProvider(LlmProvider provider);
+    void RemoveProvider(LlmProvider provider);
+    Task RemoveModelConfigsByProviderAsync(Guid providerId, CancellationToken ct = default);
+    Task ClearFallbackReferencesAsync(Guid providerId, CancellationToken ct = default);
 
     Task<List<ProviderModelConfig>> ListModelConfigsAsync(
         Guid providerId,

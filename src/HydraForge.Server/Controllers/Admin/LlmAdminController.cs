@@ -84,6 +84,15 @@ public class LlmAdminController : ControllerBase
         return result.IsFailure ? ToProblemResult(result.Error) : NoContent();
     }
 
+    [HttpDelete("providers/{id:guid}/permanent")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteProviderPermanently(Guid id, CancellationToken ct)
+    {
+        var result = await _llmAdmin.PermanentlyDeleteProviderAsync(id, ct);
+        return result.IsFailure ? ToProblemResult(result.Error) : NoContent();
+    }
+
     // Models
 
     [HttpGet("providers/{providerId:guid}/models")]

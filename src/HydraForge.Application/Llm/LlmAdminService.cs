@@ -170,6 +170,36 @@ public sealed class LlmAdminService : ILlmAdminService
             provider.ApiKeyEncrypted = _keyVault.Encrypt(input.ApiKey);
         }
 
+        if (input.AdapterType is { } adapterTypeStr)
+        {
+            if (!Enum.TryParse<AdapterType>(adapterTypeStr, true, out var adapterType))
+            {
+                return Result<ProviderDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown adapter type: {adapterTypeStr}"
+                    )
+                );
+            }
+
+            provider.AdapterType = adapterType;
+        }
+
+        if (input.ProviderType is { } providerTypeStr)
+        {
+            if (!Enum.TryParse<ProviderType>(providerTypeStr, true, out var providerType))
+            {
+                return Result<ProviderDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown provider type: {providerTypeStr}"
+                    )
+                );
+            }
+
+            provider.ProviderType = providerType;
+        }
+
         if (input.Tier is { } tierStr)
         {
             if (!Enum.TryParse<ModelTier>(tierStr, true, out var tier))
@@ -213,6 +243,30 @@ public sealed class LlmAdminService : ILlmAdminService
 
         provider.IsEnabled = false;
         provider.UpdatedAt = DateTime.UtcNow;
+        await _repo.SaveChangesAsync(ct);
+
+        return Result.Success();
+    }
+
+    public async Task<Result> PermanentlyDeleteProviderAsync(
+        Guid id,
+        CancellationToken ct = default
+    )
+    {
+        var provider = await _repo.GetProviderByIdAsync(id, ct);
+        if (provider is null)
+        {
+            return Result.Failure(
+                new Error(DomainErrorCodes.Llm.ProviderNotFound, $"Provider not found: {id}")
+            );
+        }
+
+        // Token/image usage records keep their own denormalized ProviderId/ModelName
+        // snapshot and aren't FK-linked to LlmProvider, so historical usage stays
+        // intact and readable after the provider itself is gone.
+        await _repo.RemoveModelConfigsByProviderAsync(id, ct);
+        await _repo.ClearFallbackReferencesAsync(id, ct);
+        _repo.RemoveProvider(provider);
         await _repo.SaveChangesAsync(ct);
 
         return Result.Success();

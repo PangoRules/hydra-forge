@@ -213,10 +213,31 @@ public sealed class OpenAiCompatibleAdapter(
         }
 
         var models = modelsResponse
-            .Data.Select(m => new ProviderModelDto(m.Id, m.Name ?? m.Id, m.Description, m.Metadata))
+            .Data.Select(m => new ProviderModelDto(
+                m.Id,
+                m.Name ?? m.Id,
+                m.Description,
+                WithPricingMetadata(m)
+            ))
             .ToList();
 
         return Result<IReadOnlyList<ProviderModelDto>>.Success(models);
+    }
+
+    // OpenRouter's /models response carries per-model pricing (`pricing.prompt`, $/token)
+    // that our own admin discovery flow otherwise has no way to learn — without this the
+    // Provider Models "Add" form always starts with an empty price and usage cost silently
+    // stays $0 until someone hand-types the rate from OpenRouter's own dashboard.
+    private static Dictionary<string, string>? WithPricingMetadata(OpenAiModel model)
+    {
+        if (model.Pricing?.Prompt is not { } promptPrice || string.IsNullOrWhiteSpace(promptPrice))
+            return model.Metadata;
+
+        var metadata = model.Metadata is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(model.Metadata);
+        metadata["pricePerToken"] = promptPrice;
+        return metadata;
     }
 
     public bool SupportsToolCalling(ProviderModelConfigDto model) => true;
@@ -408,6 +429,15 @@ public sealed class OpenAiCompatibleAdapter(
 
         [JsonPropertyName("metadata")]
         public Dictionary<string, string>? Metadata { get; set; }
+
+        [JsonPropertyName("pricing")]
+        public OpenAiModelPricing? Pricing { get; set; }
+    }
+
+    private sealed class OpenAiModelPricing
+    {
+        [JsonPropertyName("prompt")]
+        public string? Prompt { get; set; }
     }
 
     private sealed class OpenAiEmbeddingRequest

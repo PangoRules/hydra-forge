@@ -48,6 +48,10 @@ const probeError = ref<string | null>(null)
 const confirmTargetId = ref<string | null>(null)
 const confirmCurrentEnabled = ref(false)
 
+// Hard-delete confirm state
+const deleteTarget = ref<ProviderDto | null>(null)
+const deleting = ref(false)
+
 const columns = [
   { accessorKey: 'name', header: 'Name' },
   { accessorKey: 'adapterType', header: 'Adapter' },
@@ -94,6 +98,8 @@ async function handleModalSubmit(data: ProviderFormData) {
       const body: Record<string, unknown> = {
         name: data.name,
         baseUrl: data.baseUrl,
+        adapterType: data.adapterType,
+        providerType: data.providerType,
         tier: data.tier,
         fallbackProviderId: data.fallbackProviderId
       }
@@ -143,6 +149,22 @@ async function confirmToggleDisable() {
     toast.success(`Provider ${wasEnabled ? 'disabled' : 'enabled'}`)
   } catch (e) {
     toast.error((e as Error).message || 'Action failed')
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    await api.DELETE(ApiRoutes.Admin.providers.delete(deleteTarget.value.id))
+    toast.success('Provider permanently deleted')
+    deleteTarget.value = null
+    if (providers.value.length === 1 && page.value > 1) page.value -= 1
+    await loadProviders()
+  } catch (e) {
+    toast.error((e as Error).message || 'Delete failed')
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -236,6 +258,14 @@ onMounted(() => loadProviders())
             >
               Enable
             </UButton>
+            <UButton
+              size="xs"
+              color="error"
+              variant="outline"
+              @click="deleteTarget = row.original"
+            >
+              Delete
+            </UButton>
           </div>
         </template>
 
@@ -281,6 +311,14 @@ onMounted(() => loadProviders())
                   @click="showDisableConfirm(item)"
                 >
                   Enable
+                </UButton>
+                <UButton
+                  size="xs"
+                  color="error"
+                  variant="outline"
+                  @click="deleteTarget = item"
+                >
+                  Delete
                 </UButton>
               </div>
             </div>
@@ -373,6 +411,43 @@ onMounted(() => loadProviders())
             @click="confirmToggleDisable"
           >
             {{ confirmCurrentEnabled ? 'Disable' : 'Enable' }}
+          </UButton>
+        </div>
+      </template>
+    </AppModal>
+
+    <!-- Hard Delete Confirm Modal -->
+    <AppModal
+      :open="!!deleteTarget"
+      title="Delete Provider Permanently"
+      width="sm:max-w-sm"
+      @update:open="deleteTarget = null"
+    >
+      <template #body>
+        <div class="p-4 space-y-2">
+          <p>
+            Permanently delete <strong>{{ deleteTarget?.name }}</strong>? This removes the provider and all of its
+            configured models. This cannot be undone.
+          </p>
+          <p class="text-xs text-muted">
+            Past usage records stay in Usage history — only the provider and model configuration are removed.
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton
+            variant="outline"
+            @click="deleteTarget = null"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            color="error"
+            :loading="deleting"
+            @click="confirmDelete"
+          >
+            Delete Permanently
           </UButton>
         </div>
       </template>

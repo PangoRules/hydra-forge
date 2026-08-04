@@ -3,6 +3,7 @@ import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
+import CollapsibleFilterPanel from '~/components/shared/CollapsibleFilterPanel.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -26,14 +27,14 @@ const filterTo = ref('')
 const page = ref(1)
 const pageSize = ref(50)
 
-const hasActiveFilters = computed(() =>
-  Boolean(
-    filterUserId.value
-    || filterFeature.value.length > 0
-    || filterModel.value
-    || filterFrom.value
-    || filterTo.value
-  )
+const activeFilterCount = computed(() =>
+  [
+    !!filterUserId.value,
+    filterFeature.value.length > 0,
+    !!filterModel.value,
+    !!filterFrom.value,
+    !!filterTo.value
+  ].filter(Boolean).length
 )
 
 const featureOptions = [
@@ -300,91 +301,77 @@ onMounted(() => loadRecords())
         />
       </div>
 
-      <div class="rounded-lg border border-muted p-3">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
-            Filters
-          </h2>
-          <UButton
-            v-if="hasActiveFilters"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-x"
-            label="Reset filters"
-            @click="resetFilters"
+      <CollapsibleFilterPanel
+        :active-count="activeFilterCount"
+        @reset="resetFilters"
+      >
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="relative">
+            <div
+              v-if="selectedUser"
+              class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
+            >
+              <span class="truncate font-medium">{{ selectedUser.username }}</span>
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                size="xs"
+                color="neutral"
+                class="ml-auto size-4"
+                aria-label="Clear user filter"
+                @click="clearUserFilter"
+              />
+            </div>
+            <UInput
+              v-else
+              :model-value="userQuery"
+              placeholder="User ID or name"
+              :loading="userSearchLoading"
+              @update:model-value="onUserInput"
+            />
+            <div
+              v-if="!selectedUser && userResults.length > 0"
+              class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
+            >
+              <button
+                v-for="u in userResults"
+                :key="u.id"
+                type="button"
+                class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
+                @click="selectUser(u)"
+              >
+                {{ u.username }}
+              </button>
+            </div>
+          </div>
+
+          <USelect
+            v-model="filterFeature"
+            :items="featureOptions"
+            multiple
+            placeholder="Feature"
+          />
+          <UInput
+            v-model="filterModel"
+            placeholder="Model"
           />
         </div>
 
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="relative">
-              <div
-                v-if="selectedUser"
-                class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
-              >
-                <span class="truncate font-medium">{{ selectedUser.username }}</span>
-                <UButton
-                  icon="i-lucide-x"
-                  variant="ghost"
-                  size="xs"
-                  color="neutral"
-                  class="ml-auto size-4"
-                  aria-label="Clear user filter"
-                  @click="clearUserFilter"
-                />
-              </div>
-              <UInput
-                v-else
-                :model-value="userQuery"
-                placeholder="User ID or name"
-                :loading="userSearchLoading"
-                @update:model-value="onUserInput"
-              />
-              <div
-                v-if="!selectedUser && userResults.length > 0"
-                class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
-              >
-                <button
-                  v-for="u in userResults"
-                  :key="u.id"
-                  type="button"
-                  class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
-                  @click="selectUser(u)"
-                >
-                  {{ u.username }}
-                </button>
-              </div>
-            </div>
-
-            <USelect
-              v-model="filterFeature"
-              :items="featureOptions"
-              multiple
-              placeholder="Feature"
-            />
+        <div class="flex flex-wrap gap-3">
+          <UFormField label="From">
             <UInput
-              v-model="filterModel"
-              placeholder="Model"
+              v-model="filterFrom"
+              type="date"
             />
-          </div>
-
-          <div class="flex flex-wrap gap-3">
-            <UFormField label="From">
-              <UInput
-                v-model="filterFrom"
-                type="date"
-              />
-            </UFormField>
-            <UFormField label="To">
-              <UInput
-                v-model="filterTo"
-                type="date"
-              />
-            </UFormField>
-          </div>
+          </UFormField>
+          <UFormField label="To">
+            <UInput
+              v-model="filterTo"
+              type="date"
+            />
+          </UFormField>
         </div>
-      </div>
+      </CollapsibleFilterPanel>
     </div>
 
     <!-- Results Table -->

@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
-import { AI_FEATURE_LABELS, TIER_OPTIONS, MAX_TIER_OPTIONS, type LlmTier } from '~/lib/ai-feature'
-import DataTable from '~/components/shared/DataTable.vue'
-import type { TableColumn } from '@nuxt/ui'
+import {
+  AI_FEATURE_LABELS,
+  AI_FEATURE_CATEGORY_ORDER,
+  aiFeatureCategory,
+  TIER_OPTIONS,
+  MAX_TIER_OPTIONS,
+  type LlmTier
+} from '~/lib/ai-feature'
+import CollapsibleSection from '~/components/shared/CollapsibleSection.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -42,13 +48,7 @@ const toast = useAppToast()
 const routings = ref<FeatureRoutingDto[]>([])
 const loading = ref(false)
 const providerModels = ref<ProviderModelOption[]>([])
-
-const columns: TableColumn<FeatureRoutingDto>[] = [
-  { accessorKey: 'feature', header: 'Feature' },
-  { accessorKey: 'defaultTier', header: 'Default Tier' },
-  { accessorKey: 'maxUserTier', header: 'Max User Tier' },
-  { accessorKey: 'id', header: 'Allowed Models' }
-]
+const search = ref('')
 
 // Per-row saving state keyed by feature name
 const savingFeatures = ref<Set<string>>(new Set())
@@ -180,15 +180,15 @@ function moveAllowedModel(feature: string, index: number, delta: number) {
   draftAllowedModels.value = { ...draftAllowedModels.value, [feature]: draft }
 }
 
-function toggleAllowlistEditor(row: { original: FeatureRoutingDto, toggleExpanded: () => void }) {
-  const feature = row.original.feature
+function toggleAllowlistEditor(routing: FeatureRoutingDto) {
+  const feature = routing.feature
   if (!expandedRow.value[feature]) {
     draftAllowedModels.value = {
       ...draftAllowedModels.value,
-      [feature]: [...row.original.allowedModelConfigIds]
+      [feature]: [...routing.allowedModelConfigIds]
     }
   }
-  row.toggleExpanded()
+  expandedRow.value = { ...expandedRow.value, [feature]: !expandedRow.value[feature] }
 }
 
 async function saveAllowlist(feature: string) {
@@ -215,6 +215,28 @@ async function saveAllowlist(feature: string) {
   }
 }
 
+const filteredRoutings = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return routings.value
+  return routings.value.filter((r) => {
+    return featureLabel(r.feature).toLowerCase().includes(q)
+      || aiFeatureCategory(r.feature).toLowerCase().includes(q)
+  })
+})
+
+const groupedRoutings = computed(() => {
+  const groups = new Map<string, FeatureRoutingDto[]>()
+  for (const routing of filteredRoutings.value) {
+    const category = aiFeatureCategory(routing.feature)
+    if (!groups.has(category)) groups.set(category, [])
+    groups.get(category)!.push(routing)
+  }
+  const order = [...AI_FEATURE_CATEGORY_ORDER, 'Other']
+  return order
+    .filter(category => groups.has(category))
+    .map(category => ({ category, items: groups.get(category)! }))
+})
+
 onMounted(() => {
   loadRoutings()
   loadProviderModels()
@@ -223,189 +245,91 @@ onMounted(() => {
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="shrink-0 px-6 pt-6 pb-4 border-b border-default">
-      <h1 class="text-2xl font-bold">
-        AI Feature Routing
-      </h1>
-      <p class="text-sm text-muted mt-1">
-        Configure which LLM tier each AI feature uses by default, the maximum tier accessible to non-admin users, and (optionally) a fixed, ordered list of models that overrides tier-based selection entirely.
-      </p>
+    <div class="shrink-0 px-6 pt-6 pb-4 border-b border-default space-y-3">
+      <div>
+        <h1 class="text-2xl font-bold">
+          AI Feature Routing
+        </h1>
+        <p class="text-sm text-muted mt-1">
+          Configure which LLM tier each AI feature uses by default, the maximum tier accessible to non-admin users, and (optionally) a fixed, ordered list of models that overrides tier-based selection entirely.
+        </p>
+      </div>
+      <UInput
+        v-model="search"
+        icon="i-lucide-search"
+        placeholder="Filter features or categories..."
+        class="max-w-sm"
+      />
     </div>
 
-    <div class="flex-1 min-h-0 px-6 pb-6 pt-4">
-      <DataTable
-        v-model:expanded="expandedRow"
-        :data="routings"
-        :columns="columns"
-        :loading="loading"
-        :page="1"
-        :page-size="routings.length || 11"
-        :total-count="routings.length"
-        :row-key="(item: FeatureRoutingDto) => item.feature"
-        fill-height
-        hide-footer
-      >
-        <template #feature-cell="{ row }">
-          <span class="font-medium">{{ featureLabel(row.original.feature) }}</span>
-        </template>
-        <template #defaultTier-cell="{ row }">
-          <USelect
-            :model-value="(row.original.defaultTier as LlmTier)"
-            :items="TIER_OPTIONS"
-            :disabled="savingFeatures.has(row.original.feature)"
-            class="w-36"
-            @update:model-value="onDefaultTierChange(row.original.feature, $event as LlmTier)"
-          />
-        </template>
-        <template #maxUserTier-cell="{ row }">
-          <USelect
-            :model-value="((row.original.maxUserTier ?? 'Locked') as LlmTier | 'Locked')"
-            :items="MAX_TIER_OPTIONS"
-            :disabled="savingFeatures.has(row.original.feature)"
-            class="w-48"
-            @update:model-value="onMaxUserTierChange(row.original.feature, $event as LlmTier | 'Locked')"
-          />
-        </template>
-        <template #id-cell="{ row }">
-          <div class="flex items-center gap-2">
-            <UBadge
-              v-if="row.original.allowedModelConfigIds.length === 0"
-              variant="subtle"
-              color="neutral"
-              size="sm"
-            >
-              Auto (tier-based)
-            </UBadge>
-            <UBadge
-              v-else
-              variant="subtle"
-              color="primary"
-              size="sm"
-            >
-              {{ row.original.allowedModelConfigIds.length }} model{{ row.original.allowedModelConfigIds.length === 1 ? '' : 's' }}
-            </UBadge>
-            <UButton
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :label="expandedRow[row.original.feature] ? 'Close' : 'Configure'"
-              @click="toggleAllowlistEditor(row)"
-            />
-          </div>
-        </template>
-        <template #expanded="{ row }">
-          <div class="p-4 space-y-3">
-            <p class="text-xs text-muted">
-              Restrict {{ featureLabel(row.original.feature) }} to a fixed set of models, tried in order. Leave empty to fall back to tier-based routing.
-            </p>
-            <div
-              v-if="(draftAllowedModels[row.original.feature] ?? []).length > 0"
-              class="space-y-1"
-            >
-              <div
-                v-for="(modelConfigId, index) in draftAllowedModels[row.original.feature]"
-                :key="modelConfigId"
-                class="flex items-center gap-2 text-sm"
-              >
-                <span class="w-5 text-xs text-muted">{{ index + 1 }}.</span>
-                <span class="flex-1">{{ modelLabel(modelConfigId) }}</span>
-                <UButton
-                  icon="i-lucide-arrow-up"
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  :disabled="index === 0"
-                  aria-label="Move up"
-                  @click="moveAllowedModel(row.original.feature, index, -1)"
-                />
-                <UButton
-                  icon="i-lucide-arrow-down"
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  :disabled="index === (draftAllowedModels[row.original.feature]?.length ?? 0) - 1"
-                  aria-label="Move down"
-                  @click="moveAllowedModel(row.original.feature, index, 1)"
-                />
-                <UButton
-                  icon="i-lucide-x"
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  aria-label="Remove"
-                  @click="removeAllowedModel(row.original.feature, index)"
-                />
-              </div>
-            </div>
-            <USelectMenu
-              :model-value="''"
-              :items="availableModelsFor(row.original.feature)"
-              value-key="value"
-              size="sm"
-              class="w-full max-w-sm"
-              placeholder="+ Add model..."
-              @update:model-value="(v: string) => v && addAllowedModel(row.original.feature, v)"
-            />
-            <div class="flex gap-2 pt-1">
-              <UButton
-                size="sm"
-                :loading="savingAllowlist.has(row.original.feature)"
-                @click="saveAllowlist(row.original.feature)"
-              >
-                Save
-              </UButton>
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="ghost"
-                @click="row.toggleExpanded()"
-              >
-                Cancel
-              </UButton>
-            </div>
-          </div>
-        </template>
+    <div
+      v-if="loading && routings.length === 0"
+      class="flex-1 flex justify-center items-center p-8"
+    >
+      <UIcon
+        name="i-lucide-loader-circle"
+        class="animate-spin size-8"
+      />
+    </div>
 
-        <template #card="{ item }">
-          <UCard>
-            <div class="space-y-3">
+    <div
+      v-else
+      class="flex-1 min-h-0 overflow-auto px-6 pb-6 pt-4 space-y-4"
+    >
+      <p
+        v-if="groupedRoutings.length === 0"
+        class="text-center text-muted p-8"
+      >
+        No features match "{{ search }}".
+      </p>
+
+      <CollapsibleSection
+        v-for="group in groupedRoutings"
+        :key="group.category"
+        :title="group.category"
+        :badge="group.items.length"
+        :default-open="true"
+      >
+        <div
+          v-for="routing in group.items"
+          :key="routing.feature"
+          class="rounded-md border border-muted/60 p-3"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="sm:w-44 shrink-0 font-medium text-sm">
+              {{ featureLabel(routing.feature) }}
+            </div>
+
+            <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
               <div>
-                <p class="font-medium">
-                  {{ featureLabel(item.feature) }}
+                <p class="text-xs text-muted mb-1 sm:hidden">
+                  Default Tier
                 </p>
+                <USelect
+                  :model-value="(routing.defaultTier as LlmTier)"
+                  :items="TIER_OPTIONS"
+                  :disabled="savingFeatures.has(routing.feature)"
+                  class="w-full sm:w-36"
+                  @update:model-value="onDefaultTierChange(routing.feature, $event as LlmTier)"
+                />
               </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <p class="text-xs text-muted mb-1">
-                    Default Tier
-                  </p>
-                  <USelect
-                    :model-value="(item.defaultTier as LlmTier)"
-                    :items="TIER_OPTIONS"
-                    :disabled="savingFeatures.has(item.feature)"
-                    class="w-full"
-                    @update:model-value="onDefaultTierChange(item.feature, $event as LlmTier)"
-                  />
-                </div>
-                <div>
-                  <p class="text-xs text-muted mb-1">
-                    Max User Tier
-                  </p>
-                  <USelect
-                    :model-value="((item.maxUserTier ?? 'Locked') as LlmTier | 'Locked')"
-                    :items="MAX_TIER_OPTIONS"
-                    :disabled="savingFeatures.has(item.feature)"
-                    class="w-full"
-                    @update:model-value="onMaxUserTierChange(item.feature, $event as LlmTier | 'Locked')"
-                  />
-                </div>
-              </div>
+
               <div>
-                <p class="text-xs text-muted mb-1">
-                  Allowed Models
+                <p class="text-xs text-muted mb-1 sm:hidden">
+                  Max User Tier
                 </p>
+                <USelect
+                  :model-value="((routing.maxUserTier ?? 'Locked') as LlmTier | 'Locked')"
+                  :items="MAX_TIER_OPTIONS"
+                  :disabled="savingFeatures.has(routing.feature)"
+                  class="w-full sm:w-48"
+                  @update:model-value="onMaxUserTierChange(routing.feature, $event as LlmTier | 'Locked')"
+                />
+              </div>
+
+              <div class="flex items-center gap-2">
                 <UBadge
-                  v-if="item.allowedModelConfigIds.length === 0"
+                  v-if="routing.allowedModelConfigIds.length === 0"
                   variant="subtle"
                   color="neutral"
                   size="sm"
@@ -418,13 +342,94 @@ onMounted(() => {
                   color="primary"
                   size="sm"
                 >
-                  {{ item.allowedModelConfigIds.length }} model{{ item.allowedModelConfigIds.length === 1 ? '' : 's' }}
+                  {{ routing.allowedModelConfigIds.length }} model{{ routing.allowedModelConfigIds.length === 1 ? '' : 's' }}
                 </UBadge>
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  :label="expandedRow[routing.feature] ? 'Close' : 'Configure'"
+                  @click="toggleAllowlistEditor(routing)"
+                />
               </div>
             </div>
-          </UCard>
-        </template>
-      </DataTable>
+          </div>
+
+          <div
+            v-if="expandedRow[routing.feature]"
+            class="mt-3 pt-3 border-t border-muted/60 space-y-3"
+          >
+            <p class="text-xs text-muted">
+              Restrict {{ featureLabel(routing.feature) }} to a fixed set of models, tried in order. Leave empty to fall back to tier-based routing.
+            </p>
+            <div
+              v-if="(draftAllowedModels[routing.feature] ?? []).length > 0"
+              class="space-y-1"
+            >
+              <div
+                v-for="(modelConfigId, index) in draftAllowedModels[routing.feature]"
+                :key="modelConfigId"
+                class="flex items-center gap-2 text-sm"
+              >
+                <span class="w-5 text-xs text-muted">{{ index + 1 }}.</span>
+                <span class="flex-1">{{ modelLabel(modelConfigId) }}</span>
+                <UButton
+                  icon="i-lucide-arrow-up"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  :disabled="index === 0"
+                  aria-label="Move up"
+                  @click="moveAllowedModel(routing.feature, index, -1)"
+                />
+                <UButton
+                  icon="i-lucide-arrow-down"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  :disabled="index === (draftAllowedModels[routing.feature]?.length ?? 0) - 1"
+                  aria-label="Move down"
+                  @click="moveAllowedModel(routing.feature, index, 1)"
+                />
+                <UButton
+                  icon="i-lucide-x"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  aria-label="Remove"
+                  @click="removeAllowedModel(routing.feature, index)"
+                />
+              </div>
+            </div>
+            <USelectMenu
+              :model-value="''"
+              :items="availableModelsFor(routing.feature)"
+              value-key="value"
+              size="sm"
+              class="w-full max-w-sm"
+              placeholder="+ Add model..."
+              @update:model-value="(v: string) => v && addAllowedModel(routing.feature, v)"
+            />
+            <div class="flex gap-2 pt-1">
+              <UButton
+                size="sm"
+                :loading="savingAllowlist.has(routing.feature)"
+                @click="saveAllowlist(routing.feature)"
+              >
+                Save
+              </UButton>
+              <UButton
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                @click="toggleAllowlistEditor(routing)"
+              >
+                Cancel
+              </UButton>
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
     </div>
   </div>
 </template>

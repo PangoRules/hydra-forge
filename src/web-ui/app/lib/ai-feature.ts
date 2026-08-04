@@ -15,6 +15,35 @@ export const AI_FEATURE_LABELS: Record<string, string> = {
   ChatTitle: 'Chat Title'
 }
 
+export const AI_FEATURE_CATEGORIES: Record<string, string> = {
+  PersonalChat: 'Chat',
+  ProjectChat: 'Chat',
+  ChatTitle: 'Chat',
+  DeepResearch: 'Research & Agents',
+  AgentPipeline: 'Research & Agents',
+  MemoryExtraction: 'Content Processing',
+  NotesClassification: 'Content Processing',
+  DocumentEditing: 'Content Processing',
+  CardReview: 'Content Processing',
+  DocumentEmbedding: 'Content Processing',
+  ImageChat: 'Image',
+  ImageDocument: 'Image',
+  ImageGalleryEditor: 'Image',
+  ProjectNarrative: 'Nightly Jobs'
+}
+
+export const AI_FEATURE_CATEGORY_ORDER = [
+  'Chat',
+  'Research & Agents',
+  'Content Processing',
+  'Image',
+  'Nightly Jobs'
+]
+
+export function aiFeatureCategory(feature: string): string {
+  return AI_FEATURE_CATEGORIES[feature] ?? 'Other'
+}
+
 export type LlmTier = 'Economy' | 'Standard' | 'Premium'
 
 export const TIER_OPTIONS: { label: string, value: LlmTier }[] = [

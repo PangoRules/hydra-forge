@@ -157,6 +157,7 @@ onMounted(() => loadSettings())
           </h2>
           <p class="text-sm text-muted">
             How long archived items, audit logs, and notifications are kept before permanent deletion.
+            No background job deletes them yet — these limits take effect once the housekeeping job ships.
           </p>
         </template>
 
@@ -197,16 +198,6 @@ onMounted(() => loadSettings())
               :min="1"
             />
           </UFormField>
-          <UFormField
-            label="AI Narrative Generation Time"
-            description="UTC"
-          >
-            <UInput
-              v-model="aiNarrativeTimeModel"
-              type="time"
-              class="w-full"
-            />
-          </UFormField>
         </div>
 
         <template #footer>
@@ -215,6 +206,38 @@ onMounted(() => loadSettings())
               label="Save Retention"
               :loading="saving.retention"
               :disabled="retentionHasErrors"
+              @click="saveSettings('retention')"
+            />
+          </div>
+        </template>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Nightly Jobs
+          </h2>
+          <p class="text-sm text-muted">
+            Scheduled background work. A restart is required for a changed time to take effect (Hangfire re-registers the recurring job on startup, not live).
+          </p>
+        </template>
+
+        <UFormField
+          label="AI Narrative Generation Time"
+          description="UTC"
+        >
+          <UInput
+            v-model="aiNarrativeTimeModel"
+            type="time"
+            class="w-full"
+          />
+        </UFormField>
+
+        <template #footer>
+          <div class="flex justify-end">
+            <UButton
+              label="Save Nightly Jobs"
+              :loading="saving.retention"
               @click="saveSettings('retention')"
             />
           </div>

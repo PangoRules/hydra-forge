@@ -169,6 +169,7 @@ export const ApiRoutes = {
       detail: (id: string) => `/api/admin/providers/${id}`,
       update: (id: string) => `/api/admin/providers/${id}`,
       disable: (id: string) => `/api/admin/providers/${id}`,
+      delete: (id: string) => `/api/admin/providers/${id}/permanent`,
       probeModels: (id: string) => `/api/admin/providers/${id}/models`,
       listModels: (id: string) => `/api/admin/providers/${id}/models/configured`,
       createModel: (id: string) => `/api/admin/providers/${id}/models`,

@@ -3,6 +3,7 @@ import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
+import CollapsibleFilterPanel from '~/components/shared/CollapsibleFilterPanel.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -55,15 +56,15 @@ const filterTo = ref('')
 const page = ref(1)
 const pageSize = ref(50)
 
-const hasActiveFilters = computed(() =>
-  Boolean(
-    filterProjectId.value
-    || filterActorId.value
-    || (filterEntityType.value && filterEntityType.value !== '__all__')
-    || (filterAction.value && filterAction.value !== '__all__')
-    || filterFrom.value
-    || filterTo.value
-  )
+const activeFilterCount = computed(() =>
+  [
+    !!filterProjectId.value,
+    !!filterActorId.value,
+    !!(filterEntityType.value && filterEntityType.value !== '__all__'),
+    !!(filterAction.value && filterAction.value !== '__all__'),
+    !!filterFrom.value,
+    !!filterTo.value
+  ].filter(Boolean).length
 )
 
 const entityTypes = [
@@ -493,130 +494,116 @@ onMounted(() => loadEntries())
         Audit Log
       </h1>
 
-      <div class="rounded-lg border border-muted p-3">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
-            Filters
-          </h2>
-          <UButton
-            v-if="hasActiveFilters"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-x"
-            label="Reset filters"
-            @click="resetFilters"
+      <CollapsibleFilterPanel
+        :active-count="activeFilterCount"
+        @reset="resetFilters"
+      >
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="relative">
+            <div
+              v-if="selectedProject"
+              class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
+            >
+              <span class="truncate font-medium">{{ selectedProject.name }}</span>
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                size="xs"
+                color="neutral"
+                class="ml-auto size-4"
+                aria-label="Clear project filter"
+                @click="clearProjectFilter"
+              />
+            </div>
+            <UInput
+              v-else
+              :model-value="projectQuery"
+              placeholder="Project ID or name"
+              :loading="projectSearchLoading"
+              @update:model-value="onProjectInput"
+            />
+            <div
+              v-if="!selectedProject && projectResults.length > 0"
+              class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
+            >
+              <button
+                v-for="p in projectResults"
+                :key="p.id"
+                type="button"
+                class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
+                @click="selectProject(p)"
+              >
+                {{ p.name }}
+              </button>
+            </div>
+          </div>
+
+          <div class="relative">
+            <div
+              v-if="selectedActor"
+              class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
+            >
+              <span class="truncate font-medium">{{ selectedActor.username }}</span>
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                size="xs"
+                color="neutral"
+                class="ml-auto size-4"
+                aria-label="Clear actor filter"
+                @click="clearActorFilter"
+              />
+            </div>
+            <UInput
+              v-else
+              :model-value="actorQuery"
+              placeholder="Actor ID or username"
+              :loading="actorSearchLoading"
+              @update:model-value="onActorInput"
+            />
+            <div
+              v-if="!selectedActor && actorResults.length > 0"
+              class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
+            >
+              <button
+                v-for="u in actorResults"
+                :key="u.id"
+                type="button"
+                class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
+                @click="selectActor(u)"
+              >
+                {{ u.username }}
+              </button>
+            </div>
+          </div>
+
+          <USelect
+            v-model="filterEntityType"
+            :items="entityTypes"
+            placeholder="Entity Type"
+          />
+          <USelect
+            v-model="filterAction"
+            :items="actions"
+            placeholder="Action"
           />
         </div>
 
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="relative">
-              <div
-                v-if="selectedProject"
-                class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
-              >
-                <span class="truncate font-medium">{{ selectedProject.name }}</span>
-                <UButton
-                  icon="i-lucide-x"
-                  variant="ghost"
-                  size="xs"
-                  color="neutral"
-                  class="ml-auto size-4"
-                  aria-label="Clear project filter"
-                  @click="clearProjectFilter"
-                />
-              </div>
-              <UInput
-                v-else
-                :model-value="projectQuery"
-                placeholder="Project ID or name"
-                :loading="projectSearchLoading"
-                @update:model-value="onProjectInput"
-              />
-              <div
-                v-if="!selectedProject && projectResults.length > 0"
-                class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
-              >
-                <button
-                  v-for="p in projectResults"
-                  :key="p.id"
-                  type="button"
-                  class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
-                  @click="selectProject(p)"
-                >
-                  {{ p.name }}
-                </button>
-              </div>
-            </div>
-
-            <div class="relative">
-              <div
-                v-if="selectedActor"
-                class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
-              >
-                <span class="truncate font-medium">{{ selectedActor.username }}</span>
-                <UButton
-                  icon="i-lucide-x"
-                  variant="ghost"
-                  size="xs"
-                  color="neutral"
-                  class="ml-auto size-4"
-                  aria-label="Clear actor filter"
-                  @click="clearActorFilter"
-                />
-              </div>
-              <UInput
-                v-else
-                :model-value="actorQuery"
-                placeholder="Actor ID or username"
-                :loading="actorSearchLoading"
-                @update:model-value="onActorInput"
-              />
-              <div
-                v-if="!selectedActor && actorResults.length > 0"
-                class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
-              >
-                <button
-                  v-for="u in actorResults"
-                  :key="u.id"
-                  type="button"
-                  class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
-                  @click="selectActor(u)"
-                >
-                  {{ u.username }}
-                </button>
-              </div>
-            </div>
-
-            <USelect
-              v-model="filterEntityType"
-              :items="entityTypes"
-              placeholder="Entity Type"
+        <div class="flex flex-wrap gap-3">
+          <UFormField label="From">
+            <UInput
+              v-model="filterFrom"
+              type="date"
             />
-            <USelect
-              v-model="filterAction"
-              :items="actions"
-              placeholder="Action"
+          </UFormField>
+          <UFormField label="To">
+            <UInput
+              v-model="filterTo"
+              type="date"
             />
-          </div>
-
-          <div class="flex flex-wrap gap-3">
-            <UFormField label="From">
-              <UInput
-                v-model="filterFrom"
-                type="date"
-              />
-            </UFormField>
-            <UFormField label="To">
-              <UInput
-                v-model="filterTo"
-                type="date"
-              />
-            </UFormField>
-          </div>
+          </UFormField>
         </div>
-      </div>
+      </CollapsibleFilterPanel>
     </div>
 
     <!-- Results Table (fills remaining height, scrolls internally) -->
