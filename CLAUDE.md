@@ -336,10 +336,11 @@ Phase 6 (LLM Infrastructure) is **complete** (2026-08-02) — see `docs/function
 
 ## Housekeeping & archive
 
-- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is the responsibility of the future `HousekeepingBackgroundService` (deferred across later phase work in `docs/functional-spec.md`).
-- Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`.
+- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is handled by `HousekeepingJob` (`HydraForge.Application/Housekeeping/HousekeepingJob.cs`), a Hangfire recurring job following the same `RecurringJob.AddOrUpdate` post-startup registration pattern as the AI-narrative job.
+- Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`. Run time is `SystemSettings.HousekeepingRunTimeUtc`.
 - DB-level cascades cover `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. Polymorphic `DocumentChunk` (`SourceType`+`SourceId`) is cascaded manually in the housekeeping service.
 - Design spec: `docs/archive/specs/2026-06-03-archive-and-housekeeping-design.md`.
+- **Postgres backups**: `deploy/postgres-backup.sh` — nightly `pg_dump -F custom` to `/etc/hydraforge/backups/` (override via `HYDRAFORGE_BACKUP_DIR`), pruned after `HYDRAFORGE_BACKUP_RETENTION_DAYS` (default 14). The script auto-detects the repo root from its own path and sources `.env` for real `POSTGRES_USER`/`POSTGRES_DB` — safe to run by hand any time (`./deploy/postgres-backup.sh`). Scheduling is opt-in: `deploy/hydraforge-backup.service` + `.timer` (03:30 daily) are systemd unit templates — the `ExecStart`/path inside `.service` needs editing per host (systemd units can't be repo-relative), same caveat as `hydraforge-cert-renew.service`. Install when ready for real persistence: `sudo cp deploy/hydraforge-backup.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now hydraforge-backup.timer`. Restore: `docker compose exec -T postgres pg_restore -U <user> -d <db> < backup.dump`.
 
 ## Docs
 
