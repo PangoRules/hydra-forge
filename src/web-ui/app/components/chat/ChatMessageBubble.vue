@@ -21,6 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const toast = useAppToast()
 const userInitials = computed(() => getInitials(authStore.user?.username, 'U'))
 const modelIcon = computed(() => getModelIcon(props.message.modelName))
 const modelInitials = computed(() => getInitials(props.message.modelName, 'AI'))
@@ -69,6 +70,20 @@ function getImageSrc(img: ParsedImage): string {
     return `data:${mime};base64,${img.base64}`
   }
   return img.url
+}
+
+const copied = ref(false)
+
+async function copyMessage() {
+  try {
+    await navigator.clipboard.writeText(props.message.content)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 1500)
+  } catch {
+    toast.error('Failed to copy message')
+  }
 }
 </script>
 
@@ -137,6 +152,15 @@ function getImageSrc(img: ParsedImage): string {
             · {{ message.modelName }}
           </template>
         </span>
+        <UButton
+          :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+          title="Copy message"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          class="opacity-0 group-hover:opacity-100 transition-opacity"
+          @click="copyMessage"
+        />
         <UButton
           :icon="isUser ? 'i-lucide-pencil' : 'i-lucide-rotate-ccw'"
           :title="isUser ? 'Edit and resend' : 'Regenerate'"
