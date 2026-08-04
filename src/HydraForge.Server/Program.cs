@@ -200,6 +200,31 @@ if (jwtSigningKey.Length < 32)
     );
 }
 
+// AdminSeed:Password — mirrors the Jwt:SigningKey check above. Without this, a
+// deployment that never edited .env.example's AdminSeed__Password ships an admin
+// account whose password is public in this repo's git history.
+var adminSeedPassword = builder.Configuration["AdminSeed:Password"];
+if (adminSeedPassword == "change-this-admin-password")
+{
+    throw new InvalidOperationException(
+        "AdminSeed:Password must be changed from the default placeholder. "
+            + "Set it via environment variable AdminSeed__Password or user-secrets."
+    );
+}
+
+// Llm:EncryptionKey — AddLlmInfrastructure already requires this to be present and
+// well-formed (missing/invalid → InvalidOperationException at startup per its own
+// validation), but it does not reject the specific key .env.example ships, which is
+// syntactically valid and would pass that check silently.
+var llmEncryptionKey = builder.Configuration["Llm:EncryptionKey"];
+if (llmEncryptionKey == "ckaOH71rTlfT6cR0r28AObevMLQSJFCz4goqiV2aMwY=")
+{
+    throw new InvalidOperationException(
+        "Llm:EncryptionKey must be changed from the default placeholder shipped in "
+            + ".env.example. Generate your own with: openssl rand -base64 32"
+    );
+}
+
 var accessTokenMinutes = builder.Configuration.GetValue("Jwt:AccessTokenMinutes", 60);
 
 builder.Services.Configure<Argon2Options>(builder.Configuration.GetSection("Argon2"));
