@@ -254,6 +254,29 @@ async function submitTitleEdit() {
   }
 }
 
+function exportChat() {
+  if (!session.value) return
+  const markdown = session.value.messages
+    .map((m) => {
+      const heading = m.role === MessageRole.User
+        ? '## User'
+        : m.role === MessageRole.Assistant
+          ? '## Assistant'
+          : `## ${m.role}`
+      return `${heading}\n\n${m.content}`
+    })
+    .join('\n\n')
+
+  const safeTitle = session.value.title.replace(/[/\\?%*:|"<>]/g, '-') || 'chat'
+  const blob = new Blob([markdown], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${safeTitle}.md`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function handleRollbackRequest(message: ChatMessageDto) {
   if (!session.value) return
   const idx = session.value.messages.findIndex(m => m.id === message.id)
@@ -359,6 +382,14 @@ onUnmounted(() => {
           size="xs"
           title="Rename chat"
           @click="startEditTitle"
+        />
+        <UButton
+          icon="i-lucide-download"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          title="Export chat"
+          @click="exportChat"
         />
       </template>
     </div>

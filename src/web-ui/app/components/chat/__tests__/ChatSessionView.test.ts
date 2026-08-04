@@ -140,3 +140,46 @@ describe('ChatSessionView — rename', () => {
     expect(mockPATCH).not.toHaveBeenCalled()
   })
 })
+
+describe('ChatSessionView — export', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({
+      data: {
+        ...baseSession,
+        messages: [
+          { id: 'm1', sessionId: 's1', role: 'User', content: 'Hi', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:00:00Z' },
+          { id: 'm2', sessionId: 's1', role: 'Assistant', content: 'Hello!', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:01:00Z' }
+        ]
+      },
+      error: undefined
+    })
+  })
+
+  it('builds a markdown blob with role headers and triggers a download named after the session', async () => {
+    const createObjectURL = vi.fn().mockReturnValue('blob:mock-url')
+    const revokeObjectURL = vi.fn()
+    Object.assign(URL, { createObjectURL, revokeObjectURL })
+
+    const clickSpy = vi.fn()
+    const originalCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = originalCreateElement(tag)
+      if (tag === 'a') el.click = clickSpy
+      return el
+    })
+
+    const wrapper = await mountView()
+    await wrapper.find('[title="Export chat"]').trigger('click')
+
+    expect(createObjectURL).toHaveBeenCalled()
+    const blob = createObjectURL.mock.calls[0]![0] as Blob
+    const text = await blob.text()
+    expect(text).toContain('## User\n\nHi')
+    expect(text).toContain('## Assistant\n\nHello!')
+    expect(clickSpy).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+
+    vi.restoreAllMocks()
+  })
+})
