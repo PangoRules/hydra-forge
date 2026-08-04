@@ -36,6 +36,7 @@ interface ProviderModelConfigDto {
   pricePerToken: number | null
   maxTokens: number | null
   isEnabled: boolean
+  supportsReasoning: boolean
 }
 
 interface CreateModelInput {
@@ -45,6 +46,7 @@ interface CreateModelInput {
   pricePerToken: number | null
   maxTokens: number | null
   isEnabled: boolean
+  supportsReasoning: boolean
 }
 
 interface UpdateModelInput {
@@ -53,6 +55,7 @@ interface UpdateModelInput {
   pricePerToken?: number | null
   maxTokens?: number | null
   isEnabled?: boolean
+  supportsReasoning?: boolean
 }
 
 const MODEL_TIERS = [
@@ -130,6 +133,7 @@ const formTier = ref('Standard')
 const formPricePerToken = ref<number | null>(null)
 const formMaxTokens = ref<number | null>(null)
 const formEnabled = ref(true)
+const formSupportsReasoning = ref(false)
 
 // $/token values for real-world models are tiny (often < 1e-6) and render in
 // ugly scientific notation ("7.6e-7") in a plain number input. Editing in
@@ -208,6 +212,7 @@ function openEditModal(model: ProviderModelConfigDto) {
   formPricePerToken.value = model.pricePerToken
   formMaxTokens.value = model.maxTokens
   formEnabled.value = model.isEnabled
+  formSupportsReasoning.value = model.supportsReasoning
   modalError.value = null
   showModal.value = true
 }
@@ -219,6 +224,7 @@ function resetForm() {
   formPricePerToken.value = null
   formMaxTokens.value = null
   formEnabled.value = true
+  formSupportsReasoning.value = false
 }
 
 async function handleModalSubmit() {
@@ -232,7 +238,8 @@ async function handleModalSubmit() {
         tier: formTier.value,
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
-        isEnabled: formEnabled.value
+        isEnabled: formEnabled.value,
+        supportsReasoning: formSupportsReasoning.value
       }
       await api.PUT(
         ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, editingModel.value.id),
@@ -246,7 +253,8 @@ async function handleModalSubmit() {
         tier: formTier.value,
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
-        isEnabled: formEnabled.value
+        isEnabled: formEnabled.value,
+        supportsReasoning: formSupportsReasoning.value
       }
       await api.POST(
         ApiRoutes.Admin.providers.createModel(selectedProviderId.value),
@@ -571,6 +579,12 @@ onMounted(() => loadProviders())
           <UCheckbox
             v-model="formEnabled"
             label="Enabled"
+          />
+
+          <UCheckbox
+            v-model="formSupportsReasoning"
+            label="Supports reasoning effort"
+            help="Shows the Low/Medium/High effort picker in chat when this model is selected"
           />
         </form>
       </template>
