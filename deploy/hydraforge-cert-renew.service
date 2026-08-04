@@ -1,0 +1,10 @@
+[Unit]
+Description=Renew HydraForge's Tailscale-issued TLS cert and reload nginx
+
+[Service]
+Type=oneshot
+# Path is intentionally not repo-relative — systemd units run outside any
+# working-directory context. Adjust if this repo lives somewhere else on
+# the deployment host.
+ExecStart=/home/pango/Projects/hydra-forge/deploy/tailscale-https-setup.sh
+User=pango

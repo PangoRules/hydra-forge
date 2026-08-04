@@ -95,6 +95,15 @@ docker compose up -d --build server web
 - Default max file size: 10 MB. Supported types: PNG/JPEG/GIF/WebP, PDF, text, JSON/XML/HTML/CSV, ZIP, Office docs
 - `.env.example` has commented MinIO config block — uncomment `FileStorage__Provider=S3` and related vars to enable
 
+### HTTPS (Tailscale cert)
+
+- `deploy/tailscale-https-setup.sh` — auto-detects this machine's tailnet hostname (`tailscale status --json`) and issues a Let's Encrypt cert via `tailscale cert`. Nothing hardcoded to any one deployment; any clone with Tailscale installed can run it as-is. Requires HTTPS Certificates enabled once per tailnet (Tailscale admin console → DNS → HTTPS Certificates).
+- nginx auto-detects the cert at container start (`nginx/docker-entrypoint-wrapper.sh`) and serves HTTPS+redirect+HTTP/2 on 8443 if present, plain HTTP on 8080 otherwise — `docker compose up` needs no config either way, dual-mode by design (see `nginx/http.conf.template` / `nginx/https.conf.template`).
+- Once the cert exists, set in `.env` (the two move together — see `.env.example`): `CORS_ALLOWED_ORIGINS=https://<your-tailnet-hostname>:8443` and `NUXT_PUBLIC_AUTH_COOKIE_SECURE=true`.
+- HTTPS matters beyond cosmetics here: `crypto.randomUUID()` and other secure-context browser APIs don't exist over plain HTTP-by-IP (only HTTPS, or the special-cased `http://localhost`) — this broke mobile chat in production before HTTPS was set up. HTTP/2 (unlocked by TLS) also removes the browser's ~6-connections-per-origin cap, which otherwise lets a slow SignalR handshake starve ordinary REST calls.
+- `deploy/hydraforge-cert-renew.service`/`.timer` — weekly systemd timer re-running the same setup script (idempotent, no-ops if the cert doesn't need renewal yet) and reloading nginx. Install once: `sudo cp deploy/hydraforge-cert-renew.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now hydraforge-cert-renew.timer`.
+- Full design rationale: `docs/superpowers/plans/2026-08-04-https-tailscale-cert.md`.
+
 ### Local dev database
 
 - Docker compose exposes Postgres on host port **5433** (not 5432) to avoid collisions with local Postgres or other services on the host.
