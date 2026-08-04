@@ -6,10 +6,19 @@ import { MessageRole } from '~/types/chat'
 
 const props = defineProps<{
   sessionId: string
+  /** A message to send automatically once connected — used when this session was just
+   * created from a compose-first "new chat" box so the first message isn't lost. */
+  initialMessage?: string | null
+  initialPresetId?: string | null
+  initialModelId?: string | null
 }>()
 
 const emit = defineEmits<{
-  close: []
+  initialMessageSent: []
+  /** Fires after every successful fetch — lets the sidebar list stay in sync with
+   * this session's title (e.g. the AI-generated title landing after the first
+   * exchange) without polling or a shared store. */
+  sessionRefreshed: [id: string, title: string, status: string]
 }>()
 
 const toast = useAppToast()
@@ -18,7 +27,6 @@ const api = useApi()
 const session = ref<ChatSessionDetailDto | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const isOpen = ref(true)
 
 // Chat stream composable
 const chatStream = useChatStream()
@@ -27,12 +35,13 @@ const chatStream = useChatStream()
 // look up its content for streaming display
 const streamingMessageId = ref<string | null>(null)
 
-// Track the selected preset/personality ID for the chat session
-const selectedPresetId = ref<string | null>(null)
+// Last stream failure, shown inline in the message list until the next send
+const streamError = ref<string | null>(null)
 
 // Register stream callbacks
 chatStream.onStreamStart((messageId) => {
   streamingMessageId.value = messageId
+  streamError.value = null
 })
 
 chatStream.onStreamDone((_messageId) => {
@@ -41,8 +50,9 @@ chatStream.onStreamDone((_messageId) => {
   fetchSession()
 })
 
-chatStream.onStreamError((_messageId) => {
+chatStream.onStreamError((_messageId, _code, message) => {
   streamingMessageId.value = null
+  streamError.value = message
 })
 
 async function fetchSession() {
@@ -55,6 +65,7 @@ async function fetchSession() {
     session.value = data as ChatSessionDetailDto
     // API returns newest-first; sort chronologically for display
     session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Failed to load chat session'
   } finally {
@@ -62,13 +73,14 @@ async function fetchSession() {
   }
 }
 
-async function handleSend(content: string, presetId?: string | null) {
+async function handleSend(
+  content: string,
+  presetId?: string | null,
+  preferredModelId?: string | null
+) {
   if (!session.value) return
 
-  // Update selected preset ID when user picks one
-  if (presetId !== undefined) {
-    selectedPresetId.value = presetId
-  }
+  streamError.value = null
 
   // Add user message optimistically
   const userMsg: ChatMessageDto = {
@@ -86,7 +98,12 @@ async function handleSend(content: string, presetId?: string | null) {
   session.value.messages.push(userMsg)
 
   try {
-    await chatStream.send(props.sessionId, content, selectedPresetId.value ?? undefined)
+    await chatStream.send(
+      props.sessionId,
+      content,
+      presetId ?? undefined,
+      preferredModelId ?? undefined
+    )
   } catch (err) {
     // Remove optimistic user message on failure
     const idx = session.value.messages.findIndex(m => m.id === userMsg.id)
@@ -99,14 +116,21 @@ async function handleCancel() {
   await chatStream.cancel(props.sessionId)
 }
 
-function handleClose() {
-  emit('close')
-}
-
 onMounted(async () => {
   await fetchSession()
   await chatStream.connect()
   await chatStream.join(props.sessionId)
+  if (props.initialMessage) {
+    // Tell the parent to forget this pending message before sending — the
+    // parent owns the one-shot bookkeeping (this component gets recreated
+    // on every re-entry to the session via :key, so a local flag here
+    // wouldn't survive across visits and the message would resend forever).
+    const message = props.initialMessage
+    const presetId = props.initialPresetId
+    const modelId = props.initialModelId
+    emit('initialMessageSent')
+    await handleSend(message, presetId, modelId)
+  }
 })
 
 onUnmounted(() => {
@@ -116,43 +140,50 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AppModal
-    v-model:open="isOpen"
-    :title="session?.title ?? 'Chat'"
-    width="sm:max-w-2xl"
-    :loading="loading"
-    :error="error"
-    @close="handleClose"
-  >
-    <template #body>
-      <div class="flex flex-col h-[60vh] min-h-[400px]">
-        <!-- Message list -->
-        <ChatMessageList
-          :messages="session?.messages ?? []"
-          :streaming-message="chatStream.streamingMessage.value"
-        />
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <h2 class="font-semibold truncate">
+        {{ session?.title ?? 'Chat' }}
+      </h2>
+    </div>
 
-        <!-- Input -->
-        <ChatInput
-          :disabled="chatStream.isStreaming.value || session?.status !== 'Active'"
-          :preset-id="selectedPresetId"
-          @send="handleSend"
-          @cancel="handleCancel"
+    <div
+      v-if="loading"
+      class="flex-1 flex items-center justify-center text-muted text-sm"
+    >
+      Loading…
+    </div>
+    <div
+      v-else-if="error"
+      class="flex-1 flex items-center justify-center text-error text-sm p-4 text-center"
+    >
+      {{ error }}
+    </div>
+    <template v-else>
+      <ChatMessageList
+        :messages="session?.messages ?? []"
+        :streaming-message="chatStream.streamingMessage.value"
+        :stream-error="streamError"
+      />
+
+      <ChatInput
+        :disabled="chatStream.isStreaming.value || session?.status !== 'Active'"
+        @send="handleSend"
+        @cancel="handleCancel"
+      >
+        <template
+          v-if="chatStream.isStreaming.value"
+          #cancel
         >
-          <template
-            v-if="chatStream.isStreaming.value"
-            #cancel
-          >
-            <UButton
-              icon="i-lucide-x"
-              variant="ghost"
-              size="xs"
-              class="absolute right-2 bottom-2"
-              @click="handleCancel"
-            />
-          </template>
-        </ChatInput>
-      </div>
+          <UButton
+            icon="i-lucide-x"
+            variant="ghost"
+            size="xs"
+            class="absolute right-2 bottom-2"
+            @click="handleCancel"
+          />
+        </template>
+      </ChatInput>
     </template>
-  </AppModal>
+  </div>
 </template>

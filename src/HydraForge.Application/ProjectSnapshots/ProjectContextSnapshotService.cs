@@ -194,6 +194,7 @@ public class ProjectContextSnapshotService(
 
     public async Task RefreshAsync(Guid projectId, CancellationToken ct = default)
     {
+        var project = await projectRepo.GetByIdAsync(projectId, ct);
         var columns = await columnRepo.GetByProjectIdAsync(projectId, ct);
         var activeCards = await cardRepo.ListByProjectAsync(
             projectId,
@@ -203,6 +204,8 @@ public class ProjectContextSnapshotService(
         var activeRelationships = await relationshipRepo.ListActiveByProjectAsync(projectId, ct);
 
         var templateContent = ProjectContextSnapshotRenderer.Render(
+            project?.Name ?? string.Empty,
+            project?.Description ?? string.Empty,
             columns,
             activeCards,
             activeRelationships

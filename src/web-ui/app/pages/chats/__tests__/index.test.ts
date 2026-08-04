@@ -15,7 +15,12 @@ mockNuxtImport('useToast', () => () => ({ add: vi.fn() }))
 describe('chats/index.vue', () => {
   beforeEach(() => {
     mockGET.mockReset()
-    mockGET.mockResolvedValue({ data: { items: [], totalCount: 0 }, error: undefined })
+    mockGET.mockImplementation((url: string) => {
+      if (url.includes('/presets')) {
+        return Promise.resolve({ data: [], error: undefined })
+      }
+      return Promise.resolve({ data: { items: [], totalCount: 0 }, error: undefined })
+    })
   })
 
   it('renders a Chats heading and an enabled New Chat button', async () => {
@@ -26,9 +31,11 @@ describe('chats/index.vue', () => {
     expect(button.attributes('disabled')).toBeUndefined()
   })
 
-  it('shows the empty state once the session list loads', async () => {
+  it('shows the empty state and a compose box when no session is selected', async () => {
     const wrapper = await mountSuspended(ChatsPage)
     await flushPromises()
     expect(wrapper.text()).toContain('No chats yet')
+    expect(wrapper.text()).toContain('Type a message below to start a new chat.')
+    expect(wrapper.find('textarea').exists()).toBe(true)
   })
 })

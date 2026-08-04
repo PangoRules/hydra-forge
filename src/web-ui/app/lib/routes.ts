@@ -249,5 +249,9 @@ export const ApiRoutes = {
     },
     search: (q: string, projectId?: string) =>
       `/api/chat/search?q=${encodeURIComponent(q)}${projectId ? `&projectId=${projectId}` : ''}`
+  },
+
+  Llm: {
+    models: (feature: string) => `/api/llm/models?feature=${feature}`
   }
 } as const

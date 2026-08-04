@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import DataTable from '~/components/shared/DataTable.vue'
+import ClientDataTable from '~/components/shared/ClientDataTable.vue'
 import AppModal from '~/components/shared/AppModal.vue'
 
 definePageMeta({ middleware: ['auth'] })
@@ -490,7 +491,7 @@ onMounted(() => loadProviders())
     <AppModal
       v-model:open="showProbeModal"
       title="Discovered Models"
-      width="sm:max-w-2xl"
+      width="sm:max-w-3xl"
       :loading="probeLoading"
       :error="probeError"
       @close="showProbeModal = false"
@@ -512,44 +513,38 @@ onMounted(() => loadProviders())
             placeholder="Filter by name or model ID..."
             class="w-full"
           />
-          <p class="text-xs text-muted">
-            {{ filteredProbeResults.length }} of {{ probeResults.length }} models
-          </p>
-          <div class="max-h-96 overflow-y-auto">
-            <UTable
-              :data="filteredProbeResults"
-              :columns="probeColumns"
-              :get-row-id="(m: ProbedModelDto) => m.modelId"
-              sticky="header"
-              class="w-full"
-            >
-              <template #modelId-cell="{ row }">
-                <code class="text-xs">{{ row.original.modelId }}</code>
-              </template>
-              <template #name-cell="{ row }">
-                {{ row.original.name || row.original.modelId }}
-              </template>
-              <template #actions-cell="{ row }">
-                <div class="flex justify-end">
-                  <UBadge
-                    v-if="configuredModelIds.has(row.original.modelId)"
-                    color="neutral"
-                    variant="subtle"
-                  >
-                    Already added
-                  </UBadge>
-                  <UButton
-                    v-else
-                    size="xs"
-                    color="neutral"
-                    @click="addProbedModel(row.original)"
-                  >
-                    Add
-                  </UButton>
-                </div>
-              </template>
-            </UTable>
-          </div>
+          <ClientDataTable
+            :data="filteredProbeResults"
+            :columns="probeColumns"
+            :row-key="(m: ProbedModelDto) => m.modelId"
+            :default-page-size="10"
+          >
+            <template #modelId-cell="{ row }">
+              <code class="text-xs truncate block max-w-56">{{ row.original.modelId }}</code>
+            </template>
+            <template #name-cell="{ row }">
+              <span class="truncate block max-w-40">{{ row.original.name || row.original.modelId }}</span>
+            </template>
+            <template #actions-cell="{ row }">
+              <div class="flex justify-end">
+                <UBadge
+                  v-if="configuredModelIds.has(row.original.modelId)"
+                  color="neutral"
+                  variant="subtle"
+                >
+                  Already added
+                </UBadge>
+                <UButton
+                  v-else
+                  size="xs"
+                  color="neutral"
+                  @click="addProbedModel(row.original)"
+                >
+                  Add
+                </UButton>
+              </div>
+            </template>
+          </ClientDataTable>
         </div>
       </template>
       <template #footer>

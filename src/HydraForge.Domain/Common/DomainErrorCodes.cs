@@ -150,6 +150,7 @@ public static class DomainErrorCodes
         public const string StreamInProgress = "CHAT_STREAM_IN_PROGRESS";
         public const string ModelNoVision = "CHAT_MODEL_NO_VISION";
         public const string SummaryFailed = "CHAT_SUMMARY_FAILED";
+        public const string TitleFailed = "CHAT_TITLE_FAILED";
         public const string PresetGroupNotFound = "CHAT_PRESET_GROUP_NOT_FOUND";
         public const string PresetGroupNotOwner = "CHAT_PRESET_GROUP_NOT_OWNER";
         public const string PresetNotFound = "CHAT_PRESET_NOT_FOUND";

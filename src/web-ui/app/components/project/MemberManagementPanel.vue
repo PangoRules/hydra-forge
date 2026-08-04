@@ -156,7 +156,7 @@ function confirmSelfRemove() {
       class="flex justify-center py-4"
     >
       <UIcon
-        name="i-lucide-loader"
+        name="i-lucide-loader-circle"
         class="animate-spin size-5"
       />
     </div>

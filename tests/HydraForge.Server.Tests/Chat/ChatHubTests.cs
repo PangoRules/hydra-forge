@@ -38,6 +38,7 @@ public class ChatHubTests
     private readonly LlmCallGuard _llmCallGuard;
     private readonly IUserTokenBudgetRepository _budgetRepo;
     private readonly IContextCompressor _contextCompressor;
+    private readonly IChatTitleGenerator _titleGenerator;
     private readonly ILogger<ChatHub> _logger;
     private readonly IOptions<LlmOptions> _llmOptions;
     private readonly IChatHub _mockCaller;
@@ -70,6 +71,15 @@ public class ChatHubTests
             .GetByUserIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((UserTokenBudget?)null);
         _llmCallGuard = new LlmCallGuard(_budgetRepo, _usageRecorder);
+        _titleGenerator = Substitute.For<IChatTitleGenerator>();
+        _titleGenerator
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<string>.Failure(new Error("TEST_NO_TITLE", "not configured in test")));
         _logger = Substitute.For<ILogger<ChatHub>>();
         _llmOptions = Substitute.For<IOptions<LlmOptions>>();
         _llmOptions.Value.Returns(new LlmOptions());
@@ -106,6 +116,7 @@ public class ChatHubTests
             _usageRecorder,
             _llmCallGuard,
             _contextCompressor,
+            _titleGenerator,
             _logger,
             _llmOptions
         )

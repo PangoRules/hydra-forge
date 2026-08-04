@@ -19,6 +19,9 @@ importers:
       '@iconify-json/simple-icons':
         specifier: ^1.2.92
         version: 1.2.92
+      '@iconify/vue':
+        specifier: ^5.0.1
+        version: 5.0.1(vue@3.5.40(typescript@6.0.3))
       '@microsoft/signalr':
         specifier: ^10.0.0
         version: 10.0.0

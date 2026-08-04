@@ -234,7 +234,12 @@ export function useChatStream() {
    * 1. POST to persist the user message → get messageId
    * 2. Invoke SendMessage on the hub to trigger streaming response
    */
-  async function send(sessionId: string, content: string, presetId?: string) {
+  async function send(
+    sessionId: string,
+    content: string,
+    presetId?: string,
+    preferredProviderModelConfigId?: string
+  ) {
     if (sendingLock.value) return
     if (!connection) throw new Error('Not connected')
     sendingLock.value = true
@@ -247,12 +252,14 @@ export function useChatStream() {
       if (!result.data) throw new Error('Failed to send message: no response')
       const data = result.data
 
-      // Step 2: invoke streaming — pass presetId as raw string, not Guid wrapper
+      // Step 2: invoke streaming — presetId/preferredProviderModelConfigId as raw
+      // strings, not Guid wrappers
       await connection.invoke(
         'SendMessage',
         sessionId,
         data.id,
-        presetId ?? null
+        presetId ?? null,
+        preferredProviderModelConfigId ?? null
       )
     } finally {
       sendingLock.value = false

@@ -6,7 +6,11 @@ namespace HydraForge.Application.ProjectSnapshots;
 
 public static class ProjectContextSnapshotRenderer
 {
+    private const int CardDescriptionMaxLength = 200;
+
     public static string Render(
+        string projectName,
+        string projectDescription,
         IReadOnlyList<Column> columns,
         IReadOnlyList<Card> cards,
         IReadOnlyList<CardRelationship> relationships
@@ -64,6 +68,7 @@ public static class ProjectContextSnapshotRenderer
                                 id = card.Id,
                                 cardNumber = $"#{card.CardNumber}",
                                 title = card.Title,
+                                description = Truncate(card.Description, CardDescriptionMaxLength),
                                 column = col.Name,
                                 type = card.Type.ToString(),
                                 blockers,
@@ -82,8 +87,14 @@ public static class ProjectContextSnapshotRenderer
             recentMoved,
         };
 
-        return JsonSerializer.Serialize(
+        var snapshot = new
+        {
+            project = new { name = projectName, description = projectDescription },
             board,
+        };
+
+        return JsonSerializer.Serialize(
+            snapshot,
             new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -91,4 +102,7 @@ public static class ProjectContextSnapshotRenderer
             }
         );
     }
+
+    private static string Truncate(string text, int maxLength) =>
+        text.Length > maxLength ? text[..maxLength].TrimEnd() + "…" : text;
 }

@@ -4,13 +4,53 @@ import type { ChatSessionDto, ChatSessionPageDto } from '~/types/chat'
 
 definePageMeta({ middleware: ['auth'] })
 
+const TITLE_MAX_LENGTH = 60
+
 const api = useApi()
 const toast = useAppToast()
 
+const route = useRoute()
+
 const sessions = ref<ChatSessionDto[]>([])
 const loading = ref(true)
-const creating = ref(false)
+const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
+
+// Arriving via the top-nav "+ New Chat" button (?compose=1) means "go straight to
+// composing" — start collapsed. Arriving via the Chats menu item (no query) means
+// "browse my chats" — start expanded. Either way the user can toggle it themselves.
+const sidebarOpen = ref(route.query.compose !== '1')
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value
+}
+
+// Selecting a chat or starting a new one never touches sidebarOpen — only the
+// toggle button and the initial ?compose=1 landing state do. The user's own
+// open/closed choice sticks until they change it themselves.
+function selectSession(id: string) {
+  activeSessionId.value = id
+}
+
+function startCompose() {
+  activeSessionId.value = null
+}
+
+// Keyed by sessionId — the first message of a compose-first "new chat", handed
+// to ChatSessionView as a one-shot prop on the mount right after creation.
+// Plain object, not a ref: only ever read once (in ChatSessionView's onMounted),
+// so it doesn't need to be reactive.
+const pendingFirstMessage: Record<
+  string,
+  { content: string, presetId: string | null, modelId: string | null }
+> = {}
+
+function deriveTitle(content: string): string {
+  const firstLine = content.trim().split('\n')[0] ?? content.trim()
+  return firstLine.length > TITLE_MAX_LENGTH
+    ? `${firstLine.slice(0, TITLE_MAX_LENGTH)}…`
+    : firstLine
+}
 
 async function fetchSessions() {
   loading.value = true
@@ -24,20 +64,33 @@ async function fetchSessions() {
   }
 }
 
-async function createSession() {
-  creating.value = true
+async function startNewChat(content: string, presetId?: string | null, modelId?: string | null) {
+  starting.value = true
   try {
     const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), {
-      body: { title: `Test Chat ${new Date().toLocaleString()}` }
+      body: { title: deriveTitle(content) }
     })
     if (data) {
       sessions.value.unshift(data)
+      pendingFirstMessage[data.id] = {
+        content,
+        presetId: presetId ?? null,
+        modelId: modelId ?? null
+      }
       activeSessionId.value = data.id
     }
   } catch {
     toast.error('Failed to create chat session')
   } finally {
-    creating.value = false
+    starting.value = false
+  }
+}
+
+function syncSession(id: string, title: string, status: string) {
+  const entry = sessions.value.find(s => s.id === id)
+  if (entry) {
+    entry.title = title
+    entry.status = status as ChatSessionDto['status']
   }
 }
 
@@ -45,53 +98,95 @@ onMounted(fetchSessions)
 </script>
 
 <template>
-  <div class="p-8 max-w-2xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold">
-        Chats
-      </h1>
-      <UButton
-        label="New Chat"
-        icon="i-lucide-plus"
-        :loading="creating"
-        @click="createSession"
-      />
-    </div>
+  <div class="flex-1 flex min-h-0 relative">
+    <!-- Session list -->
+    <div
+      class="shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 overflow-hidden transition-[width] duration-200"
+      :class="sidebarOpen ? 'w-72' : 'w-0 border-r-0'"
+    >
+      <div class="w-72 h-full flex flex-col min-h-0">
+        <div class="shrink-0 flex items-center justify-between p-4">
+          <h1 class="text-lg font-bold">
+            Chats
+          </h1>
+          <UButton
+            icon="i-lucide-plus"
+            size="sm"
+            title="Start a new chat"
+            @click="startCompose"
+          />
+        </div>
 
-    <div
-      v-if="loading"
-      class="text-muted text-sm"
-    >
-      Loading…
-    </div>
-    <div
-      v-else-if="sessions.length === 0"
-      class="text-center text-muted text-sm py-12"
-    >
-      No chats yet. Start one with "New Chat".
-    </div>
-    <ul
-      v-else
-      class="divide-y divide-gray-200 dark:divide-gray-700"
-    >
-      <li
-        v-for="s in sessions"
-        :key="s.id"
-      >
-        <button
-          class="w-full text-left py-3 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md flex items-center justify-between"
-          @click="activeSessionId = s.id"
+        <div
+          v-if="loading"
+          class="text-muted text-sm px-4"
         >
-          <span class="truncate">{{ s.title }}</span>
-          <span class="text-xs text-muted shrink-0 ml-2">{{ s.status }}</span>
-        </button>
-      </li>
-    </ul>
+          Loading…
+        </div>
+        <div
+          v-else-if="sessions.length === 0"
+          class="text-center text-muted text-sm px-4 py-8"
+        >
+          No chats yet — type below to start one.
+        </div>
+        <ul
+          v-else
+          class="flex-1 min-h-0 overflow-y-auto"
+        >
+          <li
+            v-for="s in sessions"
+            :key="s.id"
+          >
+            <button
+              class="w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+              :class="s.id === activeSessionId ? 'bg-gray-100 dark:bg-gray-800' : ''"
+              @click="selectSession(s.id)"
+            >
+              <p class="truncate text-sm font-medium">
+                {{ s.title }}
+              </p>
+              <p class="text-xs text-muted">
+                {{ s.status }}
+              </p>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
 
+    <UButton
+      :icon="sidebarOpen ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right'"
+      size="xs"
+      color="neutral"
+      variant="solid"
+      :title="sidebarOpen ? 'Hide chat list' : 'Show chat list'"
+      class="absolute top-1/2 -translate-y-1/2 z-10 rounded-full shadow transition-[left] duration-200"
+      :style="{ left: sidebarOpen ? '272px' : '0px' }"
+      @click="toggleSidebar"
+    />
+
+    <!-- Active chat -->
     <ChatSessionView
       v-if="activeSessionId"
+      :key="activeSessionId"
       :session-id="activeSessionId"
-      @close="activeSessionId = null"
+      :initial-message="pendingFirstMessage[activeSessionId]?.content ?? null"
+      :initial-preset-id="pendingFirstMessage[activeSessionId]?.presetId ?? null"
+      :initial-model-id="pendingFirstMessage[activeSessionId]?.modelId ?? null"
+      @initial-message-sent="delete pendingFirstMessage[activeSessionId!]"
+      @session-refreshed="syncSession"
     />
+    <div
+      v-else
+      class="flex-1 flex flex-col min-h-0"
+    >
+      <div class="flex-1 flex items-center justify-center text-muted text-sm">
+        Type a message below to start a new chat.
+      </div>
+      <ChatInput
+        :disabled="starting"
+        @send="startNewChat"
+      />
+    </div>
   </div>
 </template>

@@ -54,7 +54,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
       class="flex justify-center items-center p-8 min-h-50"
     >
       <UIcon
-        name="i-lucide-loader"
+        name="i-lucide-loader-circle"
         class="animate-spin size-8"
       />
     </div>

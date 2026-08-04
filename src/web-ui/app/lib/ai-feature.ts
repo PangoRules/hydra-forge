@@ -11,7 +11,8 @@ export const AI_FEATURE_LABELS: Record<string, string> = {
   ImageDocument: 'Image Document',
   ImageGalleryEditor: 'Image Gallery Editor',
   ProjectNarrative: 'Project Narrative (nightly)',
-  DocumentEmbedding: 'Document Embedding'
+  DocumentEmbedding: 'Document Embedding',
+  ChatTitle: 'Chat Title'
 }
 
 export type LlmTier = 'Economy' | 'Standard' | 'Premium'

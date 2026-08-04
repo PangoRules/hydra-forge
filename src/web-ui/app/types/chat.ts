@@ -58,6 +58,23 @@ export interface ChatSessionPageDto {
   totalCount: number
 }
 
+export interface AvailableModelDto {
+  providerModelConfigId: string
+  modelName: string
+  providerName: string
+  tier: string
+}
+
+export interface PromptPresetDto {
+  id: string
+  groupId: string | null
+  name: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+}
+
 export interface CreateChatSessionRequest {
   title: string
   folderId?: string | null

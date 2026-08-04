@@ -29,6 +29,7 @@ public class ChatHub(
     IUsageRecorder usageRecorder,
     LlmCallGuard llmCallGuard,
     IContextCompressor contextCompressor,
+    IChatTitleGenerator titleGenerator,
     ILogger<ChatHub> logger,
     IOptions<LlmOptions> llmOptions
 ) : Hub<IChatHub>
@@ -79,7 +80,12 @@ public class ChatHub(
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, SessionGroup(sessionId));
     }
 
-    public async Task SendMessage(Guid sessionId, Guid userMessageId, Guid? presetId)
+    public async Task SendMessage(
+        Guid sessionId,
+        Guid userMessageId,
+        Guid? presetId,
+        Guid? preferredProviderModelConfigId = null
+    )
     {
         var userId = Context.User!.GetRequiredUserId();
 
@@ -218,6 +224,7 @@ public class ChatHub(
             )
                 .Reverse()
                 .ToList();
+            var isFirstMessage = history.Count == 1;
             foreach (var msg in history)
             {
                 var role = msg.Role switch
@@ -271,7 +278,8 @@ public class ChatHub(
                 userId,
                 session.ProjectId,
                 estimatedTokens,
-                cts.Token
+                cts.Token,
+                preferredProviderModelConfigId
             );
             if (!routeResult.IsSuccess)
             {
@@ -365,6 +373,28 @@ public class ChatHub(
                 CreatedAt = DateTime.UtcNow,
             };
             await messageRepo.AddAsync(assistantMessage);
+
+            if (isFirstMessage)
+            {
+                try
+                {
+                    var titleResult = await titleGenerator.GenerateTitleAsync(
+                        userId,
+                        userMessage.Content,
+                        content,
+                        cts.Token
+                    );
+                    if (titleResult.IsSuccess)
+                    {
+                        session.UpdateSettings(titleResult.Value, null, null, null, null);
+                        await sessionRepo.UpdateAsync(session, cts.Token);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Chat title generation failed for session {SessionId}", sessionId);
+                }
+            }
 
             var recordInput = new TokenUsageRecordInput(
                 UserId: userId,

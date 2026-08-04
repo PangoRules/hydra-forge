@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { marked, Renderer } from 'marked'
 import type { ChatMessageDto } from '~/types/chat'
+import { getInitials, getModelIcon } from '~/lib/chat-avatar'
 
 const props = defineProps<{
   message: ChatMessageDto
   isStreaming?: boolean
 }>()
+
+const authStore = useAuthStore()
+const userInitials = computed(() => getInitials(authStore.user?.username, 'U'))
+const modelIcon = computed(() => getModelIcon(props.message.modelName))
+const modelInitials = computed(() => getInitials(props.message.modelName, 'AI'))
 
 interface ParsedImage {
   url: string
@@ -59,7 +65,8 @@ function getImageSrc(img: ParsedImage): string {
   >
     <!-- Avatar -->
     <UAvatar
-      :name="isUser ? 'You' : 'AI'"
+      :text="isUser ? userInitials : (modelIcon ? undefined : modelInitials)"
+      :icon="isUser ? undefined : (modelIcon ?? undefined)"
       :class="isUser ? 'bg-primary text-white' : 'bg-gray-300 dark:bg-gray-600'"
       size="sm"
       class="shrink-0 mt-0.5"
@@ -103,9 +110,12 @@ function getImageSrc(img: ParsedImage): string {
         v-html="renderedContent"
       />
 
-      <!-- Timestamp -->
+      <!-- Timestamp (+ model name for assistant replies) -->
       <span class="text-xs text-muted px-1">
         {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+        <template v-if="!isUser && message.modelName">
+          · {{ message.modelName }}
+        </template>
       </span>
     </div>
   </div>
