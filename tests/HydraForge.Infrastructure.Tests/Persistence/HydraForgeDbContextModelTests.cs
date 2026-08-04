@@ -86,6 +86,18 @@ public class HydraForgeDbContextModelTests
     }
 
     [Fact]
+    public void FindEntityType_ProviderModelConfig_HasSupportsReasoningProperty()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var entity = model.FindEntityType(typeof(ProviderModelConfig));
+        Assert.NotNull(entity);
+
+        AssertProperties(entity, "SupportsReasoning");
+    }
+
+    [Fact]
     public void FindEntityType_ImageUsageRecord_HasRequiredProperties()
     {
         using var context = new HydraForgeDbContext(CreateOptions());
