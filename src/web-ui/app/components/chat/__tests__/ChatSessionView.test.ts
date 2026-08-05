@@ -81,6 +81,30 @@ describe('ChatSessionView — rename', () => {
     mockGET.mockResolvedValue({ data: { ...baseSession }, error: undefined })
   })
 
+  it('filters System-role messages from the rendered list', async () => {
+    const ChatMessageListStub = {
+      props: ['messages', 'streamingMessage', 'streamError', 'awaitingReply', 'rollbackDisabled', 'highlightMessageId'],
+      template: '<div data-testid="message-list">{{ messages.map(m => m.content).join(" ") }}</div>'
+    }
+    mockGET.mockResolvedValue({
+      data: {
+        ...baseSession,
+        messages: [
+          { id: 'sys1', sessionId: 's1', role: 'System', content: 'You are HydraForge assistant.', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:00:00Z' },
+          { id: 'u1', sessionId: 's1', role: 'User', content: 'hello', inputTokens: 0, outputTokens: 0, cachedTokens: 0, modelName: null, imagesJson: null, createdAt: '2026-08-01T00:01:00Z' }
+        ]
+      },
+      error: undefined
+    })
+    const wrapper = await mountSuspended(ChatSessionView, {
+      props: { sessionId: 's1' },
+      global: { stubs: { ...stubs, ChatMessageList: ChatMessageListStub } }
+    })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="message-list"]').text()).toContain('hello')
+    expect(wrapper.find('[data-testid="message-list"]').text()).not.toContain('You are HydraForge assistant.')
+  })
+
   it('renders the fetched session title', async () => {
     const wrapper = await mountView()
     expect(wrapper.text()).toContain('Original Title')

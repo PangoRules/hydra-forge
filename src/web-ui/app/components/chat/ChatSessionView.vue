@@ -142,6 +142,9 @@ async function fetchSession(silent = false) {
       ApiRoutes.Chat.sessions.detail(props.sessionId)
     )
     session.value = data as ChatSessionDetailDto
+    // Hide System-role messages (e.g. the Hydra identity prompt) from the UI —
+    // they flow to the LLM via history but aren't for the user to read.
+    session.value.messages = session.value.messages.filter(m => m.role !== 'System')
     // API returns newest-first; sort chronologically for display
     session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)

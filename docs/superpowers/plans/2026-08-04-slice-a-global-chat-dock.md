@@ -569,7 +569,7 @@ git commit -m "fix(chat): exclude identity System message from isFirstMessage ch
 
 The identity `System` message is persisted in the DB and returned by `GET /api/chat/sessions/{id}`. It must NOT render in the UI. Filter `role === 'System'` from the messages array after fetch.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 In `src/web-ui/app/components/chat/__tests__/ChatSessionView.test.ts`, add a test that asserts `System`-role messages are not rendered. Read the existing test file first to follow its mount + mock pattern. The test should:
 1. Mock `useApi().GET` to return a `ChatSessionDetailDto` with one `System` message and one `User` message.
@@ -590,12 +590,12 @@ it('filters System-role messages from the rendered list', async () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionView`
 Expected: FAIL — System message currently renders (it's not filtered).
 
-- [ ] **Step 3: Add the filter in `fetchSession`**
+- [x] **Step 3: Add the filter in `fetchSession`**
 
 In `src/web-ui/app/components/chat/ChatSessionView.vue`, the `fetchSession` function (around line 136-152) assigns `session.value` then sorts. Add a filter after the assignment, before the sort. Change:
 
@@ -616,12 +616,12 @@ to:
     session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionView`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatSessionView.vue src/web-ui/app/components/chat/__tests__/ChatSessionView.test.ts
