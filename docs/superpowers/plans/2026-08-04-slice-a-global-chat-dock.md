@@ -1010,7 +1010,7 @@ git commit -m "feat(chat): add ChatDock global floating chat widget"
 **Files:**
 - Modify: `src/web-ui/app/layouts/default.vue:49-79` (template)
 
-- [ ] **Step 1: Add the import and render**
+- [x] **Step 1: Add the import and render**
 
 In `src/web-ui/app/layouts/default.vue`, add the import in the `<script setup>` block (after line 4):
 
@@ -1037,12 +1037,12 @@ In the `<template>`, add `<ChatDock />` inside `<UApp>` but after the `<UDashboa
   </UApp>
 ```
 
-- [ ] **Step 2: Verify typecheck + lint + build**
+- [x] **Step 2: Verify typecheck + lint + build**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
 Expected: All pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/web-ui/app/layouts/default.vue

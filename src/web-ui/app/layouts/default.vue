@@ -2,6 +2,7 @@
 import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppTopbar from '~/components/layout/AppTopbar.vue'
+import ChatDock from '~/components/chat/ChatDock.vue'
 
 const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
 const { fetchUnreadCount } = useNotifications()
@@ -76,5 +77,7 @@ function handleSessionLogout() {
         @logout="handleSessionLogout"
       />
     </ClientOnly>
+
+    <ChatDock />
   </UApp>
 </template>
