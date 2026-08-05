@@ -9,6 +9,7 @@ import { Table } from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model'
 import { marked } from 'marked'
 import { onMounted, onUnmounted } from 'vue'
 import { turndownService as turndown, htmlToMarkdown } from '~/lib/document-markdown'
@@ -99,8 +100,16 @@ const editor = useEditor({
       // markdown parsing.
       if (!text || clipboard.getData('text/html') || !looksLikeMarkdown(text)) return false
 
+      // Build and dispatch the transaction directly rather than going through
+      // view.pasteHTML()/editor.commands.insertContent() — both re-enter
+      // ProseMirror's doPaste(), which calls this same handlePaste hook again
+      // with the *same* original event (still plain-text-only), causing
+      // infinite recursion ("too much recursion").
       const html = marked.parse(text, { async: false, breaks: true, gfm: true }) as string
-      return view.pasteHTML(html.trim(), event)
+      const dom = new window.DOMParser().parseFromString(html, 'text/html')
+      const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(dom.body)
+      view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView())
+      return true
     }
   },
   onUpdate({ editor: ed }) {
