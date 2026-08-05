@@ -1059,21 +1059,21 @@ git commit -m "feat(chat): render ChatDock in default layout"
 
 Remove the side-rail `ChatPanel` and all its wiring from the board page. The global `ChatDock` (layout-level) replaces it.
 
-- [ ] **Step 1: Remove the `ChatPanel` import**
+- [x] **Step 1: Remove the `ChatPanel` import**
 
 In `src/web-ui/app/pages/projects/[id]/board.vue`, remove line 11:
 ```typescript
 import ChatPanel from '~/components/chat/ChatPanel.vue'
 ```
 
-- [ ] **Step 2: Remove `showChatPanel` ref**
+- [x] **Step 2: Remove `showChatPanel` ref**
 
 Remove line 43:
 ```typescript
 const showChatPanel = ref(false)
 ```
 
-- [ ] **Step 3: Remove `showChatPanel` from the `selectedCardId` watcher**
+- [x] **Step 3: Remove `showChatPanel` from the `selectedCardId` watcher**
 
 In the `watch(selectedCardId, ...)` block (around line 232-239), remove `showChatPanel.value = true`:
 
@@ -1087,7 +1087,7 @@ watch(selectedCardId, (cardId) => {
 })
 ```
 
-- [ ] **Step 4: Remove the chat toggle button from the board header**
+- [x] **Step 4: Remove the chat toggle button from the board header**
 
 Remove the `i-lucide-message-square` button (around line 353-359):
 ```vue
@@ -1100,7 +1100,7 @@ Remove the `i-lucide-message-square` button (around line 353-359):
         />
 ```
 
-- [ ] **Step 5: Remove the `<ChatPanel>` render block**
+- [x] **Step 5: Remove the `<ChatPanel>` render block**
 
 Remove the block at the bottom of the template (around line 523-529):
 ```vue
@@ -1113,18 +1113,18 @@ Remove the block at the bottom of the template (around line 523-529):
     />
 ```
 
-- [ ] **Step 6: Delete `ChatPanel.vue`**
+- [x] **Step 6: Delete `ChatPanel.vue`**
 
 ```bash
 git rm src/web-ui/app/components/chat/ChatPanel.vue
 ```
 
-- [ ] **Step 7: Verify typecheck + lint + build**
+- [x] **Step 7: Verify typecheck + lint + build**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
 Expected: All pass (no dangling references to `ChatPanel` or `showChatPanel`).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/web-ui/app/pages/projects/[id]/board.vue

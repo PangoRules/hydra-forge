@@ -8,7 +8,6 @@ import MemberManagementPanel from '~/components/project/MemberManagementPanel.vu
 import ProjectNarrativeModal from '~/components/project/ProjectNarrativeModal.vue'
 import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import ChatPanel from '~/components/chat/ChatPanel.vue'
 import { useCardMove } from '~/composables/useCardMove'
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { useBoardKeyboardNav } from '~/composables/keyboard/useBoardKeyboardNav'
@@ -40,7 +39,6 @@ const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
 const showMembersPanel = ref(false)
-const showChatPanel = ref(false)
 const showShortcutOverlay = ref(false)
 const showNarrativeModal = ref(false)
 
@@ -232,7 +230,6 @@ watch(
 watch(selectedCardId, (cardId) => {
   if (cardId) {
     presence.focusCard(projectId, cardId)
-    showChatPanel.value = true
   } else {
     presence.unfocusCard(projectId)
   }
@@ -349,13 +346,6 @@ function hashColor(id: string): string {
           icon="i-lucide-archive-restore"
           title="Restore project"
           @click="handleRestore"
-        />
-        <UButton
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-message-square"
-          title="Chat"
-          @click="showChatPanel = !showChatPanel"
         />
         <UButton
           variant="ghost"
@@ -518,14 +508,6 @@ function hashColor(id: string): string {
       :message="archiveTargetCard ? `Archive #${archiveTargetCard.cardNumber} ${archiveTargetCard.title}?` : ''"
       confirm-text="Archive"
       @confirm="confirmArchive"
-    />
-
-    <ChatPanel
-      v-if="showChatPanel"
-      :project-id="projectId"
-      :card-id="selectedCard?.id"
-      :card-number="selectedCard?.cardNumber"
-      :card-title="selectedCard?.title"
     />
   </div>
 </template>
