@@ -127,7 +127,7 @@ async function submitTitleEdit() {
         >
           <div class="flex items-center gap-2">
             <UButton
-              v-if="dock.mode === 'session'"
+              v-if="dock.mode !== 'history'"
               icon="i-lucide-chevron-left"
               variant="ghost"
               size="xs"

@@ -121,4 +121,17 @@ describe('ChatDock', () => {
     await textarea.trigger('keydown', { key: 'Enter' })
     expect(mockStartNewChat).not.toHaveBeenCalled()
   })
+
+  it('draft mode: shows history button so history is reachable without an active session', async () => {
+    storeState.mode = 'draft'
+    storeState.activeSessionId = undefined as unknown as string
+    const wrapper = await mountSuspended(ChatDock)
+    expect(wrapper.find('button[title="History"]').exists()).toBe(true)
+  })
+
+  it('history mode: hides the history button (already viewing history)', async () => {
+    storeState.mode = 'history'
+    const wrapper = await mountSuspended(ChatDock)
+    expect(wrapper.find('button[title="History"]').exists()).toBe(false)
+  })
 })
