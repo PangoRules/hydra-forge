@@ -88,7 +88,6 @@ public class PlanService(
             Id = Guid.NewGuid(),
             ProjectId = cmd.ProjectId,
             CardId = cmd.CardId,
-            SpecId = cmd.SpecId,
             Title = cmd.Title,
             Description = cmd.Description,
             Content = cmd.Content,
