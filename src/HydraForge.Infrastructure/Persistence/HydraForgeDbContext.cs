@@ -505,6 +505,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             "system_settings",
             b =>
             {
+                b.Property(s => s.AiIdentityPrompt).HasColumnType("text");
                 b.HasData(
                     new SystemSettings
                     {
