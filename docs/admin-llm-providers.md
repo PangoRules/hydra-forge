@@ -23,6 +23,40 @@ A provider with no routed model is inert — chat will fail with a routing error
 3. Routing → set `PersonalChat` (and `ProjectChat` if you want project-scoped chat too) → the OpenRouter provider → the tier you assigned above.
 4. Test at `/chats`.
 
+## MiniMax (cloud, OpenAI-compatible)
+
+MiniMax exposes an OpenAI-compatible API at `https://api.minimax.io/v1` — same wire shape as OpenRouter, so it rides the existing `OpenAiCompatible` adapter. Two key types work as the Bearer token, pick based on how you pay:
+
+- **Subscription Key** — tied to a Token Plan subscription (Plus / Max / Ultra, yearly or monthly) or purchased Credits. Flat fee, quota-bounded (5-hour rolling + weekly windows). This is what a "yearly starter subscription" gives you.
+- **API Key** (pay-as-you-go) — billed per token against your account balance. No quota windows; covers all modalities including video.
+
+Both keys hit the same `/v1/chat/completions` endpoint with the same `Authorization: Bearer {key}` header. They are **not interchangeable for billing**: a Subscription Key has no pay-as-you-go balance, and an API Key has no Token Plan quota. A Subscription Key only becomes usable once an active Token Plan seat or Credits is assigned to the account — it can exist before that but will reject calls.
+
+1. Get your key:
+   - **Subscription Key**: MiniMax console → Account → Token Plan (`platform.minimax.io/user-center/payment/token-plan`). Copy the Subscription Key.
+   - **API Key** (pay-as-you-go): MiniMax console → API Keys → Create new secret key (`platform.minimax.io/user-center/basic-information/interface-key`). Requires a balance top-up.
+2. Providers → **Add Provider**:
+   - `Name`: `MiniMax` (or whatever you want)
+   - `Base URL`: `https://api.minimax.io/v1`
+   - `Adapter Type`: `OpenAiCompatible`
+   - `Provider Type`: `Text` — MiniMax the platform also serves image/speech/video/music, but HydraForge's `OpenAiCompatible` adapter only wires text chat + embeddings. Image generation has no MiniMax adapter (only `DallE`/`StabilityAi`/`ComfyUi`/`Diffusers` are wired for images), so setting `Both` here would let the admin route an image `AiFeature` to MiniMax and it would throw `NotSupportedException` at call time. Leave it `Text` unless/until a MiniMax image adapter is added.
+   - `API Key`: your Subscription Key **or** pay-as-you-go API Key. Encrypted at rest (AES-256-GCM via `IKeyVault`) — never stored or logged in plaintext.
+   - `Tier`: pick one.
+3. Provider Models → select the MiniMax provider → **Discover Models** (hits `/v1/models`, lists the M-series). Add the ones you want:
+   - `MiniMax-M3` — latest, 1M context, multimodal, coding/agentic SOTA. Recommended default.
+   - `MiniMax-M2.7` / `MiniMax-M2.7-highspeed` — 204K context.
+   - `MiniMax-M2.5` / `MiniMax-M2.5-highspeed`, `MiniMax-M2.1` / `MiniMax-M2.1-highspeed`, `MiniMax-M2` — legacy.
+   - The `-highspeed` variants trade a little quality for ~2x throughput.
+4. Routing → map `PersonalChat` (and `ProjectChat` if needed) → MiniMax provider → the tier you assigned.
+5. Test at `/chats`.
+
+### Token Plan quota caveats
+
+- Token Plan uses **5-hour rolling + weekly quota windows**. Hit the limit and requests fail (`1002 Rate limit triggered` / `1008 Insufficient balance`) until the window resets. Unused quota does not roll over.
+- When quota is exhausted your options are: wait for reset, buy Credits (same Subscription Key covers them), or swap the provider's API Key field to a pay-as-you-go key (separate key, needs balance).
+- Token Plan covers the M-series text models + image/speech/music. It does **not** cover H3 video, voice design, or rapid voice cloning — irrelevant for HydraForge text chat, but worth knowing if you reuse the same key elsewhere.
+- `MiniMax-M3` has **thinking on by default** — responses include inline reasoning mixed into the message text. This is normal, not a bug. M2.x models always think and cannot disable it.
+
 ## Ollama (local)
 
 1. Make sure Ollama is running and has at least one model pulled: `ollama pull llama3.1` (or whatever you use).
