@@ -15,12 +15,10 @@ namespace HydraForge.Server.Controllers.Projects;
 public class ProjectDocumentsController(
     ProjectDocumentService docService,
     IHtmlToMarkdownConverter htmlToMarkdown,
-    IMarkdownToHtmlConverter markdownToHtml,
-    ILogger<ProjectDocumentsController> logger
+    IMarkdownToHtmlConverter markdownToHtml
 ) : ControllerBase
 {
     private readonly ProjectDocumentService _docService = docService;
-    private readonly ILogger<ProjectDocumentsController> _logger = logger;
 
     private string InContent(string content) =>
         ContentFormatHeader.IsHtml(Request) ? htmlToMarkdown.Convert(content) : content;
