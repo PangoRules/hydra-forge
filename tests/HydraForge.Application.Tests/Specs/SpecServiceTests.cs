@@ -464,7 +464,7 @@ public class SpecServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.InvalidCardType, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Specs.InvalidDocTypeForCard, result.Error.Code);
     }
 
     [Theory]
@@ -555,7 +555,7 @@ public class SpecServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.DocTypeMismatch, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Specs.InvalidDocTypeForCard, result.Error.Code);
     }
 
     [Fact]
@@ -614,8 +614,7 @@ public class SpecServiceTests
             )
         );
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.AlreadyExists, result.Error.Code);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]

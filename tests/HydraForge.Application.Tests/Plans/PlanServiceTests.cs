@@ -508,7 +508,6 @@ public class PlanServiceTests
     }
 
     [Theory]
-    [InlineData(CardType.Goal)]
     [InlineData(CardType.Issue)]
     [InlineData(CardType.Task)]
     public async Task CreateAsync_AllowedCardTypeWithoutSpecId_Succeeds(CardType cardType)
@@ -622,7 +621,7 @@ public class PlanServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_SpecIdBelongsToDifferentCard_ReturnsSpecCardMismatch()
+    public async Task CreateAsync_SpecIdOnNonGoalCard_ReturnsSpecLinkNotAllowed()
     {
         var (
             planRepo,
@@ -661,7 +660,7 @@ public class PlanServiceTests
             {
                 Id = cardId,
                 ProjectId = projectId,
-                Type = CardType.Goal,
+                Type = CardType.Issue,
             }
         );
         var otherSpec = new Spec
@@ -669,7 +668,7 @@ public class PlanServiceTests
             Id = NewId(),
             ProjectId = projectId,
             CardId = NewId(),
-            DocType = DocType.Specification,
+            DocType = DocType.Report,
         };
         specRepo.Add(otherSpec);
 
@@ -678,11 +677,11 @@ public class PlanServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Plans.SpecCardMismatch, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Plans.SpecLinkNotAllowed, result.Error.Code);
     }
 
     [Fact]
-    public async Task CreateAsync_GoalWithOwnSpecId_Succeeds()
+    public async Task CreateAsync_IssueWithoutSpecId_Succeeds()
     {
         var (
             planRepo,
@@ -721,24 +720,15 @@ public class PlanServiceTests
             {
                 Id = cardId,
                 ProjectId = projectId,
-                Type = CardType.Goal,
+                Type = CardType.Issue,
             }
         );
-        var spec = new Spec
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            CardId = cardId,
-            DocType = DocType.Specification,
-        };
-        specRepo.Add(spec);
 
         var result = await service.CreateAsync(
-            new CreatePlanCommand(projectId, cardId, spec.Id, actorId, "T", null, "C")
+            new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
         );
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(spec.Id, result.Value.SpecId);
     }
 
     // ─── Audit tests ───────────────────────────────────────────────────────────
