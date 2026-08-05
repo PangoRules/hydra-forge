@@ -7711,7 +7711,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7738,6 +7738,10 @@ namespace HydraForge.Tui.Generated
                     if (before != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("before")).Append('=').Append(System.Uri.EscapeDataString(before.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (beforeId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("beforeId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(beforeId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (limit != null)
                     {

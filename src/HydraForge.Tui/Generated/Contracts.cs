@@ -468,7 +468,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -1662,6 +1662,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<ChatMessageDto> Messages { get; set; } = new System.Collections.ObjectModel.Collection<ChatMessageDto>();
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -1768,6 +1774,12 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("archivedAt", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.DateTimeOffset? ArchivedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2092,6 +2104,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("forkedFromSessionId", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.Guid? ForkedFromSessionId { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2193,6 +2211,9 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
+
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = "Auto";
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3344,6 +3365,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = "Auto";
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -3982,6 +4006,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("searchAllMyDocs", Required = Newtonsoft.Json.Required.Always)]
         public bool SearchAllMyDocs { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -4096,6 +4126,9 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
