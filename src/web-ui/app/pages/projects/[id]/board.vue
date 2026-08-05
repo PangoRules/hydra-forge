@@ -120,6 +120,7 @@ function handleCardClick(card: CardResponse) {
 
 function handleCardModalClose() {
   selectedCardId.value = null
+  selectedCard.value = null
   board.fetchBoard(projectId)
 }
 

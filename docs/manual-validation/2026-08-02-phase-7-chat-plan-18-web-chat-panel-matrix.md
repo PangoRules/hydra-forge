@@ -43,13 +43,13 @@
 
 ---
 
-### TC-3: Panel collapse does not close session
+### TC-3: Panel collapse — new session on reopen (F6 implicit close)
 
 | Step | Action | Expected |
 |------|--------|----------|
 | 1 | Open ChatPanel for a card | Session created and active |
-| 2 | Click **X** to collapse panel | Panel hides; session still Active on server |
-| 3 | Click chat icon in toolbar | Panel reopens; same session shown with all messages |
+| 2 | Click **X** to collapse panel | Panel hides; prior session implicitly closed on server (F6) |
+| 3 | Click chat icon in toolbar | Panel reopens; new session created for the card |
 
 **Pass/Fail:** _____
 

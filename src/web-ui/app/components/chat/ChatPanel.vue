@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ApiError } from '~/lib/api-error'
 import { ApiRoutes } from '~/lib/routes'
 import type { ChatSessionDto } from '~/types/chat'
 
@@ -38,7 +39,15 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateDesktop)
 })
 
-const pendingFirstMessage: Record<string, string> = {}
+const pendingFirstMessage = ref<Record<string, string | undefined>>({})
+
+function getPendingMessage(sessionId: string): string | null {
+  return pendingFirstMessage.value[sessionId] ?? null
+}
+
+function clearPendingMessage(sessionId: string) {
+  pendingFirstMessage.value[sessionId] = undefined
+}
 
 function deriveTitle(content: string): string {
   const firstLine = content.trim().split('\n')[0] ?? content.trim()
@@ -61,11 +70,11 @@ async function createSession(cardId: string | undefined, prefillMessage: string 
     if (data) {
       activeSessionId.value = data.id
       if (prefillMessage) {
-        pendingFirstMessage[data.id] = prefillMessage
+        pendingFirstMessage.value[data.id] = prefillMessage
       }
     }
-  } catch {
-    toast.error('Failed to create chat session')
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : 'Failed to create chat session')
   }
 }
 
@@ -88,7 +97,9 @@ async function submitNewChatInline() {
   const content = newChatContent.value.trim()
   if (!content || isCreating.value) return
   isCreating.value = true
-  await createSession(undefined, content)
+  // Pass cardId so F6 implicit-close fires on the card-bound session,
+  // not just the project-scoped one this call creates.
+  await createSession(props.cardId, content)
   newChatContent.value = ''
   isCreating.value = false
 }
@@ -104,12 +115,7 @@ function closePanel() {
   isOpen.value = false
 }
 
-function togglePanel() {
-  if (isOpen.value) closePanel()
-  else openPanel()
-}
-
-defineExpose({ openPanel, closePanel, togglePanel })
+defineExpose({ openPanel, closePanel })
 </script>
 
 <template>
@@ -161,8 +167,8 @@ defineExpose({ openPanel, closePanel, togglePanel })
             v-if="activeSessionId"
             :key="activeSessionId"
             :session-id="activeSessionId"
-            :initial-message="pendingFirstMessage[activeSessionId] ?? null"
-            @initial-message-sent="delete pendingFirstMessage[activeSessionId!]"
+            :initial-message="activeSessionId ? getPendingMessage(activeSessionId) : null"
+            @initial-message-sent="activeSessionId && clearPendingMessage(activeSessionId)"
           />
 
           <!-- Empty state when no session -->
@@ -185,7 +191,7 @@ defineExpose({ openPanel, closePanel, togglePanel })
 
           <!-- Inline new-chat form shown above messages when session is active with no pending message -->
           <div
-            v-if="activeSessionId && !pendingFirstMessage[activeSessionId]"
+            v-if="activeSessionId && !getPendingMessage(activeSessionId)"
             class="shrink-0 border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2"
           >
             <textarea

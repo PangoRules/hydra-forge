@@ -379,17 +379,10 @@ onMounted(async () => {
   await fetchSession()
 
   if (props.initialMessage) {
-    // Tell the parent to forget this pending message before sending — the
-    // parent owns the one-shot bookkeeping (this component gets recreated
-    // on every re-entry to the session via :key, so a local flag here
-    // wouldn't survive across visits and the message would resend forever).
-    const message = props.initialMessage
-    const presetId = props.initialPresetId
-    const modelId = props.initialModelId
-    const effort = props.initialEffort
-    emit('initialMessageSent')
-    lastUsedEffort.value = effort ?? null
-    await handleSend(message, presetId, modelId, effort)
+    // Pre-fill the input so the user can review, edit, then click Send.
+    // Per spec: "pre-filled, user edits then sends" — never auto-sent.
+    chatInputRef.value?.setContent(props.initialMessage)
+    if (props.initialEffort) lastUsedEffort.value = props.initialEffort
   }
 
   // Connect *after* the message above, not before/alongside it. A SignalR
