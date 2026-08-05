@@ -18,7 +18,7 @@ export const UiRoutes = {
   Chats: '/chats',
   Projects: {
     List: '/projects',
-    Board: (projectId: string) => `/projects/${projectId}/board`
+    Board: (projectId: string) => `/projects/${projectId}`
   },
   Admin: {
     Home: '/admin',
@@ -135,6 +135,15 @@ export const ApiRoutes = {
 
   ProjectSnapshot: {
     get: (projectId: string) => `/api/projects/${projectId}/ProjectSnapshot`
+  },
+
+  Documents: {
+    list: (projectId: string) => `/api/projects/${projectId}/Documents`,
+    create: (projectId: string) => `/api/projects/${projectId}/Documents`,
+    detail: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}`,
+    update: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}`,
+    versions: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}/versions`,
+    restore: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}/restore`
   },
 
   Notifications: {
