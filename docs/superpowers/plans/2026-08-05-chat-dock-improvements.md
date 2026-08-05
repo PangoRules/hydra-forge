@@ -193,7 +193,7 @@ git commit -m "fix(chat): composite (UpdatedAt, Id) cursor for session list pagi
 - Modify: `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`
 - Create: `src/HydraForge.Infrastructure/Migrations/<timestamp>_AddChatSessionModelPreferences.cs`
 
-- [ ] **Step 1: Add fields + widen `UpdateSettings` on `ChatSession` entity**
+- [x] **Step 1: Add fields + widen `UpdateSettings` on `ChatSession` entity**
 
 In `src/HydraForge.Domain/Entities/Chat/ChatSession.cs`, add after existing fields:
 

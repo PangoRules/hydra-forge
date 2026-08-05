@@ -21,6 +21,8 @@ public class ChatSession
     public Guid? OpenCardId { get; set; }
     public DateTime? ClosedAt { get; set; }
     public string? Summary { get; set; }
+    public Guid? PreferredModelConfigId { get; set; }
+    public string? PreferredEffort { get; set; }
 
     public void Open(Guid? personalityId, Guid? openCardId, AiEditMode aiEditMode)
     {
@@ -50,7 +52,9 @@ public class ChatSession
         Guid? folderId,
         Guid? personalityId,
         AiEditMode? aiEditMode,
-        bool? searchAllMyDocs
+        bool? searchAllMyDocs,
+        Guid? preferredModelConfigId,
+        string? preferredEffort
     )
     {
         if (Status != ChatSessionStatus.Active)
@@ -66,6 +70,10 @@ public class ChatSession
             AiEditMode = aiEditMode.Value;
         if (searchAllMyDocs != null)
             SearchAllMyDocs = searchAllMyDocs.Value;
+        if (preferredModelConfigId.HasValue)
+            PreferredModelConfigId = preferredModelConfigId;
+        if (preferredEffort != null)
+            PreferredEffort = preferredEffort;
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -312,6 +312,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                     .WithMany()
                     .HasForeignKey(e => e.PersonalityId)
                     .OnDelete(DeleteBehavior.SetNull);
+                b.Property(e => e.PreferredEffort).HasColumnType("text");
             }
         );
 

@@ -140,7 +140,7 @@ public class ChatSessionTests
         var folderId = Guid.NewGuid();
         var personalityId = Guid.NewGuid();
 
-        session.UpdateSettings("New", folderId, personalityId, AiEditMode.Blanket, true);
+        session.UpdateSettings("New", folderId, personalityId, AiEditMode.Blanket, true, null, null);
 
         Assert.Equal("New", session.Title);
         Assert.Equal(folderId, session.FolderId);
@@ -160,7 +160,7 @@ public class ChatSessionTests
             SearchAllMyDocs = true,
         };
 
-        session.UpdateSettings(null, null, null, null, null);
+        session.UpdateSettings(null, null, null, null, null, null, null);
 
         Assert.Equal("Keep", session.Title);
         Assert.Equal(folderId, session.FolderId);
@@ -173,7 +173,7 @@ public class ChatSessionTests
         var session = new ChatSession();
         session.Close(null);
 
-        var act = () => session.UpdateSettings("New", null, null, null, null);
+        var act = () => session.UpdateSettings("New", null, null, null, null, null, null);
 
         Assert.Throws<InvalidOperationException>(act);
     }

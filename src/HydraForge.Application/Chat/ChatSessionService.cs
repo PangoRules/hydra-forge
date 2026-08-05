@@ -344,7 +344,9 @@ public class ChatSessionService(
             request.FolderId,
             request.PersonalityId,
             request.AiEditMode,
-            request.SearchAllMyDocs
+            request.SearchAllMyDocs,
+            null,
+            null
         );
 
         await _sessionRepo.UpdateAsync(session, ct);

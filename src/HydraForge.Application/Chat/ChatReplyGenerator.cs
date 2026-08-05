@@ -354,7 +354,7 @@ public sealed class ChatReplyGenerator(
                     );
                     if (titleResult.IsSuccess)
                     {
-                        session.UpdateSettings(titleResult.Value, null, null, null, null);
+                        session.UpdateSettings(titleResult.Value, null, null, null, null, null, null);
                         await sessionRepo.UpdateAsync(session, cts.Token);
                     }
                 }
