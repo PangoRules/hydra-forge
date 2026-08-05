@@ -1,6 +1,6 @@
 # Slice A.2: Chat Dock Improvements — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fix gaps in the global chat dock: history panel with infinite scroll, draft mode (no session until first message), per-session model persistence, card-context awareness, robust auto-title for local models, half-screen height, and `/chats` page infinite scroll.
 
@@ -230,7 +230,7 @@ public void UpdateSettings(
 
 Confirm the exact guard condition/message against the real method before editing — the snippet above reconstructs it from the "throws if Status != Active" fact, not a verbatim quote.
 
-- [x] **Step 2: Map new columns in DbContext**
+- [ ] **Step 2: Map new columns in DbContext**
 
 In `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`, find the `ConfigureEntity<ChatSession>` block. Add property configs:
 
@@ -240,7 +240,7 @@ b.Property(s => s.PreferredEffort).HasColumnType("text");
 
 `PreferredModelConfigId` is a `Guid?` — EF Core maps it to `uuid` by default, no `.HasColumnType()` needed.
 
-- [x] **Step 3: Generate migration**
+- [ ] **Step 3: Generate migration**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations add AddChatSessionModelPreferences --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server
@@ -248,7 +248,7 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations add AddChatSessionMo
 
 Verify the `Up` method adds `preferred_model_config_id` (uuid, nullable) and `preferred_effort` (text, nullable) to the `chat_sessions` table.
 
-- [x] **Step 4: Verify model is clean**
+- [ ] **Step 4: Verify model is clean**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server
@@ -256,12 +256,12 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations has-pending-model-ch
 
 Expected: "No pending model changes."
 
-- [x] **Step 5: Build to verify**
+- [ ] **Step 5: Build to verify**
 
 Run: `dotnet build`
 Expected: BUILD SUCCEEDED (existing callers of `UpdateSettings` will fail — fixed in Task 3)
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/HydraForge.Domain/Entities/Chat/ChatSession.cs src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs src/HydraForge.Infrastructure/Migrations/
@@ -278,7 +278,7 @@ git commit -m "feat(chat): add PreferredModelConfigId/PreferredEffort to ChatSes
 - Modify: `src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs`
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs`
 
-- [x] **Step 1: Add model fields to DTOs**
+- [ ] **Step 1: Add model fields to DTOs**
 
 In `src/HydraForge.Application/Chat/ChatDtos.cs`:
 
@@ -300,7 +300,7 @@ public Guid? PreferredModelConfigId { get; init; }
 public string? PreferredEffort { get; init; }
 ```
 
-- [x] **Step 2: Write the failing service test**
+- [ ] **Step 2: Write the failing service test**
 
 In `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs`, add:
 
@@ -333,12 +333,12 @@ public async Task CreateAsync_WithPreferredModelConfigId_PersistsIt()
 
 Follow the existing `TestFakes` pattern (add `Sessions` list to the fake repo if not already exposed).
 
-- [x] **Step 3: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `dotnet test --filter FullyQualifiedName~CreateAsync_WithPreferredModelConfigId_PersistsIt`
 Expected: FAIL
 
-- [x] **Step 4: Update `ChatSessionService.CreateAsync` to store model fields**
+- [ ] **Step 4: Update `ChatSessionService.CreateAsync` to store model fields**
 
 After `session.UpdateSettings(...)` or direct property assignment in `CreateAsync`:
 
@@ -349,7 +349,7 @@ if (request.PreferredEffort != null)
     session.PreferredEffort = request.PreferredEffort;
 ```
 
-- [x] **Step 5: Update `ChatSessionService.UpdateAsync` to handle model fields**
+- [ ] **Step 5: Update `ChatSessionService.UpdateAsync` to handle model fields**
 
 In the PATCH handler, after the existing property checks:
 
@@ -360,7 +360,7 @@ if (request.PreferredEffort != null)
     session.PreferredEffort = request.PreferredEffort;
 ```
 
-- [x] **Step 6: Fix the existing `UpdateSettings` call site in `ChatSessionService.cs`**
+- [ ] **Step 6: Fix the existing `UpdateSettings` call site in `ChatSessionService.cs`**
 
 Find line ~340 (the existing `session.UpdateSettings(...)` call) and add the two new params (`null, null`):
 
@@ -368,21 +368,21 @@ Find line ~340 (the existing `session.UpdateSettings(...)` call) and add the two
 session.UpdateSettings(title, folderId, personalityId, aiEditMode, searchAllMyDocs, null, null);
 ```
 
-- [x] **Step 7: Update controller to accept model fields**
+- [ ] **Step 7: Update controller to accept model fields**
 
 In `ChatSessionsController.cs`, the `CreateChatSessionRequest` binding already uses the DTO — no manual mapping needed if the DTO is the parameter type. Verify the POST action signature uses `[FromBody] CreateChatSessionRequest request`. If it maps manually, add the new fields.
 
-- [x] **Step 8: Run test to verify it passes**
+- [ ] **Step 8: Run test to verify it passes**
 
 Run: `dotnet test --filter FullyQualifiedName~CreateAsync_WithPreferredModelConfigId_PersistsIt`
 Expected: PASS
 
-- [x] **Step 9: Run full ChatSessionServiceTests suite**
+- [ ] **Step 9: Run full ChatSessionServiceTests suite**
 
 Run: `dotnet test --filter FullyQualifiedName~ChatSessionServiceTests`
 Expected: All PASS (existing tests may need `null, null` added to `UpdateSettings` calls in test setup code)
 
-- [x] **Step 10: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatDtos.cs src/HydraForge.Application/Chat/ChatSessionService.cs src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs
@@ -399,7 +399,7 @@ git commit -m "feat(chat): per-session model persistence (DTOs, service, control
 - Modify: `src/HydraForge.Application/Chat/ChatReplyGenerator.cs`
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`
 
-- [x] **Step 1: Check server logs for title-gen failure path**
+- [ ] **Step 1: Check server logs for title-gen failure path**
 
 The user's local model (Ollama gemma4:26b via OpenAiCompatible adapter) fails title gen. Check logs for one of these warnings from `LlmChatTitleGenerator`:
 - `"Failed to resolve LLM route for chat title generation"` — routing issue
@@ -410,7 +410,7 @@ If the log shows `"LLM call failed"` with a `TaskCanceledException` or `Operatio
 
 If it shows routing failure, the `ChatTitle` feature needs the model in its allowlist.
 
-- [x] **Step 2: Fix timeout per-provider-type (if confirmed)**
+- [ ] **Step 2: Fix timeout per-provider-type (if confirmed)**
 
 If Step 1 confirms the `"openai-compatible"` 60s timeout is the cause, change `LlmServiceCollectionExtensions.cs` to make the timeout configurable per-provider-type. The simplest approach: add a second named client for local OpenAiCompatible providers:
 
@@ -444,7 +444,7 @@ services.AddHttpClient(
 );
 ```
 
-- [x] **Step 3: Write the failing fallback test**
+- [ ] **Step 3: Write the failing fallback test**
 
 In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add:
 
@@ -480,12 +480,12 @@ public async Task GenerateAsync_TitleGenFails_FallsBackToFirstMessage()
 
 Follow the existing test fixture pattern (make `_titleGenerator` a field, set up via `_titleGenerator = Substitute.For<IChatTitleGenerator>()`).
 
-- [x] **Step 4: Run test to verify it fails**
+- [ ] **Step 4: Run test to verify it fails**
 
 Run: `dotnet test --filter FullyQualifiedName~GenerateAsync_TitleGenFails_FallsBackToFirstMessage`
 Expected: FAIL
 
-- [x] **Step 5: Add fallback in `ChatReplyGenerator.cs`**
+- [ ] **Step 5: Add fallback in `ChatReplyGenerator.cs`**
 
 Find the title-generation block (around line 345-369). Replace:
 
@@ -519,17 +519,17 @@ await _sessionRepo.UpdateAsync(session, ct);
 
 Note: `UpdateSettings` now takes 7 params — the two new `null, null` are for `preferredModelConfigId` and `preferredEffort`.
 
-- [x] **Step 6: Run test to verify it passes**
+- [ ] **Step 6: Run test to verify it passes**
 
 Run: `dotnet test --filter FullyQualifiedName~GenerateAsync_TitleGenFails_FallsBackToFirstMessage`
 Expected: PASS
 
-- [x] **Step 7: Run full ChatReplyGeneratorTests suite**
+- [ ] **Step 7: Run full ChatReplyGeneratorTests suite**
 
 Run: `dotnet test --filter FullyQualifiedName~ChatReplyGeneratorTests`
 Expected: All PASS
 
-- [x] **Step 8: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatReplyGenerator.cs src/HydraForge.Infrastructure/Llm/LlmServiceCollectionExtensions.cs tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs
@@ -545,7 +545,7 @@ git commit -m "fix(chat): auto-title fallback + bump openai-compatible timeout t
 - Modify: `src/web-ui/app/pages/projects/[id]/board.vue`
 - Modify: `src/web-ui/app/stores/chatDock.ts`
 
-- [x] **Step 1: Add `openCardId` to board Pinia store**
+- [ ] **Step 1: Add `openCardId` to board Pinia store**
 
 In `src/web-ui/app/stores/board.ts`, add a new field:
 
@@ -566,7 +566,7 @@ export const useBoardStore = defineStore('board', () => {
 })
 ```
 
-- [x] **Step 2: Write `openCardId` from `board.vue` instead of local ref**
+- [ ] **Step 2: Write `openCardId` from `board.vue` instead of local ref**
 
 In `src/web-ui/app/pages/projects/[id]/board.vue`, find the local `selectedCardId` ref (line ~37). Replace:
 
@@ -588,7 +588,7 @@ Also add `import { useBoardStore } from '~/stores/board'` at the top.
 
 Verify all usages of `selectedCardId` in the template still work (they reference the ref — now it's a computed that reads/writes the store).
 
-- [x] **Step 3: Read `openCardId` in `chatDock` store on new chat**
+- [ ] **Step 3: Read `openCardId` in `chatDock` store on new chat**
 
 Note: Task 8 rewrites `startNewChat` again as part of the larger draft/history/resume store overhaul — this step's edit will be superseded there. Doing it here first still verifies the board-store wiring in isolation before Task 8's bigger rewrite lands on top of it.
 
@@ -616,12 +616,12 @@ async function startNewChat() {
 }
 ```
 
-- [x] **Step 4: Verify typecheck + lint**
+- [ ] **Step 4: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/stores/board.ts src/web-ui/app/pages/projects/[id]/board.vue src/web-ui/app/stores/chatDock.ts
@@ -637,7 +637,7 @@ git commit -m "feat(chat): card context wiring — board store openCardId, dock 
 - Modify: `src/web-ui/app/components/chat/ChatInput.vue`
 - Modify: `src/web-ui/app/components/chat/ChatSessionView.vue`
 
-- [x] **Step 1: Add `initialModelId`/`initialEffort` props to `ChatModelPicker`**
+- [ ] **Step 1: Add `initialModelId`/`initialEffort` props to `ChatModelPicker`**
 
 In `src/web-ui/app/components/chat/ChatModelPicker.vue`, add to `defineProps`:
 
@@ -677,7 +677,7 @@ async function fetchModels() {
 }
 ```
 
-- [x] **Step 2: Add `initialModelId`/`initialEffort` props to `ChatInput`**
+- [ ] **Step 2: Add `initialModelId`/`initialEffort` props to `ChatInput`**
 
 In `src/web-ui/app/components/chat/ChatInput.vue`, add to `defineProps`:
 
@@ -704,7 +704,7 @@ const props = defineProps<{
 />
 ```
 
-- [x] **Step 3: Add `feature` prop to `ChatSessionView` + forward `initialModelId`/`initialEffort` (already exist as props, just unused)**
+- [ ] **Step 3: Add `feature` prop to `ChatSessionView` + forward `initialModelId`/`initialEffort` (already exist as props, just unused)**
 
 `initialModelId`/`initialEffort` already exist on `ChatSessionView`'s `defineProps` — today they're only used to seed the first auto-send call, never forwarded to `ChatInput`. Only `feature` is genuinely new:
 
@@ -734,7 +734,7 @@ In the template, pass `feature` and `initialModelId`/`initialEffort` to `ChatInp
 >
 ```
 
-- [x] **Step 4: Resolve session-persisted model in `ChatSessionView.fetchSession`**
+- [ ] **Step 4: Resolve session-persisted model in `ChatSessionView.fetchSession`**
 
 `initialModelId`/`initialEffort` are **props**, not local refs — they can't be reassigned (`props.initialModelId.value = ...` doesn't compile / mutating a prop directly is a Vue anti-pattern the linter will flag). The plan's earlier draft of this step named new local refs identically to the existing props, which would shadow them and silently break the case where a caller (e.g. `board.vue`) explicitly passes `initial-model-id` for a fresh session.
 
@@ -759,7 +759,7 @@ Update the `<ChatInput>` binding from Step 3 to use these computeds instead of `
 >
 ```
 
-- [x] **Step 5: Pass feature from ChatDock to ChatSessionView**
+- [ ] **Step 5: Pass feature from ChatDock to ChatSessionView**
 
 In `src/web-ui/app/components/chat/ChatDock.vue`, pass `feature` based on page context:
 
@@ -772,12 +772,12 @@ In `src/web-ui/app/components/chat/ChatDock.vue`, pass `feature` based on page c
 />
 ```
 
-- [x] **Step 6: Verify typecheck + lint**
+- [ ] **Step 6: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [x] **Step 7: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatModelPicker.vue src/web-ui/app/components/chat/ChatInput.vue src/web-ui/app/components/chat/ChatSessionView.vue src/web-ui/app/components/chat/ChatDock.vue
@@ -792,7 +792,7 @@ git commit -m "feat(chat): external model id props + feature prop wiring for mod
 - Create: `src/web-ui/app/composables/useChatSessionList.ts`
 - Test: `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`
 
-- [x] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`:
 
@@ -856,12 +856,12 @@ describe('useChatSessionList', () => {
 })
 ```
 
-- [x] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: FAIL — composable doesn't exist
 
-- [x] **Step 2b: Add `beforeId` to `ApiRoutes.Chat.sessions.list`**
+- [ ] **Step 2b: Add `beforeId` to `ApiRoutes.Chat.sessions.list`**
 
 `useApi().GET<T>()` takes a single URL-string argument only — no second `{ params }` object (unlike `POST`/`PATCH`/`PUT`/`DELETE`, which do accept an `opts` arg). `routes.ts` bakes query params into the URL string itself; there is no openapi-fetch `{ params: { query } }` convention in this codebase. Confirmed by the sibling `messages` route (`routes.ts:208-209`), which already does exactly this for its own `before`/`beforeId`/`limit` cursor — mirror it:
 
@@ -872,7 +872,7 @@ list: (folderId?: string, projectId?: string, before?: string, beforeId?: string
   `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
 ```
 
-- [x] **Step 3: Implement the composable**
+- [ ] **Step 3: Implement the composable**
 
 Create `src/web-ui/app/composables/useChatSessionList.ts`. Build the full URL via `ApiRoutes` and call `api.GET<T>(url)` with a single argument — no `{ params }` object:
 
@@ -934,12 +934,12 @@ export function useChatSessionList(options?: { folderId?: string; projectId?: st
 }
 ```
 
-- [x] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: PASS. Adjust mocks as needed for the composable's import pattern.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/composables/useChatSessionList.ts src/web-ui/app/composables/__tests__/useChatSessionList.test.ts
@@ -956,7 +956,7 @@ git commit -m "feat(chat): useChatSessionList composable for cursor-paginated se
 - Create: `src/web-ui/app/components/chat/ChatDockHistory.vue`
 - Test: `src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts`
 
-- [x] **Step 1: Update `chatDock` store with draft/history/resume modes**
+- [ ] **Step 1: Update `chatDock` store with draft/history/resume modes**
 
 In `src/web-ui/app/stores/chatDock.ts`, replace the store with:
 
@@ -1066,11 +1066,11 @@ export const useChatDockStore = defineStore('chatDock', () => {
 })
 ```
 
-- [x] **Step 1b: Update the 2 existing `chatDock.test.ts` tests that assert the old `startNewChat` body**
+- [ ] **Step 1b: Update the 2 existing `chatDock.test.ts` tests that assert the old `startNewChat` body**
 
 `src/web-ui/app/stores/__tests__/chatDock.test.ts` currently has tests asserting `startNewChat` POSTs `body: { title: 'New chat', projectId: 'abc' }` and `body: { title: 'New chat' }` (no project). The rewrite above changes the body to `{ title: '' }` plus conditional `projectId`/`openCardId` — those 2 tests will fail unmodified. Update their expected `body` assertions to match the new shape (`title: ''`, `projectId` only when set, `openCardId` only when set).
 
-- [x] **Step 2: Update `ChatDock.vue` with draft mode + history panel + height**
+- [ ] **Step 2: Update `ChatDock.vue` with draft mode + history panel + height**
 
 Replace the template body section. Key changes:
 - Remove the auto-create watch (no more `watch(() => dock.isOpen, ...)`)
@@ -1229,7 +1229,7 @@ function handleSendInDraft(message: string) {
 </template>
 ```
 
-- [x] **Step 3: Create `ChatDockHistory.vue`**
+- [ ] **Step 3: Create `ChatDockHistory.vue`**
 
 Create `src/web-ui/app/components/chat/ChatDockHistory.vue`:
 
@@ -1314,7 +1314,7 @@ onUnmounted(() => {
 </template>
 ```
 
-- [x] **Step 4: Write the `ChatDockHistory` test**
+- [ ] **Step 4: Write the `ChatDockHistory` test**
 
 Create `src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts`:
 
@@ -1355,12 +1355,12 @@ describe('ChatDockHistory', () => {
 })
 ```
 
-- [x] **Step 5: Run tests**
+- [ ] **Step 5: Run tests**
 
 Run: `cd src/web-ui && pnpm test -- ChatDock`
 Expected: PASS (existing tests + new history test)
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/web-ui/app/stores/chatDock.ts src/web-ui/app/components/chat/ChatDock.vue src/web-ui/app/components/chat/ChatDockHistory.vue src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts
@@ -1374,7 +1374,7 @@ git commit -m "feat(chat): ChatDock draft mode, history panel, session resume, h
 **Files:**
 - Modify: `src/web-ui/app/pages/chats/index.vue`
 
-- [x] **Step 1: Replace flat fetch with `useChatSessionList`**
+- [ ] **Step 1: Replace flat fetch with `useChatSessionList`**
 
 In `src/web-ui/app/pages/chats/index.vue`, replace the existing `fetchSessions()` function with:
 
@@ -1401,12 +1401,12 @@ Replace the sidebar list template to use `sessions` from the composable and add 
 
 **Preserve existing state this file already has and the snippet above doesn't mention:** `pendingMessage`, `syncSession`, `archiveTargetId`. Don't drop them while swapping in `useChatSessionList` — they're unrelated to the fetch-and-paginate change (archive flow, cross-session message handoff).
 
-- [x] **Step 2: Verify typecheck + lint**
+- [ ] **Step 2: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [x] **Step 3: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add src/web-ui/app/pages/chats/index.vue
@@ -1423,7 +1423,7 @@ git commit -m "feat(chat): /chats page infinite scroll + session resume from doc
 - Modify: `src/web-ui/app/pages/chats/index.vue`
 - Modify: `src/web-ui/app/assets/css/main.css` (only if z-index fix needed)
 
-- [x] **Step 1: Update default identity prompt**
+- [ ] **Step 1: Update default identity prompt**
 
 In `src/HydraForge.Application/Chat/ChatSessionService.cs`, replace the `DefaultIdentityPrompt` constant:
 
@@ -1444,7 +1444,7 @@ private const string DefaultIdentityPrompt =
     "Be concise and direct.";
 ```
 
-- [x] **Step 2: Add title rename to dock header**
+- [ ] **Step 2: Add title rename to dock header**
 
 In `ChatDock.vue`, add inline rename state and handler:
 
@@ -1495,7 +1495,7 @@ In the template, replace the static title with the rename pattern:
 />
 ```
 
-- [x] **Step 3: Verify z-index in browser (manual check)**
+- [ ] **Step 3: Verify z-index in browser (manual check)**
 
 Run the app and open a card modal, then try to click the chat FAB and type in the chat popup. If it works (the popup is above the modal), no CSS change needed. If the modal blocks the popup, add to `src/web-ui/app/assets/css/main.css`:
 
@@ -1508,12 +1508,12 @@ Run the app and open a card modal, then try to click the chat FAB and type in th
 
 And verify the ChatDock uses `z-[var(--z-chat-fab)]` and `z-[var(--z-chat-popup)]` (already done in Task 8's template code).
 
-- [x] **Step 4: Build + typecheck**
+- [ ] **Step 4: Build + typecheck**
 
 Run: `dotnet build && cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatSessionService.cs src/web-ui/app/components/chat/ChatDock.vue src/web-ui/app/pages/chats/index.vue
@@ -1527,7 +1527,7 @@ git commit -m "feat(chat): update identity prompt, add title rename, verify z-in
 **Files:**
 - Create: `docs/manual-validation/2026-08-05-chat-dock-improvements-matrix.md`
 
-- [x] **Step 1: Run full .NET verification**
+- [ ] **Step 1: Run full .NET verification**
 
 ```bash
 dotnet build
@@ -1537,7 +1537,7 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations has-pending-model-ch
 
 Expected: All build, all tests pass, no pending model changes.
 
-- [x] **Step 2: Run full Web UI verification**
+- [ ] **Step 2: Run full Web UI verification**
 
 ```bash
 cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build && pnpm test
@@ -1545,7 +1545,7 @@ cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build && pnpm test
 
 Expected: All pass.
 
-- [x] **Step 3: Write the manual validation matrix**
+- [ ] **Step 3: Write the manual validation matrix**
 
 Create `docs/manual-validation/2026-08-05-chat-dock-improvements-matrix.md`:
 
@@ -1657,7 +1657,7 @@ Create `docs/manual-validation/2026-08-05-chat-dock-improvements-matrix.md`:
 **Expected:** The chat popup is visible and usable above the card modal. You can type in the chat while the card modal remains open behind it.
 ```
 
-- [x] **Step 4: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add docs/manual-validation/2026-08-05-chat-dock-improvements-matrix.md
