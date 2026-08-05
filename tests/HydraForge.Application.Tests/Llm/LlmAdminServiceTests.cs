@@ -129,7 +129,12 @@ public class LlmAdminServiceTests
         var service = CreateService(repo);
         var input = new UpdateModelInput(null, null, null, null, null, SupportsReasoning: true);
 
-        var result = await service.UpdateModelAsync(providerId, modelId, input, CancellationToken.None);
+        var result = await service.UpdateModelAsync(
+            providerId,
+            modelId,
+            input,
+            CancellationToken.None
+        );
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value.SupportsReasoning);
