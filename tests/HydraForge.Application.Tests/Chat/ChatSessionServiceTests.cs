@@ -5,6 +5,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Chat;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.Chat;
@@ -429,6 +430,16 @@ public class ChatSessionServiceTests
         }
     }
 
+    private sealed class FakeSettingsProvider : ISettingsProvider
+    {
+        public SystemSettings? Settings { get; set; }
+
+        public Task<SystemSettings> GetAsync(CancellationToken ct = default) =>
+            Task.FromResult(Settings ?? new SystemSettings());
+
+        public void Invalidate() { }
+    }
+
     // ── SUT factory ───────────────────────────────────────────────────────────
 
     private static (
@@ -442,7 +453,8 @@ public class ChatSessionServiceTests
         FakeDocumentRepo documentRepo,
         FakeSummaryGenerator summaryGenerator,
         FakeBackgroundTaskQueue backgroundTaskQueue,
-        FakeSessionDocRepo sessionDocRepo
+        FakeSessionDocRepo sessionDocRepo,
+        FakeSettingsProvider settingsProvider
     ) CreateSut()
     {
         var sessionRepo = new FakeSessionRepo();
@@ -455,6 +467,7 @@ public class ChatSessionServiceTests
         var documentRepo = new FakeDocumentRepo();
         var summaryGenerator = new FakeSummaryGenerator();
         var backgroundTaskQueue = new FakeBackgroundTaskQueue();
+        var settingsProvider = new FakeSettingsProvider();
         var logger = Substitute.For<ILogger<ChatSessionService>>();
 
         var service = new ChatSessionService(
@@ -468,6 +481,7 @@ public class ChatSessionServiceTests
             documentRepo,
             summaryGenerator,
             backgroundTaskQueue,
+            settingsProvider,
             logger
         );
 
@@ -487,16 +501,45 @@ public class ChatSessionServiceTests
             documentRepo,
             summaryGenerator,
             backgroundTaskQueue,
-            sessionDocRepo
+            sessionDocRepo,
+            settingsProvider
         );
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
+    public async Task CreateAsync_PersistsIdentitySystemMessage()
+    {
+        var (service, _, messageRepo, _, _, _, _, _, _, _, _, settingsProvider) =
+            CreateSut();
+        settingsProvider.Settings = new SystemSettings { AiIdentityPrompt = null };
+        var actorId = NewId();
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "test",
+                FolderId: null,
+                ProjectId: null,
+                OpenCardId: null,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null
+            ),
+            actorId
+        );
+
+        Assert.True(result.IsSuccess);
+        var systemMessage = messageRepo.Messages.FirstOrDefault(m => m.Role == MessageRole.System);
+        Assert.NotNull(systemMessage);
+        Assert.Contains("HydraForge", systemMessage!.Content);
+    }
+
+    [Fact]
     public async Task CreateAsync_F6_ImplicitClose_EnqueuesBackgroundJob()
     {
-        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, backgroundTaskQueue, _) =
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, backgroundTaskQueue, _, _) =
             CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
@@ -549,6 +592,7 @@ public class ChatSessionServiceTests
             _,
             summaryGenerator,
             backgroundTaskQueue,
+            _,
             _
         ) = CreateSut();
         var ownerId = NewId();
@@ -594,7 +638,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_Idempotent_ReturnsSameSessionTwice()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _, _) =
             CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
@@ -631,7 +675,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_EmptySession_NoSummaryNoCardChatLink()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -654,7 +698,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task UpdateAsync_ClosedSession_ReturnsSessionClosedError()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -684,7 +728,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_Fork_CreatesIndependentSessionOwnedByCaller()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _, _) =
             CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
@@ -747,7 +791,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetPermissionAsync_Granted_WhenActiveProjectSession()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -767,7 +811,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetPermissionAsync_Denied_WhenPersonalOrClosed()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
 
         // Personal session (no project) — denied
@@ -802,7 +846,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_WithMessages_CreatesCardChatLink()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _, _) =
             CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
@@ -844,7 +888,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CloseAsync_SummaryGenerationFails_ClosesWithNullSummaryAndFallbackCardChatLink()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _) =
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, summaryGenerator, _, _, _) =
             CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
@@ -890,7 +934,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task ArchiveAsync_NotOwner_ReturnsSessionNotOwner()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -910,7 +954,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task DetachDocumentAsync_NotOwner_ReturnsSessionNotOwner()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -930,7 +974,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_NoProjectNoFork_CreatesPersonalSession()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
 
         var result = await service.CreateAsync(
@@ -955,7 +999,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_MembershipDenied_ReturnsError()
     {
-        var (service, _, _, _, _, memberRepo, _, _, _, _, _) = CreateSut();
+        var (service, _, _, _, _, memberRepo, _, _, _, _, _, _) = CreateSut();
         memberRepo.DenyAccess = true;
 
         var result = await service.CreateAsync(
@@ -979,7 +1023,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_OpenCardWithoutProject_ReturnsError()
     {
-        var (service, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, _, _, _, _, _, _, _, _, _, _, _) = CreateSut();
 
         var result = await service.CreateAsync(
             new CreateChatSessionRequest(
@@ -1002,7 +1046,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_CardInDifferentProject_ReturnsError()
     {
-        var (service, _, _, cardRepo, _, _, _, _, _, _, _) = CreateSut();
+        var (service, _, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
         var projectId = NewId();
         var otherProjectId = NewId();
         var cardId = NewId();
@@ -1029,7 +1073,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetAsync_Owner_ReturnsDetailWithMessages()
     {
-        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -1059,7 +1103,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task GetAsync_NotOwnerNotShared_ReturnsAccessDenied()
     {
-        var (service, sessionRepo, _, _, _, memberRepo, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, memberRepo, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -1079,7 +1123,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task ListAsync_ReturnsOnlyCallersNonArchivedSessions()
     {
-        var (service, sessionRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var otherOwnerId = NewId();
         sessionRepo.Sessions.Add(
@@ -1123,7 +1167,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task AttachDocumentAsync_OwnedDocument_AttachesSuccessfully()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
         var ownerId = NewId();
         var documentId = NewId();
         var session = new ChatSession
@@ -1150,7 +1194,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task AttachDocumentAsync_NotOwnedDocument_ReturnsError()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, _, _) = CreateSut();
         var ownerId = NewId();
         var documentId = NewId();
         var session = new ChatSession
@@ -1176,7 +1220,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task AttachDocumentAsync_AlreadyAttached_ReturnsError()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
         var ownerId = NewId();
         var documentId = NewId();
         var session = new ChatSession
@@ -1211,7 +1255,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task ListDocumentsAsync_ReturnsAttachedNonArchivedDocuments()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
         var ownerId = NewId();
         var attachedId = NewId();
         var archivedId = NewId();

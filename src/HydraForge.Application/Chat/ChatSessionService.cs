@@ -1,6 +1,7 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
@@ -21,6 +22,7 @@ public class ChatSessionService(
     IDocumentRepository documentRepo,
     IChatSummaryGenerator summaryGenerator,
     IBackgroundTaskQueue backgroundTaskQueue,
+    ISettingsProvider settingsProvider,
     ILogger<ChatSessionService> logger
 ) : IChatSessionService
 {
@@ -34,7 +36,15 @@ public class ChatSessionService(
     private readonly IDocumentRepository _documentRepo = documentRepo;
     private readonly IChatSummaryGenerator _summaryGenerator = summaryGenerator;
     private readonly IBackgroundTaskQueue _backgroundTaskQueue = backgroundTaskQueue;
+    private readonly ISettingsProvider _settingsProvider = settingsProvider;
     private readonly ILogger<ChatSessionService> _logger = logger;
+
+    private const string DefaultIdentityPrompt =
+        "You are HydraForge's built-in assistant. HydraForge is a project management tool: " +
+        "users organize work into Projects, Boards (columns + cards), Specs, Plans, and Chat " +
+        "sessions. You help users think through their work, draft content, and answer questions " +
+        "about their projects. Be concise and direct. If a user asks about something outside " +
+        "HydraForge's scope, say so.";
 
     public async Task<Result<ChatSessionDto>> CreateAsync(
         CreateChatSessionRequest request,
@@ -122,8 +132,27 @@ public class ChatSessionService(
         };
 
         await _sessionRepo.AddAsync(session, ct);
+        await PersistIdentityMessageAsync(session, ct);
 
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+    }
+
+    private async Task PersistIdentityMessageAsync(ChatSession session, CancellationToken ct)
+    {
+        var settings = await _settingsProvider.GetAsync(ct);
+        var prompt = string.IsNullOrWhiteSpace(settings.AiIdentityPrompt)
+            ? DefaultIdentityPrompt
+            : settings.AiIdentityPrompt;
+
+        var identityMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            Role = MessageRole.System,
+            Content = prompt,
+            CreatedAt = DateTime.UtcNow,
+        };
+        await _messageRepo.AddAsync(identityMessage, ct);
     }
 
     private async Task<Result<ChatSessionDto>> CreateForkedAsync(
@@ -190,6 +219,7 @@ public class ChatSessionService(
         };
 
         await _sessionRepo.AddAsync(forked, ct);
+        await PersistIdentityMessageAsync(forked, ct);
 
         // Pre-populate first message with summary
         if (!string.IsNullOrWhiteSpace(summaryText))

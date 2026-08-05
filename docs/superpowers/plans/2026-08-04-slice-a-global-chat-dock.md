@@ -53,7 +53,7 @@
 - Modify: `src/HydraForge.Domain/Entities/PersonalSpace/SystemSettings.cs`
 - Test: `tests/HydraForge.Domain.Tests/` (existing entity tests if any; otherwise skip — entity is a POCO, no behavior to test beyond the setter)
 
-- [ ] **Step 1: Add the property and setter method**
+- [x] **Step 1: Add the property and setter method**
 
 In `src/HydraForge.Domain/Entities/PersonalSpace/SystemSettings.cs`, add the property after `HousekeepingRunTimeUtc` (line 16) and a setter method after `SetHousekeepingRunTime` (line 60):
 
@@ -69,12 +69,12 @@ In `src/HydraForge.Domain/Entities/PersonalSpace/SystemSettings.cs`, add the pro
     }
 ```
 
-- [ ] **Step 2: Build to verify it compiles**
+- [x] **Step 2: Build to verify it compiles**
 
 Run: `dotnet build`
 Expected: BUILD SUCCEEDED (no tests yet — property is a POCO field, tested via migration + service tests later)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/HydraForge.Domain/Entities/PersonalSpace/SystemSettings.cs
@@ -89,7 +89,7 @@ git commit -m "feat(settings): add AiIdentityPrompt to SystemSettings"
 - Modify: `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs:503-520` (SystemSettings seed block)
 - Create: `src/HydraForge.Infrastructure/Migrations/<timestamp>_AddAiIdentityPrompt.cs`
 
-- [ ] **Step 1: Update the seed data to include the new column**
+- [x] **Step 1: Update the seed data to include the new column**
 
 In `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`, the `SystemSettings` seed block (around line 508-518) creates a `new SystemSettings { ... }`. The new `AiIdentityPrompt` property defaults to `null` (hardcoded fallback used when null), so no seed value is needed — but verify the column maps correctly. The `ConfigureEntity<SystemSettings>` call uses the default property mapping. Since `AiIdentityPrompt` is `string?`, Npgsql would default to `nvarchar(max)` — per repo convention (AGENTS.md "Database And Migrations"), chain `.HasColumnType("text")`.
 
@@ -140,7 +140,7 @@ Update it to add a property configuration before `HasData`:
         );
 ```
 
-- [ ] **Step 2: Generate the migration**
+- [x] **Step 2: Generate the migration**
 
 Run:
 ```bash
@@ -148,7 +148,7 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations add AddAiIdentityPro
 ```
 Expected: Migration file created under `src/HydraForge.Infrastructure/Migrations/`. Verify the `Up` method adds an `ai_identity_prompt` column of type `text` (nullable) to the `system_settings` table.
 
-- [ ] **Step 3: Verify model is clean (no pending changes)**
+- [x] **Step 3: Verify model is clean (no pending changes)**
 
 Run:
 ```bash
@@ -409,7 +409,7 @@ Expected: PASS
 Run: `dotnet test --filter FullyQualifiedName~ChatSessionServiceTests`
 Expected: All PASS. If any existing test fails because the constructor signature changed (missing `ISettingsProvider` stub), update the test fakes to provide an `ISettingsProvider` stub returning a default `SystemSettings`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatSessionService.cs tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs
