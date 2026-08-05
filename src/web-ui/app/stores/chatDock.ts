@@ -11,6 +11,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   const activeSessionId = ref<string | null>(null)
   const isCreating = ref(false)
   const position = ref({ x: 0, y: 0 })
+  const pendingMessage = ref<string | null>(null)
 
   const route = useRoute()
   const api = useApi()
@@ -55,13 +56,19 @@ export const useChatDockStore = defineStore('chatDock', () => {
   function loadSession(sessionId: string) {
     activeSessionId.value = sessionId
     mode.value = 'session'
+    pendingMessage.value = null
     localStorage.setItem(LS_ACTIVE_SESSION_KEY, sessionId)
   }
 
   function newChat() {
     activeSessionId.value = null
+    pendingMessage.value = null
     localStorage.removeItem(LS_ACTIVE_SESSION_KEY)
     mode.value = 'draft'
+  }
+
+  function clearPendingMessage() {
+    pendingMessage.value = null
   }
 
   function showHistory() {
@@ -72,7 +79,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
     mode.value = activeSessionId.value ? 'session' : 'draft'
   }
 
-  async function startNewChat() {
+  async function startNewChat(initialMessage?: string) {
     if (isCreating.value) return
     isCreating.value = true
     try {
@@ -87,6 +94,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
       if (data) {
         activeSessionId.value = data.id
         mode.value = 'session'
+        pendingMessage.value = initialMessage ?? null
         localStorage.setItem(LS_ACTIVE_SESSION_KEY, data.id)
       }
     } catch (err) {
@@ -97,7 +105,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   }
 
   return {
-    isOpen, mode, activeSessionId, isCreating, position, currentProjectId,
-    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat
+    isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage,
+    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage
   }
 })

@@ -193,8 +193,8 @@ export const ApiRoutes = {
 
   Chat: {
     sessions: {
-      list: (folderId?: string, projectId?: string, before?: string, limit = 20) =>
-        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}limit=${limit}`,
+      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20) =>
+        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
       create: () => '/api/chat/sessions',
       detail: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       update: (sessionId: string) => `/api/chat/sessions/${sessionId}`,

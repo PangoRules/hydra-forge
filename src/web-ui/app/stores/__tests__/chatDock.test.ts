@@ -85,6 +85,38 @@ describe('chatDock store', () => {
       body: { title: '' }
     })
   })
+
+  it('startNewChat with content sets pendingMessage for the auto-send flow', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('summarize this board')
+    expect(store.activeSessionId).toBe('new-session')
+    expect(store.pendingMessage).toBe('summarize this board')
+  })
+
+  it('startNewChat without content leaves pendingMessage null', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat()
+    expect(store.pendingMessage).toBe(null)
+  })
+
+  it('newChat clears pendingMessage', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('hello')
+    expect(store.pendingMessage).toBe('hello')
+    store.newChat()
+    expect(store.pendingMessage).toBe(null)
+  })
+
+  it('loadSession clears any stale pendingMessage', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('hello')
+    store.loadSession('other-session')
+    expect(store.pendingMessage).toBe(null)
+  })
 })
 
 import { useChatDockStore } from '~/stores/chatDock'

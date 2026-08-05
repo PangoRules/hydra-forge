@@ -15,7 +15,7 @@ const toast = useAppToast()
 const route = useRoute()
 
 const dock = useChatDockStore()
-const { sessions, loading, hasMore, loadMore, refresh } = useChatSessionList()
+const { sessions, loading, hasMore, loadMore, refresh, patchSession } = useChatSessionList()
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
@@ -104,9 +104,10 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
   }
 }
 
-function syncSession(_id: string, _title: string, _status: string) {
-  // Session state is managed by ChatSessionView; refresh list to pick up title/status changes
-  refresh()
+function syncSession(id: string, title: string, status: string) {
+  // Patch the item in place — a full refresh() would drop the user back to
+  // page 1 and lose their scroll position if they've paged into older history.
+  patchSession(id, { title, status: status as ChatSessionDto['status'] })
 }
 
 const archiveTargetId = ref<string | null>(null)

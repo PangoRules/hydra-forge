@@ -50,9 +50,13 @@ function onSessionRefreshed(_id: string, _title: string, _status: string) {
   // Title/status updated server-side — store refreshes on next open
 }
 
-function handleSendInDraft(_message: string) {
-  // Create session — user will type in session mode after creation
-  dock.startNewChat()
+const draftMessage = ref('')
+
+async function sendDraftMessage() {
+  const content = draftMessage.value.trim()
+  if (!content || dock.isCreating) return
+  draftMessage.value = ''
+  await dock.startNewChat(content)
 }
 
 const isEditingTitle = ref(false)
@@ -176,8 +180,10 @@ async function submitTitleEdit() {
             </div>
             <div class="shrink-0 px-4 pb-4">
               <UInput
+                v-model="draftMessage"
                 placeholder="Type a message..."
-                @keydown.enter="handleSendInDraft"
+                :disabled="dock.isCreating"
+                @keydown.enter="sendDraftMessage"
               />
             </div>
           </div>
@@ -195,7 +201,10 @@ async function submitTitleEdit() {
             :key="dock.activeSessionId"
             :session-id="dock.activeSessionId"
             :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
+            :initial-message="dock.pendingMessage"
+            :auto-send-initial="!!dock.pendingMessage"
             @session-refreshed="onSessionRefreshed"
+            @initial-message-sent="dock.clearPendingMessage()"
           />
         </div>
       </div>
