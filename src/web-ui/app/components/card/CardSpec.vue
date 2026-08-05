@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { htmlToMarkdown } from '~/lib/document-markdown'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 const DOC_TYPE_LABELS: Record<string, string> = { Specification: 'Specification', Concept: 'Concept', Report: 'Report' }
@@ -158,6 +159,12 @@ async function toggleHistory() {
 
 const { shortUser } = useMemberDisplay()
 
+const { exportDocument } = useDocumentExport()
+
+function exportAsMarkdown() {
+  exportDocument(title.value || 'untitled', htmlToMarkdown(content.value), 'md')
+}
+
 onMounted(() => fetchSpec())
 </script>
 
@@ -174,6 +181,14 @@ onMounted(() => fetchSpec())
           variant="ghost"
           :label="showHistory ? 'Hide history' : 'History'"
           @click="toggleHistory"
+        />
+        <UButton
+          v-if="spec"
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-download"
+          title="Export as Markdown"
+          @click="exportAsMarkdown"
         />
         <UButton
           v-if="!props.readonly"

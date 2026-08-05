@@ -12,9 +12,22 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]
-public class SpecsController(SpecService specService, IHtmlToMarkdownConverter htmlToMarkdown)
-    : ControllerBase
+public class SpecsController(
+    SpecService specService,
+    IHtmlToMarkdownConverter htmlToMarkdown,
+    IMarkdownToHtmlConverter markdownToHtml
+) : ControllerBase
 {
+    // Content is stored as Markdown. A client that authors in HTML (the Web UI's
+    // TipTap editor) sends/expects HTML on both write and read — the same
+    // X-Content-Format header drives conversion in both directions so Content
+    // never leaves this boundary in the wrong shape for whichever client asked.
+    private string InContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? htmlToMarkdown.Convert(content) : content;
+
+    private string OutContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? markdownToHtml.Convert(content) : content;
+
     [HttpPost("cards/{cardId:guid}")]
     [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
@@ -24,9 +37,6 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
     )
     {
         var userId = User.GetRequiredUserId();
-        var content = ContentFormatHeader.IsHtml(Request)
-            ? htmlToMarkdown.Convert(request.Content)
-            : request.Content;
 
         var cmd = new CreateSpecCommand(
             projectId,
@@ -35,7 +45,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             request.DocType,
             request.Title,
             request.Description,
-            content
+            InContent(request.Content)
         );
 
         var result = await specService.CreateAsync(cmd);
@@ -52,7 +62,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -92,7 +102,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
                 s.DocType,
                 s.Title,
                 s.Description,
-                s.Content,
+                OutContent(s.Content),
                 s.Version,
                 s.CreatedByUserId,
                 s.CreatedAt,
@@ -123,7 +133,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -142,9 +152,6 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
     )
     {
         var userId = User.GetRequiredUserId();
-        var content = ContentFormatHeader.IsHtml(Request)
-            ? htmlToMarkdown.Convert(request.Content)
-            : request.Content;
 
         var cmd = new UpdateSpecCommand(
             projectId,
@@ -152,7 +159,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             userId,
             request.Title,
             request.Description,
-            content
+            InContent(request.Content)
         );
 
         var result = await specService.UpdateAsync(cmd);
@@ -169,7 +176,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -199,7 +206,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
                 v.Version,
                 v.Title,
                 v.Description,
-                v.Content,
+                OutContent(v.Content),
                 v.CreatedAt,
                 v.CreatedByUserId
             )),
@@ -234,7 +241,7 @@ public class SpecsController(SpecService specService, IHtmlToMarkdownConverter h
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,

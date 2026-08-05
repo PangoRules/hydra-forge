@@ -244,6 +244,7 @@ public class SpecViewerScreen(
                 yield return "[s] Status";
             if (_versions.Count > 1)
                 yield return "[r] Restore version";
+            yield return "[x] Export";
         }
         if (CanCreateMore)
             yield return "[c] Create";
@@ -300,6 +301,10 @@ public class SpecViewerScreen(
                 await RestoreVersionAsync();
                 break;
 
+            case ConsoleKey.X:
+                await ExportDocumentAsync();
+                break;
+
             case ConsoleKey.Q:
                 if (QuitConfirm.Show())
                     Environment.Exit(0);
@@ -334,6 +339,15 @@ public class SpecViewerScreen(
                 Border = BoxBorder.Rounded,
                 Header = new PanelHeader($" {mode} v{doc.Version} "),
                 Expand = true,
+                // Without an explicit Height, a long-enough logical line word-wraps
+                // into more rendered rows than `pageSize` budgeted for, growing the
+                // panel past the terminal and pushing the title Rule above off-screen
+                // (Content is real Markdown now — headings/lists/tables wrap far more
+                // than the old single-line HTML blobs did). +2 accounts for the
+                // panel's own top/bottom border+header rows, matching the "Rule +
+                // panel + hint line eat 4 rows" budget below. Same technique as
+                // BuildListPanel/BuildDetailSplit in this file.
+                Height = pageSize + 2,
             };
             AnsiConsole.Write(panel);
             AnsiConsole.MarkupLine("[grey][[j/k]] Scroll  [[Esc]] Back[/]");
@@ -600,6 +614,77 @@ public class SpecViewerScreen(
         {
             errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
+    }
+
+    // Content returned to the TUI is already Markdown (no X-Content-Format
+    // header sent — see docs on the Web UI's read-path conversion), so this
+    // writes doc.Content verbatim, no conversion needed.
+    private async Task ExportDocumentAsync()
+    {
+        if (_selectedIndex >= _documents.Count)
+            return;
+        var doc = _documents[_selectedIndex];
+
+        try
+        {
+            var client = apiClientFactory.GetClient();
+            var project = await client.ProjectsGET2Async(projectId);
+
+            var cwd = Environment.CurrentDirectory;
+            var repoRoot = GitRepoDetector.FindRepoRoot(cwd);
+            var localRemote =
+                repoRoot != null ? GitRepoDetector.GetOriginRemoteUrl(repoRoot) : null;
+            var matches = GitRepoDetector.Matches(localRemote, project.GitRemoteUrl);
+
+            string baseDir;
+            if (repoRoot != null && matches)
+            {
+                baseDir = repoRoot;
+            }
+            else
+            {
+                var reason =
+                    repoRoot == null
+                        ? "No git repository found from the current directory."
+                        : $"This directory's git remote doesn't match the project's configured remote ({project.GitRemoteUrl ?? "none set"}).";
+                AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(reason)}[/]");
+                if (!AnsiConsole.Confirm("Export here anyway?", false))
+                {
+                    await RenderAsync();
+                    return;
+                }
+                baseDir = cwd;
+            }
+
+            var targetDir = Path.Combine(baseDir, "docs", mode == "spec" ? "specs" : "plans");
+            Directory.CreateDirectory(targetDir);
+            var path = Path.Combine(targetDir, $"{Slugify(doc.Title)}.md");
+            await File.WriteAllTextAsync(path, doc.Content);
+
+            AnsiConsole.MarkupLine($"[green]Exported to {Markup.Escape(path)}[/]");
+            AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
+            Console.ReadKey(true);
+            await RenderAsync();
+        }
+        catch (ApiException ex)
+        {
+            errorCollector.Add("N/A", $"Export failed: {ex.Message}");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            errorCollector.Add("N/A", $"Export failed: {ex.Message}");
+        }
+    }
+
+    private static string Slugify(string title)
+    {
+        var lower = title.Trim().ToLowerInvariant();
+        var slug = System.Text.RegularExpressions.Regex.Replace(lower, "[^a-z0-9]+", "-").Trim('-');
+        return string.IsNullOrEmpty(slug) ? "untitled" : slug;
     }
 
     private async Task LoadDocumentsAsync()

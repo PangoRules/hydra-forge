@@ -115,9 +115,25 @@ public class PlansControllerTests
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("<p>", body);
-        Assert.Contains("Hello **world**", body);
+        // Response echoes back in the same format the request asked for (Html) —
+        // the real assertion is what's actually stored: fetch it back without the
+        // header (the TUI's request shape) and confirm it's Markdown, not HTML.
+        var createdBody = await response.Content.ReadAsStringAsync();
+        var planId = System
+            .Text.Json.JsonDocument.Parse(createdBody)
+            .RootElement.GetProperty("id")
+            .GetString();
+
+        var getRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/plans/{planId}"
+        );
+        getRequest.Headers.Add("Authorization", $"Bearer {token}");
+
+        var getResponse = await client.SendAsync(getRequest);
+        var storedBody = await getResponse.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("<p>", storedBody);
+        Assert.Contains("Hello **world**", storedBody);
     }
 
     [Fact]
@@ -263,6 +279,64 @@ public class PlansControllerTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Plan", body);
         Assert.Contains("# Content", body);
+    }
+
+    [Fact]
+    public async Task GetById_WithHtmlContentFormatHeader_ConvertsStoredMarkdownToHtml()
+    {
+        var factory = new PlansTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = PlansTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+
+        var projectId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddPlan(
+            new Plan
+            {
+                Id = planId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "Test Plan",
+                Content = "Hello **world**",
+                Version = 1,
+                CreatedByUserId = userId,
+            }
+        );
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/plans/{planId}"
+        );
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("X-Content-Format", "Html");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("<strong>world</strong>", body);
+        Assert.DoesNotContain("**world**", body);
     }
 
     [Fact]

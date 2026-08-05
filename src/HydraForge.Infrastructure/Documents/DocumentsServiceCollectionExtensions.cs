@@ -9,6 +9,7 @@ public static class DocumentsServiceCollectionExtensions
     public static IServiceCollection AddDocumentServices(this IServiceCollection services)
     {
         services.AddScoped<IHtmlToMarkdownConverter, ReverseMarkdownConverter>();
+        services.AddScoped<IMarkdownToHtmlConverter, MarkdigMarkdownToHtmlConverter>();
         services.AddScoped<ISpecPlanHtmlBackfillRepository, EfSpecPlanHtmlBackfillRepository>();
         services.AddScoped<SpecPlanHtmlBackfillJob>();
         return services;
