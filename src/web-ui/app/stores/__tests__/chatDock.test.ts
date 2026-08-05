@@ -89,9 +89,23 @@ describe('chatDock store', () => {
   it('startNewChat with content sets pendingMessage for the auto-send flow', async () => {
     mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
     const store = useChatDockStore()
-    await store.startNewChat('summarize this board')
+    await store.startNewChat('summarize this board', null, 'model-1', 'high')
     expect(store.activeSessionId).toBe('new-session')
-    expect(store.pendingMessage).toBe('summarize this board')
+    expect(store.pendingMessage).toEqual({
+      content: 'summarize this board',
+      presetId: null,
+      modelId: 'model-1',
+      reasoningEffort: 'high'
+    })
+  })
+
+  it('startNewChat sends the chosen model/effort on the create request', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('hello', null, 'model-1', 'high')
+    expect(mockPOST).toHaveBeenCalledWith('/api/chat/sessions', {
+      body: { title: '', projectId: 'abc', preferredModelConfigId: 'model-1', preferredEffort: 'high' }
+    })
   })
 
   it('startNewChat without content leaves pendingMessage null', async () => {
@@ -105,7 +119,7 @@ describe('chatDock store', () => {
     mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
     const store = useChatDockStore()
     await store.startNewChat('hello')
-    expect(store.pendingMessage).toBe('hello')
+    expect(store.pendingMessage).not.toBe(null)
     store.newChat()
     expect(store.pendingMessage).toBe(null)
   })

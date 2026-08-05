@@ -11,7 +11,12 @@ export const useChatDockStore = defineStore('chatDock', () => {
   const activeSessionId = ref<string | null>(null)
   const isCreating = ref(false)
   const position = ref({ x: 0, y: 0 })
-  const pendingMessage = ref<string | null>(null)
+  const pendingMessage = ref<{
+    content: string
+    presetId: string | null
+    modelId: string | null
+    reasoningEffort: string | null
+  } | null>(null)
 
   const route = useRoute()
   const api = useApi()
@@ -79,7 +84,12 @@ export const useChatDockStore = defineStore('chatDock', () => {
     mode.value = activeSessionId.value ? 'session' : 'draft'
   }
 
-  async function startNewChat(initialMessage?: string) {
+  async function startNewChat(
+    content?: string,
+    presetId?: string | null,
+    modelId?: string | null,
+    reasoningEffort?: string | null
+  ) {
     if (isCreating.value) return
     isCreating.value = true
     try {
@@ -90,11 +100,20 @@ export const useChatDockStore = defineStore('chatDock', () => {
       const body: Record<string, unknown> = { title: '' }
       if (currentProjectId.value) body.projectId = currentProjectId.value
       if (openCardId) body.openCardId = openCardId
+      if (modelId) body.preferredModelConfigId = modelId
+      if (reasoningEffort) body.preferredEffort = reasoningEffort
       const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), { body })
       if (data) {
         activeSessionId.value = data.id
         mode.value = 'session'
-        pendingMessage.value = initialMessage ?? null
+        pendingMessage.value = content
+          ? {
+              content,
+              presetId: presetId ?? null,
+              modelId: modelId ?? null,
+              reasoningEffort: reasoningEffort ?? null
+            }
+          : null
         localStorage.setItem(LS_ACTIVE_SESSION_KEY, data.id)
       }
     } catch (err) {

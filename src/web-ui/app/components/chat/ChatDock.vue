@@ -3,6 +3,7 @@ import { useDraggable } from '@vueuse/core'
 import { useChatDockStore } from '~/stores/chatDock'
 import ChatSessionView from '~/components/chat/ChatSessionView.vue'
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
+import ChatInput from '~/components/chat/ChatInput.vue'
 import type { ChatSessionDetailDto } from '~/types/chat'
 import { ApiRoutes } from '~/lib/routes'
 
@@ -22,7 +23,10 @@ const { x, y } = useDraggable(popupRef, {
       ? { ...dock.position }
       : {
           x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 400) : 0,
-          y: typeof window !== 'undefined' ? Math.max(16, window.innerHeight - 600) : 0
+          // Popup height is h-[50vh] (see template) — anchor off half the
+          // viewport height, not a stale fixed-pixel assumption from when
+          // the popup was h-[560px]. Leaves a 16px margin above the bottom edge.
+          y: typeof window !== 'undefined' ? Math.max(16, window.innerHeight * 0.5 - 16) : 0
         }
   ),
   preventDefault: true
@@ -50,13 +54,14 @@ function onSessionRefreshed(_id: string, _title: string, _status: string) {
   // Title/status updated server-side — store refreshes on next open
 }
 
-const draftMessage = ref('')
-
-async function sendDraftMessage() {
-  const content = draftMessage.value.trim()
-  if (!content || dock.isCreating) return
-  draftMessage.value = ''
-  await dock.startNewChat(content)
+async function sendDraftMessage(
+  content: string,
+  presetId?: string | null,
+  modelId?: string | null,
+  reasoningEffort?: string | null
+) {
+  if (!content.trim() || dock.isCreating) return
+  await dock.startNewChat(content, presetId, modelId, reasoningEffort)
 }
 
 const isEditingTitle = ref(false)
@@ -168,24 +173,24 @@ async function submitTitleEdit() {
 
         <!-- Body -->
         <div class="flex-1 min-h-0 flex flex-col">
-          <!-- Draft mode -->
+          <!-- Draft mode — same chrome as an active session (ChatInput, model
+               picker, presets), just no messages above it yet. Keeps the UI
+               identical before/after the first message instead of swapping
+               to a different-looking composer. -->
           <div
             v-if="dock.mode === 'draft'"
-            class="flex-1 flex flex-col"
+            class="flex-1 flex flex-col min-h-0"
           >
             <div class="flex-1 flex items-center justify-center p-4">
               <p class="text-sm text-muted text-center">
                 Start a new conversation.
               </p>
             </div>
-            <div class="shrink-0 px-4 pb-4">
-              <UInput
-                v-model="draftMessage"
-                placeholder="Type a message..."
-                :disabled="dock.isCreating"
-                @keydown.enter="sendDraftMessage"
-              />
-            </div>
+            <ChatInput
+              :disabled="dock.isCreating"
+              :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
+              @send="sendDraftMessage"
+            />
           </div>
 
           <!-- History mode -->
@@ -201,8 +206,11 @@ async function submitTitleEdit() {
             :key="dock.activeSessionId"
             :session-id="dock.activeSessionId"
             :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
-            :initial-message="dock.pendingMessage"
+            :initial-message="dock.pendingMessage?.content ?? null"
             :auto-send-initial="!!dock.pendingMessage"
+            :initial-preset-id="dock.pendingMessage?.presetId ?? null"
+            :initial-model-id="dock.pendingMessage?.modelId ?? null"
+            :initial-effort="dock.pendingMessage?.reasoningEffort ?? null"
             @session-refreshed="onSessionRefreshed"
             @initial-message-sent="dock.clearPendingMessage()"
           />

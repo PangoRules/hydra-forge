@@ -14,7 +14,7 @@ const storeState = reactive({
   isCreating: false,
   currentProjectId: 'proj1',
   position: { x: 0, y: 0 },
-  pendingMessage: null as string | null,
+  pendingMessage: null as { content: string, presetId: string | null, modelId: string | null, reasoningEffort: string | null } | null,
   toggleDock: mockToggleDock,
   closeDock: mockCloseDock,
   startNewChat: mockStartNewChat,
@@ -94,24 +94,31 @@ describe('ChatDock', () => {
     expect(wrapper.html()).not.toContain('fixed z-50')
   })
 
+  it('draft mode: renders the same ChatInput composer used by an active session', async () => {
+    storeState.mode = 'draft'
+    storeState.activeSessionId = undefined as unknown as string
+    const wrapper = await mountSuspended(ChatDock)
+    expect(wrapper.find('textarea').exists()).toBe(true)
+  })
+
   it('draft mode: typing a message and pressing Enter creates a session with that content', async () => {
     storeState.mode = 'draft'
     storeState.activeSessionId = undefined as unknown as string
     const wrapper = await mountSuspended(ChatDock)
-    const input = wrapper.find('input[placeholder="Type a message..."]')
-    expect(input.exists()).toBe(true)
-    await input.setValue('summarize this board')
-    await input.trigger('keydown.enter')
-    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board')
+    const textarea = wrapper.find('textarea')
+    expect(textarea.exists()).toBe(true)
+    await textarea.setValue('summarize this board')
+    await textarea.trigger('keydown', { key: 'Enter' })
+    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board', null, null, null)
   })
 
   it('draft mode: does not create a session on empty/whitespace-only Enter', async () => {
     storeState.mode = 'draft'
     storeState.activeSessionId = undefined as unknown as string
     const wrapper = await mountSuspended(ChatDock)
-    const input = wrapper.find('input[placeholder="Type a message..."]')
-    await input.setValue('   ')
-    await input.trigger('keydown.enter')
+    const textarea = wrapper.find('textarea')
+    await textarea.setValue('   ')
+    await textarea.trigger('keydown', { key: 'Enter' })
     expect(mockStartNewChat).not.toHaveBeenCalled()
   })
 })
