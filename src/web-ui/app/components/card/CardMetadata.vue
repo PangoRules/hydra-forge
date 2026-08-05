@@ -99,11 +99,11 @@ async function handleTypeChange(value: string) {
   const currentType = cardTypeToApiString(props.card.type)
   const newType = value
 
-  const isGoalOrIdea = (t: string) => t === 'Goal' || t === 'Idea'
-  const isGoal = (t: string) => t === 'Goal'
+  const hasSpec = (t: string) => ['Goal', 'Idea', 'Issue', 'Security', 'Task'].includes(t)
+  const hasPlan = (t: string) => ['Issue', 'Task'].includes(t)
 
-  const wouldLoseSpec = isGoalOrIdea(currentType) && !isGoalOrIdea(newType)
-  const wouldLosePlan = isGoal(currentType) && !isGoal(newType)
+  const wouldLoseSpec = hasSpec(currentType) && !hasSpec(newType)
+  const wouldLosePlan = hasPlan(currentType) && !hasPlan(newType)
 
   if (wouldLoseSpec || wouldLosePlan) {
     const [specsResult, plansResult] = await Promise.all([

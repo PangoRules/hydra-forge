@@ -3,7 +3,8 @@ export const CARD_TYPE_MAP: Record<number, string> = {
   0: 'Task',
   1: 'Issue',
   2: 'Goal',
-  3: 'Idea'
+  3: 'Idea',
+  4: 'Security'
 }
 
 /** Lucide icon name for each UI index. */
@@ -11,7 +12,8 @@ export const CARD_TYPE_ICONS: Record<number, string> = {
   0: 'i-lucide-square-check',
   1: 'i-lucide-bug',
   2: 'i-lucide-layers',
-  3: 'i-lucide-lightbulb'
+  3: 'i-lucide-lightbulb',
+  4: 'i-lucide-shield'
 }
 
 /**
@@ -22,7 +24,8 @@ export const CARD_TYPE_OPTIONS = [
   { value: 0, apiValue: 'Task', label: 'Task', color: 'neutral', icon: 'i-lucide-square-check' },
   { value: 1, apiValue: 'Issue', label: 'Issue', color: 'error', icon: 'i-lucide-bug' },
   { value: 2, apiValue: 'Goal', label: 'Goal', color: 'primary', icon: 'i-lucide-layers' },
-  { value: 3, apiValue: 'Idea', label: 'Idea', color: 'warning', icon: 'i-lucide-lightbulb' }
+  { value: 3, apiValue: 'Idea', label: 'Idea', color: 'warning', icon: 'i-lucide-lightbulb' },
+  { value: 4, apiValue: 'Security', label: 'Security', color: 'info', icon: 'i-lucide-shield' }
 ] as const
 
 /** @deprecated — parent type is no longer restricted; any card can be a parent. */
@@ -34,7 +37,8 @@ export const CARD_TYPE_FILTER_OPTIONS = [
   { label: 'Task', value: 'Task' },
   { label: 'Issue', value: 'Issue' },
   { label: 'Goal', value: 'Goal' },
-  { label: 'Idea', value: 'Idea' }
+  { label: 'Idea', value: 'Idea' },
+  { label: 'Security', value: 'Security' }
 ] as const
 
 /**
