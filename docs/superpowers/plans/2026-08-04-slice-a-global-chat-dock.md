@@ -806,7 +806,7 @@ git commit -m "feat(chat): add chatDock Pinia store for global chat widget"
 
 The component renders a FAB (collapsed) + draggable popup (expanded), reusing `ChatSessionView`. Hidden on `/chats` routes. Uses `@vueuse/core` `useDraggable` for the popup.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/components/chat/__tests__/ChatDock.test.ts`. Test: FAB renders, clicking FAB opens the popup, popup contains `ChatSessionView` when a session is active, dock is hidden on `/chats` route.
 
@@ -848,12 +848,12 @@ describe('ChatDock', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- ChatDock`
 Expected: FAIL — component doesn't exist.
 
-- [ ] **Step 3: Implement the component**
+- [x] **Step 3: Implement the component**
 
 Create `src/web-ui/app/components/chat/ChatDock.vue`:
 
@@ -991,12 +991,12 @@ watch(() => dock.isOpen, async (open) => {
 </template>
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd src/web-ui && pnpm test -- ChatDock`
 Expected: PASS. Adjust stubs as needed — `ChatSessionView`, `useChatDockStore`, `useRoute` must be stubbed per the existing component test convention.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatDock.vue src/web-ui/app/components/chat/__tests__/ChatDock.test.ts
