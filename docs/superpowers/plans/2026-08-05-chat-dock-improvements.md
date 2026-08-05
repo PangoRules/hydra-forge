@@ -230,7 +230,7 @@ public void UpdateSettings(
 
 Confirm the exact guard condition/message against the real method before editing — the snippet above reconstructs it from the "throws if Status != Active" fact, not a verbatim quote.
 
-- [ ] **Step 2: Map new columns in DbContext**
+- [x] **Step 2: Map new columns in DbContext**
 
 In `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs`, find the `ConfigureEntity<ChatSession>` block. Add property configs:
 
@@ -240,7 +240,7 @@ b.Property(s => s.PreferredEffort).HasColumnType("text");
 
 `PreferredModelConfigId` is a `Guid?` — EF Core maps it to `uuid` by default, no `.HasColumnType()` needed.
 
-- [ ] **Step 3: Generate migration**
+- [x] **Step 3: Generate migration**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations add AddChatSessionModelPreferences --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server
@@ -248,7 +248,7 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations add AddChatSessionMo
 
 Verify the `Up` method adds `preferred_model_config_id` (uuid, nullable) and `preferred_effort` (text, nullable) to the `chat_sessions` table.
 
-- [ ] **Step 4: Verify model is clean**
+- [x] **Step 4: Verify model is clean**
 
 ```bash
 PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations has-pending-model-changes --project src/HydraForge.Infrastructure --startup-project src/HydraForge.Server
@@ -256,12 +256,12 @@ PATH="$PATH:/home/pango/.dotnet/tools" dotnet ef migrations has-pending-model-ch
 
 Expected: "No pending model changes."
 
-- [ ] **Step 5: Build to verify**
+- [x] **Step 5: Build to verify**
 
 Run: `dotnet build`
 Expected: BUILD SUCCEEDED (existing callers of `UpdateSettings` will fail — fixed in Task 3)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/HydraForge.Domain/Entities/Chat/ChatSession.cs src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs src/HydraForge.Infrastructure/Migrations/
@@ -278,7 +278,7 @@ git commit -m "feat(chat): add PreferredModelConfigId/PreferredEffort to ChatSes
 - Modify: `src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs`
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs`
 
-- [ ] **Step 1: Add model fields to DTOs**
+- [x] **Step 1: Add model fields to DTOs**
 
 In `src/HydraForge.Application/Chat/ChatDtos.cs`:
 
@@ -300,7 +300,7 @@ public Guid? PreferredModelConfigId { get; init; }
 public string? PreferredEffort { get; init; }
 ```
 
-- [ ] **Step 2: Write the failing service test**
+- [x] **Step 2: Write the failing service test**
 
 In `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs`, add:
 
@@ -333,12 +333,12 @@ public async Task CreateAsync_WithPreferredModelConfigId_PersistsIt()
 
 Follow the existing `TestFakes` pattern (add `Sessions` list to the fake repo if not already exposed).
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `dotnet test --filter FullyQualifiedName~CreateAsync_WithPreferredModelConfigId_PersistsIt`
 Expected: FAIL
 
-- [ ] **Step 4: Update `ChatSessionService.CreateAsync` to store model fields**
+- [x] **Step 4: Update `ChatSessionService.CreateAsync` to store model fields**
 
 After `session.UpdateSettings(...)` or direct property assignment in `CreateAsync`:
 
@@ -349,7 +349,7 @@ if (request.PreferredEffort != null)
     session.PreferredEffort = request.PreferredEffort;
 ```
 
-- [ ] **Step 5: Update `ChatSessionService.UpdateAsync` to handle model fields**
+- [x] **Step 5: Update `ChatSessionService.UpdateAsync` to handle model fields**
 
 In the PATCH handler, after the existing property checks:
 
@@ -360,7 +360,7 @@ if (request.PreferredEffort != null)
     session.PreferredEffort = request.PreferredEffort;
 ```
 
-- [ ] **Step 6: Fix the existing `UpdateSettings` call site in `ChatSessionService.cs`**
+- [x] **Step 6: Fix the existing `UpdateSettings` call site in `ChatSessionService.cs`**
 
 Find line ~340 (the existing `session.UpdateSettings(...)` call) and add the two new params (`null, null`):
 
@@ -368,21 +368,21 @@ Find line ~340 (the existing `session.UpdateSettings(...)` call) and add the two
 session.UpdateSettings(title, folderId, personalityId, aiEditMode, searchAllMyDocs, null, null);
 ```
 
-- [ ] **Step 7: Update controller to accept model fields**
+- [x] **Step 7: Update controller to accept model fields**
 
 In `ChatSessionsController.cs`, the `CreateChatSessionRequest` binding already uses the DTO — no manual mapping needed if the DTO is the parameter type. Verify the POST action signature uses `[FromBody] CreateChatSessionRequest request`. If it maps manually, add the new fields.
 
-- [ ] **Step 8: Run test to verify it passes**
+- [x] **Step 8: Run test to verify it passes**
 
 Run: `dotnet test --filter FullyQualifiedName~CreateAsync_WithPreferredModelConfigId_PersistsIt`
 Expected: PASS
 
-- [ ] **Step 9: Run full ChatSessionServiceTests suite**
+- [x] **Step 9: Run full ChatSessionServiceTests suite**
 
 Run: `dotnet test --filter FullyQualifiedName~ChatSessionServiceTests`
 Expected: All PASS (existing tests may need `null, null` added to `UpdateSettings` calls in test setup code)
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatDtos.cs src/HydraForge.Application/Chat/ChatSessionService.cs src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs
