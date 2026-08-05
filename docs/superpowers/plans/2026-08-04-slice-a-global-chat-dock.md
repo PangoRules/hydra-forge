@@ -1140,7 +1140,7 @@ git commit -m "refactor(chat): remove Plan 18 ChatPanel, replaced by global Chat
 
 Add a new card for the AI Identity Prompt with a textarea + save button, following the existing section/save pattern.
 
-- [ ] **Step 1: Add `aiIdentityPrompt` to the settings reactive state**
+- [x] **Step 1: Add `aiIdentityPrompt` to the settings reactive state**
 
 In `src/web-ui/app/pages/admin/settings.vue`, add to the `settings` reactive object (around line 16-26):
 
@@ -1159,7 +1159,7 @@ const settings = reactive({
 })
 ```
 
-- [ ] **Step 2: Add `aiIdentityPrompt` to the `SettingsResponse` interface**
+- [x] **Step 2: Add `aiIdentityPrompt` to the `SettingsResponse` interface**
 
 In the same file (around line 35-45), add:
 
@@ -1178,7 +1178,7 @@ interface SettingsResponse {
 }
 ```
 
-- [ ] **Step 3: Add an `ai` section to the `saving` reactive + `saveSettings`**
+- [x] **Step 3: Add an `ai` section to the `saving` reactive + `saveSettings`**
 
 Add `ai` to the `saving` reactive (around line 28-33):
 
@@ -1200,7 +1200,7 @@ In `saveSettings` (around line 113-143), add a branch for the `ai` section:
     }
 ```
 
-- [ ] **Step 4: Add the AI Identity Prompt card to the template**
+- [x] **Step 4: Add the AI Identity Prompt card to the template**
 
 Add a new `<UCard>` in the grid (after the Branding card, around line 375 — before the closing `</div>` of the grid). It follows the same pattern as the other cards:
 
@@ -1236,12 +1236,12 @@ Add a new `<UCard>` in the grid (after the Branding card, around line 375 — be
       </UCard>
 ```
 
-- [ ] **Step 5: Verify typecheck + lint + build**
+- [x] **Step 5: Verify typecheck + lint + build**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
 Expected: All pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/web-ui/app/pages/admin/settings.vue

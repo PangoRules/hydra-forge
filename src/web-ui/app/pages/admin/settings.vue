@@ -22,14 +22,16 @@ const settings = reactive({
   brandName: '',
   brandLogoUrl: '',
   aiNarrativeGenerationTimeUtc: null as string | null,
-  housekeepingRunTimeUtc: null as string | null
+  housekeepingRunTimeUtc: null as string | null,
+  aiIdentityPrompt: ''
 })
 
 const saving = reactive({
   retention: false,
   notifications: false,
   search: false,
-  branding: false
+  branding: false,
+  ai: false
 })
 
 interface SettingsResponse {
@@ -42,6 +44,7 @@ interface SettingsResponse {
   brandLogoUrl: string | null
   aiNarrativeGenerationTimeUtc: string | null
   housekeepingRunTimeUtc: string | null
+  aiIdentityPrompt: string | null
 }
 
 async function loadSettings() {
@@ -94,7 +97,8 @@ const sectionHasErrors: Record<keyof typeof saving, ComputedRef<boolean>> = {
   retention: retentionHasErrors,
   notifications: computed(() => !!ntfyServerUrlError.value),
   search: computed(() => !!searXngUrlError.value),
-  branding: computed(() => !!brandNameError.value)
+  branding: computed(() => !!brandNameError.value),
+  ai: computed(() => false)
 }
 
 // Required-field errors only render once the user has interacted with that
@@ -132,6 +136,8 @@ async function saveSettings(section: keyof typeof saving) {
     } else if (section === 'branding') {
       body.brandName = settings.brandName
       body.brandLogoUrl = settings.brandLogoUrl
+    } else if (section === 'ai') {
+      body.aiIdentityPrompt = settings.aiIdentityPrompt
     }
     await api.PUT(ApiRoutes.Admin.settingsUpdate(), { body })
     toast.success('Settings saved. Changes apply within 5 minutes (cache TTL) or on next housekeeping run.', 6000)
@@ -369,6 +375,36 @@ onMounted(() => loadSettings())
               :loading="saving.branding"
               :disabled="!!brandNameError"
               @click="saveSettings('branding')"
+            />
+          </div>
+        </template>
+      </UCard>
+
+      <UCard class="lg:col-span-2">
+        <template #header>
+          <h2 class="font-semibold">
+            AI Identity Prompt
+          </h2>
+          <p class="text-sm text-muted">
+            System prompt injected into every chat session so models know they're running inside HydraForge. Leave blank to use the built-in default. Applies to new sessions only — existing sessions keep their original prompt.
+          </p>
+        </template>
+
+        <UFormField label="Identity Prompt">
+          <UTextarea
+            v-model="settings.aiIdentityPrompt"
+            :rows="6"
+            placeholder="You are HydraForge's built-in assistant..."
+            class="w-full"
+          />
+        </UFormField>
+
+        <template #footer>
+          <div class="flex justify-end">
+            <UButton
+              label="Save AI Identity"
+              :loading="saving.ai"
+              @click="saveSettings('ai')"
             />
           </div>
         </template>
