@@ -79,6 +79,21 @@ public class ChatFolderServiceTests
             );
         }
 
+        public Task<int> CountAsync(
+            Guid ownerId,
+            Guid? folderId,
+            Guid? projectId,
+            CancellationToken ct = default
+        )
+        {
+            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            if (folderId.HasValue)
+                query = query.Where(s => s.FolderId == folderId.Value);
+            if (projectId.HasValue)
+                query = query.Where(s => s.ProjectId == projectId.Value);
+            return Task.FromResult(query.Count());
+        }
+
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {
             Sessions.Add(session);

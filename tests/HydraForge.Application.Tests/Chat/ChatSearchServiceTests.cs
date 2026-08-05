@@ -32,6 +32,13 @@ public class ChatSearchServiceTests
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
+        public Task<int> CountAsync(
+            Guid ownerId,
+            Guid? folderId,
+            Guid? projectId,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
+
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
             Guid ownerId,
             string query,

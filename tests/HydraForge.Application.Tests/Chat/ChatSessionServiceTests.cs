@@ -69,6 +69,21 @@ public class ChatSessionServiceTests
             );
         }
 
+        public Task<int> CountAsync(
+            Guid ownerId,
+            Guid? folderId,
+            Guid? projectId,
+            CancellationToken ct = default
+        )
+        {
+            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            if (folderId.HasValue)
+                query = query.Where(s => s.FolderId == folderId.Value);
+            if (projectId.HasValue)
+                query = query.Where(s => s.ProjectId == projectId.Value);
+            return Task.FromResult(query.Count());
+        }
+
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {
             Sessions.Add(session);
@@ -1211,6 +1226,44 @@ public class ChatSessionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task ListAsync_TotalCountIsRealTotalNotPageSize()
+    {
+        // Regression: TotalCount was set to dtos.Count (page size), not the real
+        // total — the client used sessions.length < totalCount to decide whether
+        // to fetch the next page, so a page-size TotalCount made hasMore false
+        // after page 1 and every session beyond the first page unreachable.
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        for (var i = 0; i < 25; i++)
+        {
+            sessionRepo.Sessions.Add(
+                new ChatSession
+                {
+                    Id = NewId(),
+                    OwnerId = ownerId,
+                    Status = ChatSessionStatus.Active,
+                    UpdatedAt = DateTime.UtcNow.AddSeconds(-i),
+                }
+            );
+        }
+
+        var result = await service.ListAsync(
+            ownerId,
+            folderId: null,
+            projectId: null,
+            before: null,
+            beforeId: null,
+            limit: 20
+        );
+
+        Assert.True(result.IsSuccess);
+        // Page has 20 items (the limit), but TotalCount must be 25 — the real
+        // total — so the client knows there's another page to fetch.
+        Assert.Equal(20, result.Value.Items.Count);
+        Assert.Equal(25, result.Value.TotalCount);
     }
 
     [Fact]

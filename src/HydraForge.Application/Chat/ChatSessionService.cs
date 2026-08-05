@@ -322,7 +322,14 @@ public class ChatSessionService(
         foreach (var session in sessions)
             dtos.Add(await MapToDtoAsync(session, ct));
 
-        return Result<ChatSessionPageDto>.Success(new ChatSessionPageDto(dtos, dtos.Count));
+        // Real total count (not the current page size) — the client uses
+        // sessions.length < totalCount to decide whether to fetch the next
+        // page. Using dtos.Count here made TotalCount == page size, which
+        // capped hasMore at false after the first page and made every
+        // session beyond page 1 permanently unreachable.
+        var totalCount = await _sessionRepo.CountAsync(actorId, folderId, projectId, ct);
+
+        return Result<ChatSessionPageDto>.Success(new ChatSessionPageDto(dtos, totalCount));
     }
 
     public async Task<Result<ChatSessionDto>> UpdateAsync(

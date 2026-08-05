@@ -54,6 +54,23 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         return await query.OrderByDescending(s => s.UpdatedAt).ThenByDescending(s => s.Id).Take(limit).ToListAsync(ct);
     }
 
+    public async Task<int> CountAsync(
+        Guid ownerId,
+        Guid? folderId,
+        Guid? projectId,
+        CancellationToken ct = default
+    )
+    {
+        var query = context.ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+
+        if (folderId.HasValue)
+            query = query.Where(s => s.FolderId == folderId.Value);
+        if (projectId.HasValue)
+            query = query.Where(s => s.ProjectId == projectId.Value);
+
+        return await query.CountAsync(ct);
+    }
+
     public async Task AddAsync(ChatSession session, CancellationToken ct = default)
     {
         context.ChatSessions.Add(session);
