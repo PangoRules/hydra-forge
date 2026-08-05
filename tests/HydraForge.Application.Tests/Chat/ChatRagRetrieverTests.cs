@@ -475,6 +475,40 @@ public class ChatRagRetrieverTests
         Assert.Contains("chunk B", result[1].Content);
     }
 
+    [Fact]
+    public async Task RetrieveAsync_OnlyIdentitySystemMessagePresent_StillInjectsProjectSnapshot()
+    {
+        var (retriever, deps) = CreateSut();
+        var session = CreateSession(searchAllMyDocs: false, projectId: ProjectId);
+        SetupSessionFound(deps, session);
+
+        // Only the identity System message is present (first real user message not yet sent)
+        deps.MessageRepo
+            .GetBySessionAsync(SessionId, null, null, 1, Arg.Any<CancellationToken>())
+            .Returns(new List<DomainChatMessage>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    SessionId = SessionId,
+                    Role = MessageRole.System,
+                    Content = "You are HydraForge's assistant.",
+                }
+            });
+
+        deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
+            .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });
+
+        var result = await retriever.RetrieveAsync(
+            SessionId,
+            "query",
+            searchAllMyDocs: false,
+            k: 5
+        );
+
+        Assert.Contains(result, b => b.Type == CacheBlockType.ProjectSnapshot);
+    }
+
     private static ChatSession CreateSession(bool searchAllMyDocs, Guid? projectId = null)
     {
         return new ChatSession

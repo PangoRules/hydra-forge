@@ -435,7 +435,7 @@ The identity prompt is now a `System`-role message in history. `ChatReplyGenerat
 
 Both must be fixed to exclude `System`-role messages from the count, in the same commit as the identity-message persist lands (not deferred) — otherwise this ships a regression the same day it ships the feature.
 
-- [ ] **Step 1: Write the failing regression tests**
+- [x] **Step 1: Write the failing regression tests**
 
 In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add a test seeding history with a `System`-role identity message plus the first real user/assistant exchange, and assert auto-title generation still fires:
 
@@ -506,7 +506,7 @@ In `tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs`, add a tes
 
 Note: exact fake setup depends on each test file's existing conventions — read a neighboring passing test in each file first and mirror its fixture pattern.
 
-- [ ] **Step 2: Run both tests to verify they fail**
+- [x] **Step 2: Run both tests to verify they fail**
 
 Run:
 ```bash
@@ -515,7 +515,7 @@ dotnet test --filter FullyQualifiedName~RetrieveAsync_OnlyIdentitySystemMessageP
 ```
 Expected: Both FAIL against the current `Count == 1` / `Count == 0` checks.
 
-- [ ] **Step 3: Fix `ChatReplyGenerator.cs`**
+- [x] **Step 3: Fix `ChatReplyGenerator.cs`**
 
 Change line ~202:
 ```csharp
@@ -526,7 +526,7 @@ to:
 var isFirstMessage = history.Count(m => m.Role != MessageRole.System) == 1;
 ```
 
-- [ ] **Step 4: Fix `ChatRagRetriever.cs`**
+- [x] **Step 4: Fix `ChatRagRetriever.cs`**
 
 Change line ~67:
 ```csharp
@@ -539,11 +539,11 @@ bool isFirstMessage = priorMessages.Count(m => m.Role != MessageRole.System) == 
 
 Note: `priorMessages` is fetched with `limit: 1` (line ~64). If the identity message is the only row and it's excluded from the count, this still correctly evaluates to `0 == 0` → `true`. No change needed to the fetch `limit` itself — worst case with `limit: 1` is the identity row occupies the one slot fetched and the count-after-filter is 0, which is exactly what we want. (If a future change ever needs to distinguish "identity + 1 real message" from "identity only" here, bump `limit` to 2 — not needed for this fix.)
 
-- [ ] **Step 5: Run both tests to verify they pass**
+- [x] **Step 5: Run both tests to verify they pass**
 
 Run the same two filters as Step 2. Expected: PASS.
 
-- [ ] **Step 6: Run full regression suites for both files**
+- [x] **Step 6: Run full regression suites for both files**
 
 Run:
 ```bash
@@ -552,7 +552,7 @@ dotnet test --filter FullyQualifiedName~ChatRagRetrieverTests
 ```
 Expected: All PASS — including any pre-existing tests that asserted `isFirstMessage`/snapshot-injection behavior on a session with zero prior messages (those should still pass since `Count(m => m.Role != System) == 0` on an empty list is still `0 == 0`).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatReplyGenerator.cs src/HydraForge.Application/Chat/ChatRagRetriever.cs tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs

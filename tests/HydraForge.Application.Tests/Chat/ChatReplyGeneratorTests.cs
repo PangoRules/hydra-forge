@@ -516,6 +516,99 @@ public class ChatReplyGeneratorTests
     }
 
     [Fact]
+    public async Task GenerateAsync_FirstRealMessageAfterIdentitySystemMessage_StillGeneratesTitle()
+    {
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var identityMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = SessionId,
+            Role = MessageRole.System,
+            Content = "You are HydraForge's assistant.",
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _messageRepo
+            .GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ChatMessage> { identityMessage, userMessage });
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        await _titleGenerator.Received(1).GenerateTitleAsync(
+            UserId, "hello", Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GenerateAsync_ReasoningEffort_PassedThroughToChatRequest()
     {
         var session = new ChatSession

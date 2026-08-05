@@ -64,7 +64,7 @@ public sealed class ChatRagRetriever : IChatRagRetriever
             limit: 1,
             ct
         );
-        bool isFirstMessage = priorMessages.Count == 0;
+        bool isFirstMessage = priorMessages.Count(m => m.Role != MessageRole.System) == 0;
 
         CacheBlock? snapshotBlock = null;
         if (session.ProjectId != null && isFirstMessage)

@@ -199,7 +199,7 @@ public sealed class ChatReplyGenerator(
             )
                 .Reverse()
                 .ToList();
-            var isFirstMessage = history.Count == 1;
+            var isFirstMessage = history.Count(m => m.Role != MessageRole.System) == 1;
             foreach (var msg in history)
             {
                 var role = msg.Role switch
