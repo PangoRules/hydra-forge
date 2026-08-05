@@ -92,6 +92,12 @@ function toggleExpand(planId: string) {
   expandedPlans.value = new Set(expanded) // Trigger reactivity
 }
 
+function expandFirst() {
+  if (plans.value.length > 0 && expandedPlans.value.size === 0) {
+    expandedPlans.value = new Set([plans.value[0]!.id])
+  }
+}
+
 function isExpanded(planId: string): boolean {
   return expandedPlans.value.has(planId)
 }
@@ -250,6 +256,8 @@ async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
 }
 
 onMounted(() => fetchPlans())
+
+defineExpose({ expandFirst })
 </script>
 
 <template>

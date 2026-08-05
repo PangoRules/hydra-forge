@@ -39,12 +39,18 @@ const archiveDependents = ref<{ id: string, title: string, type: string }[]>([])
 // re-fetches off the same counter.
 const contentRefresh = ref(0)
 
-// API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal
-const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue'] as const
-const PLAN_CARD_TYPES = ['Goal', 'Issue', 'Task'] as const
+// API sends CardType as string (JsonStringEnumConverter). C# values: Task, Issue, Idea, Goal, Security
+const SPEC_CARD_TYPES = ['Goal', 'Idea', 'Issue', 'Security', 'Task'] as const
+const PLAN_CARD_TYPES = ['Issue', 'Task'] as const
 
-// DocType from API (JsonStringEnumConverter): 'Specification', 'Concept', 'Report'
-const CARD_TYPE_TO_DOC_TYPE: Record<string, string> = { Goal: 'Specification', Idea: 'Concept', Issue: 'Report' }
+// DocType from API (JsonStringEnumConverter): 'Specification', 'Concept', 'Report', 'ValidationMatrix'
+const CARD_TYPE_TO_DOC_TYPE: Record<string, string> = {
+  Goal: 'Specification',
+  Idea: 'Concept',
+  Issue: 'Report',
+  Security: 'Report',
+  Task: 'ValidationMatrix'
+}
 
 const hasSpec = computed(() =>
   card.value != null && (SPEC_CARD_TYPES as readonly string[]).includes(card.value.type as unknown as string)
@@ -64,6 +70,9 @@ const specDocType = computed(() => {
 // Populated by CardSpec after it loads/creates the spec; passed to CardPlan for Goal linking
 const linkedSpecId = ref<string | null>(null)
 
+// Ref to CardPlan child for triggering auto-expand
+const cardPlanRef = ref<InstanceType<typeof CardPlan> | null>(null)
+
 const activeTab = ref<'details' | 'checklist' | 'comments' | 'related' | 'docs'>('details')
 
 const tabs = computed(() => [
@@ -82,6 +91,18 @@ const desktopTabs = computed(() => [
 
 watch(hasDocsTab, (has) => {
   if (!has && activeTab.value === 'docs') activeTab.value = 'details'
+})
+
+function expandFirstDoc() {
+  // Spec is always inline in CardSpec — nothing to expand
+  // Plans use accordion expand; trigger first plan open
+  if (hasPlan.value) {
+    nextTick(() => cardPlanRef.value?.expandFirst())
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'docs') expandFirstDoc()
 })
 
 const api = useApi()
@@ -407,6 +428,7 @@ const otherViewers = computed(() => {
                 <template v-if="hasPlan">
                   <USeparator v-if="hasSpec" />
                   <CardPlan
+                    ref="cardPlanRef"
                     :card-id="card.id"
                     :project-id="projectId"
                     :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
@@ -543,6 +565,7 @@ const otherViewers = computed(() => {
               <template v-if="hasPlan">
                 <USeparator v-if="hasSpec" />
                 <CardPlan
+                  ref="cardPlanRef"
                   :card-id="card.id"
                   :project-id="projectId"
                   :spec-id="String(card.type) === 'Goal' ? linkedSpecId : null"
