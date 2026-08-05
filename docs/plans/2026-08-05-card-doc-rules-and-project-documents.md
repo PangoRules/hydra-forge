@@ -2,18 +2,91 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Backend-enforce new card-type→doc-type rules (Goal=N Specs+ValidationMatrix, Task=N Plans+ValidationMatrix, Issue=1 Report, Idea=1 Concept, Security=1 Report), add `CardType.Security` + `DocType.ValidationMatrix`, add `ProjectDocument` entity for project-level versioned docs, and fix CardCreateModal parent/assignee selectors.
+**Goal:** Backend-enforce new card-type→doc-type rules (Goal=N Specs[Specification+ValidationMatrix], Task=N Plans+N ValidationMatrix Specs, Issue=N Reports, Idea=N Concepts, Security=N Reports), add `CardType.Security` + `DocType.ValidationMatrix`, add `ProjectDocument` entity for project-level versioned docs, restructure project page into Board/Docs tabs with full-bleed Tiptap editor, and fix CardCreateModal parent/assignee selectors. See "Plan Revisions" section above for corrections to the tasks below.
 
 **Architecture:** Domain enums/entities first, then Application services mirroring Spec/Plan patterns, then Server controllers, then Web UI fixes (selector → docs tab → Documents page), then TUI, then tests, then docs. `ProjectDocument` follows the same versioned-document pattern as Spec/Plan (entity + version snapshot table, CRUD + restore).
 
 **Tech Stack:** .NET 10, EF Core 10 + Npgsql, Nuxt 4 + Nuxt UI v4, Spectre.Console TUI, xUnit + NSubstitute.
 
 **New decisions this plan introduces (for later addition to DECISIONS.md):**
-- **D-XX1: Goal-no-Plans** — Goal cards no longer own Plans directly. A Goal's "plan" is the set of child Task cards. `Card.ValidateAllowsPlan` rejects Goal. Existing Goal-owned Plans are migrated to Task cards or deleted.
+- **D-XX1: Goal-no-Plans** — Goal cards no longer own Plans directly. A Goal's "plan" is the set of child Task cards. `Card.ValidateAllowsPlan` rejects Goal. Existing Goal-owned Plans are deleted.
 - **D-XX2: Security card type** — `CardType.Security = 6`. Same doc shape as Issue (one Report Spec, no Plans) but distinct type for filtering/reporting. General projects have security concerns too (physical security, compliance, access control).
 - **D-XX3: ValidationMatrix DocType** — `DocType.ValidationMatrix = 4`. A structured checklist of validation steps (unit tests, e2e, manual checks). Allowed on Goal and Task cards. Replaces loose `docs/archive/manual-validation/*.md` files.
 - **D-XX4: ProjectDocument entity** — Project-level versioned documents not owned by a card. `ProjectDocType` enum: `Scope`, `Glossary`, `DataModel`, `Architecture`, `FunctionalSpec`, `Decisions`, `Reference`. Unique-per-project for Scope/Glossary/DataModel/Architecture/FunctionalSpec/Decisions; N allowed for Reference. Versioned via `ProjectDocumentVersion` (mirrors SpecVersion/PlanVersion).
 - **D-XX5: Decisions-as-ProjectDocument** — `docs/DECISIONS.md` lives as a `ProjectDocument` with `DocType.Decisions`. LLM or user appends to it. Not a card on the board — it's a project-level document section.
+- **D-XX6: Multiple docs per card (all types)** — The 1-Spec-per-card limit is removed entirely. Every card type that allows Specs can have N Specs within its allowed DocTypes. Goal=N Specs (Specification+ValidationMatrix), Issue=N Reports, Idea=N Concepts, Task=N ValidationMatrix Specs. Common case is 1, but unlimited. Each Concept on an Idea can spawn its own Goal.
+- **D-XX7: Project page = Board tab + Docs tab** — The project board page becomes a two-tab layout: "Board" (existing board view) and "Docs" (project-level documents). Clicking a project document opens a full-bleed Tiptap editor using all available real estate. Not a separate `/documents` page — it's a tab on the existing project page.
+- **D-XX8: Chat context-awareness (future)** — The Docs tab + in-app editable project documents are the foundation for the chat eventually having "hands" (knowing where the user is, interacting with docs/cards). Not built in this plan — noted as direction only.
+
+---
+
+## ⚠️ Plan Revisions (post-review — OVERRIDES contradictory sections below)
+
+The following revisions take precedence over any contradictory text in Tasks 1–12 below. Read these first.
+
+### R1: Multiple Specs per card — remove 1-per-card limit everywhere
+
+**Overrides:** Task 1 Step 4, Task 1 Step 6, Task 3 (SpecService section), Task 11 Step 1 & Step 3.
+
+The 1-Spec-per-card limit (`SpecService.cs` lines 80–84: `if (existingSpecs.Count > 0) return ...AlreadyExists`) is **deleted entirely**. All card types that allow Specs can have N Specs.
+
+**`Card.ValidateAllowsSpec` (Task 1 Step 4) — corrected:**
+```csharp
+public static Error? ValidateAllowsSpec(CardType type) =>
+    type is CardType.Goal or CardType.Idea or CardType.Issue or CardType.Security or CardType.Task
+        ? null
+        : new Error(DomainErrorCodes.Specs.InvalidCardType, $"{type} cards cannot have a Spec.");
+```
+Task is now included (it allows ValidationMatrix Specs).
+
+**`Card.ExpectedSpecDocType` is REPLACED by `Card.IsValidSpecDocType(CardType, DocType)`** — the singular method is removed. SpecService validation (line 72) changes from `cmd.DocType != Card.ExpectedSpecDocType(card.Type)` to `!Card.IsValidSpecDocType(card.Type, cmd.DocType)`.
+
+```csharp
+public static bool IsValidSpecDocType(CardType cardType, DocType docType) =>
+    cardType switch
+    {
+        CardType.Goal => docType is DocType.Specification or DocType.ValidationMatrix,
+        CardType.Task => docType is DocType.ValidationMatrix,
+        CardType.Idea => docType is DocType.Concept,
+        CardType.Issue => docType is DocType.Report,
+        CardType.Security => docType is DocType.Report,
+        _ => false,
+    };
+```
+
+**SpecService.CreateAsync changes:**
+1. Replace `ExpectedSpecDocType` check (line 72) with `IsValidSpecDocType` check.
+2. **Delete** the `existingSpecs.Count > 0` block (lines 80–84) — no count limit.
+3. Error code for doc-type mismatch: reuse `SPEC_INVALID_DOC_TYPE_FOR_CARD` (already added in Task 1 Step 9).
+
+**Task 11 Step 1 corrections:** Task → null (allows Spec, ValidationMatrix only). The test "Task → error" is WRONG — Task allows ValidationMatrix Spec. Test `IsValidSpecDocType` not `ExpectedSpecDocType`.
+
+**Task 11 Step 3 corrections:** "Task card: cannot create Specification Spec" stays (wrong doc type), but "Task card: can create ValidationMatrix Spec" is the valid case. "Goal card: can create 2 Specs" → generalize to "can create N Specs of allowed DocTypes."
+
+### R2: Project page = Board tab + Docs tab (not separate page)
+
+**Overrides:** Task 9.
+
+Task 9 becomes: **restructure the project board page into a two-tab layout** ("Board" and "Docs"), not a separate `/documents` page.
+
+- The existing project board page (`src/web-ui/app/pages/projects/[id]/index.vue` or wherever the board lives — find it) gets a tab bar at the top: `Board` | `Docs`.
+- `Board` tab = the existing board view (columns, cards, filters). Unchanged behavior, just wrapped in a tab.
+- `Docs` tab = project-level documents list. Grouped by `ProjectDocType` with labels. Click a document → **full-bleed Tiptap editor** (`MarkdownEditor` maximized/fullscreen, using all available real estate, smooth open/close transition). Save → `PUT` endpoint. Version history + restore accessible from the editor.
+- Create new document: button in Docs tab → DocType selector → create.
+- Use `ApiRoutes.Documents.*` for all API calls. `useAppToast` for feedback. All `useApi()` in try/catch.
+- Do NOT create `pages/projects/[id]/documents.vue` as a separate routed page. It's a tab within the project page.
+
+### R3: ProjectDocument unique index — remove DB constraint
+
+**Overrides:** Task 2 Step 2 (the `HasIndex(...).IsUnique()` block on ProjectDocument).
+
+Remove the unique DB index on `(ProjectId, DocType)`. Uniqueness for single-doc types (Scope/Glossary/DataModel/Architecture/FunctionalSpec/Decisions) is enforced in `ProjectDocumentService.CreateAsync` (service-layer check via `GetByDocTypeAsync`, already in Task 3 Step 3). Reference allows N. A DB unique index would block Reference and complicate archive/restore flows. Service-layer check is sufficient and more flexible.
+
+Keep the non-unique index `HasIndex(e => new { e.ProjectId, e.DocType })` for query performance — just drop `.IsUnique()`.
+
+### R4: Chat context-awareness — direction only, not built
+
+The Docs tab + in-app editable project docs are the foundation for future chat "hands" (chat knowing what the user is viewing/editing, eventually driving mutations). No code for this in the plan. Do not add context-tracking hooks or chat integration. Just build the Docs tab clean.
 
 ---
 
