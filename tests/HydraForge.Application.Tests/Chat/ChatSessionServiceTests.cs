@@ -51,6 +51,7 @@ public class ChatSessionServiceTests
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
+            Guid? beforeId,
             int limit,
             CancellationToken ct = default
         )
@@ -1157,6 +1158,7 @@ public class ChatSessionServiceTests
             folderId: null,
             projectId: null,
             before: null,
+            beforeId: null,
             limit: 50
         );
 

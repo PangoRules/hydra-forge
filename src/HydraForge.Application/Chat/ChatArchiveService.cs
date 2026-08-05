@@ -21,6 +21,7 @@ public class ChatArchiveService(
             folderId: folder.Id,
             projectId: null,
             before: null,
+            beforeId: null,
             limit: int.MaxValue,
             ct
         );

@@ -27,6 +27,7 @@ public class ChatSearchServiceTests
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
+            Guid? beforeId,
             int limit,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);

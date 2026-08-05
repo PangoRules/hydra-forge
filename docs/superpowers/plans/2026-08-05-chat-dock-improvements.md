@@ -60,13 +60,13 @@
 
 **Problem:** `EfChatSessionRepository.ListAsync` filters `before` against `CreatedAt` but sorts by `UpdatedAt`, with no `beforeId` tiebreaker. Two sessions with the same `UpdatedAt` get skipped/duplicated across pages.
 
-- [ ] **Step 1: Confirm target shapes — no query DTO record exists**
+- [x] **Step 1: Confirm target shapes — no query DTO record exists**
 
 Verified against current code: there is no `ListSessionsQuery`/params-record anywhere in this path. `ChatSessionsController.List` takes `[FromQuery]` params directly (`folderId, projectId, before, limit`), and `ChatSessionService.ListAsync`/`IChatSessionRepository.ListAsync`/`EfChatSessionRepository.ListAsync` all take individual positional params the same way. `beforeId` gets added as one more individual param at each layer (Steps 4, 6, 7) — no DTO to create here.
 
 Also note: `ChatSessionPageDto(IReadOnlyList<ChatSessionDto> Items, int TotalCount)` **already exists** in `ChatDtos.cs` — nothing to add there for this task. `ChatSessionService.ListAsync` already returns `Result<ChatSessionPageDto>` (not a bare DTO) — preserve that wrapper in Step 7, don't drop it.
 
-- [ ] **Step 2: Write the failing repository test**
+- [x] **Step 2: Write the failing repository test**
 
 In `tests/HydraForge.Infrastructure.Tests/Chat/EfChatSessionRepositoryTests.cs`, add a test:
 
@@ -95,12 +95,12 @@ public async Task ListAsync_CompositeCursor_DoesNotSkipSameTimestampSessions()
 
 Follow the existing test file's fixture pattern (in-memory DB setup, `UserId` constant, etc.).
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `dotnet test --filter FullyQualifiedName~CompositeCursor`
 Expected: FAIL — current `ListAsync` doesn't accept `beforeId` and the cursor logic is wrong.
 
-- [ ] **Step 4: Fix `EfChatSessionRepository.ListAsync`**
+- [x] **Step 4: Fix `EfChatSessionRepository.ListAsync`**
 
 Real current signature uses `ownerId` (not `actorId`) as the first param — keep that name. Change the method signature to accept `beforeId`:
 
@@ -134,12 +134,12 @@ return await query.OrderByDescending(s => s.UpdatedAt).ThenByDescending(s => s.I
 
 Also update the `IChatSessionRepository` interface to match the new signature.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `dotnet test --filter FullyQualifiedName~CompositeCursor`
 Expected: PASS
 
-- [ ] **Step 6: Update `ChatSessionsController` to accept `beforeId`**
+- [x] **Step 6: Update `ChatSessionsController` to accept `beforeId`**
 
 In `src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs`, add `beforeId` query param to `GET /api/chat/sessions`:
 
@@ -157,7 +157,7 @@ public async Task<IActionResult> List(
 
 Pass `beforeId` to `ChatSessionService.ListAsync(...)`.
 
-- [ ] **Step 7: Update `ChatSessionService.ListAsync` to accept and pass `beforeId`**
+- [x] **Step 7: Update `ChatSessionService.ListAsync` to accept and pass `beforeId`**
 
 Preserve the existing `Result<ChatSessionPageDto>` return type — don't unwrap it:
 
@@ -172,12 +172,12 @@ public async Task<Result<ChatSessionPageDto>> ListAsync(
     CancellationToken ct = default)
 ```
 
-- [ ] **Step 8: Build to verify**
+- [x] **Step 8: Build to verify**
 
 Run: `dotnet build`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/HydraForge.Infrastructure/Chat/EfChatSessionRepository.cs src/HydraForge.Application/Chat/ChatDtos.cs src/HydraForge.Application/Chat/ChatSessionService.cs src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs tests/HydraForge.Infrastructure.Tests/Chat/EfChatSessionRepositoryTests.cs

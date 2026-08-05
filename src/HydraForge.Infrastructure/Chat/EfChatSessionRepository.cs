@@ -35,6 +35,7 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
+        Guid? beforeId,
         int limit,
         CancellationToken ct = default
     )
@@ -46,9 +47,11 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         if (projectId.HasValue)
             query = query.Where(s => s.ProjectId == projectId.Value);
         if (before.HasValue)
-            query = query.Where(s => s.CreatedAt < before.Value);
+            query = query.Where(s =>
+                s.UpdatedAt < before.Value
+                || (s.UpdatedAt == before.Value && s.Id < beforeId));
 
-        return await query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToListAsync(ct);
+        return await query.OrderByDescending(s => s.UpdatedAt).ThenByDescending(s => s.Id).Take(limit).ToListAsync(ct);
     }
 
     public async Task AddAsync(ChatSession session, CancellationToken ct = default)
