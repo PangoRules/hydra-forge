@@ -36,6 +36,7 @@ const mockChatStream = {
   onStreamDelta: vi.fn(),
   onStreamDone: vi.fn(),
   onStreamError: vi.fn(),
+  onSessionUpdated: vi.fn(),
   onReconnected: vi.fn(),
   clearStreaming: vi.fn()
 }
@@ -108,6 +109,36 @@ describe('ChatSessionView — rename', () => {
   it('renders the fetched session title', async () => {
     const wrapper = await mountView()
     expect(wrapper.text()).toContain('Original Title')
+  })
+
+  it('a SessionUpdated push (e.g. from title generation finishing later) patches the title live, no refetch needed', async () => {
+    // Title generation runs as its own decoupled background job — it doesn't land
+    // inline with the reply, so this push is the only way a connected client learns
+    // the title changed without the user manually refreshing.
+    const wrapper = await mountView()
+    expect(wrapper.text()).toContain('Original Title')
+    mockGET.mockClear()
+
+    const onSessionUpdatedHandler = mockChatStream.onSessionUpdated.mock.calls.at(-1)?.[0]
+    expect(onSessionUpdatedHandler).toBeTypeOf('function')
+    onSessionUpdatedHandler('s1', 'Live Generated Title', 'Active')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Live Generated Title')
+    expect(wrapper.text()).not.toContain('Original Title')
+    // Patched in place from the push payload — no extra GET round trip.
+    expect(mockGET).not.toHaveBeenCalled()
+    expect(wrapper.emitted('sessionRefreshed')?.at(-1)).toEqual(['s1', 'Live Generated Title', 'Active'])
+  })
+
+  it('ignores a SessionUpdated push for a different session', async () => {
+    const wrapper = await mountView()
+    const onSessionUpdatedHandler = mockChatStream.onSessionUpdated.mock.calls.at(-1)?.[0]
+    onSessionUpdatedHandler('some-other-session', 'Should Not Apply', 'Active')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Original Title')
+    expect(wrapper.text()).not.toContain('Should Not Apply')
   })
 
   it('clicking the rename button shows an editable input pre-filled with the current title', async () => {

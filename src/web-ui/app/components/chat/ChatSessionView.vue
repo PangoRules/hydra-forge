@@ -148,6 +148,18 @@ chatStream.onStreamError((_messageId, _code, message) => {
   streamError.value = message
 })
 
+// Title generation runs as its own decoupled background job (see
+// ChatTitleGenerationJob) so it doesn't block the reply's own StreamDone —
+// without this, a connected client had no way to learn the title changed
+// short of a manual refresh. Patch in place; no refetch needed, the payload
+// already has everything.
+chatStream.onSessionUpdated((updatedSessionId, title, status) => {
+  if (updatedSessionId !== props.sessionId || !session.value) return
+  session.value.title = title
+  session.value.status = status as ChatSessionDetailDto['status']
+  emit('sessionRefreshed', session.value.id, title, status)
+})
+
 async function fetchSession(silent = false) {
   if (!silent) loading.value = true
   error.value = null

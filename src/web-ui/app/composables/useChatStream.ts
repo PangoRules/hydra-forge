@@ -65,6 +65,7 @@ export function useChatStream() {
     ) => void)
     | null = null
   let onStreamError: ((messageId: string, code: string, message: string) => void) | null = null
+  let onSessionUpdated: ((sessionId: string, title: string, status: string) => void) | null = null
   let onReconnectedHandler: (() => void) | null = null
 
   function onStreamStartCb(
@@ -93,6 +94,16 @@ export function useChatStream() {
     cb: (messageId: string, code: string, message: string) => void
   ) {
     onStreamError = cb
+  }
+
+  // Pushed when a session's title (or other server-set fields) changes outside the
+  // caller's own request cycle — e.g. title generation, which runs as its own decoupled
+  // Hangfire job specifically so it doesn't block the chat reply's own completion. Without
+  // this, a connected client had no way to learn the title changed short of a refresh.
+  function onSessionUpdatedCb(
+    cb: (sessionId: string, title: string, status: string) => void
+  ) {
+    onSessionUpdated = cb
   }
 
   // Fired after every reconnect (including the automatic ones SignalR retries
@@ -209,6 +220,10 @@ export function useChatStream() {
       }
       toast.error(`Chat error: ${message}`)
       onStreamError?.(messageId, code, message)
+    })
+
+    conn.on('SessionUpdated', (sessionId: string, title: string, status: string) => {
+      onSessionUpdated?.(sessionId, title, status)
     })
 
     return conn
@@ -427,6 +442,7 @@ export function useChatStream() {
     onStreamDelta: onStreamDeltaCb,
     onStreamDone: onStreamDoneCb,
     onStreamError: onStreamErrorCb,
+    onSessionUpdated: onSessionUpdatedCb,
     onReconnected: onReconnectedCb,
     // Force-clears a stuck "typing…" bubble when the consumer independently
     // confirms (via REST) that the reply already completed and persisted —

@@ -36,7 +36,7 @@ public sealed class ChatReplyGenerator(
     IUsageRecorder usageRecorder,
     LlmCallGuard llmCallGuard,
     IContextCompressor contextCompressor,
-    IChatTitleGenerator titleGenerator,
+    IBackgroundTaskQueue backgroundTaskQueue,
     IChatStreamRegistry streamRegistry,
     IChatBroadcaster broadcaster,
     ILogger<ChatReplyGenerator> logger,
@@ -288,7 +288,8 @@ public sealed class ChatReplyGenerator(
                 [],
                 4096,
                 0.7m,
-                reasoningEffort
+                reasoningEffort,
+                route.Primary.OllamaThinkMode
             );
 
             await group.StreamStart(assistantMessageId, route.Primary.ModelId, route.Primary.Name);
@@ -344,27 +345,24 @@ public sealed class ChatReplyGenerator(
 
             if (isFirstMessage)
             {
+                // Enqueued as its own job (not awaited inline) — title generation can
+                // retry a slow/reasoning model for a while (see ChatTitleGenerationJob),
+                // and none of that should delay this job's own StreamDone below, which
+                // is what actually unblocks the user's chat input. CancellationToken.None:
+                // same reasoning as the outer GenerateReply trigger — enqueueing only
+                // needs to survive long enough for a fast DB write, not track this job's
+                // own possibly-cancelled cts.
                 try
                 {
-                    var titleResult = await titleGenerator.GenerateTitleAsync(
-                        userId,
-                        userMessage.Content,
-                        content,
-                        cts.Token
+                    await backgroundTaskQueue.EnqueueJobAsync<ChatTitleGenerationJob>(j =>
+                        j.RunAsync(sessionId, userId, userMessage.Content, content, CancellationToken.None)
                     );
-                    var title = titleResult.IsSuccess
-                        ? titleResult.Value
-                        : userMessage.Content.Length <= 60
-                            ? userMessage.Content
-                            : userMessage.Content[..60] + "…";
-                    session.UpdateSettings(title, null, null, null, null, null, null);
-                    await sessionRepo.UpdateAsync(session, cts.Token);
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(
                         ex,
-                        "Chat title generation failed for session {SessionId}",
+                        "Failed to enqueue chat title generation job for session {SessionId}",
                         sessionId
                     );
                 }
