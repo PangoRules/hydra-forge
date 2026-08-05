@@ -5,19 +5,13 @@ const route = useRoute()
 const projectId = route.params.id as string
 const activeTab = ref<'board' | 'docs'>('board')
 
-useHead({
-  bodyAttrs: {
-    class: 'md:overflow-hidden'
-  }
-})
-
 watch(activeTab, (tab) => {
   useHead({
     bodyAttrs: {
       class: tab === 'board' ? 'md:overflow-hidden' : ''
     }
   })
-})
+}, { immediate: true })
 </script>
 
 <template>

@@ -3,6 +3,7 @@ import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
 import { htmlToMarkdown } from '~/lib/document-markdown'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
+import AppModal from '~/components/shared/AppModal.vue'
 import { useMemberDisplay } from '~/composables/useMemberDisplay'
 
 const props = defineProps<{
@@ -131,7 +132,7 @@ async function fetchVersions() {
     )
     versions.value = (data?.versions ?? []).sort((a, b) => b.version - a.version)
   } catch {
-    // silently fail
+    toast.error('Failed to load version history')
   } finally {
     loadingVersions.value = false
   }
@@ -379,9 +380,10 @@ onMounted(() => fetchDocuments())
     </div>
 
     <!-- Create document modal -->
-    <UModal
+    <AppModal
       v-model:open="showCreateModal"
       title="New Document"
+      width="sm:max-w-md"
     >
       <template #body>
         <div class="space-y-3">
@@ -421,6 +423,6 @@ onMounted(() => fetchDocuments())
           Create
         </UButton>
       </template>
-    </UModal>
+    </AppModal>
   </div>
 </template>

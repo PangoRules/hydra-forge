@@ -9,7 +9,7 @@ test('a stale save from a second tab is rejected, not silently merged', async ({
   const pageB = await contextB.newPage()
 
   for (const page of [pageA, pageB]) {
-    await page.goto(`/projects/${seedCard.projectId}/board`)
+    await page.goto(`/projects/${seedCard.projectId}`)
     await page.getByRole('heading', { name: seedCard.cardTitle, exact: true }).click()
   }
 

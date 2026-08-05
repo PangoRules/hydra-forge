@@ -32,7 +32,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   const toast = useAppToast()
 
   const currentProjectId = computed(() => {
-    if (route.path.match(/^\/projects\/[^/]+\/board/)) {
+    if (route.path.match(/^\/projects\/[^/]+\/?$/)) {
       return route.params.id as string
     }
     return null
