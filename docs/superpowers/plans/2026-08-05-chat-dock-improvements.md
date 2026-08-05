@@ -399,7 +399,7 @@ git commit -m "feat(chat): per-session model persistence (DTOs, service, control
 - Modify: `src/HydraForge.Application/Chat/ChatReplyGenerator.cs`
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`
 
-- [ ] **Step 1: Check server logs for title-gen failure path**
+- [x] **Step 1: Check server logs for title-gen failure path**
 
 The user's local model (Ollama gemma4:26b via OpenAiCompatible adapter) fails title gen. Check logs for one of these warnings from `LlmChatTitleGenerator`:
 - `"Failed to resolve LLM route for chat title generation"` — routing issue
@@ -410,8 +410,7 @@ If the log shows `"LLM call failed"` with a `TaskCanceledException` or `Operatio
 
 If it shows routing failure, the `ChatTitle` feature needs the model in its allowlist.
 
-- [ ] **Step 2: Fix timeout per-provider-type (if confirmed)**
-
+- [x] **Step 2: Fix timeout per-provider-type (if confirmed)**
 If Step 1 confirms the `"openai-compatible"` 60s timeout is the cause, change `LlmServiceCollectionExtensions.cs` to make the timeout configurable per-provider-type. The simplest approach: add a second named client for local OpenAiCompatible providers:
 
 ```csharp
@@ -444,7 +443,7 @@ services.AddHttpClient(
 );
 ```
 
-- [ ] **Step 3: Write the failing fallback test**
+- [x] **Step 3: Write the failing fallback test**
 
 In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add:
 
@@ -480,12 +479,12 @@ public async Task GenerateAsync_TitleGenFails_FallsBackToFirstMessage()
 
 Follow the existing test fixture pattern (make `_titleGenerator` a field, set up via `_titleGenerator = Substitute.For<IChatTitleGenerator>()`).
 
-- [ ] **Step 4: Run test to verify it fails**
+- [x] **Step 4: Run test to verify it fails**
 
 Run: `dotnet test --filter FullyQualifiedName~GenerateAsync_TitleGenFails_FallsBackToFirstMessage`
 Expected: FAIL
 
-- [ ] **Step 5: Add fallback in `ChatReplyGenerator.cs`**
+- [x] **Step 5: Add fallback in `ChatReplyGenerator.cs`**
 
 Find the title-generation block (around line 345-369). Replace:
 
@@ -519,17 +518,17 @@ await _sessionRepo.UpdateAsync(session, ct);
 
 Note: `UpdateSettings` now takes 7 params — the two new `null, null` are for `preferredModelConfigId` and `preferredEffort`.
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `dotnet test --filter FullyQualifiedName~GenerateAsync_TitleGenFails_FallsBackToFirstMessage`
 Expected: PASS
 
-- [ ] **Step 7: Run full ChatReplyGeneratorTests suite**
+- [x] **Step 7: Run full ChatReplyGeneratorTests suite**
 
 Run: `dotnet test --filter FullyQualifiedName~ChatReplyGeneratorTests`
 Expected: All PASS
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/HydraForge.Application/Chat/ChatReplyGenerator.cs src/HydraForge.Infrastructure/Llm/LlmServiceCollectionExtensions.cs tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs
