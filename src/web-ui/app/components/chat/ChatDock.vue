@@ -3,9 +3,12 @@ import { useDraggable } from '@vueuse/core'
 import { useChatDockStore } from '~/stores/chatDock'
 import ChatSessionView from '~/components/chat/ChatSessionView.vue'
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
+import type { ChatSessionDetailDto } from '~/types/chat'
+import { ApiRoutes } from '~/lib/routes'
 
 const dock = useChatDockStore()
 const route = useRoute()
+const api = useApi()
 
 const isHidden = computed(() => route.path.startsWith('/chats'))
 
@@ -51,6 +54,40 @@ function handleSendInDraft(_message: string) {
   // Create session — user will type in session mode after creation
   dock.startNewChat()
 }
+
+const isEditingTitle = ref(false)
+const editTitle = ref('')
+const titleInputRef = ref<HTMLInputElement | null>(null)
+
+async function startEditTitle() {
+  if (!dock.activeSessionId) return
+  try {
+    const { data } = await api.GET<ChatSessionDetailDto>(
+      ApiRoutes.Chat.sessions.detail(dock.activeSessionId)
+    )
+    editTitle.value = data?.title ?? ''
+    isEditingTitle.value = true
+    nextTick(() => titleInputRef.value?.focus())
+  } catch {
+    // silently fail — user can retry
+  }
+}
+
+async function submitTitleEdit() {
+  if (!dock.activeSessionId || !editTitle.value.trim()) {
+    isEditingTitle.value = false
+    return
+  }
+  const newTitle = editTitle.value.trim()
+  try {
+    await api.PATCH(ApiRoutes.Chat.sessions.update(dock.activeSessionId), {
+      body: { title: newTitle }
+    })
+    isEditingTitle.value = false
+  } catch {
+    isEditingTitle.value = false
+  }
+}
 </script>
 
 <template>
@@ -88,9 +125,23 @@ function handleSendInDraft(_message: string) {
               title="History"
               @click="dock.showHistory()"
             />
-            <h2 class="font-semibold text-sm truncate">
+            <h2
+              v-if="!isEditingTitle"
+              class="font-semibold text-sm truncate cursor-pointer hover:text-primary"
+              title="Click to rename"
+              @click="startEditTitle"
+            >
               {{ dock.activeSessionId ? 'Chat' : 'New Chat' }}
             </h2>
+            <input
+              v-else
+              ref="titleInputRef"
+              v-model="editTitle"
+              class="text-sm font-semibold bg-transparent border-b border-primary outline-none w-full"
+              @blur="submitTitleEdit"
+              @keydown.enter="submitTitleEdit"
+              @keydown.escape="isEditingTitle = false"
+            >
           </div>
           <div class="flex items-center gap-1">
             <UButton

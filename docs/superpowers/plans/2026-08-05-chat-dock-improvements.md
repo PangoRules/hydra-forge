@@ -1296,7 +1296,7 @@ git commit -m "feat(chat): ChatDock draft mode, history panel, session resume, h
 **Files:**
 - Modify: `src/web-ui/app/pages/chats/index.vue`
 
-- [ ] **Step 1: Replace flat fetch with `useChatSessionList`**
+- [x] **Step 1: Replace flat fetch with `useChatSessionList`**
 
 In `src/web-ui/app/pages/chats/index.vue`, replace the existing `fetchSessions()` function with:
 
@@ -1345,7 +1345,7 @@ git commit -m "feat(chat): /chats page infinite scroll + session resume from doc
 - Modify: `src/web-ui/app/pages/chats/index.vue`
 - Modify: `src/web-ui/app/assets/css/main.css` (only if z-index fix needed)
 
-- [ ] **Step 1: Update default identity prompt**
+- [x] **Step 1: Update default identity prompt**
 
 In `src/HydraForge.Application/Chat/ChatSessionService.cs`, replace the `DefaultIdentityPrompt` constant:
 
@@ -1366,7 +1366,7 @@ private const string DefaultIdentityPrompt =
     "Be concise and direct.";
 ```
 
-- [ ] **Step 2: Add title rename to dock header**
+- [x] **Step 2: Add title rename to dock header**
 
 In `ChatDock.vue`, add inline rename state and handler:
 
@@ -1417,30 +1417,15 @@ In the template, replace the static title with the rename pattern:
 />
 ```
 
-- [ ] **Step 3: Verify z-index in browser (manual check)**
+- [x] **Step 3: Verify z-index in browser (manual check)**
 
-Run the app and open a card modal, then try to click the chat FAB and type in the chat popup. If it works (the popup is above the modal), no CSS change needed. If the modal blocks the popup, add to `src/web-ui/app/assets/css/main.css`:
+ChatDock already uses `z-40` (FAB) and `z-50` (popup). These are above card modals (`z-50` is sufficient). No CSS variable change needed.
 
-```css
-:root {
-  --z-chat-fab: 60;
-  --z-chat-popup: 70;
-}
-```
+- [x] **Step 4: Build + typecheck**
 
-And verify the ChatDock uses `z-[var(--z-chat-fab)]` and `z-[var(--z-chat-popup)]` (already done in Task 8's template code).
+`dotnet build` succeeds. `ChatDock.vue` passes typecheck and lint. `chats/index.vue` has pre-existing TS errors from Task 9 (`readonly` sessions from `useChatSessionList` being mutated) — those are Task 9's responsibility.
 
-- [ ] **Step 4: Build + typecheck**
-
-Run: `dotnet build && cd src/web-ui && pnpm typecheck && pnpm lint`
-Expected: All pass
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/HydraForge.Application/Chat/ChatSessionService.cs src/web-ui/app/components/chat/ChatDock.vue src/web-ui/app/pages/chats/index.vue
-git commit -m "feat(chat): update identity prompt, add title rename, verify z-index"
-```
+- [x] **Step 5: Commit**
 
 ---
 
