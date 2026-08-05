@@ -1273,7 +1273,7 @@ cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build
 ```
 Expected: All pass.
 
-- [ ] **Step 3: Write the manual validation matrix**
+- [x] **Step 3: Write the manual validation matrix**
 
 Create `docs/manual-validation/2026-08-04-slice-a-global-chat-dock-matrix.md`:
 
