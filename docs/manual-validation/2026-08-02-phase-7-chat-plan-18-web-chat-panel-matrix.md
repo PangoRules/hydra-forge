@@ -93,6 +93,20 @@
 
 ---
 
+### TC-7: Compose-first auto-send — no cross-session leak after switch (regression for cycle-3 fix a87e7d7)
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | Navigate to `/chats` (Chats page) with empty sidebar | Empty state: "Type a message below to start a new chat." |
+| 2 | Type `hello world` into the bottom composer, send | New session A appears in sidebar, auto-send fires, user message lands in A |
+| 3 | Wait for auto-send to settle, then click an older existing session B in the sidebar | View switches to session B; **no message is auto-sent into B** |
+| 4 | Verify session B's message list contains only its original messages | No `hello world` present in B; original messages intact |
+| 5 | Verify session A's message list still contains the `hello world` user message | Sent into the correct session only |
+
+**Pass/Fail:** _____
+
+---
+
 ## Sign-off
 
 | Role | Name | Date | Signature |
