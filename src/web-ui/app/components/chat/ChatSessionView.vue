@@ -8,9 +8,10 @@ import { MessageRole } from '~/types/chat'
 
 const props = defineProps<{
   sessionId: string
-  /** A message to send automatically once connected — used when this session was just
-   * created from a compose-first "new chat" box so the first message isn't lost. */
+  /** A message to pre-fill into the input on mount — user edits then sends manually. */
   initialMessage?: string | null
+  /** When true, the initial message is sent automatically (compose-first flow). */
+  autoSendInitial?: boolean
   initialPresetId?: string | null
   initialModelId?: string | null
   initialEffort?: string | null
@@ -379,10 +380,21 @@ onMounted(async () => {
   await fetchSession()
 
   if (props.initialMessage) {
-    // Pre-fill the input so the user can review, edit, then click Send.
-    // Per spec: "pre-filled, user edits then sends" — never auto-sent.
-    chatInputRef.value?.setContent(props.initialMessage)
-    if (props.initialEffort) lastUsedEffort.value = props.initialEffort
+    if (props.autoSendInitial) {
+      // Compose-first flow from chats/index.vue: user already typed the message,
+      // expect it to be sent automatically.
+      await handleSend(
+        props.initialMessage,
+        props.initialPresetId,
+        props.initialModelId,
+        props.initialEffort
+      )
+      emit('initialMessageSent')
+    } else {
+      // ChatPanel flow: pre-fill input so the user reviews, edits, then sends.
+      chatInputRef.value?.setContent(props.initialMessage)
+      if (props.initialEffort) lastUsedEffort.value = props.initialEffort
+    }
   }
 
   // Connect *after* the message above, not before/alongside it. A SignalR

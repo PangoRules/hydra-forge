@@ -39,16 +39,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateDesktop)
 })
 
-const pendingFirstMessage = ref<Record<string, string | undefined>>({})
-
-function getPendingMessage(sessionId: string): string | null {
-  return pendingFirstMessage.value[sessionId] ?? null
-}
-
-function clearPendingMessage(sessionId: string) {
-  pendingFirstMessage.value[sessionId] = undefined
-}
-
 function deriveTitle(content: string): string {
   const firstLine = content.trim().split('\n')[0] ?? content.trim()
   return firstLine.length > TITLE_MAX_LENGTH
@@ -69,9 +59,6 @@ async function createSession(cardId: string | undefined, prefillMessage: string 
     })
     if (data) {
       activeSessionId.value = data.id
-      if (prefillMessage) {
-        pendingFirstMessage.value[data.id] = prefillMessage
-      }
     }
   } catch (err) {
     toast.error(err instanceof ApiError ? err.message : 'Failed to create chat session')
@@ -167,8 +154,6 @@ defineExpose({ openPanel, closePanel })
             v-if="activeSessionId"
             :key="activeSessionId"
             :session-id="activeSessionId"
-            :initial-message="activeSessionId ? getPendingMessage(activeSessionId) : null"
-            @initial-message-sent="activeSessionId && clearPendingMessage(activeSessionId)"
           />
 
           <!-- Empty state when no session -->
@@ -189,9 +174,9 @@ defineExpose({ openPanel, closePanel })
             </UButton>
           </div>
 
-          <!-- Inline new-chat form shown above messages when session is active with no pending message -->
+          <!-- Inline new-chat form shown above messages when session is active -->
           <div
-            v-if="activeSessionId && !getPendingMessage(activeSessionId)"
+            v-if="activeSessionId"
             class="shrink-0 border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2"
           >
             <textarea

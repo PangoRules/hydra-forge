@@ -37,14 +37,14 @@ function startCompose() {
   activeSessionId.value = null
 }
 
-// Keyed by sessionId — the first message of a compose-first "new chat", handed
-// to ChatSessionView as a one-shot prop on the mount right after creation.
-// Plain object, not a ref: only ever read once (in ChatSessionView's onMounted),
-// so it doesn't need to be reactive.
-const pendingFirstMessage: Record<
-  string,
-  { content: string, presetId: string | null, modelId: string | null, reasoningEffort: string | null }
-> = {}
+// Tracks the just-created session's first message for the auto-send flow.
+// Set before activeSessionId changes; read in the template on the same tick.
+const pendingMessage = ref<{
+  content: string
+  presetId: string | null
+  modelId: string | null
+  reasoningEffort: string | null
+} | null>(null)
 
 function deriveTitle(content: string): string {
   const firstLine = content.trim().split('\n')[0] ?? content.trim()
@@ -73,7 +73,7 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
     })
     if (data) {
       sessions.value.unshift(data)
-      pendingFirstMessage[data.id] = {
+      pendingMessage.value = {
         content,
         presetId: presetId ?? null,
         modelId: modelId ?? null,
@@ -207,11 +207,11 @@ onMounted(fetchSessions)
       v-if="activeSessionId"
       :key="activeSessionId"
       :session-id="activeSessionId"
-      :initial-message="pendingFirstMessage[activeSessionId]?.content ?? null"
-      :initial-preset-id="pendingFirstMessage[activeSessionId]?.presetId ?? null"
-      :initial-model-id="pendingFirstMessage[activeSessionId]?.modelId ?? null"
-      :initial-effort="pendingFirstMessage[activeSessionId]?.reasoningEffort ?? null"
-      @initial-message-sent="delete pendingFirstMessage[activeSessionId!]"
+      :initial-message="pendingMessage?.content ?? null"
+      :auto-send-initial="true"
+      :initial-preset-id="pendingMessage?.presetId ?? null"
+      :initial-model-id="pendingMessage?.modelId ?? null"
+      :initial-effort="pendingMessage?.reasoningEffort ?? null"
       @session-refreshed="syncSession"
     />
     <div
