@@ -41,6 +41,8 @@ export interface ChatSessionDto {
   aiEditMode: AiEditMode
   searchAllMyDocs: boolean
   summary: string | null
+  preferredModelConfigId: string | null
+  preferredEffort: string | null
   createdAt: string
   updatedAt: string
   archivedAt: string | null

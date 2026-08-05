@@ -7,11 +7,15 @@ const props = withDefaults(
     disabled?: boolean
     personalityId?: string | null
     feature?: string
+    initialModelId?: string | null
+    initialEffort?: string | null
   }>(),
   {
     disabled: false,
     personalityId: null,
-    feature: 'PersonalChat'
+    feature: 'PersonalChat',
+    initialModelId: null,
+    initialEffort: null
   }
 )
 
@@ -151,6 +155,8 @@ defineExpose({ setContent })
             v-model:effort="selectedEffort"
             :feature="feature"
             :disabled="disabled"
+            :initial-model-id="initialModelId"
+            :initial-effort="initialEffort"
           />
         </div>
 

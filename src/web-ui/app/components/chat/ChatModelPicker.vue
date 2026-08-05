@@ -6,10 +6,14 @@ const props = withDefaults(
   defineProps<{
     feature?: string
     disabled?: boolean
+    initialModelId?: string | null
+    initialEffort?: string | null
   }>(),
   {
     feature: 'PersonalChat',
-    disabled: false
+    disabled: false,
+    initialModelId: null,
+    initialEffort: null
   }
 )
 
@@ -86,10 +90,16 @@ async function fetchModels() {
     models.value = data ?? []
     if (models.value.length === 0) return
 
-    const saved = import.meta.client ? localStorage.getItem(storageKey.value) : null
-    const savedIsValid = !!saved && models.value.some(m => m.providerModelConfigId === saved)
-    modelId.value = savedIsValid ? saved! : models.value[0]!.providerModelConfigId
-    applyEffortForModel(modelId.value)
+    // Prefer external initialModelId over localStorage
+    if (props.initialModelId && models.value.some(m => m.providerModelConfigId === props.initialModelId)) {
+      modelId.value = props.initialModelId
+      if (props.initialEffort) effort.value = props.initialEffort
+    } else {
+      const saved = import.meta.client ? localStorage.getItem(storageKey.value) : null
+      const savedIsValid = !!saved && models.value.some(m => m.providerModelConfigId === saved)
+      modelId.value = savedIsValid ? saved! : models.value[0]!.providerModelConfigId
+      applyEffortForModel(modelId.value)
+    }
   } catch {
     // No models configured/reachable — chat falls back to server-side tier routing
   } finally {

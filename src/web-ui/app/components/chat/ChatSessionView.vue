@@ -6,16 +6,27 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import type { ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
 import { MessageRole } from '~/types/chat'
 
-const props = defineProps<{
-  sessionId: string
-  /** A message to pre-fill into the input on mount — user edits then sends manually. */
-  initialMessage?: string | null
-  /** When true, the initial message is sent automatically (compose-first flow). */
-  autoSendInitial?: boolean
-  initialPresetId?: string | null
-  initialModelId?: string | null
-  initialEffort?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    sessionId: string
+    /** A message to pre-fill into the input on mount — user edits then sends manually. */
+    initialMessage?: string | null
+    /** When true, the initial message is sent automatically (compose-first flow). */
+    autoSendInitial?: boolean
+    initialPresetId?: string | null
+    initialModelId?: string | null
+    initialEffort?: string | null
+    feature?: string
+  }>(),
+  {
+    initialMessage: null,
+    autoSendInitial: false,
+    initialPresetId: null,
+    initialModelId: null,
+    initialEffort: null,
+    feature: 'PersonalChat'
+  }
+)
 
 const emit = defineEmits<{
   initialMessageSent: []
@@ -27,6 +38,9 @@ const emit = defineEmits<{
 
 const toast = useAppToast()
 const api = useApi()
+
+const resolvedInitialModelId = computed(() => props.initialModelId ?? session.value?.preferredModelConfigId ?? null)
+const resolvedInitialEffort = computed(() => props.initialEffort ?? session.value?.preferredEffort ?? null)
 
 const session = ref<ChatSessionDetailDto | null>(null)
 const loading = ref(true)
@@ -536,6 +550,9 @@ onUnmounted(() => {
       <ChatInput
         ref="chatInputRef"
         :disabled="awaitingReply || session?.status !== 'Active'"
+        :feature="feature"
+        :initial-model-id="resolvedInitialModelId"
+        :initial-effort="resolvedInitialEffort"
         @send="handleSend"
         @cancel="handleCancel"
       >

@@ -104,6 +104,7 @@ watch(() => dock.isOpen, async (open) => {
             v-if="dock.activeSessionId"
             :key="dock.activeSessionId"
             :session-id="dock.activeSessionId"
+            :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
           />
           <div
             v-else

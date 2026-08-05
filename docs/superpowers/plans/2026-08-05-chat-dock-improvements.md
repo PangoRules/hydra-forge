@@ -559,7 +559,7 @@ git commit -m "fix(chat): auto-title fallback + bump openai-compatible timeout t
 - Modify: `src/web-ui/app/components/chat/ChatInput.vue`
 - Modify: `src/web-ui/app/components/chat/ChatSessionView.vue`
 
-- [ ] **Step 1: Add `initialModelId`/`initialEffort` props to `ChatModelPicker`**
+- [x] **Step 1: Add `initialModelId`/`initialEffort` props to `ChatModelPicker`**
 
 In `src/web-ui/app/components/chat/ChatModelPicker.vue`, add to `defineProps`:
 
@@ -599,7 +599,7 @@ async function fetchModels() {
 }
 ```
 
-- [ ] **Step 2: Add `initialModelId`/`initialEffort` props to `ChatInput`**
+- [x] **Step 2: Add `initialModelId`/`initialEffort` props to `ChatInput`**
 
 In `src/web-ui/app/components/chat/ChatInput.vue`, add to `defineProps`:
 
@@ -626,7 +626,7 @@ const props = defineProps<{
 />
 ```
 
-- [ ] **Step 3: Add `feature` prop to `ChatSessionView` + forward `initialModelId`/`initialEffort` (already exist as props, just unused)**
+- [x] **Step 3: Add `feature` prop to `ChatSessionView` + forward `initialModelId`/`initialEffort` (already exist as props, just unused)**
 
 `initialModelId`/`initialEffort` already exist on `ChatSessionView`'s `defineProps` — today they're only used to seed the first auto-send call, never forwarded to `ChatInput`. Only `feature` is genuinely new:
 
@@ -656,7 +656,7 @@ In the template, pass `feature` and `initialModelId`/`initialEffort` to `ChatInp
 >
 ```
 
-- [ ] **Step 4: Resolve session-persisted model in `ChatSessionView.fetchSession`**
+- [x] **Step 4: Resolve session-persisted model in `ChatSessionView.fetchSession`**
 
 `initialModelId`/`initialEffort` are **props**, not local refs — they can't be reassigned (`props.initialModelId.value = ...` doesn't compile / mutating a prop directly is a Vue anti-pattern the linter will flag). The plan's earlier draft of this step named new local refs identically to the existing props, which would shadow them and silently break the case where a caller (e.g. `board.vue`) explicitly passes `initial-model-id` for a fresh session.
 
@@ -681,7 +681,7 @@ Update the `<ChatInput>` binding from Step 3 to use these computeds instead of `
 >
 ```
 
-- [ ] **Step 5: Pass feature from ChatDock to ChatSessionView**
+- [x] **Step 5: Pass feature from ChatDock to ChatSessionView**
 
 In `src/web-ui/app/components/chat/ChatDock.vue`, pass `feature` based on page context:
 
@@ -694,12 +694,12 @@ In `src/web-ui/app/components/chat/ChatDock.vue`, pass `feature` based on page c
 />
 ```
 
-- [ ] **Step 6: Verify typecheck + lint**
+- [x] **Step 6: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatModelPicker.vue src/web-ui/app/components/chat/ChatInput.vue src/web-ui/app/components/chat/ChatSessionView.vue src/web-ui/app/components/chat/ChatDock.vue
