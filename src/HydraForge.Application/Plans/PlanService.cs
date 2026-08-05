@@ -5,7 +5,7 @@ using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Application.Shared;
-using HydraForge.Application.Specs;
+
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -15,7 +15,6 @@ namespace HydraForge.Application.Plans;
 public class PlanService(
     IPlanRepository planRepo,
     ICardRepository cardRepo,
-    ISpecRepository specRepo,
     IProjectMemberRepository memberRepo,
     IUserRepository userRepo,
     IAuditLogWriter auditLogWriter,
@@ -25,7 +24,6 @@ public class PlanService(
 {
     private readonly IPlanRepository _planRepo = planRepo;
     private readonly ICardRepository _cardRepo = cardRepo;
-    private readonly ISpecRepository _specRepo = specRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IAuditLogWriter _auditLogWriter = auditLogWriter;
@@ -76,26 +74,6 @@ public class PlanService(
         var cardTypeError = Card.ValidateAllowsPlan(card.Type);
         if (cardTypeError != null)
             return Result<PlanDto>.Failure(cardTypeError);
-
-        if (cmd.SpecId != null)
-        {
-            if (card.Type != CardType.Goal)
-                return Result<PlanDto>.Failure(
-                    new Error(
-                        DomainErrorCodes.Plans.SpecLinkNotAllowed,
-                        $"{card.Type} plans cannot be linked to a Spec via SpecId."
-                    )
-                );
-
-            var spec = await _specRepo.GetByIdAsync(cmd.SpecId.Value, ct);
-            if (spec == null || spec.CardId != cmd.CardId || spec.ProjectId != cmd.ProjectId)
-                return Result<PlanDto>.Failure(
-                    new Error(
-                        DomainErrorCodes.Plans.SpecCardMismatch,
-                        "SpecId must reference the Spec owned by this card."
-                    )
-                );
-        }
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<PlanDto>.Failure(
