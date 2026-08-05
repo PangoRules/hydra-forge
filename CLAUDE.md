@@ -274,7 +274,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 7 in progress (Tasks 1–17 done, Tasks 18–24 remaining)
+## Current Phase — Phase 7 in progress (Tasks 1–18 done, Tasks 19–24 remaining)
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
@@ -319,6 +319,7 @@ Phase 6 (LLM Infrastructure) is **complete** (2026-08-02) — see `docs/function
 - **E2E tests** — `src/web-ui/e2e/` (Playwright, D-42). Specs drive a real browser against the real running stack (`pnpm dev` + the .NET API in `Development`) and seed their own data via the API with random-suffixed titles — there is no per-test database reset. Run with `pnpm test:e2e`.
 - **Test what a component actually does, not a copy of its logic** — `CardModal.docs.test.ts` originally hardcoded its own `DOCS_CARD_TYPES`/`PLAN_CARD_TYPES` constants instead of mounting `CardModal.vue`, so it silently drifted from the real `hasSpec`/`hasPlan` computed values (which already supported Issue and Task) and never caught it — the test always passed by checking itself, not the component. When a test needs to assert on a component's conditional-rendering logic, mount the component and assert on its actual output/props, not a hand-copied duplicate of the condition.
 - **Vue Test Utils stub gotchas** (found writing the fix above): (1) `global.stubs: { AppModal: { render() { return h('div', {}, this.$slots.default?.()) } } }` renders nothing if the real usage puts content in a named slot — `AppModal.vue` uses `#body`, so the stub must render `this.$slots.body?.()`, not `default`. (2) Auto-stubbed components (`ComponentName: true`) serialize props to attributes in all-lowercase with no hyphen — a `:doc-type="..."` prop shows up as `wrapper.find('component-name-stub').attributes('doctype')`, not `'doc-type'`.
+- **`pendingMessage` cross-session leak** — `ChatSessionView`'s `autoSendInitial` prop auto-sends the `initialMessage` on mount. If `pendingMessage` ref is not cleared after the auto-send fires (`@initial-message-sent="pendingMessage = null"`), switching to a different session re-triggers the auto-send into the wrong session. Always pair `initialMessage` with `autoSendInitial` and clear pendingMessage on `initialMessageSent` emit.
 
 ### TUI conventions (Phase 4 lessons)
 
