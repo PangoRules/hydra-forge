@@ -6,6 +6,8 @@
 
 **Architecture:** Frontend: a Pinia store (`chatDock.ts`) owns the sticky session + window open/position state, surviving route changes. `ChatDock.vue` renders a FAB + draggable popup (via `@vueuse/core` `useDraggable`), reusing `ChatSessionView` from Plan 17. Rendered once in `default.vue` layout, hidden on `/chats` routes. Backend: `ChatSessionService.CreateAsync` persists a `System`-role `ChatMessage` with the identity prompt on every new session (regular + forked paths), reading from `ISettingsProvider` (admin-configurable, null → hardcoded default). `ChatSessionView` filters `System`-role messages from the rendered list. Plan 18's `ChatPanel.vue` + board.vue chat integration are deleted/reverted.
 
+**Regression fix folded into this plan (found during design review, not deferred):** persisting the identity message means every new session starts with a message count of 1 instead of 0. Two existing code paths — `ChatRagRetriever.cs` (gates project-snapshot cache-block injection) and `ChatReplyGenerator.cs` (gates auto-title generation) — infer "is this the session's first exchange" from a raw message count of 0/1 and silently break once that's no longer true. Task 5 fixes both to exclude `System`-role messages from the count, with regression tests. See spec's "Known regression" section for full detail.
+
 **Tech Stack:** Nuxt 4 / Vue 3 / Pinia / `@vueuse/core` 14.4.0 (`useDraggable`) / Nuxt UI v4 / ASP.NET Core 10 / EF Core 10 / xUnit / NSubstitute.
 
 **Spec:** `docs/superpowers/specs/2026-08-04-slice-a-global-chat-dock-design.md`
@@ -31,11 +33,13 @@
 - `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` — map new column (snake_case `ai_identity_prompt`, `.HasColumnType("text")`).
 - `src/HydraForge.Infrastructure/Migrations/<timestamp>_AddAiIdentityPrompt.cs` — EF migration.
 - `src/HydraForge.Application/Chat/ChatSessionService.cs` — inject `ISettingsProvider`, persist identity `System` message on creation (both regular + forked paths).
-- `src/HydraForge.Application/Chat/ChatReplyGenerator.cs` — remove per-reply identity injection (personality stays per-reply; identity now flows from history).
+- `src/HydraForge.Application/Chat/ChatReplyGenerator.cs` — fix `isFirstMessage = history.Count == 1` (line ~202) to exclude `System`-role messages. No change needed for identity flow itself — it already maps `System`-role history into the LLM call.
+- `src/HydraForge.Application/Chat/ChatRagRetriever.cs` — fix `isFirstMessage = priorMessages.Count == 0` (line ~67) to exclude `System`-role messages. Not in the original file list — found during review; without this, project-snapshot injection breaks for every project chat session.
 - `src/HydraForge.Server/Controllers/Admin/AdminController.cs` — add `AiIdentityPrompt` to GET response + PUT request record.
 - `src/web-ui/app/pages/admin/settings.vue` — add AI Identity Prompt editor card.
 - `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs` — assert identity System message persisted on creation.
-- `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs` — update constructor if signature changes (personality injection stays; no identity assertion needed since it's in history now).
+- `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs` — update constructor if signature changes (personality injection stays; no identity assertion needed since it's in history now); regression test for `isFirstMessage`/auto-title fix.
+- `tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs` — regression test for `isFirstMessage`/project-snapshot-injection fix.
 - `tests/HydraForge.Server.Tests/` — admin settings round-trip for `AiIdentityPrompt` (if a factory exists; otherwise skip — admin controller is thin).
 
 **Delete:**
@@ -414,20 +418,30 @@ git commit -m "feat(chat): persist Hydra identity System message on session crea
 
 ---
 
-## Task 5: Verify `ChatReplyGenerator` flows identity from history (no per-reply injection needed)
+## Task 5: Flow identity from history, and fix the `isFirstMessage` regression it causes
 
 **Files:**
+- Modify: `src/HydraForge.Application/Chat/ChatReplyGenerator.cs` (line ~202)
+- Modify: `src/HydraForge.Application/Chat/ChatRagRetriever.cs` (line ~67)
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`
+- Test: `tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs`
 
-The identity prompt is now a `System`-role message in history. `ChatReplyGenerator` already maps all history messages (including `System` role — see line 209-210 of `ChatReplyGenerator.cs`) into the LLM call. So no code change is needed in `ChatReplyGenerator` — the identity flows naturally from history. We just need a test confirming a `System` message in history reaches the LLM call.
+The identity prompt is now a `System`-role message in history. `ChatReplyGenerator` already maps all history messages (including `System` role — see line 209-210 of `ChatReplyGenerator.cs`) into the LLM call, so no change is needed for that part.
 
-- [ ] **Step 1: Write the test**
+**But** two existing checks infer "is this session's first real exchange" from a raw message count of 0 or 1, and both silently break once every new session starts with the identity message already in it:
 
-In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add a test that seeds history with a `System`-role message and asserts it appears in the `ChatRequest.Messages` passed to the LLM client. Find an existing happy-path test (one that reaches `StreamChatAsync`) and mirror its setup. The fake `ILlmClient` captures the `ChatRequest` — find how existing tests inspect it.
+- `ChatReplyGenerator.cs:202` — `var isFirstMessage = history.Count == 1;` gates auto-title generation (line 345). After identity-persist, `history.Count` is always ≥2 for a fresh session's first exchange → title generation never fires again.
+- `ChatRagRetriever.cs:67` — `bool isFirstMessage = priorMessages.Count == 0;` (fetched with `limit: 1`) gates project-snapshot cache-block injection (line 70: `session.ProjectId != null && isFirstMessage`). After identity-persist, `priorMessages.Count` is always ≥1 → project-snapshot injection never fires again. This is the more serious of the two — it silently kills project-context-aware chat for every project session.
+
+Both must be fixed to exclude `System`-role messages from the count, in the same commit as the identity-message persist lands (not deferred) — otherwise this ships a regression the same day it ships the feature.
+
+- [ ] **Step 1: Write the failing regression tests**
+
+In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add a test seeding history with a `System`-role identity message plus the first real user/assistant exchange, and assert auto-title generation still fires:
 
 ```csharp
     [Fact]
-    public async Task GenerateAsync_SystemMessageInHistory_IsIncludedInLlmCall()
+    public async Task GenerateAsync_FirstRealMessageAfterIdentitySystemMessage_StillGeneratesTitle()
     {
         var session = new ChatSession
         {
@@ -435,7 +449,7 @@ In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add a t
             OwnerId = UserId,
             Status = ChatSessionStatus.Active,
         };
-        var systemMessage = new ChatMessage
+        var identityMessage = new ChatMessage
         {
             Id = Guid.NewGuid(),
             SessionId = SessionId,
@@ -453,42 +467,96 @@ In `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`, add a t
         _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
         _messageRepo
             .GetBySessionAsync(SessionId, Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new List<ChatMessage> { systemMessage, userMessage });
+            .Returns(new List<ChatMessage> { identityMessage, userMessage });
 
-        // Set up a minimal successful stream (mirror an existing happy-path test)
-        var capturedRequests = new List<ChatRequest>();
-        var fakeClient = Substitute.For<ILlmClient>();
-        fakeClient.SupportsToolCalling(Arg.Any<ProviderModelConfigDto>()).Returns(false);
-        fakeClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(async c =>
-            {
-                capturedRequests.Add(c.Arg<ChatRequest>());
-                await Task.CompletedTask;
-                yield return new ChatChunk(Delta: "ok", FinishReason: ChatChunkFinishReason.Stop);
-            });
-        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(fakeClient);
-        // Wire up a valid route (mirror existing happy-path test setup)
+        // Wire up a minimal successful stream + valid route (mirror an existing
+        // happy-path test that reaches StreamChatAsync — search for FinishReason.Stop).
 
         await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
 
-        Assert.NotEmpty(capturedRequests);
-        Assert.Contains(capturedRequests[0].Messages, m => m.Role == ChatRole.System && m.Content.Contains("HydraForge"));
+        await _titleGenerator.Received(1).GenerateTitleAsync(
+            UserId, "hello", Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 ```
 
-Note: the exact setup for a happy-path test (route resolution, budget guard, stream registry) is non-trivial. Read an existing passing test in `ChatReplyGeneratorTests.cs` that reaches `StreamChatAsync` (search for `StreamChatAsync` calls or `FinishReason.Stop` in the test file) and copy its setup. The key assertion is that the captured `ChatRequest.Messages` includes a `System`-role message with "HydraForge" content.
+In `tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs`, add a test where `GetBySessionAsync` returns only the identity `System` message (simulating the first real user message about to be sent) and assert the project-snapshot cache block is still injected:
 
-- [ ] **Step 2: Run the test to verify it passes**
+```csharp
+    [Fact]
+    public async Task RetrieveAsync_OnlyIdentitySystemMessagePresent_StillInjectsProjectSnapshot()
+    {
+        var identityMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = SessionId,
+            Role = MessageRole.System,
+            Content = "You are HydraForge's assistant.",
+        };
+        _messageRepo
+            .GetBySessionAsync(SessionId, null, null, 1, Arg.Any<CancellationToken>())
+            .Returns(new List<ChatMessage> { identityMessage });
+        // Wire up session.ProjectId + snapshot repo per an existing passing test for
+        // the "first message injects snapshot" case.
 
-Run: `dotnet test --filter FullyQualifiedName~GenerateAsync_SystemMessageInHistory_IsIncludedInLlmCall`
-Expected: PASS (no code change needed — `ChatReplyGenerator` already maps `System` role from history at line 209-210).
+        var blocks = await _retriever.RetrieveAsync(SessionId, /* ... */);
 
-- [ ] **Step 3: Commit**
+        Assert.Contains(blocks, b => b.Type == CacheBlockType.ProjectSnapshot);
+    }
+```
+
+Note: exact fake setup depends on each test file's existing conventions — read a neighboring passing test in each file first and mirror its fixture pattern.
+
+- [ ] **Step 2: Run both tests to verify they fail**
+
+Run:
+```bash
+dotnet test --filter FullyQualifiedName~GenerateAsync_FirstRealMessageAfterIdentitySystemMessage_StillGeneratesTitle
+dotnet test --filter FullyQualifiedName~RetrieveAsync_OnlyIdentitySystemMessagePresent_StillInjectsProjectSnapshot
+```
+Expected: Both FAIL against the current `Count == 1` / `Count == 0` checks.
+
+- [ ] **Step 3: Fix `ChatReplyGenerator.cs`**
+
+Change line ~202:
+```csharp
+var isFirstMessage = history.Count == 1;
+```
+to:
+```csharp
+var isFirstMessage = history.Count(m => m.Role != MessageRole.System) == 1;
+```
+
+- [ ] **Step 4: Fix `ChatRagRetriever.cs`**
+
+Change line ~67:
+```csharp
+bool isFirstMessage = priorMessages.Count == 0;
+```
+to:
+```csharp
+bool isFirstMessage = priorMessages.Count(m => m.Role != MessageRole.System) == 0;
+```
+
+Note: `priorMessages` is fetched with `limit: 1` (line ~64). If the identity message is the only row and it's excluded from the count, this still correctly evaluates to `0 == 0` → `true`. No change needed to the fetch `limit` itself — worst case with `limit: 1` is the identity row occupies the one slot fetched and the count-after-filter is 0, which is exactly what we want. (If a future change ever needs to distinguish "identity + 1 real message" from "identity only" here, bump `limit` to 2 — not needed for this fix.)
+
+- [ ] **Step 5: Run both tests to verify they pass**
+
+Run the same two filters as Step 2. Expected: PASS.
+
+- [ ] **Step 6: Run full regression suites for both files**
+
+Run:
+```bash
+dotnet test --filter FullyQualifiedName~ChatReplyGeneratorTests
+dotnet test --filter FullyQualifiedName~ChatRagRetrieverTests
+```
+Expected: All PASS — including any pre-existing tests that asserted `isFirstMessage`/snapshot-injection behavior on a session with zero prior messages (those should still pass since `Count(m => m.Role != System) == 0` on an empty list is still `0 == 0`).
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs
-git commit -m "test(chat): verify identity System message flows from history to LLM call"
+git add src/HydraForge.Application/Chat/ChatReplyGenerator.cs src/HydraForge.Application/Chat/ChatRagRetriever.cs tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs tests/HydraForge.Application.Tests/Chat/ChatRagRetrieverTests.cs
+git commit -m "fix(chat): exclude identity System message from isFirstMessage checks"
 ```
 
 ---
@@ -1308,7 +1376,10 @@ git commit -m "docs: manual validation matrix for Slice A (global chat dock)"
 - F6 implicit close on "New chat": Task 7 store calls `POST /api/chat/sessions` (server handles F6) ✓
 - Page context detection: Task 7 (`currentProjectId` computed) ✓
 - `/chats` hide: Task 8 (`isHidden` computed) ✓
+- **`isFirstMessage` regression (project-snapshot injection + auto-title), found in design review: Task 5 ✓** — not in the original plan; added because persisting the identity message breaks two unrelated message-count assumptions in `ChatRagRetriever.cs` and `ChatReplyGenerator.cs`. Without this, the plan would ship a silent regression to project-context-aware chat the same day it ships the identity prompt.
 
 **Placeholder scan:** No TBD/TODO. All steps have concrete code.
 
 **Type consistency:** `useChatDockStore` used in Task 8 matches Task 7's export. `ChatSessionView` props match existing (`:session-id`, `:key`). `AiIdentityPrompt` property name consistent across Tasks 1-3, 11. `SetAiIdentityPrompt` method name consistent across Tasks 1, 3.
+
+**Order clarification (see spec's "Order in LLM call" section):** the actual `chatMessages` array in `ChatReplyGenerator` ends up personality-first, identity-second (identity arrives via history, not a dedicated first slot) — opposite of an earlier spec draft. Confirmed functionally harmless (two additive `System` messages), but documented so the subagent doesn't "fix" the order thinking it's a bug.

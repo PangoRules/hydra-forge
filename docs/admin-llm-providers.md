@@ -57,6 +57,41 @@ Both keys hit the same `/v1/chat/completions` endpoint with the same `Authorizat
 - Token Plan covers the M-series text models + image/speech/music. It does **not** cover H3 video, voice design, or rapid voice cloning — irrelevant for HydraForge text chat, but worth knowing if you reuse the same key elsewhere.
 - `MiniMax-M3` has **thinking on by default** — responses include inline reasoning mixed into the message text. This is normal, not a bug. M2.x models always think and cannot disable it.
 
+## Z.ai (cloud, OpenAI-compatible)
+
+Z.ai exposes an OpenAI-compatible API at `https://api.z.ai/api/paas/v4` — same wire shape as MiniMax/OpenRouter, rides the existing `OpenAiCompatible` adapter. Two key types, both Bearer:
+
+- **GLM Coding Plan** — subscription (Lite $18/mo, Pro, Max), credit-based with 5-hour rolling + weekly windows. Credits map to GLM-5.2 / GLM-5-Turbo / GLM-4.7 tokens. Off-peak hours (UTC+8 14:00–18:00) charge 50% credit rate.
+- **API Key** (pay-as-you-go) — billed per token against balance. GLM-5.2 = $1.40/M input, $4.40/M output. GLM-4.7 cheaper at $0.60/$2.20. Free tier exists: `glm-4.7-flash`, `glm-4.5-flash` (no sub needed).
+
+Both keys hit the same `/chat/completions` endpoint with `Authorization: Bearer {key}`. Same pattern as MiniMax — not interchangeable for billing.
+
+1. Get your key:
+   - **Coding Plan**: Z.ai console → API Keys (`z.ai/manage-apikey/apikey-list`). Subscribe to a Coding Plan first.
+   - **Pay-as-you-go**: same API Keys page, needs balance top-up.
+2. Providers → **Add Provider**:
+   - `Name`: `Z.ai` (or whatever you want)
+   - `Base URL`: `https://api.z.ai/api/paas/v4`
+   - `Adapter Type`: `OpenAiCompatible`
+   - `Provider Type`: `Text` — Z.ai the platform also serves image/video/audio, but HydraForge has no Z.ai image adapter. Same caveat as MiniMax.
+   - `API Key`: your Coding Plan key **or** pay-as-you-go API Key. Encrypted at rest (AES-256-GCM via `IKeyVault`) — never stored or logged in plaintext.
+   - `Tier`: pick one.
+3. Provider Models → select the Z.ai provider → **Discover Models** (hits `/models`). Add the ones you want:
+   - `glm-5.2` — flagship, coding SOTA. Recommended default.
+   - `glm-5-turbo` — faster, cheaper.
+   - `glm-4.7`, `glm-4.6` — cheaper still.
+   - `glm-4.7-flash`, `glm-4.5-flash` — free tier, no sub needed.
+4. Routing → map `PersonalChat` (and `ProjectChat` if needed) → Z.ai provider → the tier you assigned.
+5. Test at `/chats`.
+
+### Coding Plan quota caveats
+
+- 5-hour rolling + weekly credit windows. Lite = 2,000 credits/5hr, 10,000/week. Pro = 12,000/60,000. Max = 28,000/140,000.
+- Credits = (input tokens × input multiplier + output tokens × output multiplier) / 10,000. GLM-5.2 multipliers: input 6.9, cached input 1.7, output 24.
+- Off-peak = 50% credit cost. Peak = Mon–Fri 14:00–18:00 UTC+8.
+- Quota exhausted → wait for reset, or swap to pay-as-you-go API Key (separate key, needs balance).
+- GLM-5.2 supports thinking mode (`thinking.type: enabled`) — inline reasoning in response. Not sent by HydraForge's adapter (only sends `reasoning_effort` when set on the request), so thinking stays off unless you wire it yourself.
+
 ## Ollama (local)
 
 1. Make sure Ollama is running and has at least one model pulled: `ollama pull llama3.1` (or whatever you use).

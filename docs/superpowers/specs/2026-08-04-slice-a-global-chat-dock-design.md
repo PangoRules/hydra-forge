@@ -63,15 +63,25 @@ Plan 18's `ChatPanel.vue` side-rail had a dead-icon bug (rendered via `v-if="sho
 
 **Model switch mid-conversation:** works — the System message is in history, the new model sees it on the next reply. No re-injection logic needed.
 
-**Order in LLM call** (built by `ChatReplyGenerator` from history + injected personality):
-1. Hydra identity `System` message (from history, persisted on creation).
-2. Personality system prompt (if `session.PersonalityId` set — injected per-reply at L182, current behavior, NOT persisted as a message).
-3. Preset content (if `presetId` passed — wraps user message).
-4. RAG context (if retrieved — compressed separately).
-5. Conversation history (User/Assistant/Tool messages).
-6. Current user message.
+**Order in LLM call** (built by `ChatReplyGenerator` — verified against current code, not aspirational):
+1. Personality system prompt (if `session.PersonalityId` set — injected per-reply at L182, current behavior, NOT persisted as a message). Added to `chatMessages` first.
+2. Then full history is appended in chronological order, which is where the persisted identity `System` message actually lands (it's the oldest row, so for a fresh session it's the first history entry — i.e. effectively 2nd in the array, after personality, not 1st).
+3. Preset content (if `presetId` passed — wraps the user message at its position in history).
+4. RAG context (if retrieved — compressed separately, not part of `chatMessages`).
+5. Current user message (last history entry).
 
-Personality overrides tone; identity anchors scope. Additive, no conflict.
+Personality overrides tone; identity anchors scope. Additive, no conflict — order between the two `System` messages doesn't matter functionally, but note it's personality-then-identity in the actual array, not identity-then-personality as an earlier draft of this doc implied.
+
+**No `ChatReplyGenerator.cs` code change needed to make identity flow into the LLM call** — it already maps every history message (including `System` role) into `chatMessages` (line ~209-210). Verified: there is no existing per-reply identity injection in `ChatReplyGenerator.cs` to remove; that was a stale assumption in an earlier draft of this doc. `ChatReplyGenerator.cs` DOES need a different, unrelated fix — see "Known regression" below.
+
+### Known regression: `isFirstMessage` detection breaks in two places
+
+Persisting the identity message means **every new session starts with 1 message already in it**, before the user ever sends anything. Two existing code paths infer "is this the session's very first exchange" from a raw message count of 0 or 1, and both break silently once that assumption is false:
+
+- **`ChatRagRetriever.cs:60-70`** — fetches `priorMessages` with `limit: 1`, sets `isFirstMessage = priorMessages.Count == 0`, and gates **project-snapshot cache-block injection** on it (`session.ProjectId != null && isFirstMessage`). After this change, `priorMessages.Count` is always ≥1 (the identity message) → `isFirstMessage` is permanently `false` → **project chat sessions never receive their project snapshot again.** This is a load-bearing feature (see CLAUDE.md's cache-breakpoint notes) and a silent regression, not a loud failure.
+- **`ChatReplyGenerator.cs:202,345`** — `isFirstMessage = history.Count == 1`, gates auto-title generation after the first reply. Same break: `history.Count` is always ≥2 for a brand-new session → auto-title generation never fires again.
+
+**Fix (in scope for this plan, not deferred):** both checks must count only non-`System` messages, e.g. `priorMessages.Count(m => m.Role != MessageRole.System) == 0` and `history.Count(m => m.Role != MessageRole.System) == 1`. See Plan Task 5 (updated) for the concrete change and regression tests.
 
 ### A3. Admin-Configurable Identity Prompt
 
@@ -139,7 +149,8 @@ Passed to `POST /api/chat/sessions` as `projectId` on session creation.
 - `src/web-ui/app/layouts/default.vue` — render `<ChatDock />` once.
 - `src/web-ui/app/components/chat/ChatSessionView.vue` — filter `role === 'System'` messages from rendered list.
 - `src/web-ui/app/pages/projects/[id]/board.vue` — revert Plan 18 chat integration.
-- `src/HydraForge.Application/Chat/ChatReplyGenerator.cs` — persist identity System message on session creation (or first reply); remove per-reply injection (personality stays per-reply).
+- `src/HydraForge.Application/Chat/ChatReplyGenerator.cs` — no change needed for identity flow (already maps `System`-role history into the LLM call); fix `isFirstMessage = history.Count == 1` to exclude `System`-role messages (see "Known regression" above).
+- `src/HydraForge.Application/Chat/ChatRagRetriever.cs` — fix `isFirstMessage = priorMessages.Count == 0` to exclude `System`-role messages (see "Known regression" above). Not previously in this file list — found during review.
 - `src/HydraForge.Domain/Entities/SystemSettings.cs` — add `AiIdentityPrompt` property.
 - `src/HydraForge.Infrastructure/Persistence/HydraForgeDbContext.cs` — map new column.
 - `src/HydraForge.Infrastructure/Migrations/` — new migration for `AiIdentityPrompt`.
@@ -156,7 +167,8 @@ Passed to `POST /api/chat/sessions` as `projectId` on session creation.
 - `ChatDock.vue` component test: open/close via FAB, session creation on first open, route-hide logic (hidden on `/chats`), drag behavior.
 - `chatDock.ts` store test: session lifecycle, context detection (board → projectId, else null), `startNewChat` creates new session, window position state.
 - `ChatSessionView` test: System-role messages filtered from rendered list.
-- `ChatReplyGenerator` test: identity System message persisted on session creation, present in LLM call messages, hidden from UI fetch.
+- `ChatReplyGenerator` test: identity System message persisted on session creation, present in LLM call messages, hidden from UI fetch. Regression test: auto-title generation still fires after the first real (non-System) exchange in a fresh session.
+- `ChatRagRetriever` test: regression test — project-snapshot cache block still injected on a session's first real (non-System) user message, not skipped because of the persisted identity message occupying slot 0.
 - Admin settings round-trip: `AiIdentityPrompt` read/write via admin endpoint.
 - Manual matrix: open dock on project list → chat works; nav to board → same session persists; "New chat" on board → project-scoped; model switch mid-convo → identity stays; `/chats` page → dock hidden; open card modal → chat dock usable above modal; drag window → repositions.
 
