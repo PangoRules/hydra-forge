@@ -69,7 +69,7 @@ describe('chatDock store', () => {
     await store.startNewChat()
     expect(store.activeSessionId).toBe('new-session')
     expect(mockPOST).toHaveBeenCalledWith('/api/chat/sessions', {
-      body: { title: 'New chat', projectId: 'abc' }
+      body: { title: '', projectId: 'abc' }
     })
   })
 
@@ -82,7 +82,7 @@ describe('chatDock store', () => {
     await store.startNewChat()
     expect(store.activeSessionId).toBe('new-session-no-project')
     expect(mockPOST).toHaveBeenCalledWith('/api/chat/sessions', {
-      body: { title: 'New chat' }
+      body: { title: '' }
     })
   })
 })
