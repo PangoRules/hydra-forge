@@ -526,7 +526,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             actorId
         );
@@ -568,7 +570,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             ownerId
         );
@@ -623,7 +627,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             ownerId
         );
@@ -717,7 +723,9 @@ public class ChatSessionServiceTests
                 FolderId: null,
                 PersonalityId: null,
                 AiEditMode: null,
-                SearchAllMyDocs: false
+                SearchAllMyDocs: false,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             ownerId
         );
@@ -768,7 +776,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: source.Id
+                ForkedFromSessionId: source.Id,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             callerId
         );
@@ -933,6 +943,35 @@ public class ChatSessionServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithPreferredModelConfigId_PersistsIt()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var actorId = NewId();
+        var modelConfigId = Guid.NewGuid();
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "test",
+                FolderId: null,
+                ProjectId: null,
+                OpenCardId: null,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: modelConfigId,
+                PreferredEffort: "medium"
+            ),
+            actorId
+        );
+
+        Assert.True(result.IsSuccess);
+        var saved = sessionRepo.Sessions.Single();
+        Assert.Equal(modelConfigId, saved.PreferredModelConfigId);
+        Assert.Equal("medium", saved.PreferredEffort);
+    }
+
+    [Fact]
     public async Task ArchiveAsync_NotOwner_ReturnsSessionNotOwner()
     {
         var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
@@ -987,7 +1026,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             ownerId
         );
@@ -1012,7 +1053,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             NewId()
         );
@@ -1035,7 +1078,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             NewId()
         );
@@ -1062,7 +1107,9 @@ public class ChatSessionServiceTests
                 PersonalityId: null,
                 AiEditMode: null,
                 SearchAllMyDocs: false,
-                ForkedFromSessionId: null
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
             ),
             NewId()
         );

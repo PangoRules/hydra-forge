@@ -129,6 +129,8 @@ public class ChatSessionService(
             Status = ChatSessionStatus.Active,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            PreferredModelConfigId = request.PreferredModelConfigId,
+            PreferredEffort = request.PreferredEffort,
         };
 
         await _sessionRepo.AddAsync(session, ct);
@@ -282,7 +284,9 @@ public class ChatSessionService(
                 session.UpdatedAt,
                 session.ArchivedAt,
                 session.ClosedAt,
-                messages.Select(MapMessageToDto).ToList()
+                messages.Select(MapMessageToDto).ToList(),
+                session.PreferredModelConfigId,
+                session.PreferredEffort
             )
         );
     }
@@ -345,8 +349,8 @@ public class ChatSessionService(
             request.PersonalityId,
             request.AiEditMode,
             request.SearchAllMyDocs,
-            null,
-            null
+            request.PreferredModelConfigId,
+            request.PreferredEffort
         );
 
         await _sessionRepo.UpdateAsync(session, ct);
@@ -635,7 +639,9 @@ public class ChatSessionService(
             session.Summary,
             session.CreatedAt,
             session.UpdatedAt,
-            session.ArchivedAt
+            session.ArchivedAt,
+            session.PreferredModelConfigId,
+            session.PreferredEffort
         );
     }
 
