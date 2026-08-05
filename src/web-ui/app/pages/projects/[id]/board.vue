@@ -11,6 +11,7 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { useBoardKeyboardNav } from '~/composables/keyboard/useBoardKeyboardNav'
+import { useBoardStore } from '~/stores/board'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -25,7 +26,7 @@ type CardResponse = components['schemas']['CardResponse']
 
 const route = useRoute()
 const projectId = route.params.id as string
-const board = useBoardStore()
+const boardStore = useBoardStore()
 const api = useApi()
 const toast = useAppToast()
 
@@ -34,7 +35,10 @@ const projectArchived = ref(false)
 
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
-const selectedCardId = ref<string | null>(null)
+const selectedCardId = computed({
+  get: () => boardStore.openCardId,
+  set: val => boardStore.setOpenCardId(val)
+})
 const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
@@ -64,7 +68,7 @@ async function confirmArchive() {
       body: { version: card.version }
     })
     toast.success('Card archived')
-    board.fetchBoard(projectId)
+    boardStore.fetchBoard(projectId)
   } catch {
     toast.error('Failed to archive card')
   }
@@ -83,7 +87,7 @@ const realtime = useRealtime()
 const presence = usePresence()
 
 function findCard(cardId: string): CardResponse | undefined {
-  for (const [, cards] of board.cardsByColumn) {
+  for (const [, cards] of boardStore.cardsByColumn) {
     const found = cards.find(c => c.id === cardId)
     if (found) return found
   }
@@ -119,20 +123,20 @@ function handleCardClick(card: CardResponse) {
 function handleCardModalClose() {
   selectedCardId.value = null
   selectedCard.value = null
-  board.fetchBoard(projectId)
+  boardStore.fetchBoard(projectId)
 }
 
 // Bulk handlers for desktop
 async function handleBulkMove() {
   if (projectArchived.value) return
   if (!bulkTargetColumnId.value) return
-  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  const ids = Object.keys(boardStore.selectedCardIds).filter(k => (boardStore.selectedCardIds as Record<string, boolean>)[k])
   for (const cardId of ids) {
     const card = findCard(cardId)
     if (!card) continue
     const targetPosition = 0
     // Optimistic update
-    board.moveCard(cardId, bulkTargetColumnId.value, targetPosition)
+    boardStore.moveCard(cardId, bulkTargetColumnId.value, targetPosition)
     try {
       await api.POST(ApiRoutes.Cards.move(projectId, cardId), {
         body: {
@@ -143,17 +147,17 @@ async function handleBulkMove() {
         }
       })
     } catch {
-      board.rollbackMove(projectId)
+      boardStore.rollbackMove(projectId)
       toast.error(`Failed to move card #${card.cardNumber}`)
     }
   }
-  board.clearSelection()
+  boardStore.clearSelection()
   toast.success(`Moved ${ids.length} card(s)`)
 }
 
 async function handleBulkArchive() {
   if (projectArchived.value) return
-  const ids = Object.keys(board.selectedCardIds).filter(k => (board.selectedCardIds as Record<string, boolean>)[k])
+  const ids = Object.keys(boardStore.selectedCardIds).filter(k => (boardStore.selectedCardIds as Record<string, boolean>)[k])
   for (const cardId of ids) {
     const card = findCard(cardId)
     if (!card) continue
@@ -161,18 +165,18 @@ async function handleBulkArchive() {
       await api.POST(ApiRoutes.Cards.archive(projectId, cardId), {
         body: { version: card.version }
       })
-      board.removeCard(cardId)
+      boardStore.removeCard(cardId)
     } catch {
       toast.error(`Failed to archive #${card.cardNumber}`)
     }
   }
-  board.clearSelection()
+  boardStore.clearSelection()
   toast.success(`Archived ${ids.length} card(s)`)
 }
 
 onMounted(async () => {
-  board.fetchBoard(projectId)
-  board.fetchMembers(projectId)
+  boardStore.fetchBoard(projectId)
+  boardStore.fetchMembers(projectId)
   realtime.connect(projectId)
   presence.connect(projectId)
   try {
@@ -193,7 +197,7 @@ async function handleRestore() {
     await api.POST(ApiRoutes.Projects.toggleArchive(projectId))
     projectArchived.value = false
     toast.success('Project restored')
-    board.fetchBoard(projectId)
+    boardStore.fetchBoard(projectId)
   } catch {
     toast.error('Failed to restore project')
   }
@@ -201,29 +205,29 @@ async function handleRestore() {
 
 // Only re-fetch when includeArchived actually change — not when search changes
 watch(
-  () => board.boardFilters.includeArchived,
+  () => boardStore.boardFilters.includeArchived,
   (newArchived, oldArchived) => {
-    if (newArchived !== oldArchived) board.fetchBoard(projectId)
+    if (newArchived !== oldArchived) boardStore.fetchBoard(projectId)
   }
 )
 
 // Debounced search — 300ms after user stops typing, fetch with search param
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(
-  () => board.boardFilters.search,
+  () => boardStore.boardFilters.search,
   () => {
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
-      board.fetchBoard(projectId)
+      boardStore.fetchBoard(projectId)
       searchTimer = null
     }, 300)
   }
 )
 
 watch(
-  () => board.boardFilters.assigneeUserId,
+  () => boardStore.boardFilters.assigneeUserId,
   (newAssignee, oldAssignee) => {
-    if (newAssignee !== oldAssignee) board.fetchBoard(projectId)
+    if (newAssignee !== oldAssignee) boardStore.fetchBoard(projectId)
   }
 )
 
@@ -251,7 +255,7 @@ const onlineUsers = computed(() => {
 function viewingCardNumber(userId: string): number | string | null {
   const cardId = presenceStore.focusedCards.get(userId)
   if (!cardId) return null
-  for (const cards of board.cardsByColumn.values()) {
+  for (const cards of boardStore.cardsByColumn.values()) {
     const found = cards.find(c => c.id === cardId)
     if (found) return found.cardNumber
   }
@@ -357,7 +361,7 @@ function hashColor(id: string): string {
         <UButton
           variant="ghost"
           size="sm"
-          @click="board.fetchBoard(projectId)"
+          @click="boardStore.fetchBoard(projectId)"
         >
           <UIcon
             name="i-lucide-refresh-cw"
@@ -369,8 +373,8 @@ function hashColor(id: string): string {
 
     <!-- Filter bar — always visible above the board area -->
     <BoardFilterBar
-      :members="board.members"
-      :columns="board.columns"
+      :members="boardStore.members"
+      :columns="boardStore.columns"
       :readonly="projectArchived"
       class="hidden md:flex"
       @add-card="handleAddCard()"
@@ -383,7 +387,7 @@ function hashColor(id: string): string {
     >
       <MemberManagementPanel
         :project-id="projectId"
-        @update="board.fetchMembers(projectId)"
+        @update="boardStore.fetchMembers(projectId)"
       />
     </div>
 
@@ -391,17 +395,17 @@ function hashColor(id: string): string {
     <div class="flex-1 flex flex-col min-h-0">
       <!-- Error state — shown above all board content when present -->
       <div
-        v-if="board.error"
+        v-if="boardStore.error"
         class="h-full flex items-center justify-center"
       >
         <div class="text-center">
           <p class="text-red-500 mb-2">
-            {{ board.error }}
+            {{ boardStore.error }}
           </p>
           <UButton
             variant="outline"
             size="sm"
-            @click="board.fetchBoard(projectId)"
+            @click="boardStore.fetchBoard(projectId)"
           >
             Retry
           </UButton>
@@ -410,25 +414,25 @@ function hashColor(id: string): string {
 
       <!-- Desktop board content — hidden during loading (desktop uses full-height spinner) -->
       <div
-        v-else-if="!board.loading"
+        v-else-if="!boardStore.loading"
         class="hidden md:flex flex-1 flex-col min-h-0"
       >
         <!-- Bulk action bar for desktop (above board) -->
         <BulkActionBar
-          :selected-count="board.selectedCount"
+          :selected-count="boardStore.selectedCount"
           :bulk-target-column-id="bulkTargetColumnId"
-          :columns="board.columns"
+          :columns="boardStore.columns"
           @update:bulk-target-column-id="val => bulkTargetColumnId = val"
           @move="handleBulkMove"
           @archive="handleBulkArchive"
-          @clear="board.clearSelection()"
+          @clear="boardStore.clearSelection()"
         />
         <div class="flex-1 min-h-0 overflow-x-auto p-4 flex flex-col">
           <BoardView
-            :columns="board.visibleColumns"
-            :cards-by-column="board.cardsByColumn"
+            :columns="boardStore.visibleColumns"
+            :cards-by-column="boardStore.cardsByColumn"
             :project-id="projectId"
-            :include-archived="board.boardFilters.includeArchived"
+            :include-archived="boardStore.boardFilters.includeArchived"
             :readonly="projectArchived"
             :selected-card-id="nav.selectedCardId.value"
             :selected-column-index="nav.selectedColumnIndex.value"
@@ -454,15 +458,15 @@ function hashColor(id: string): string {
 
       <!-- Mobile board content — always rendered so its inline spinner works -->
       <div
-        v-if="!board.error"
+        v-if="!boardStore.error"
         class="md:hidden flex-1 min-h-0 overflow-auto"
       >
         <BoardMobileList
-          :columns="board.columns"
-          :cards-by-column="board.cardsByColumn"
+          :columns="boardStore.columns"
+          :cards-by-column="boardStore.cardsByColumn"
           :project-id="projectId"
-          :members="board.members"
-          :loading="board.loading"
+          :members="boardStore.members"
+          :loading="boardStore.loading"
           :readonly="projectArchived"
           @card-click="handleCardClick"
           @add-card="handleAddCard"
@@ -477,17 +481,17 @@ function hashColor(id: string): string {
       :project-id="projectId"
       :readonly="projectArchived"
       @close="handleCardModalClose"
-      @archived="board.fetchBoard(projectId)"
-      @restored="board.fetchBoard(projectId)"
+      @archived="boardStore.fetchBoard(projectId)"
+      @restored="boardStore.fetchBoard(projectId)"
     />
     <CardCreateModal
       v-if="showCreateModal"
       :project-id="projectId"
-      :columns="board.columns"
-      :members="board.members"
+      :columns="boardStore.columns"
+      :members="boardStore.members"
       :preselected-column-id="createColumnId ?? undefined"
       @close="showCreateModal = false"
-      @created="board.fetchBoard(projectId)"
+      @created="boardStore.fetchBoard(projectId)"
     />
 
     <KeyboardShortcutOverlay

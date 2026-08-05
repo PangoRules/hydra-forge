@@ -36,8 +36,10 @@ export const useChatDockStore = defineStore('chatDock', () => {
     if (isCreating.value) return
     isCreating.value = true
     try {
-      const body: Record<string, unknown> = { title: 'New chat' }
+      const openCardId = currentProjectId.value ? useBoardStore().openCardId : null
+      const body: Record<string, unknown> = { title: '' }
       if (currentProjectId.value) body.projectId = currentProjectId.value
+      if (openCardId) body.openCardId = openCardId
       const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), { body })
       if (data) {
         activeSessionId.value = data.id

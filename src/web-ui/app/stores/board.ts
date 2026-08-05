@@ -31,6 +31,10 @@ export const useBoardStore = defineStore('board', () => {
 
   const members = ref<MemberResponse[]>([])
   const selectedCardIds = ref<Record<string, boolean>>({})
+  const openCardId = ref<string | null>(null)
+  function setOpenCardId(id: string | null) {
+    openCardId.value = id
+  }
 
   // Bridge for CardModal (and any other open-card UI) to react to realtime events without
   // owning its own SignalR connection — same pattern presence already uses (a shared
@@ -254,6 +258,7 @@ export const useBoardStore = defineStore('board', () => {
     cardContentEvent, signalCardContentEvent,
     boardFilters, visibleColumns,
     members, fetchMembers,
-    selectedCardIds, selectedCount, toggleSelectCard, clearSelection
+    selectedCardIds, selectedCount, toggleSelectCard, clearSelection,
+    openCardId, setOpenCardId
   }
 })
