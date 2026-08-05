@@ -208,10 +208,11 @@ onMounted(fetchSessions)
       :key="activeSessionId"
       :session-id="activeSessionId"
       :initial-message="pendingMessage?.content ?? null"
-      :auto-send-initial="true"
+      :auto-send-initial="!!pendingMessage"
       :initial-preset-id="pendingMessage?.presetId ?? null"
       :initial-model-id="pendingMessage?.modelId ?? null"
       :initial-effort="pendingMessage?.reasoningEffort ?? null"
+      @initial-message-sent="pendingMessage = null"
       @session-refreshed="syncSession"
     />
     <div
