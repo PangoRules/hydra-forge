@@ -8,4 +8,5 @@ public enum CardType
     // 3 intentionally skipped — was Spec; rows migrated to Goal in MigrateSpecCardsToGoal
     Idea = 4,
     Goal = 5, // was Epic
+    Security = 6,
 }
