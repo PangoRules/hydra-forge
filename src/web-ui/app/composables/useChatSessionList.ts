@@ -50,6 +50,21 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     if (index !== -1) sessions.value[index] = { ...sessions.value[index]!, ...patch }
   }
 
+  // A brand-new session always sorts newest-first — prepend it locally instead
+  // of refresh()ing. refresh() resets to page 1, which visibly "disappears"
+  // any already-loaded pages 2+ if the user had scrolled into older history —
+  // this keeps everything they'd already loaded intact.
+  function prependSession(session: ChatSessionDto) {
+    sessions.value.unshift(session)
+  }
+
+  // Same reasoning as prependSession — removing an archived item locally
+  // avoids collapsing back to page 1 for anyone who'd scrolled further.
+  function removeSession(id: string) {
+    const index = sessions.value.findIndex(s => s.id === id)
+    if (index !== -1) sessions.value.splice(index, 1)
+  }
+
   // Load initial page
   loadMore()
 
@@ -59,6 +74,8 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     hasMore: readonly(hasMore),
     loadMore,
     refresh,
-    patchSession
+    patchSession,
+    prependSession,
+    removeSession
   }
 }

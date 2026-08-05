@@ -15,7 +15,7 @@ const toast = useAppToast()
 const route = useRoute()
 
 const dock = useChatDockStore()
-const { sessions, loading, hasMore, loadMore, refresh, patchSession } = useChatSessionList()
+const { sessions, loading, hasMore, loadMore, patchSession, prependSession, removeSession } = useChatSessionList()
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
@@ -95,7 +95,10 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
         reasoningEffort: reasoningEffort ?? null
       }
       activeSessionId.value = data.id
-      await refresh()
+      // A new session always sorts newest-first — prepend locally instead of
+      // refresh()ing, which would collapse back to page 1 and "disappear" any
+      // older pages the user had already scrolled into.
+      prependSession(data)
     }
   } catch {
     toast.error('Failed to create chat session')
@@ -122,7 +125,7 @@ async function confirmArchive() {
   try {
     await api.DELETE(ApiRoutes.Chat.sessions.archive(id))
     if (activeSessionId.value === id) activeSessionId.value = null
-    await refresh()
+    removeSession(id)
   } catch {
     toast.error('Failed to archive chat')
   } finally {
@@ -199,7 +202,7 @@ async function confirmArchive() {
               @click.stop="requestArchive(s.id)"
             />
           </li>
-          <div
+          <li
             v-if="hasMore"
             ref="sentinel"
             class="h-4 shrink-0"

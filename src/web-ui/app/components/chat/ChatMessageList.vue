@@ -2,6 +2,7 @@
 import type { ChatMessageDto } from '~/types/chat'
 import type { StreamingMessage } from '~/composables/useChatStream'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
+import { renderMarkdown } from '~/lib/markdown'
 
 const MESSAGE_WINDOW_SIZE = 50
 
@@ -221,12 +222,18 @@ onMounted(() => {
             >
               {{ streamingMessage.modelName }}
             </span>
+            <!-- eslint-disable vue/no-v-html -- renderMarkdown output is DOMPurify-sanitized -->
             <div
+              v-if="streamingMessage.content"
+              class="px-4 py-2 rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm leading-relaxed"
+              v-html="renderMarkdown(streamingMessage.content)"
+            />
+            <!-- eslint-enable vue/no-v-html -->
+            <div
+              v-else
               class="px-4 py-2 rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm leading-relaxed"
             >
-              <span v-if="streamingMessage.content">{{ streamingMessage.content }}</span>
               <span
-                v-else
                 class="inline-flex gap-1"
               >
                 <span

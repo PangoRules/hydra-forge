@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { marked, Renderer } from 'marked'
-import DOMPurify from 'dompurify'
 import type { ChatMessageDto } from '~/types/chat'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
+import { renderMarkdown } from '~/lib/markdown'
 
 const props = withDefaults(
   defineProps<{
@@ -42,18 +41,7 @@ const images = computed<ParsedImage[]>(() => {
   }
 })
 
-const renderedContent = computed(() => {
-  if (!props.message.content) return ''
-  // Strip raw HTML by providing a no-op html renderer
-  const renderer = new Renderer()
-  renderer.html = () => ''
-  const html = marked.parse(props.message.content, { async: false, breaks: true, renderer }) as string
-  // DOMPurify needs a real DOM — no-op on the server, marked's html-stripping
-  // renderer above is what keeps SSR output safe; the client re-render below
-  // is the actual XSS defense (blocks javascript:/data: URIs, dangerous attrs, etc.)
-  if (!import.meta.client) return html
-  return DOMPurify.sanitize(html)
-})
+const renderedContent = computed(() => renderMarkdown(props.message.content))
 
 const isUser = computed(() => props.message.role === 'User')
 
