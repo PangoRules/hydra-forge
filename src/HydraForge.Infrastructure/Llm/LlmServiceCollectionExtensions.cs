@@ -25,7 +25,9 @@ public static class LlmServiceCollectionExtensions
             "openai-compatible",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(60);
+                // Local models (Ollama/LM Studio via OpenAI-compat endpoint) routinely exceed
+                // 60s for cold-model-load + generation. 600s matches the dedicated ollama client.
+                client.Timeout = TimeSpan.FromSeconds(600);
             }
         );
 

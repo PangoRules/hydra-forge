@@ -609,6 +609,207 @@ public class ChatReplyGeneratorTests
     }
 
     [Fact]
+    public async Task GenerateAsync_TitleGenFails_FallsBackToFirstUserMessage()
+    {
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var identityMsg = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = SessionId,
+            Role = MessageRole.System,
+            Content = "You are HydraForge's assistant.",
+        };
+        var userMsg = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "Hello world this is a test message",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMsg);
+        _messageRepo
+            .GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ChatMessage> { identityMsg, userMsg });
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        _titleGenerator
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<string>.Failure(new Error("Chat.TitleFailed", "Simulated failure")));
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        await _sessionRepo.Received(1).UpdateAsync(
+            Arg.Is<ChatSession>(s => s.Title == "Hello world this is a test message"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_TitleGenFails_TruncatesLongFirstMessage()
+    {
+        var longContent = string.Join(" ", Enumerable.Range(0, 20).Select(i => $"word{i}"));
+        var expectedTruncatedTitle = longContent[..60] + "…";
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var userMsg = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = longContent,
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMsg);
+        _messageRepo
+            .GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ChatMessage> { userMsg });
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        _titleGenerator
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<string>.Failure(new Error("Chat.TitleFailed", "Simulated failure")));
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        await _sessionRepo.Received(1).UpdateAsync(
+            Arg.Is<ChatSession>(s => s.Title == expectedTruncatedTitle),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GenerateAsync_ReasoningEffort_PassedThroughToChatRequest()
     {
         var session = new ChatSession

@@ -352,11 +352,13 @@ public sealed class ChatReplyGenerator(
                         content,
                         cts.Token
                     );
-                    if (titleResult.IsSuccess)
-                    {
-                        session.UpdateSettings(titleResult.Value, null, null, null, null, null, null);
-                        await sessionRepo.UpdateAsync(session, cts.Token);
-                    }
+                    var title = titleResult.IsSuccess
+                        ? titleResult.Value
+                        : userMessage.Content.Length <= 60
+                            ? userMessage.Content
+                            : userMessage.Content[..60] + "…";
+                    session.UpdateSettings(title, null, null, null, null, null, null);
+                    await sessionRepo.UpdateAsync(session, cts.Token);
                 }
                 catch (Exception ex)
                 {
