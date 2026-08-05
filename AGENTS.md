@@ -16,7 +16,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
 
 - `CLAUDE.md` for stack, commands, and conventions.
 - `docs/DECISIONS.md` before changing architecture; do not re-litigate settled decisions.
-- The monolithic `requirements-and-architecture.md` was split in `dc2e092`. It is now a 17-line index. Read by intent:
+- Read by intent:
   - `docs/scope.md` — vision, personas, scope boundaries
   - `docs/functional-spec.md` — FRs, NFRs, phase checklists (live)
   - `docs/architecture.md` — Clean Architecture, real-time, LLM, error handling, tech stack
@@ -25,6 +25,7 @@ Compact repo-specific guidance for OpenCode sessions. Prefer executable files ov
   - `docs/agent-platform-vision.md` — agent platform direction
   - `docs/backlog.md` — uncommitted ideas and scope-creep candidates
   - `docs/admin-llm-providers.md` — how-to: registering LLM providers (OpenRouter, Ollama, etc.) via the admin UI
+- Specs/plans always go to `docs/specs/`+`docs/plans/` (archived to `docs/archive/`) — never `docs/superpowers/`, see CLAUDE.md's "Spec/plan location" note.
 - Check manifests/config before trusting prose: `HydraForge.slnx`, `*.csproj`, `src/web-ui/package.json`, `src/web-ui/nuxt.config.ts`.
 
 ## Repo Shape

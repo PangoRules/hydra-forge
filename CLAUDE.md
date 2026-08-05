@@ -345,7 +345,7 @@ Phase 6 (LLM Infrastructure) is **complete** (2026-08-02) — see `docs/function
 
 ## Docs
 
-The monolithic `requirements-and-architecture.md` was split in `dc2e092` into focused files. It is now a 17-line index pointing at:
+Read by intent:
 
 - `docs/scope.md` — vision, personas, scope boundaries
 - `docs/functional-spec.md` — FRs, NFRs, phase checklists (live)
@@ -357,3 +357,5 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/admin-llm-providers.md` — how-to: registering LLM providers (OpenRouter, Ollama, etc.) via the admin UI
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.
+
+**Spec/plan location — one convention, no exceptions:** `docs/specs/` and `docs/plans/` (archived to `docs/archive/specs/`, `docs/archive/plans/` once shipped) are the only spec/plan location in this repo, regardless of whether the work came from the opencode multi-agent flow or a direct Claude Code session using the `superpowers` plugin's `brainstorming`/`writing-plans` skills. Those skills default to `docs/superpowers/specs/`/`docs/superpowers/plans/` — this line is the "user preferences override the default" the skill instructions ask to check for. `docs/superpowers/` should not reappear; if it does, migrate it back into `docs/specs`/`docs/plans` (or `docs/archive/` if already shipped) rather than leaving two parallel trees. (Also: this whole markdown-file setup is an interim measure — HydraForge's own `Spec`/`Plan` entities, described in `docs/data-model.md`, are the intended long-term home once the product's own harness drives this workflow directly against the board.)
