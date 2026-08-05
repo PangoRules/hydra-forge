@@ -295,34 +295,34 @@ onMounted(() => {
           :key="routing.feature"
           class="rounded-md border border-muted/60 p-3"
         >
-          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div class="sm:w-44 shrink-0 font-medium text-sm">
+          <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div class="lg:w-44 shrink-0 font-medium text-sm">
               {{ featureLabel(routing.feature) }}
             </div>
 
-            <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+            <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 items-center">
               <div>
-                <p class="text-xs text-muted mb-1 sm:hidden">
+                <p class="text-xs text-muted mb-1 lg:hidden">
                   Default Tier
                 </p>
                 <USelect
                   :model-value="(routing.defaultTier as LlmTier)"
                   :items="TIER_OPTIONS"
                   :disabled="savingFeatures.has(routing.feature)"
-                  class="w-full sm:w-36"
+                  class="w-full lg:w-36"
                   @update:model-value="onDefaultTierChange(routing.feature, $event as LlmTier)"
                 />
               </div>
 
               <div>
-                <p class="text-xs text-muted mb-1 sm:hidden">
+                <p class="text-xs text-muted mb-1 lg:hidden">
                   Max User Tier
                 </p>
                 <USelect
                   :model-value="((routing.maxUserTier ?? 'Locked') as LlmTier | 'Locked')"
                   :items="MAX_TIER_OPTIONS"
                   :disabled="savingFeatures.has(routing.feature)"
-                  class="w-full sm:w-48"
+                  class="w-full lg:w-48"
                   @update:model-value="onMaxUserTierChange(routing.feature, $event as LlmTier | 'Locked')"
                 />
               </div>

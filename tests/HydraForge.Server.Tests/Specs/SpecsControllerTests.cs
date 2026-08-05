@@ -71,6 +71,59 @@ public class SpecsControllerTests
     }
 
     [Fact]
+    public async Task Create_WithHtmlContentFormatHeader_ConvertsContentToMarkdown()
+    {
+        var factory = new SpecsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+
+        var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Test Card",
+                CardNumber = 1,
+                Type = CardType.Goal,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/specs/cards/{cardId}"
+        )
+        {
+            Content = new StringContent(
+                "{\"docType\":\"Specification\",\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"<p>Hello <strong>world</strong></p>\"}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("X-Content-Format", "Html");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("<p>", body);
+        Assert.Contains("Hello **world**", body);
+    }
+
+    [Fact]
     public async Task Create_NonMember_Returns403()
     {
         var factory = new SpecsTestWebApplicationFactory();

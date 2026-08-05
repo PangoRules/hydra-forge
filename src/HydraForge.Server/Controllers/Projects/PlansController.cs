@@ -1,7 +1,9 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Plans;
+using HydraForge.Application.Shared;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Server.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +12,8 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]
-public class PlansController(PlanService planService) : ControllerBase
+public class PlansController(PlanService planService, IHtmlToMarkdownConverter htmlToMarkdown)
+    : ControllerBase
 {
     [HttpPost("cards/{cardId:guid}")]
     [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status201Created)]
@@ -21,6 +24,9 @@ public class PlansController(PlanService planService) : ControllerBase
     )
     {
         var userId = User.GetRequiredUserId();
+        var content = ContentFormatHeader.IsHtml(Request)
+            ? htmlToMarkdown.Convert(request.Content)
+            : request.Content;
 
         var cmd = new CreatePlanCommand(
             projectId,
@@ -29,7 +35,7 @@ public class PlansController(PlanService planService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content,
+            content,
             request.Position
         );
 
@@ -143,6 +149,9 @@ public class PlansController(PlanService planService) : ControllerBase
     )
     {
         var userId = User.GetRequiredUserId();
+        var content = ContentFormatHeader.IsHtml(Request)
+            ? htmlToMarkdown.Convert(request.Content)
+            : request.Content;
 
         var cmd = new UpdatePlanCommand(
             projectId,
@@ -150,7 +159,7 @@ public class PlansController(PlanService planService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content
+            content
         );
 
         var result = await planService.UpdateAsync(cmd);

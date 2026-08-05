@@ -23,7 +23,13 @@ function createApiClient(store: ReturnType<typeof useAuthStore>) {
   const client = createClient<paths>({
     baseUrl,
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      // Spec/Plan Content is a Markdown contract end-to-end (the TUI reads it as
+      // plain Markdown). The Web UI's TipTap editor authors in HTML — this tells
+      // the server to normalize HTML content to Markdown on write. Harmless on
+      // requests without a content body (GETs, non-doc endpoints); the server
+      // only consults it on the Spec/Plan create/update actions.
+      'X-Content-Format': 'Html'
     }
   })
 

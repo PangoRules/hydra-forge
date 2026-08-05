@@ -34,19 +34,31 @@ onMounted(() => {
 // "browse my chats" — start expanded. Either way the user can toggle it themselves.
 const sidebarOpen = ref(route.query.compose !== '1')
 
+// The "+ New Chat" nav link always points at this same route with a ?compose=1
+// query, so clicking it while already on /chats is a same-route SPA navigation —
+// Vue Router updates route.query but does not remount this page, so the sidebarOpen
+// ref above (set once at mount) would otherwise never react. Watch the query
+// directly so re-clicking "New Chat" from within the page still lands on a fresh
+// draft with the sidebar closed, every time.
+watch(() => route.query.compose, (compose) => {
+  if (compose === '1') startCompose()
+})
+
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
 }
 
-// Selecting a chat or starting a new one never touches sidebarOpen — only the
-// toggle button and the initial ?compose=1 landing state do. The user's own
-// open/closed choice sticks until they change it themselves.
 function selectSession(id: string) {
   activeSessionId.value = id
 }
 
+// Starting a new chat — whether from the top-nav link or the sidebar's own "+" —
+// always closes the sidebar so the user lands on a clean compose view instead of
+// staring at the history list they just asked to leave.
 function startCompose() {
   activeSessionId.value = null
+  pendingMessage.value = null
+  sidebarOpen.value = false
 }
 
 // Tracks the just-created session's first message for the auto-send flow.

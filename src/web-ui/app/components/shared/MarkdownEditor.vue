@@ -167,7 +167,7 @@ function toggleSource() {
 </script>
 
 <template>
-  <div :class="isFullscreen ? 'absolute inset-0 z-10 bg-default flex flex-col' : 'border rounded-md'">
+  <div :class="isFullscreen ? 'fixed inset-0 z-[100] bg-default flex flex-col' : 'border rounded-md'">
     <!-- Toolbar -->
     <div
       v-if="editable && showToolbar && !sourceMode"

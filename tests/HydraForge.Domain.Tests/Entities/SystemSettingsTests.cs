@@ -47,4 +47,18 @@ public class SystemSettingsTests
 
         Assert.Null(settings.NtfyServerUrl);
     }
+
+    [Fact]
+    public void MarkSpecPlanHtmlBackfillCompleted_SetsTimestamps()
+    {
+        var settings = new SystemSettings();
+        Assert.Null(settings.SpecPlanHtmlBackfillCompletedAt);
+        var before = settings.UpdatedAt;
+
+        Thread.Sleep(10);
+        settings.MarkSpecPlanHtmlBackfillCompleted();
+
+        Assert.NotNull(settings.SpecPlanHtmlBackfillCompletedAt);
+        Assert.True(settings.UpdatedAt > before);
+    }
 }

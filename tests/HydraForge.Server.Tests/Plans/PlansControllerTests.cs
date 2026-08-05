@@ -69,6 +69,58 @@ public class PlansControllerTests
     }
 
     [Fact]
+    public async Task Create_WithHtmlContentFormatHeader_ConvertsContentToMarkdown()
+    {
+        var factory = new PlansTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = PlansTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+
+        var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Test Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/plans/cards/{cardId}"
+        )
+        {
+            Content = new StringContent(
+                "{\"title\":\"My Plan\",\"description\":\"desc\",\"content\":\"<p>Hello <strong>world</strong></p>\"}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("X-Content-Format", "Html");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("<p>", body);
+        Assert.Contains("Hello **world**", body);
+    }
+
+    [Fact]
     public async Task Create_NonMember_Returns403()
     {
         var factory = new PlansTestWebApplicationFactory();

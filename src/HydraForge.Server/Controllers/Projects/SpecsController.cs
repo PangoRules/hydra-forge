@@ -1,7 +1,9 @@
 using HydraForge.Application.Auth;
+using HydraForge.Application.Shared;
 using HydraForge.Application.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Server.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +12,8 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]
-public class SpecsController(SpecService specService) : ControllerBase
+public class SpecsController(SpecService specService, IHtmlToMarkdownConverter htmlToMarkdown)
+    : ControllerBase
 {
     [HttpPost("cards/{cardId:guid}")]
     [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status201Created)]
@@ -21,6 +24,9 @@ public class SpecsController(SpecService specService) : ControllerBase
     )
     {
         var userId = User.GetRequiredUserId();
+        var content = ContentFormatHeader.IsHtml(Request)
+            ? htmlToMarkdown.Convert(request.Content)
+            : request.Content;
 
         var cmd = new CreateSpecCommand(
             projectId,
@@ -29,7 +35,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             request.DocType,
             request.Title,
             request.Description,
-            request.Content
+            content
         );
 
         var result = await specService.CreateAsync(cmd);
@@ -136,6 +142,9 @@ public class SpecsController(SpecService specService) : ControllerBase
     )
     {
         var userId = User.GetRequiredUserId();
+        var content = ContentFormatHeader.IsHtml(Request)
+            ? htmlToMarkdown.Convert(request.Content)
+            : request.Content;
 
         var cmd = new UpdateSpecCommand(
             projectId,
@@ -143,7 +152,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content
+            content
         );
 
         var result = await specService.UpdateAsync(cmd);
