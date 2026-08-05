@@ -18,6 +18,7 @@ class MockIntersectionObserver {
 vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
 
 import ChatSessionList from '~/components/shared/ChatSessionList.vue'
+import { AiEditMode, ChatSessionStatus } from '~/types/chat'
 import type { ChatSessionDto } from '~/types/chat'
 
 function makeSession(id: string, title: string): ChatSessionDto {
@@ -29,8 +30,8 @@ function makeSession(id: string, title: string): ChatSessionDto {
     openCardId: null,
     personalityId: null,
     personalityArchived: false,
-    status: 'Active',
-    aiEditMode: 'Manual',
+    status: ChatSessionStatus.Active,
+    aiEditMode: AiEditMode.PerMutation,
     searchAllMyDocs: false,
     summary: null,
     preferredModelConfigId: null,

@@ -2,7 +2,7 @@
 import type { ChatSessionDto } from '~/types/chat'
 
 const props = defineProps<{
-  sessions: ChatSessionDto[]
+  sessions: readonly ChatSessionDto[]
   loading: boolean
   hasMore: boolean
   activeSessionId?: string | null
@@ -47,7 +47,10 @@ onUnmounted(() => {
       v-if="loading && sessions.length === 0"
       class="flex items-center justify-center py-8"
     >
-      <UIcon name="i-lucide-loader-2" class="animate-spin text-muted size-5" />
+      <UIcon
+        name="i-lucide-loader-2"
+        class="animate-spin text-muted size-5"
+      />
     </div>
 
     <!-- Empty state -->
@@ -55,7 +58,9 @@ onUnmounted(() => {
       v-else-if="!loading && sessions.length === 0"
       class="px-4 py-8 text-sm text-muted text-center"
     >
-      <slot name="empty">No conversations yet.</slot>
+      <slot name="empty">
+        No conversations yet.
+      </slot>
     </div>
 
     <!-- Session items + sentinel + footer -->
@@ -83,7 +88,10 @@ onUnmounted(() => {
         v-if="loading"
         class="flex items-center justify-center py-3"
       >
-        <UIcon name="i-lucide-loader-2" class="animate-spin text-muted size-5" />
+        <UIcon
+          name="i-lucide-loader-2"
+          class="animate-spin text-muted size-5"
+        />
       </div>
 
       <!-- All caught up footer -->

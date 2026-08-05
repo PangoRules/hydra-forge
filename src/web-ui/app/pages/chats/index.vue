@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import ChatSessionList from '~/components/shared/ChatSessionList.vue'
 import type { ChatSessionDto } from '~/types/chat'
 import { useChatSessionList } from '~/composables/useChatSessionList'
 import { useChatDockStore } from '~/stores/chatDock'
@@ -19,12 +20,6 @@ const { sessions, loading, hasMore, loadMore, patchSession, prependSession, remo
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
-const sentinel = ref<HTMLElement | null>(null)
-const observer = ref<IntersectionObserver | null>(null)
-const listEl = ref<HTMLElement | null>(null)
-
-// Create the observer always; watch the sentinel ref reactively so it
-// attaches even when the sentinel renders *after* mount (v-else block).
 onMounted(() => {
   if (dock.activeSessionId) {
     activeSessionId.value = dock.activeSessionId
@@ -32,25 +27,6 @@ onMounted(() => {
     const saved = localStorage.getItem('hydraforge:chat:activeSessionId')
     if (saved) activeSessionId.value = saved
   }
-
-  observer.value = new IntersectionObserver(
-    ([entry]) => {
-      if (entry?.isIntersecting && !loading.value && hasMore.value) {
-        loadMore()
-      }
-    },
-    { rootMargin: '100px' }
-  )
-})
-
-watch(sentinel, (el) => {
-  if (el && observer.value) {
-    observer.value.observe(el)
-  }
-})
-
-onUnmounted(() => {
-  observer.value?.disconnect()
 })
 
 // Arriving via the top-nav "+ New Chat" button (?compose=1) means "go straight to
@@ -107,8 +83,6 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
       // refresh()ing, which would collapse back to page 1 and "disappear" any
       // older pages the user had already scrolled into.
       prependSession(data)
-      await nextTick()
-      if (listEl.value) listEl.value.scrollTop = 0
     }
   } catch {
     toast.error('Failed to create chat session')
@@ -164,61 +138,48 @@ async function confirmArchive() {
           />
         </div>
 
-        <div
-          v-if="loading"
-          class="text-muted text-sm px-4"
+        <ChatSessionList
+          :sessions="sessions"
+          :loading="loading"
+          :has-more="hasMore"
+          :active-session-id="activeSessionId"
+          @select="selectSession"
+          @load-more="loadMore"
         >
-          Loading…
-        </div>
-        <div
-          v-else-if="sessions.length === 0"
-          class="text-center text-muted text-sm px-4 py-8"
-        >
-          No chats yet — type below to start one.
-        </div>
-<ul
-  v-else
-  ref="listEl"
-  class="flex-1 min-h-0 overflow-y-auto"
-        >
-          <li
-            v-for="s in sessions"
-            :key="s.id"
-            class="group relative"
-          >
-            <button
-              class="w-full text-left px-4 py-3 pr-9 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
-              :class="s.id === activeSessionId ? 'bg-gray-100 dark:bg-gray-800' : ''"
-              @click="selectSession(s.id)"
-            >
-              <p class="truncate text-sm font-medium">
-                {{ s.title }}
-              </p>
-              <!-- "Active" is every session's default state pre-close — showing it for
-                   everything is just noise. Only surface the badge once it's meaningful. -->
-              <p
-                v-if="s.status !== 'Active'"
-                class="text-xs text-muted"
+          <template #empty>
+            No chats yet — type below to start one.
+          </template>
+          <template #item="{ session, active }">
+            <li class="group relative">
+              <button
+                class="w-full text-left px-4 py-3 pr-9 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                :class="active ? 'bg-gray-100 dark:bg-gray-800' : ''"
+                @click="selectSession(session.id)"
               >
-                {{ s.status }}
-              </p>
-            </button>
-            <UButton
-              icon="i-lucide-archive"
-              variant="ghost"
-              color="neutral"
-              size="xs"
-              title="Archive chat"
-              class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-              @click.stop="requestArchive(s.id)"
-            />
-          </li>
-          <li
-            v-if="hasMore"
-            ref="sentinel"
-            class="h-4 shrink-0"
-          />
-        </ul>
+                <p class="truncate text-sm font-medium">
+                  {{ session.title }}
+                </p>
+                <!-- "Active" is every session's default state pre-close — showing it for
+                     everything is just noise. Only surface the badge once it's meaningful. -->
+                <p
+                  v-if="session.status !== 'Active'"
+                  class="text-xs text-muted"
+                >
+                  {{ session.status }}
+                </p>
+              </button>
+              <UButton
+                icon="i-lucide-archive"
+                variant="ghost"
+                color="neutral"
+                size="xs"
+                title="Archive chat"
+                class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click.stop="requestArchive(session.id)"
+              />
+            </li>
+          </template>
+        </ChatSessionList>
       </div>
     </div>
 
