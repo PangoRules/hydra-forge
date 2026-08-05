@@ -46,7 +46,7 @@ describe('ChatDock', () => {
 
   it('renders the FAB button when dock is closed', async () => {
     storeState.isOpen = false
-    storeState.activeSessionId = null
+    storeState.activeSessionId = undefined as unknown as string
     const wrapper = await mountSuspended(ChatDock)
     expect(wrapper.find('button[aria-label="Open chat"]').exists()).toBe(true)
   })
@@ -63,7 +63,7 @@ describe('ChatDock', () => {
   })
 
   it('shows Chat header when not on a project board', async () => {
-    storeState.currentProjectId = null
+    storeState.currentProjectId = undefined as unknown as string
     const wrapper = await mountSuspended(ChatDock)
     expect(wrapper.html()).toContain('>Chat<')
   })

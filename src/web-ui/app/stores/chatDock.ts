@@ -42,11 +42,9 @@ export const useChatDockStore = defineStore('chatDock', () => {
       if (data) {
         activeSessionId.value = data.id
       }
-    }
-    catch (err) {
+    } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to create chat session')
-    }
-    finally {
+    } finally {
       isCreating.value = false
     }
   }

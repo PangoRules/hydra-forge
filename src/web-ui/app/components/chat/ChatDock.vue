@@ -10,7 +10,7 @@ const isHidden = computed(() => route.path.startsWith('/chats'))
 const dragHandle = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
 
-const { x, y, isDragging } = useDraggable(popupRef, {
+const { x, y } = useDraggable(popupRef, {
   handle: dragHandle,
   initialValue: { x: 0, y: 0 },
   preventDefault: true

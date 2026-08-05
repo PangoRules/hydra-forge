@@ -57,7 +57,7 @@ describe('chatDock store', () => {
 
   it('returns null projectId when not on a board route', () => {
     routeState.path = '/projects'
-    routeState.params = {}
+    routeState.params = { id: undefined as unknown as string }
     setActivePinia(createPinia())
     const store = useChatDockStore()
     expect(store.currentProjectId).toBe(null)
@@ -75,7 +75,7 @@ describe('chatDock store', () => {
 
   it('startNewChat creates a session without projectId when not on board', async () => {
     routeState.path = '/projects'
-    routeState.params = {}
+    routeState.params = { id: undefined as unknown as string }
     setActivePinia(createPinia())
     mockPOST.mockResolvedValue({ data: { id: 'new-session-no-project' }, error: undefined })
     const store = useChatDockStore()
