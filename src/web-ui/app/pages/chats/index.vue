@@ -21,7 +21,10 @@ const activeSessionId = ref<string | null>(null)
 
 const sentinel = ref<HTMLElement | null>(null)
 const observer = ref<IntersectionObserver | null>(null)
+const listEl = ref<HTMLElement | null>(null)
 
+// Create the observer always; watch the sentinel ref reactively so it
+// attaches even when the sentinel renders *after* mount (v-else block).
 onMounted(() => {
   if (dock.activeSessionId) {
     activeSessionId.value = dock.activeSessionId
@@ -38,7 +41,12 @@ onMounted(() => {
     },
     { rootMargin: '100px' }
   )
-  if (sentinel.value) observer.value.observe(sentinel.value)
+})
+
+watch(sentinel, (el) => {
+  if (el && observer.value) {
+    observer.value.observe(el)
+  }
 })
 
 onUnmounted(() => {
@@ -99,6 +107,8 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
       // refresh()ing, which would collapse back to page 1 and "disappear" any
       // older pages the user had already scrolled into.
       prependSession(data)
+      await nextTick()
+      if (listEl.value) listEl.value.scrollTop = 0
     }
   } catch {
     toast.error('Failed to create chat session')
@@ -141,7 +151,7 @@ async function confirmArchive() {
       class="shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-0 overflow-hidden transition-[width] duration-200"
       :class="sidebarOpen ? 'w-72' : 'w-0 border-r-0'"
     >
-      <div class="w-72 h-full flex flex-col min-h-0">
+      <div class="w-72 flex-1 min-h-0 flex flex-col">
         <div class="shrink-0 flex items-center justify-between p-4">
           <h1 class="text-lg font-bold">
             Chats
@@ -166,9 +176,10 @@ async function confirmArchive() {
         >
           No chats yet — type below to start one.
         </div>
-        <ul
-          v-else
-          class="flex-1 min-h-0 overflow-y-auto"
+<ul
+  v-else
+  ref="listEl"
+  class="flex-1 min-h-0 overflow-y-auto"
         >
           <li
             v-for="s in sessions"
