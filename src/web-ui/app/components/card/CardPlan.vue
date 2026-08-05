@@ -98,6 +98,13 @@ function expandFirst() {
   }
 }
 
+async function loadAndExpandFirst() {
+  if (plans.value.length === 0) {
+    await fetchPlans()
+  }
+  expandFirst()
+}
+
 function isExpanded(planId: string): boolean {
   return expandedPlans.value.has(planId)
 }
@@ -257,7 +264,7 @@ async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
 
 onMounted(() => fetchPlans())
 
-defineExpose({ expandFirst })
+defineExpose({ expandFirst, loadAndExpandFirst })
 </script>
 
 <template>

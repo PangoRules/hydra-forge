@@ -95,9 +95,9 @@ watch(hasDocsTab, (has) => {
 
 function expandFirstDoc() {
   // Spec is always inline in CardSpec — nothing to expand
-  // Plans use accordion expand; trigger first plan open
+  // Plans use accordion expand; trigger first plan open (loads first if needed)
   if (hasPlan.value) {
-    nextTick(() => cardPlanRef.value?.expandFirst())
+    nextTick(() => cardPlanRef.value?.loadAndExpandFirst())
   }
 }
 
