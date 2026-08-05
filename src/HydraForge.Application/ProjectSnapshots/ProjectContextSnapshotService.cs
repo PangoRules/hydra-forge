@@ -106,7 +106,8 @@ public class ProjectContextSnapshotService(
                         ],
                         Tools: [],
                         MaxOutputTokens: 500,
-                        Temperature: 0.3m
+                        Temperature: 0.3m,
+                        OllamaThinkMode: route.Primary.OllamaThinkMode
                     );
 
                     var fullResponse = new List<string>();

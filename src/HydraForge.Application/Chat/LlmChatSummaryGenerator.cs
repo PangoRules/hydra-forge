@@ -87,7 +87,8 @@ public sealed class LlmChatSummaryGenerator : IChatSummaryGenerator
                 [],
                 [],
                 MaxOutputTokens: 500,
-                Temperature: 0.3m
+                Temperature: 0.3m,
+                OllamaThinkMode: route.Primary.OllamaThinkMode
             );
 
             var llmClient = _clientFactory.For(route.Provider!);

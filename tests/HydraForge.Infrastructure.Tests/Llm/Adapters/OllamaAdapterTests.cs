@@ -196,6 +196,91 @@ public class OllamaAdapterTests
     }
 
     [Fact]
+    public async Task StreamChatAsync_OllamaThinkModeOn_SendsThinkTrueRegardlessOfReasoningEffort()
+    {
+        // Admin-configured per-model override (Provider Models page) — a model known to
+        // need thinking always sends think:true, even with no reasoning effort requested.
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            2048,
+            0.7m,
+            OllamaThinkMode: "On"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        var doc = JsonDocument.Parse(bodyHandler.LastBody!);
+        Assert.True(doc.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_OllamaThinkModeOff_SendsThinkFalseEvenWithReasoningEffort()
+    {
+        // The override that actually closes the reported bug: a model that empties its
+        // content burning its budget on hidden reasoning (confirmed live with a local
+        // "gemma4:26b") can be forced off regardless of what reasoning effort was asked for.
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            2048,
+            0.7m,
+            ReasoningEffort: "high",
+            OllamaThinkMode: "Off"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        var doc = JsonDocument.Parse(bodyHandler.LastBody!);
+        Assert.False(doc.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_OllamaThinkModeAutoOrUnset_FallsBackToReasoningEffortHeuristic()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            2048,
+            0.7m,
+            ReasoningEffort: "high",
+            OllamaThinkMode: "Auto"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        var doc = JsonDocument.Parse(bodyHandler.LastBody!);
+        Assert.True(doc.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
     public async Task StreamChatAsync_SendsCacheBlocksAsSystemMessages()
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
@@ -332,6 +417,63 @@ public class OllamaAdapterTests
         Assert.NotNull(logger.Error);
         Assert.Contains("ServiceUnavailable", logger.Error.Message);
         Assert.Contains("model not found", logger.Error.Message);
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_NoReasoningEffort_SendsThinkFalse()
+    {
+        // Thinking-capable Ollama models put reasoning in a separate `message.thinking`
+        // field, not `message.content` — if a model spends its whole token budget
+        // thinking, content comes back empty with no error. Default to no reasoning
+        // unless the caller explicitly asked for it via ReasoningEffort.
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            60,
+            0.5m
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.False(doc.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_ReasoningEffortSet_SendsThinkTrue()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            2048,
+            0.7m,
+            ReasoningEffort: "high"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.True(doc.RootElement.GetProperty("think").GetBoolean());
     }
 
     [Fact]

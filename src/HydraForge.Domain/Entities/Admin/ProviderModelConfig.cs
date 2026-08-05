@@ -13,12 +13,19 @@ public class ProviderModelConfig
     public int? MaxTokens { get; set; }
     public bool IsEnabled { get; set; } = true;
     public bool SupportsReasoning { get; set; } = false;
+    public OllamaThinkMode OllamaThinkMode { get; set; } = OllamaThinkMode.Auto;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public void UpdateSupportsReasoning(bool supportsReasoning)
     {
         SupportsReasoning = supportsReasoning;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateOllamaThinkMode(OllamaThinkMode mode)
+    {
+        OllamaThinkMode = mode;
         UpdatedAt = DateTime.UtcNow;
     }
 }

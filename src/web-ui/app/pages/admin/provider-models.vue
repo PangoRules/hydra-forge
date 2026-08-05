@@ -37,6 +37,7 @@ interface ProviderModelConfigDto {
   maxTokens: number | null
   isEnabled: boolean
   supportsReasoning: boolean
+  ollamaThinkMode: string
 }
 
 interface CreateModelInput {
@@ -47,6 +48,7 @@ interface CreateModelInput {
   maxTokens: number | null
   isEnabled: boolean
   supportsReasoning: boolean
+  ollamaThinkMode: string
 }
 
 interface UpdateModelInput {
@@ -56,12 +58,23 @@ interface UpdateModelInput {
   maxTokens?: number | null
   isEnabled?: boolean
   supportsReasoning?: boolean
+  ollamaThinkMode?: string
 }
 
 const MODEL_TIERS = [
   { label: 'Economy', value: 'Economy' },
   { label: 'Standard', value: 'Standard' },
   { label: 'Premium', value: 'Premium' }
+]
+
+// Ollama-only: some thinking-capable local models (e.g. a "gemma4:26b") burn their
+// whole token budget on hidden reasoning and return empty content for short tasks
+// like chat titles unless thinking is explicitly turned off. "Auto" only enables it
+// when a reasoning effort was explicitly requested elsewhere in the app.
+const OLLAMA_THINK_MODES = [
+  { label: 'Auto (default)', value: 'Auto' },
+  { label: 'Always on', value: 'On' },
+  { label: 'Always off', value: 'Off' }
 ]
 
 const api = useApi()
@@ -134,6 +147,12 @@ const formPricePerToken = ref<number | null>(null)
 const formMaxTokens = ref<number | null>(null)
 const formEnabled = ref(true)
 const formSupportsReasoning = ref(false)
+const formOllamaThinkMode = ref('Auto')
+
+const selectedProviderAdapterType = computed(() =>
+  allProviders.value.find(p => p.id === selectedProviderId.value)?.adapterType
+)
+const isOllamaProvider = computed(() => selectedProviderAdapterType.value === 'Ollama')
 
 // $/token values for real-world models are tiny (often < 1e-6) and render in
 // ugly scientific notation ("7.6e-7") in a plain number input. Editing in
@@ -153,13 +172,16 @@ const deleteTargetId = ref<string | null>(null)
 // Form ref for native validation
 const modelFormRef = ref<HTMLFormElement | null>(null)
 
-const columns = [
+// "Thinking" column only makes sense for Ollama providers — lets an admin see at a
+// glance which models have been overridden away from Auto without opening each one.
+const columns = computed(() => [
   { accessorKey: 'modelId', header: 'Model ID' },
   { accessorKey: 'name', header: 'Display Name' },
   { accessorKey: 'tier', header: 'Tier' },
   { accessorKey: 'isEnabled', header: 'Status' },
+  ...(isOllamaProvider.value ? [{ accessorKey: 'ollamaThinkMode', header: 'Thinking' }] : []),
   { accessorKey: 'actions', header: 'Actions', enableSorting: false }
-]
+])
 
 async function loadProviders() {
   try {
@@ -213,6 +235,7 @@ function openEditModal(model: ProviderModelConfigDto) {
   formMaxTokens.value = model.maxTokens
   formEnabled.value = model.isEnabled
   formSupportsReasoning.value = model.supportsReasoning
+  formOllamaThinkMode.value = model.ollamaThinkMode
   modalError.value = null
   showModal.value = true
 }
@@ -225,6 +248,7 @@ function resetForm() {
   formMaxTokens.value = null
   formEnabled.value = true
   formSupportsReasoning.value = false
+  formOllamaThinkMode.value = 'Auto'
 }
 
 async function handleModalSubmit() {
@@ -239,7 +263,8 @@ async function handleModalSubmit() {
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
         isEnabled: formEnabled.value,
-        supportsReasoning: formSupportsReasoning.value
+        supportsReasoning: formSupportsReasoning.value,
+        ollamaThinkMode: formOllamaThinkMode.value
       }
       await api.PUT(
         ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, editingModel.value.id),
@@ -254,7 +279,8 @@ async function handleModalSubmit() {
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
         isEnabled: formEnabled.value,
-        supportsReasoning: formSupportsReasoning.value
+        supportsReasoning: formSupportsReasoning.value,
+        ollamaThinkMode: formOllamaThinkMode.value
       }
       await api.POST(
         ApiRoutes.Admin.providers.createModel(selectedProviderId.value),
@@ -427,6 +453,19 @@ onMounted(() => loadProviders())
           </UBadge>
         </template>
 
+        <template #ollamaThinkMode-cell="{ row }">
+          <UBadge
+            v-if="row.original.ollamaThinkMode !== 'Auto'"
+            :color="row.original.ollamaThinkMode === 'On' ? 'primary' : 'neutral'"
+          >
+            {{ row.original.ollamaThinkMode === 'On' ? 'Always on' : 'Always off' }}
+          </UBadge>
+          <span
+            v-else
+            class="text-muted text-xs"
+          >Auto</span>
+        </template>
+
         <template #actions-cell="{ row }">
           <div class="flex gap-1">
             <UButton
@@ -587,6 +626,19 @@ onMounted(() => loadProviders())
             label="Supports reasoning effort"
             help="Shows the Low/Medium/High effort picker in chat when this model is selected"
           />
+
+          <UFormField
+            v-if="isOllamaProvider"
+            label="Thinking mode"
+            help="Some local thinking-capable models burn their whole token budget on hidden reasoning and return empty replies for short tasks like chat titles unless forced off. Set this once you've seen it happen for a specific model."
+          >
+            <USelect
+              v-model="formOllamaThinkMode"
+              :items="OLLAMA_THINK_MODES"
+              value-key="value"
+              class="w-full"
+            />
+          </UFormField>
         </form>
       </template>
       <template #footer>

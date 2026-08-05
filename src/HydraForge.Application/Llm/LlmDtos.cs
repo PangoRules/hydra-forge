@@ -13,7 +13,11 @@ public sealed record ChatRequest(
     IReadOnlyList<ToolDefinition> Tools,
     int? MaxOutputTokens,
     decimal? Temperature,
-    string? ReasoningEffort = null
+    string? ReasoningEffort = null,
+    // "Auto" | "On" | "Off" (HydraForge.Domain.Enums.OllamaThinkMode) — the resolved
+    // model's admin-configured override, only read by OllamaAdapter. Callers populate
+    // this from route.Primary.OllamaThinkMode; other adapters ignore it.
+    string? OllamaThinkMode = null
 );
 
 public sealed record ImageBlock(string StorageKey, string MediaType);
