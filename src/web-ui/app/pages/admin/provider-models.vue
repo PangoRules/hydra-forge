@@ -336,6 +336,7 @@ function addProbedModel(model: ProbedModelDto) {
   formPricePerToken.value = discoveredPrice(model)
   formMaxTokens.value = null
   formEnabled.value = true
+  formSupportsReasoning.value = false
   modalError.value = null
   showModal.value = true
 }

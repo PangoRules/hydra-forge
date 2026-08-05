@@ -15,4 +15,10 @@ public class ProviderModelConfig
     public bool SupportsReasoning { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public void UpdateSupportsReasoning(bool supportsReasoning)
+    {
+        SupportsReasoning = supportsReasoning;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

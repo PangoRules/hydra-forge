@@ -374,8 +374,8 @@ public sealed class LlmAdminService : ILlmAdminService
             PricePerToken = input.PricePerToken,
             MaxTokens = input.MaxTokens,
             IsEnabled = input.IsEnabled,
-            SupportsReasoning = input.SupportsReasoning,
         };
+        config.UpdateSupportsReasoning(input.SupportsReasoning);
 
         _repo.AddModelConfig(config);
         await _repo.SaveChangesAsync(ct);
@@ -449,7 +449,7 @@ public sealed class LlmAdminService : ILlmAdminService
 
         if (input.SupportsReasoning.HasValue)
         {
-            config.SupportsReasoning = input.SupportsReasoning.Value;
+            config.UpdateSupportsReasoning(input.SupportsReasoning.Value);
         }
 
         config.UpdatedAt = DateTime.UtcNow;

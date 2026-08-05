@@ -13,6 +13,7 @@ const props = defineProps<{
   initialMessage?: string | null
   initialPresetId?: string | null
   initialModelId?: string | null
+  initialEffort?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -45,6 +46,7 @@ const isRollingBack = ref(false)
 const showRollbackConfirm = ref(false)
 const rollbackTarget = ref<ChatMessageDto | null>(null)
 const rollbackDiscardCount = ref(0)
+const lastUsedEffort = ref<string | null>(null)
 
 const isEditingTitle = ref(false)
 const editedTitle = ref('')
@@ -212,6 +214,7 @@ async function handleSend(
 ) {
   if (!session.value) return
 
+  lastUsedEffort.value = reasoningEffort ?? null
   streamError.value = null
 
   // Add user message optimistically
@@ -359,7 +362,7 @@ async function confirmRollback() {
     } else {
       const precedingUserMessage = session.value.messages.at(-1)
       if (precedingUserMessage) {
-        await chatStream.resend(props.sessionId, precedingUserMessage.id)
+        await chatStream.resend(props.sessionId, precedingUserMessage.id, undefined, undefined, lastUsedEffort.value)
         awaitingBaselineCount = session.value.messages.length
         awaitingReply.value = true
       }
@@ -383,8 +386,10 @@ onMounted(async () => {
     const message = props.initialMessage
     const presetId = props.initialPresetId
     const modelId = props.initialModelId
+    const effort = props.initialEffort
     emit('initialMessageSent')
-    await handleSend(message, presetId, modelId)
+    lastUsedEffort.value = effort ?? null
+    await handleSend(message, presetId, modelId, effort)
   }
 
   // Connect *after* the message above, not before/alongside it. A SignalR

@@ -1088,6 +1088,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("tier", Required = Newtonsoft.Json.Required.Always)]
         public string Tier { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Always)]
+        public bool SupportsReasoning { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2188,6 +2191,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.Always)]
         public bool IsEnabled { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? SupportsReasoning { get; set; } = false;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2552,6 +2558,9 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("preferredProviderModelConfigId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid? PreferredProviderModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("reasoningEffort", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ReasoningEffort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3332,6 +3341,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.Always)]
         public bool IsEnabled { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? SupportsReasoning { get; set; } = false;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -4081,6 +4093,9 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("isEnabled", Required = Newtonsoft.Json.Required.AllowNull)]
         public bool? IsEnabled { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? SupportsReasoning { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

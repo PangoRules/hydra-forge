@@ -43,7 +43,7 @@ function startCompose() {
 // so it doesn't need to be reactive.
 const pendingFirstMessage: Record<
   string,
-  { content: string, presetId: string | null, modelId: string | null }
+  { content: string, presetId: string | null, modelId: string | null, reasoningEffort: string | null }
 > = {}
 
 function deriveTitle(content: string): string {
@@ -65,7 +65,7 @@ async function fetchSessions() {
   }
 }
 
-async function startNewChat(content: string, presetId?: string | null, modelId?: string | null) {
+async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null) {
   starting.value = true
   try {
     const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), {
@@ -76,7 +76,8 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
       pendingFirstMessage[data.id] = {
         content,
         presetId: presetId ?? null,
-        modelId: modelId ?? null
+        modelId: modelId ?? null,
+        reasoningEffort: reasoningEffort ?? null
       }
       activeSessionId.value = data.id
     }
@@ -209,6 +210,7 @@ onMounted(fetchSessions)
       :initial-message="pendingFirstMessage[activeSessionId]?.content ?? null"
       :initial-preset-id="pendingFirstMessage[activeSessionId]?.presetId ?? null"
       :initial-model-id="pendingFirstMessage[activeSessionId]?.modelId ?? null"
+      :initial-effort="pendingFirstMessage[activeSessionId]?.reasoningEffort ?? null"
       @initial-message-sent="delete pendingFirstMessage[activeSessionId!]"
       @session-refreshed="syncSession"
     />
