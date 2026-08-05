@@ -41,7 +41,9 @@
 - `src/web-ui/app/components/chat/ChatModelPicker.vue` — accept & prefer external initial model id
 - `src/web-ui/app/pages/projects/[id]/board.vue` — write `openCardId` to board store
 - `src/web-ui/app/pages/chats/index.vue` — use `useChatSessionList`, infinite scroll, resume session
+- `src/web-ui/app/lib/routes.ts` — add `beforeId` to `ApiRoutes.Chat.sessions.list(...)`
 - `src/web-ui/app/assets/css/main.css` — CSS vars for z-index (only if G confirms)
+- `src/web-ui/app/stores/__tests__/chatDock.test.ts` — update 2 existing tests that assert the old `startNewChat` POST body shape
 - `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs`
 - `tests/HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs`
 - `tests/HydraForge.Infrastructure.Tests/Chat/EfChatSessionRepositoryTests.cs`
@@ -58,21 +60,11 @@
 
 **Problem:** `EfChatSessionRepository.ListAsync` filters `before` against `CreatedAt` but sorts by `UpdatedAt`, with no `beforeId` tiebreaker. Two sessions with the same `UpdatedAt` get skipped/duplicated across pages.
 
-- [ ] **Step 1: Add `beforeId` to the list-sessions DTO**
+- [ ] **Step 1: Confirm target shapes — no query DTO record exists**
 
-In `src/HydraForge.Application/Chat/ChatDtos.cs`, find `ListSessionsQuery` (or the params record used by `ChatSessionsController`). Add `BeforeId`:
+Verified against current code: there is no `ListSessionsQuery`/params-record anywhere in this path. `ChatSessionsController.List` takes `[FromQuery]` params directly (`folderId, projectId, before, limit`), and `ChatSessionService.ListAsync`/`IChatSessionRepository.ListAsync`/`EfChatSessionRepository.ListAsync` all take individual positional params the same way. `beforeId` gets added as one more individual param at each layer (Steps 4, 6, 7) — no DTO to create here.
 
-```csharp
-public sealed record ListSessionsQuery(
-    Guid? FolderId,
-    Guid? ProjectId,
-    DateTime? Before,
-    Guid? BeforeId,
-    int Limit = 20
-);
-```
-
-If the controller parses query params manually (not via a record), add `beforeId` to the controller's method signature instead (see Step 3).
+Also note: `ChatSessionPageDto(IReadOnlyList<ChatSessionDto> Items, int TotalCount)` **already exists** in `ChatDtos.cs` — nothing to add there for this task. `ChatSessionService.ListAsync` already returns `Result<ChatSessionPageDto>` (not a bare DTO) — preserve that wrapper in Step 7, don't drop it.
 
 - [ ] **Step 2: Write the failing repository test**
 
@@ -110,29 +102,34 @@ Expected: FAIL — current `ListAsync` doesn't accept `beforeId` and the cursor 
 
 - [ ] **Step 4: Fix `EfChatSessionRepository.ListAsync`**
 
-Change the method signature to accept `beforeId`:
+Real current signature uses `ownerId` (not `actorId`) as the first param — keep that name. Change the method signature to accept `beforeId`:
 
 ```csharp
 public async Task<IReadOnlyList<ChatSession>> ListAsync(
-    Guid actorId,
+    Guid ownerId,
     Guid? folderId,
     Guid? projectId,
     DateTime? before,
     Guid? beforeId,
     int limit,
-    CancellationToken ct)
+    CancellationToken ct = default)
 ```
 
-Update the query:
+Update the query. Real current code (confirmed, `EfChatSessionRepository.cs:33-52`):
 
 ```csharp
 // Before (broken):
-query = query.Where(s => s.CreatedAt < before);
+if (before.HasValue) query = query.Where(s => s.CreatedAt < before.Value);
+return await query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToListAsync(ct);
 
 // After (fixed — composite cursor on UpdatedAt + Id):
-query = query.Where(s =>
-    s.UpdatedAt < before
-    || (s.UpdatedAt == before && s.Id < beforeId));
+if (before.HasValue)
+{
+    query = query.Where(s =>
+        s.UpdatedAt < before.Value
+        || (s.UpdatedAt == before.Value && s.Id < beforeId));
+}
+return await query.OrderByDescending(s => s.UpdatedAt).ThenByDescending(s => s.Id).Take(limit).ToListAsync(ct);
 ```
 
 Also update the `IChatSessionRepository` interface to match the new signature.
@@ -146,13 +143,15 @@ Expected: PASS
 
 In `src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs`, add `beforeId` query param to `GET /api/chat/sessions`:
 
+Real action is named `List` (not `ListSessions`), returns `Ok(result.Value)` where `result.Value` is the `ChatSessionPageDto` (already `{ items, totalCount }` — client-facing shape needs no change):
+
 ```csharp
 [HttpGet]
-public async Task<IActionResult> ListSessions(
+public async Task<IActionResult> List(
     [FromQuery] Guid? folderId,
     [FromQuery] Guid? projectId,
-    [FromQuery] DateTime? before,
-    [FromQuery] Guid? beforeId,
+    [FromQuery] DateTime? before = null,
+    [FromQuery] Guid? beforeId = null,
     [FromQuery] int limit = 20)
 ```
 
@@ -160,15 +159,17 @@ Pass `beforeId` to `ChatSessionService.ListAsync(...)`.
 
 - [ ] **Step 7: Update `ChatSessionService.ListAsync` to accept and pass `beforeId`**
 
+Preserve the existing `Result<ChatSessionPageDto>` return type — don't unwrap it:
+
 ```csharp
-public async Task<ChatSessionPageDto> ListAsync(
+public async Task<Result<ChatSessionPageDto>> ListAsync(
     Guid actorId,
     Guid? folderId,
     Guid? projectId,
     DateTime? before,
     Guid? beforeId,
     int limit,
-    CancellationToken ct)
+    CancellationToken ct = default)
 ```
 
 - [ ] **Step 8: Build to verify**
@@ -201,28 +202,33 @@ public Guid? PreferredModelConfigId { get; set; }
 public string? PreferredEffort { get; set; }
 ```
 
-Widen `UpdateSettings` from 5 to 7 params:
+Widen `UpdateSettings` from 5 to 7 params. Two corrections against the real current method (`ChatSession.cs:48-70`): `aiEditMode` is the `AiEditMode` enum, not `bool?` — a plain `bool?` would not compile against the existing `AiEditMode` property. The current method also throws `InvalidOperationException` if `Status != ChatSessionStatus.Active` — preserve that guard, don't drop it:
 
 ```csharp
 public void UpdateSettings(
     string? title,
     Guid? folderId,
     Guid? personalityId,
-    bool? aiEditMode,
+    AiEditMode? aiEditMode,
     bool? searchAllMyDocs,
     Guid? preferredModelConfigId,
     string? preferredEffort)
 {
+    if (Status != ChatSessionStatus.Active)
+        throw new InvalidOperationException("Cannot update settings on a non-active session.");
+
     if (title != null) Title = title;
     if (folderId.HasValue) FolderId = folderId;
     if (personalityId.HasValue) PersonalityId = personalityId;
-    if (aiEditMode.HasValue) AiEditMode = aiEditMode;
-    if (searchAllMyDocs.HasValue) SearchAllMyDocs = searchAllMyDocs;
+    if (aiEditMode.HasValue) AiEditMode = aiEditMode.Value;
+    if (searchAllMyDocs.HasValue) SearchAllMyDocs = searchAllMyDocs.Value;
     if (preferredModelConfigId.HasValue) PreferredModelConfigId = preferredModelConfigId;
     if (preferredEffort != null) PreferredEffort = preferredEffort;
     UpdatedAt = DateTime.UtcNow;
 }
 ```
+
+Confirm the exact guard condition/message against the real method before editing — the snippet above reconstructs it from the "throws if Status != Active" fact, not a verbatim quote.
 
 - [ ] **Step 2: Map new columns in DbContext**
 
@@ -584,23 +590,16 @@ Verify all usages of `selectedCardId` in the template still work (they reference
 
 - [ ] **Step 3: Read `openCardId` in `chatDock` store on new chat**
 
-In `src/web-ui/app/stores/chatDock.ts`, in `startNewChat`:
+Note: Task 8 rewrites `startNewChat` again as part of the larger draft/history/resume store overhaul — this step's edit will be superseded there. Doing it here first still verifies the board-store wiring in isolation before Task 8's bigger rewrite lands on top of it.
+
+In `src/web-ui/app/stores/chatDock.ts`, in `startNewChat`. `useBoardStore()` always succeeds once Pinia is active (it lazily creates the store on first call) — no try/catch needed, unlike an earlier draft of this step assumed:
 
 ```typescript
 async function startNewChat() {
   if (isCreating.value) return
   isCreating.value = true
   try {
-    let openCardId: string | null = null
-    // Only read board store if we're on a board page
-    if (currentProjectId.value) {
-      try {
-        const boardStore = useBoardStore()
-        openCardId = boardStore.openCardId
-      } catch {
-        // Board store may not be registered if not on a board page
-      }
-    }
+    const openCardId = currentProjectId.value ? useBoardStore().openCardId : null
     const body: Record<string, unknown> = { title: '' }
     if (currentProjectId.value) body.projectId = currentProjectId.value
     if (openCardId) body.openCardId = openCardId
@@ -650,7 +649,9 @@ const props = defineProps<{
 }>()
 ```
 
-In `fetchModels()` (around line 85-91), after models are loaded, apply the initial value:
+Note: `modelId`/`effort` in this component are `defineModel()`/`defineModel('effort')` two-way-bound props (parent-owned via `v-model`/`v-model:effort` from `ChatInput`), not plain internal refs. Writing `modelId.value = ...` still works — `defineModel`'s setter emits `update:modelValue` to the parent, so the assignment propagates up through the existing v-model contract. No structural change needed, just be aware it's not local-only state.
+
+In `fetchModels()` (`ChatModelPicker.vue:82-98`, not ~85-91), after models are loaded, apply the initial value:
 
 ```typescript
 async function fetchModels() {
@@ -688,19 +689,24 @@ const props = defineProps<{
 }>()
 ```
 
-Pass through to `ChatModelPicker`:
+`feature` prop already exists on `ChatInput` (default `'PersonalChat'`) — only add `initialModelId`/`initialEffort`, don't redeclare `feature`.
+
+**Preserve the existing `v-model` bindings** — `ChatInput`'s current template already renders `<ChatModelPicker v-model="selectedModelId" v-model:effort="selectedEffort" :feature="feature" :disabled="disabled" />`. Add the two new props alongside those, don't replace them:
 
 ```vue
 <ChatModelPicker
+  v-model="selectedModelId"
+  v-model:effort="selectedEffort"
   :feature="feature"
+  :disabled="disabled"
   :initial-model-id="initialModelId"
   :initial-effort="initialEffort"
 />
 ```
 
-- [ ] **Step 3: Add `feature` prop to `ChatSessionView` + pass through**
+- [ ] **Step 3: Add `feature` prop to `ChatSessionView` + forward `initialModelId`/`initialEffort` (already exist as props, just unused)**
 
-In `src/web-ui/app/components/chat/ChatSessionView.vue`, add to `defineProps`:
+`initialModelId`/`initialEffort` already exist on `ChatSessionView`'s `defineProps` — today they're only used to seed the first auto-send call, never forwarded to `ChatInput`. Only `feature` is genuinely new:
 
 ```typescript
 const props = defineProps<{
@@ -728,23 +734,29 @@ In the template, pass `feature` and `initialModelId`/`initialEffort` to `ChatInp
 >
 ```
 
-- [ ] **Step 4: Load model from session detail in `ChatSessionView.fetchSession`**
+- [ ] **Step 4: Resolve session-persisted model in `ChatSessionView.fetchSession`**
 
-In `fetchSession` (around line 142), after `session.value = data as ChatSessionDetailDto`, extract model fields:
+`initialModelId`/`initialEffort` are **props**, not local refs — they can't be reassigned (`props.initialModelId.value = ...` doesn't compile / mutating a prop directly is a Vue anti-pattern the linter will flag). The plan's earlier draft of this step named new local refs identically to the existing props, which would shadow them and silently break the case where a caller (e.g. `board.vue`) explicitly passes `initial-model-id` for a fresh session.
+
+Instead, add a computed that prefers an explicitly-passed prop over the session's persisted value, and bind that computed to `ChatInput` (not the raw props):
 
 ```typescript
-// If the session has a preferred model, use it as initial selection
-if (data.preferredModelConfigId) {
-  initialModelId.value = data.preferredModelConfigId
-  initialEffort.value = data.preferredEffort ?? null
-}
+const resolvedInitialModelId = computed(() => props.initialModelId ?? session.value?.preferredModelConfigId ?? null)
+const resolvedInitialEffort = computed(() => props.initialEffort ?? session.value?.preferredEffort ?? null)
 ```
 
-Add `initialModelId` and `initialEffort` as local refs at the top of the script section:
+Update the `<ChatInput>` binding from Step 3 to use these computeds instead of `initialModelId`/`initialEffort` directly:
 
-```typescript
-const initialModelId = ref<string | null>(null)
-const initialEffort = ref<string | null>(null)
+```vue
+<ChatInput
+  ref="chatInputRef"
+  :disabled="awaitingReply || session?.status !== 'Active'"
+  :feature="feature"
+  :initial-model-id="resolvedInitialModelId"
+  :initial-effort="resolvedInitialEffort"
+  @send="handleSend"
+  @cancel="handleCancel"
+>
 ```
 
 - [ ] **Step 5: Pass feature from ChatDock to ChatSessionView**
@@ -849,9 +861,20 @@ describe('useChatSessionList', () => {
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: FAIL — composable doesn't exist
 
+- [ ] **Step 2b: Add `beforeId` to `ApiRoutes.Chat.sessions.list`**
+
+`useApi().GET<T>()` takes a single URL-string argument only — no second `{ params }` object (unlike `POST`/`PATCH`/`PUT`/`DELETE`, which do accept an `opts` arg). `routes.ts` bakes query params into the URL string itself; there is no openapi-fetch `{ params: { query } }` convention in this codebase. Confirmed by the sibling `messages` route (`routes.ts:208-209`), which already does exactly this for its own `before`/`beforeId`/`limit` cursor — mirror it:
+
+In `src/web-ui/app/lib/routes.ts`, extend `Chat.sessions.list`:
+
+```typescript
+list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20) =>
+  `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
+```
+
 - [ ] **Step 3: Implement the composable**
 
-Create `src/web-ui/app/composables/useChatSessionList.ts`:
+Create `src/web-ui/app/composables/useChatSessionList.ts`. Build the full URL via `ApiRoutes` and call `api.GET<T>(url)` with a single argument — no `{ params }` object:
 
 ```typescript
 import { ApiRoutes } from '~/lib/routes'
@@ -873,17 +896,14 @@ export function useChatSessionList(options?: { folderId?: string; projectId?: st
     loading.value = true
     try {
       const last = sessions.value[sessions.value.length - 1]
-      const params: Record<string, string | number> = { limit: 20 }
-      if (options?.folderId) params.folderId = options.folderId
-      if (options?.projectId) params.projectId = options.projectId
-      if (last) {
-        params.before = last.updatedAt
-        params.beforeId = last.id
-      }
-      const { data } = await api.GET<ChatSessionPageDto>(
-        ApiRoutes.Chat.sessions.list(),
-        { params }
+      const url = ApiRoutes.Chat.sessions.list(
+        options?.folderId,
+        options?.projectId,
+        last?.updatedAt,
+        last?.id,
+        20
       )
+      const { data } = await api.GET<ChatSessionPageDto>(url)
       if (data) {
         sessions.value.push(...data.items)
         hasMore.value = data.items.length === 20
@@ -1019,13 +1039,10 @@ export const useChatDockStore = defineStore('chatDock', () => {
     if (isCreating.value) return
     isCreating.value = true
     try {
-      let openCardId: string | null = null
-      if (currentProjectId.value) {
-        try {
-          const boardStore = useBoardStore()
-          openCardId = boardStore.openCardId
-        } catch { /* not on board */ }
-      }
+      // useBoardStore() always succeeds once Pinia is active (lazily creates
+      // the store on first call) — no try/catch needed here. On a page with
+      // no board mounted, openCardId is simply the store's untouched default (null).
+      const openCardId = currentProjectId.value ? useBoardStore().openCardId : null
       const body: Record<string, unknown> = { title: '' }
       if (currentProjectId.value) body.projectId = currentProjectId.value
       if (openCardId) body.openCardId = openCardId
@@ -1048,6 +1065,10 @@ export const useChatDockStore = defineStore('chatDock', () => {
   }
 })
 ```
+
+- [ ] **Step 1b: Update the 2 existing `chatDock.test.ts` tests that assert the old `startNewChat` body**
+
+`src/web-ui/app/stores/__tests__/chatDock.test.ts` currently has tests asserting `startNewChat` POSTs `body: { title: 'New chat', projectId: 'abc' }` and `body: { title: 'New chat' }` (no project). The rewrite above changes the body to `{ title: '' }` plus conditional `projectId`/`openCardId` — those 2 tests will fail unmodified. Update their expected `body` assertions to match the new shape (`title: ''`, `projectId` only when set, `openCardId` only when set).
 
 - [ ] **Step 2: Update `ChatDock.vue` with draft mode + history panel + height**
 
@@ -1378,6 +1399,8 @@ onMounted(() => {
 
 Replace the sidebar list template to use `sessions` from the composable and add an IntersectionObserver sentinel for infinite scroll (same pattern as `ChatDockHistory.vue`).
 
+**Preserve existing state this file already has and the snippet above doesn't mention:** `pendingMessage`, `syncSession`, `archiveTargetId`. Don't drop them while swapping in `useChatSessionList` — they're unrelated to the fetch-and-paginate change (archive flow, cross-session message handoff).
+
 - [ ] **Step 2: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
@@ -1660,5 +1683,7 @@ git commit -m "docs: manual validation matrix for Slice A.2 (chat dock improveme
 - Verification + matrix: Task 11 ✓
 
 **Placeholder scan:** No TBD/TODO. All steps have concrete code.
+
+**Drift review (2026-08-05):** Plan checked against actual current code (not the spec's prose) before execution. Corrections applied: `AiEditMode` is the `AiEditMode` enum, not `bool?` (Task 2); `UpdateSettings` currently guards `Status != Active` — preserved, an earlier draft dropped it (Task 2); `ChatSessionPageDto` already exists, `ListAsync` already returns `Result<ChatSessionPageDto>` — preserved the wrapper, an earlier draft unwrapped it (Task 1); no `ListSessionsQuery` DTO exists — `beforeId` threads through as an individual param at every layer like its siblings, not a new record (Task 1); `useApi().GET` takes a single URL-string arg only, no `{ params }` object — `useChatSessionList` builds the full URL via `ApiRoutes` instead, mirroring the existing `messages` cursor route (Task 7, plus a `routes.ts` edit Task 1 originally omitted); `ChatInput`'s existing `v-model="selectedModelId" v-model:effort="selectedEffort"` bindings to `ChatModelPicker` were being silently dropped by the new template snippet — restored alongside the new props (Task 6); `initialModelId`/`initialEffort` are already-existing props on `ChatSessionView`, not new fields, and can't be reassigned as if they were local refs — replaced with a `resolvedInitialModelId`/`resolvedInitialEffort` computed that layers the session's persisted value under an explicitly-passed prop (Task 6); the board-store try/catch around `useBoardStore()` was defending against a failure mode that doesn't exist (Pinia stores always resolve) — simplified (Tasks 5, 8); Task 8's full `chatDock.ts` rewrite changes `startNewChat`'s POST body shape without updating the 2 existing `chatDock.test.ts` tests that assert the old shape — added as an explicit step; Task 9's `/chats` rewrite didn't mention preserving `pendingMessage`/`syncSession`/`archiveTargetId`, unrelated existing state in that file — flagged to preserve.
 
 **Type consistency:** `PreferredModelConfigId` (Guid?) and `PreferredEffort` (string?) consistent across Tasks 2, 3, 6. `UpdateSettings` widened to 7 params consistently in Tasks 2, 3, 4. `useChatSessionList` return shape consistent across Tasks 7, 8, 9. `openCardId` field name consistent across Tasks 5, 8.
