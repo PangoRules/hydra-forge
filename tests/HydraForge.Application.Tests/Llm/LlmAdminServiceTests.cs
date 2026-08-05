@@ -83,6 +83,65 @@ public class LlmAdminServiceTests
     }
 
     [Fact]
+    public async Task CreateModelAsync_SupportsReasoningTrue_PersistsFlag()
+    {
+        var providerId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns(new LlmProvider { Id = providerId, Name = "Anthropic" });
+        repo.ListModelConfigsAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns(new List<ProviderModelConfig>());
+
+        var service = CreateService(repo);
+        var input = new CreateModelInput(
+            "claude-opus-5",
+            "Claude Opus 5",
+            "Premium",
+            null,
+            null,
+            true,
+            SupportsReasoning: true
+        );
+
+        var result = await service.CreateModelAsync(providerId, input, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.SupportsReasoning);
+    }
+
+    [Fact]
+    public async Task UpdateModelAsync_SupportsReasoningToggled_UpdatesFlag()
+    {
+        var providerId = Guid.NewGuid();
+        var modelId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        var config = new ProviderModelConfig
+        {
+            Id = modelId,
+            ProviderId = providerId,
+            ModelId = "gpt-5",
+            Name = "GPT-5",
+            Tier = ModelTier.Standard,
+            SupportsReasoning = false,
+        };
+        repo.GetModelConfigAsync(providerId, modelId, Arg.Any<CancellationToken>()).Returns(config);
+
+        var service = CreateService(repo);
+        var input = new UpdateModelInput(null, null, null, null, null, SupportsReasoning: true);
+
+        var result = await service.UpdateModelAsync(
+            providerId,
+            modelId,
+            input,
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.SupportsReasoning);
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task QueryTokenUsageAsync_MultipleFeatures_ParsesAllAndPassesToRepo()
     {
         var repo = Substitute.For<ILlmAdminRepository>();
@@ -582,5 +641,108 @@ public class LlmAdminServiceTests
                 )
             );
         await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PermanentlyDeleteProviderAsync_UnknownProvider_ReturnsProviderNotFound()
+    {
+        var providerId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns((LlmProvider?)null);
+
+        var service = CreateService(repo);
+
+        var result = await service.PermanentlyDeleteProviderAsync(
+            providerId,
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Llm.ProviderNotFound, result.Error.Code);
+        repo.DidNotReceive().RemoveProvider(Arg.Any<LlmProvider>());
+    }
+
+    [Fact]
+    public async Task PermanentlyDeleteProviderAsync_KnownProvider_CascadesModelsAndFallbacksThenRemoves()
+    {
+        var providerId = Guid.NewGuid();
+        var provider = new LlmProvider { Id = providerId, Name = "OpenRouter" };
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>()).Returns(provider);
+
+        var service = CreateService(repo);
+
+        var result = await service.PermanentlyDeleteProviderAsync(
+            providerId,
+            CancellationToken.None
+        );
+
+        Assert.True(result.IsSuccess);
+        await repo.Received(1)
+            .RemoveModelConfigsByProviderAsync(providerId, Arg.Any<CancellationToken>());
+        await repo.Received(1)
+            .ClearFallbackReferencesAsync(providerId, Arg.Any<CancellationToken>());
+        repo.Received(1).RemoveProvider(provider);
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateProviderAsync_ChangesAdapterAndProviderType_ParsesAndApplies()
+    {
+        var providerId = Guid.NewGuid();
+        var provider = new LlmProvider
+        {
+            Id = providerId,
+            Name = "Ollama",
+            AdapterType = AdapterType.Ollama,
+            ProviderType = ProviderType.Text,
+        };
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>()).Returns(provider);
+
+        var service = CreateService(repo);
+        var input = new UpdateProviderInput(
+            null,
+            null,
+            null,
+            "OpenAiCompatible",
+            "Both",
+            null,
+            null,
+            null
+        );
+
+        var result = await service.UpdateProviderAsync(providerId, input, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("OpenAiCompatible", result.Value.AdapterType);
+        Assert.Equal("Both", result.Value.ProviderType);
+    }
+
+    [Fact]
+    public async Task UpdateProviderAsync_UnknownAdapterType_ReturnsInvalidValue()
+    {
+        var providerId = Guid.NewGuid();
+        var repo = Substitute.For<ILlmAdminRepository>();
+        repo.GetProviderByIdAsync(providerId, Arg.Any<CancellationToken>())
+            .Returns(new LlmProvider { Id = providerId, Name = "Ollama" });
+
+        var service = CreateService(repo);
+        var input = new UpdateProviderInput(
+            null,
+            null,
+            null,
+            "NotARealAdapter",
+            null,
+            null,
+            null,
+            null
+        );
+
+        var result = await service.UpdateProviderAsync(providerId, input, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Validation.InvalidValue, result.Error.Code);
     }
 }

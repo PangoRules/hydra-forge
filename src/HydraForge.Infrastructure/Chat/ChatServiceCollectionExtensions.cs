@@ -25,6 +25,7 @@ public static class ChatServiceCollectionExtensions
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IChatRagRetriever, ChatRagRetriever>();
         services.AddScoped<IChatSummaryGenerator, LlmChatSummaryGenerator>();
+        services.AddScoped<IChatTitleGenerator, LlmChatTitleGenerator>();
         services.AddScoped<ChatArchiveService>();
         services.AddScoped<IChatFolderService, ChatFolderService>();
         services.AddScoped<ICardChatLinkService, CardChatLinkService>();
@@ -39,6 +40,7 @@ public static class ChatServiceCollectionExtensions
 
         // Background jobs
         services.AddScoped<HydraForge.Application.Chat.CloseSessionJob>();
+        services.AddScoped<ChatReplyGenerator>();
 
         return services;
     }

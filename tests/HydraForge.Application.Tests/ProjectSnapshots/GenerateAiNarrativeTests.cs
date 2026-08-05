@@ -346,7 +346,7 @@ public class GenerateAiNarrativeTests
         public ChatChunk Current =>
             _moved
                 ? new ChatChunk(Delta: _text, FinishReason: ChatChunkFinishReason.Stop, Usage: null)
-                : default;
+                : default!;
 
         public ValueTask<bool> MoveNextAsync()
         {

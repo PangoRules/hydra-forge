@@ -168,7 +168,6 @@ async function handleSubmit() {
             <USelect
               v-model="adapterType"
               :items="ADAPTER_TYPES"
-              :disabled="isEdit"
               class="w-full"
             />
           </UFormField>
@@ -180,7 +179,6 @@ async function handleSubmit() {
             <USelect
               v-model="providerType"
               :items="PROVIDER_TYPES"
-              :disabled="isEdit"
               class="w-full"
             />
           </UFormField>

@@ -11,13 +11,15 @@ public class ChatMessageService(
     IChatSessionRepository sessionRepo,
     IChatMessageRepository messageRepo,
     IUserRepository userRepo,
-    IProjectMemberRepository memberRepo
+    IProjectMemberRepository memberRepo,
+    IChatStreamRegistry streamRegistry
 ) : IChatMessageService
 {
     private readonly IChatSessionRepository _sessionRepo = sessionRepo;
     private readonly IChatMessageRepository _messageRepo = messageRepo;
     private readonly IUserRepository _userRepo = userRepo;
     private readonly IProjectMemberRepository _memberRepo = memberRepo;
+    private readonly IChatStreamRegistry _streamRegistry = streamRegistry;
 
     public async Task<Result<ChatMessageDto>> SendUserMessageAsync(
         Guid sessionId,
@@ -89,6 +91,38 @@ public class ChatMessageService(
         return Result<ChatMessagePageDto>.Success(
             new ChatMessagePageDto(messages.Select(MapToDto).ToList(), messages.Count)
         );
+    }
+
+    public async Task<Result> RollbackAsync(
+        Guid sessionId,
+        Guid userId,
+        Guid messageId,
+        CancellationToken ct = default
+    )
+    {
+        var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
+        if (session == null)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Chat.SessionNotFound, "Session not found.")
+            );
+
+        if (session.OwnerId != userId)
+            return Result.Failure(
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the session owner can roll back messages."
+                )
+            );
+
+        _streamRegistry.TryCancel(sessionId);
+
+        var deleted = await _messageRepo.DeleteFromAsync(sessionId, messageId, ct);
+        if (!deleted)
+            return Result.Failure(
+                new Error(DomainErrorCodes.Chat.MessageNotFound, "Message not found.")
+            );
+
+        return Result.Success();
     }
 
     private async Task<bool> CanReadSessionAsync(

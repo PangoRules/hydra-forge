@@ -1,0 +1,52 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# The cert only covers this machine's tailnet hostname — localhost/127.0.0.1 (used
+# for same-machine local dev/debugging) can never get a trusted cert from it, so
+# redirecting them to HTTPS just replaces "it works" with a cert warning for no
+# security benefit (still the same machine either way). Anything else — the real
+# tailnet hostname, a LAN IP, whatever — does get redirected and served over TLS.
+map $host $should_redirect_to_https {
+    default   1;
+    localhost 0;
+    127.0.0.1 0;
+}
+
+upstream backend {
+    server ${BACKEND_HOST};
+}
+
+upstream nuxt {
+    server ${NUXT_HOST};
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    if ($should_redirect_to_https) {
+        # $host has no port — nginx inside the container has no way to know the
+        # host maps 443 to a non-default external port (8443 by default in
+        # docker-compose.yml), so it has to be told explicitly or every redirect
+        # sends the browser to a port nothing's listening on externally.
+        return 301 https://$host:${HTTPS_PORT}$request_uri;
+    }
+
+    include /etc/nginx/hydraforge-templates/locations.conf;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/tls.crt;
+    ssl_certificate_key /etc/nginx/certs/tls.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    include /etc/nginx/hydraforge-templates/locations.conf;
+}

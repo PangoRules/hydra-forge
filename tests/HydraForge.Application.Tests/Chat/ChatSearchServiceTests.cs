@@ -124,6 +124,12 @@ public class ChatSearchServiceTests
             Messages.Add(message);
             return Task.CompletedTask;
         }
+
+        public Task<bool> DeleteFromAsync(
+            Guid sessionId,
+            Guid messageId,
+            CancellationToken ct = default
+        ) => Task.FromResult(false);
     }
 
     private static (

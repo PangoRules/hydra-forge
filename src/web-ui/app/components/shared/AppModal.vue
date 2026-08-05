@@ -72,7 +72,7 @@ function onKeydown(e: KeyboardEvent) {
           class="flex items-center justify-center p-8"
         >
           <UIcon
-            name="i-lucide-loader"
+            name="i-lucide-loader-circle"
             class="animate-spin size-8"
           />
         </div>

@@ -116,6 +116,9 @@ public sealed class AnthropicAdapter(
                 request.Tools.Count > 0
                     ? request.Tools.Select(t => AnthropicTool.FromDefinition(t)).ToList()
                     : null,
+            OutputConfig = request.ReasoningEffort is not null
+                ? new AnthropicOutputConfig { Effort = request.ReasoningEffort }
+                : null,
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/v1/messages")
@@ -254,6 +257,9 @@ public sealed class AnthropicAdapter(
 
         [JsonPropertyName("tools")]
         public List<AnthropicTool>? Tools { get; set; }
+
+        [JsonPropertyName("output_config")]
+        public AnthropicOutputConfig? OutputConfig { get; set; }
     }
 
     private sealed class AnthropicSystemBlock
@@ -301,6 +307,12 @@ public sealed class AnthropicAdapter(
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "ephemeral";
+    }
+
+    private sealed class AnthropicOutputConfig
+    {
+        [JsonPropertyName("effort")]
+        public string Effort { get; set; } = "";
     }
 
     private sealed class AnthropicTool

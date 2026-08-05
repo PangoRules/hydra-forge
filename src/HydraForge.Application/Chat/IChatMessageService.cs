@@ -21,4 +21,11 @@ public interface IChatMessageService
         int limit = 50,
         CancellationToken ct = default
     );
+
+    Task<Result> RollbackAsync(
+        Guid sessionId,
+        Guid userId,
+        Guid messageId,
+        CancellationToken ct = default
+    );
 }

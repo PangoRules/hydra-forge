@@ -54,7 +54,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
       class="flex justify-center items-center p-8 min-h-50"
     >
       <UIcon
-        name="i-lucide-loader"
+        name="i-lucide-loader-circle"
         class="animate-spin size-8"
       />
     </div>
@@ -68,7 +68,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
     </div>
 
     <template v-else>
-      <div :class="fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : ''">
+      <div :class="fillHeight ? 'flex-1 min-h-0 overflow-auto' : ''">
         <UTable
           :data="data"
           :columns="columns"
@@ -77,7 +77,7 @@ const isEmpty = computed(() => !props.loading && props.data.length === 0)
           :expanded="expanded ?? {}"
           :sticky="fillHeight ? 'header' : undefined"
           class="w-full"
-          :class="$slots.card ? 'hidden md:block' : ''"
+          :class="[$slots.card ? 'hidden md:block' : '', fillHeight ? 'h-full [&_td:not([colspan])]:max-w-64 [&_td:not([colspan])]:truncate' : '']"
           :meta="{ class: { tr: selectable ? 'cursor-pointer' : '' } }"
           @select="(_e, row) => emit('select', row.original)"
           @update:expanded="emit('update:expanded', $event as Record<string, boolean>)"

@@ -21,7 +21,8 @@ const settings = reactive({
   searXngUrl: '',
   brandName: '',
   brandLogoUrl: '',
-  aiNarrativeGenerationTimeUtc: null as string | null
+  aiNarrativeGenerationTimeUtc: null as string | null,
+  housekeepingRunTimeUtc: null as string | null
 })
 
 const saving = reactive({
@@ -40,6 +41,7 @@ interface SettingsResponse {
   brandName: string | null
   brandLogoUrl: string | null
   aiNarrativeGenerationTimeUtc: string | null
+  housekeepingRunTimeUtc: string | null
 }
 
 async function loadSettings() {
@@ -67,18 +69,22 @@ const auditLogError = computed(() => retentionFieldError(settings.auditLogRetent
 const notificationRetentionError = computed(() => retentionFieldError(settings.notificationRetentionDays))
 const retentionHasErrors = computed(() => !!(archivedItemsError.value || auditLogError.value || notificationRetentionError.value))
 
-const aiNarrativeTimeModel = computed({
-  get: () => {
-    if (!settings.aiNarrativeGenerationTimeUtc) return ''
-    const parts = settings.aiNarrativeGenerationTimeUtc.split(':')
-    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : ''
-  },
-  set: (val: string) => {
-    settings.aiNarrativeGenerationTimeUtc = val
-      ? val.split(':').slice(0, 2).join(':') + ':00'
-      : null
-  }
-})
+function utcTimeModel(key: 'aiNarrativeGenerationTimeUtc' | 'housekeepingRunTimeUtc') {
+  return computed({
+    get: () => {
+      const raw = settings[key]
+      if (!raw) return ''
+      const parts = raw.split(':')
+      return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : ''
+    },
+    set: (val: string) => {
+      settings[key] = val ? val.split(':').slice(0, 2).join(':') + ':00' : null
+    }
+  })
+}
+
+const aiNarrativeTimeModel = utcTimeModel('aiNarrativeGenerationTimeUtc')
+const housekeepingTimeModel = utcTimeModel('housekeepingRunTimeUtc')
 
 const ntfyServerUrlError = computed(() => requiredFieldError(settings.ntfyServerUrl))
 const searXngUrlError = computed(() => requiredFieldError(settings.searXngUrl))
@@ -118,6 +124,7 @@ async function saveSettings(section: keyof typeof saving) {
       body.auditLogRetentionDays = settings.auditLogRetentionDays
       body.notificationRetentionDays = settings.notificationRetentionDays
       body.aiNarrativeGenerationTimeUtc = settings.aiNarrativeGenerationTimeUtc
+      body.housekeepingRunTimeUtc = settings.housekeepingRunTimeUtc
     } else if (section === 'notifications') {
       body.ntfyServerUrl = settings.ntfyServerUrl
     } else if (section === 'search') {
@@ -156,7 +163,8 @@ onMounted(() => loadSettings())
             Retention
           </h2>
           <p class="text-sm text-muted">
-            How long archived items, audit logs, and notifications are kept before permanent deletion.
+            How long archived items, audit logs, and notifications are kept before the nightly
+            housekeeping job permanently deletes them.
           </p>
         </template>
 
@@ -197,16 +205,6 @@ onMounted(() => loadSettings())
               :min="1"
             />
           </UFormField>
-          <UFormField
-            label="AI Narrative Generation Time"
-            description="UTC"
-          >
-            <UInput
-              v-model="aiNarrativeTimeModel"
-              type="time"
-              class="w-full"
-            />
-          </UFormField>
         </div>
 
         <template #footer>
@@ -215,6 +213,50 @@ onMounted(() => loadSettings())
               label="Save Retention"
               :loading="saving.retention"
               :disabled="retentionHasErrors"
+              @click="saveSettings('retention')"
+            />
+          </div>
+        </template>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Nightly Jobs
+          </h2>
+          <p class="text-sm text-muted">
+            Scheduled background work. A restart is required for a changed time to take effect (Hangfire re-registers the recurring job on startup, not live).
+          </p>
+        </template>
+
+        <UFormField
+          label="AI Narrative Generation Time"
+          description="UTC"
+        >
+          <UInput
+            v-model="aiNarrativeTimeModel"
+            type="time"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Housekeeping Run Time"
+          description="UTC — hard-deletes archived items, audit logs, usage records, and notifications past the retention windows above"
+          class="mt-4"
+        >
+          <UInput
+            v-model="housekeepingTimeModel"
+            type="time"
+            class="w-full"
+          />
+        </UFormField>
+
+        <template #footer>
+          <div class="flex justify-end">
+            <UButton
+              label="Save Nightly Jobs"
+              :loading="saving.retention"
               @click="saveSettings('retention')"
             />
           </div>

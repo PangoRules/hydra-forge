@@ -443,7 +443,7 @@ function hashColor(id: string): string {
         class="hidden md:flex h-full items-center justify-center"
       >
         <UIcon
-          name="i-lucide-loader"
+          name="i-lucide-loader-circle"
           class="size-8 animate-spin"
         />
       </div>

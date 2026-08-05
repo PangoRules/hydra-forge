@@ -526,6 +526,43 @@ public class ModelRouterTests
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Llm.ContextWindowExceeded, result.Error.Code);
     }
+
+    [Fact]
+    public async Task ListAvailableModelsAsync_ReturnsSupportsReasoningFlag_FromModelConfig()
+    {
+        var providerId = Guid.NewGuid();
+        var reasoningModelId = Guid.NewGuid();
+        var plainModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.PersonalChat, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerId, "TestProvider", ModelTier.Standard);
+        provider.AddModel(
+            reasoningModelId,
+            providerId,
+            "claude-opus-5",
+            ModelTier.Standard,
+            maxTokens: 200000,
+            supportsReasoning: true
+        );
+        provider.AddModel(
+            plainModelId,
+            providerId,
+            "gpt-4o",
+            ModelTier.Standard,
+            maxTokens: 128000,
+            supportsReasoning: false
+        );
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ListAvailableModelsAsync(AiFeature.PersonalChat);
+
+        Assert.True(result.IsSuccess);
+        var reasoningModel = result.Value.Single(m => m.ModelName == "claude-opus-5");
+        var plainModel = result.Value.Single(m => m.ModelName == "gpt-4o");
+        Assert.True(reasoningModel.SupportsReasoning);
+        Assert.False(plainModel.SupportsReasoning);
+    }
 }
 
 internal class FakeRoutingConfigProvider : IRoutingConfigProvider
@@ -584,7 +621,8 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
         string modelId,
         ModelTier tier,
         int? maxTokens = null,
-        bool isEnabled = true
+        bool isEnabled = true,
+        bool supportsReasoning = false
     )
     {
         _models.Add(
@@ -597,6 +635,7 @@ internal class FakeRoutingConfigProvider : IRoutingConfigProvider
                 Tier = tier,
                 MaxTokens = maxTokens,
                 IsEnabled = isEnabled,
+                SupportsReasoning = supportsReasoning,
             }
         );
     }

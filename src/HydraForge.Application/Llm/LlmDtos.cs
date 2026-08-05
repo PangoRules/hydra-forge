@@ -12,7 +12,8 @@ public sealed record ChatRequest(
     IReadOnlyList<CacheBlock> CacheBlocks,
     IReadOnlyList<ToolDefinition> Tools,
     int? MaxOutputTokens,
-    decimal? Temperature
+    decimal? Temperature,
+    string? ReasoningEffort = null
 );
 
 public sealed record ImageBlock(string StorageKey, string MediaType);
@@ -90,6 +91,19 @@ public sealed record RouteDecision(
 );
 
 public sealed record FallbackProvider(ProviderModelConfigDto Model, ProviderDto Provider);
+
+/// <summary>
+/// A model the calling user may pick for a given feature — either the admin's
+/// curated <c>FeatureAllowedModel</c> list (in priority order) or, when no
+/// allowlist is configured, every enabled model at the feature's effective tier.
+/// </summary>
+public sealed record AvailableModelDto(
+    Guid ProviderModelConfigId,
+    string ModelName,
+    string ProviderName,
+    string Tier,
+    bool SupportsReasoning
+);
 
 // Context compression
 

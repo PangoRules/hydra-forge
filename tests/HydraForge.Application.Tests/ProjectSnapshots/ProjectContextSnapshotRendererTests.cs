@@ -67,7 +67,7 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
+        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, []);
 
         Assert.Contains("Backlog", result);
         Assert.Contains("Done", result);
@@ -119,7 +119,7 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
+        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, []);
 
         Assert.Contains("Active Card", result);
         Assert.DoesNotContain("Archived Card", result);
@@ -179,12 +179,19 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, relationships);
+        var result = ProjectContextSnapshotRenderer.Render(
+            "Test Project",
+            "",
+            columns,
+            cards,
+            relationships
+        );
 
         using var doc = JsonDocument.Parse(result);
         // Card1 is blocked by Card2. Card2 is archived, so blockers should be empty.
         var card1Blockers = doc
-            .RootElement.GetProperty("columns")[0]
+            .RootElement.GetProperty("board")
+            .GetProperty("columns")[0]
             .GetProperty("cards")[0]
             .GetProperty("blockers");
         Assert.Equal(0, card1Blockers.GetArrayLength());
@@ -243,7 +250,13 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, relationships);
+        var result = ProjectContextSnapshotRenderer.Render(
+            "Test Project",
+            "",
+            columns,
+            cards,
+            relationships
+        );
 
         Assert.Contains("#1", result);
     }
@@ -293,7 +306,7 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
+        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, []);
 
         Assert.Contains("recentMoved", result);
         Assert.Contains("Card 1", result);
@@ -348,7 +361,7 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
+        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, []);
 
         var firstIdx = result.IndexOf("First");
         var secondIdx = result.IndexOf("Second");
@@ -390,7 +403,7 @@ public class ProjectContextSnapshotRendererTests
             },
         };
 
-        var result = ProjectContextSnapshotRenderer.Render(columns, cards, []);
+        var result = ProjectContextSnapshotRenderer.Render("Test Project", "", columns, cards, []);
 
         Assert.Contains(cardId.ToString(), result);
         Assert.Contains("#5", result);

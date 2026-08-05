@@ -172,6 +172,7 @@ public class AdminController(
                 settings.BrandName,
                 settings.BrandLogoUrl,
                 settings.AiNarrativeGenerationTimeUtc,
+                settings.HousekeepingRunTimeUtc,
             }
         );
     }
@@ -209,11 +210,16 @@ public class AdminController(
             return BadRequest(new ProblemDetails { Title = "Request body is required." });
 
         bool hasAiNarrativeTime;
+        bool hasHousekeepingTime;
         try
         {
             using var jsonDoc = JsonDocument.Parse(body);
             hasAiNarrativeTime = jsonDoc.RootElement.TryGetProperty(
                 "aiNarrativeGenerationTimeUtc",
+                out _
+            );
+            hasHousekeepingTime = jsonDoc.RootElement.TryGetProperty(
+                "housekeepingRunTimeUtc",
                 out _
             );
         }
@@ -234,6 +240,8 @@ public class AdminController(
         );
         if (hasAiNarrativeTime)
             settings.SetAiNarrativeGenerationTime(request.AiNarrativeGenerationTimeUtc);
+        if (hasHousekeepingTime)
+            settings.SetHousekeepingRunTime(request.HousekeepingRunTimeUtc);
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
         return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
@@ -276,7 +284,8 @@ public record UpdateSystemSettingsRequest(
     string? SearXngUrl,
     string? BrandName,
     string? BrandLogoUrl,
-    TimeSpan? AiNarrativeGenerationTimeUtc
+    TimeSpan? AiNarrativeGenerationTimeUtc,
+    TimeSpan? HousekeepingRunTimeUtc
 );
 
 public record ResetPasswordRequest(string NewPassword);

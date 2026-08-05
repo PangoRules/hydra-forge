@@ -95,6 +95,18 @@ docker compose up -d --build server web
 - Default max file size: 10 MB. Supported types: PNG/JPEG/GIF/WebP, PDF, text, JSON/XML/HTML/CSV, ZIP, Office docs
 - `.env.example` has commented MinIO config block — uncomment `FileStorage__Provider=S3` and related vars to enable
 
+### HTTPS (Tailscale cert)
+
+- `deploy/tailscale-https-setup.sh` — auto-detects this machine's tailnet hostname (`tailscale status --json`) and issues a Let's Encrypt cert via `tailscale cert`. Nothing hardcoded to any one deployment; any clone with Tailscale installed can run it as-is (`sudo` needed once for `tailscale set --operator=$USER` and to own `/etc/hydraforge/tailscale-certs`, not on every run after). Requires HTTPS Certificates enabled once per tailnet (Tailscale admin console → DNS → HTTPS Certificates).
+- nginx auto-detects the cert at container start (`nginx/docker-entrypoint-wrapper.sh`) and serves HTTPS+redirect+HTTP/2 on `HTTPS_PORT` (8443 default) if present, plain HTTP on `HTTP_PORT` (8080 default) otherwise — `docker compose up` needs no config either way, dual-mode by design. The five proxy `location` blocks live once in `nginx/locations.conf`, `include`d by both `nginx/http.conf.template` and `nginx/https.conf.template` — never duplicate a route change across the two.
+- **`localhost`/`127.0.0.1` are exempt from the HTTPS redirect** (`https.conf.template`'s `$should_redirect_to_https` map) — the cert only covers the tailnet hostname, so redirecting same-machine traffic there just trades "it works" for a cert-mismatch warning with no security gained. Every other `Host` (the tailnet hostname, a LAN IP) still redirects and gets TLS. Use the tailnet hostname (`https://<name>.<tailnet>.ts.net:8443`) from any device, including this one, to actually get HTTPS; `http://localhost:8080` stays plain HTTP on purpose.
+- Once the cert exists, set in `.env` (the two move together — see `.env.example`): `CORS_ALLOWED_ORIGINS=https://<your-tailnet-hostname>:8443` and `NUXT_PUBLIC_AUTH_COOKIE_SECURE=true`.
+- HTTPS matters beyond cosmetics here: `crypto.randomUUID()` and other secure-context browser APIs don't exist over plain HTTP-by-IP (only HTTPS, or the special-cased `http://localhost`) — this broke mobile chat in production before HTTPS was set up. HTTP/2 (unlocked by TLS) also removes the browser's ~6-connections-per-origin cap, which otherwise lets a slow SignalR handshake starve ordinary REST calls.
+- `deploy/hydraforge-cert-renew.service`/`.timer` — weekly systemd timer re-running the same setup script (idempotent, no-ops if the cert doesn't need renewal yet) and reloading nginx. Install once: `sudo cp deploy/hydraforge-cert-renew.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now hydraforge-cert-renew.timer`. Hardcodes this machine's repo path and username — edit both before installing on a different box/user.
+- **Every docker-compose host port is `.env`-overridable** — `SERVER_PORT` (5000), `WEB_PORT` (3000), `HTTP_PORT`/`HTTPS_PORT` (8080/8443), `SEARXNG_PORT`/`NTFY_PORT` (8082/8083, optional profiles), alongside the pre-existing `POSTGRES_PORT`/`MINIO_PORT`/`MINIO_CONSOLE_PORT`. A conflict on any given host is always a `.env` line, never a `docker-compose.yml` edit.
+- **Port cheat sheet**: `3000`/`5000` = local dev (`pnpm dev` / `dotnet run`, no nginx in front) — never use these when running the full Docker stack, they skip nginx's routing entirely. `8080`/`8443` = the full Docker stack, always through nginx. You can mix — e.g. `docker compose up -d postgres minio server` (skip `web`) and run `pnpm dev` locally against `http://localhost:5000` — server/DB/storage stay containerized, the UI hot-reloads.
+- Full design rationale: `docs/superpowers/plans/2026-08-04-https-tailscale-cert.md` (note: written before implementation — the plug-and-play auto-detect script, dual-mode nginx, localhost exemption, and full port configurability were added during execution based on what came up; this CLAUDE.md section reflects the as-built state, the plan file reflects the original design intent).
+
 ### Local dev database
 
 - Docker compose exposes Postgres on host port **5433** (not 5432) to avoid collisions with local Postgres or other services on the host.
@@ -262,7 +274,7 @@ src/web-ui                 ← Nuxt 4 app (pages, components, composables) under
 - **Personal space** — private per user (chats, memory, notes, tasks, calendar, gallery, documents)
 - **Admin space** — users, all projects, LLM providers, system health, audit logs only
 
-## Current Phase — Phase 7 in progress (Tasks 1–16 done, Tasks 17–24 remaining)
+## Current Phase — Phase 7 in progress (Tasks 1–17 done, Tasks 18–24 remaining)
 
 Phase 3 (Web UI) is **complete** — see `docs/functional-spec.md` §25 Phase 3 checklist (all items checked) and `docs/archive/specs/2026-06-23-phase-3-web-ui-design.md` for the full task history. That includes Task 6 (Polish & Hardening: keyboard shortcuts, error toasts, blocked-card indicator, archive-with-dependents warning, ARIA pass, tablet pass, PWA manifest) and Task 7 (Project Management UI, superseded by `docs/specs/2026-07-07-project-list-redesign-design.md` — server-paginated table, search/sort/role-filter). Both archived plans carry a 2026-07-07 pre-execution note confirming what shipped vs. what the original plan text assumed.
 
@@ -324,10 +336,11 @@ Phase 6 (LLM Infrastructure) is **complete** (2026-08-02) — see `docs/function
 
 ## Housekeeping & archive
 
-- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is the responsibility of the future `HousekeepingBackgroundService` (deferred across later phase work in `docs/functional-spec.md`).
-- Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`.
+- Soft-delete is `ArchivedAt: DateTime?`; hard-delete is handled by `HousekeepingJob` (`HydraForge.Application/Housekeeping/HousekeepingJob.cs`), a Hangfire recurring job following the same `RecurringJob.AddOrUpdate` post-startup registration pattern as the AI-narrative job.
+- Retention periods are admin-configurable via the `SystemSettings` singleton: `ArchivedItemRetentionDays=730`, `AuditLogRetentionDays=90`, `NotificationRetentionDays=30`. Run time is `SystemSettings.HousekeepingRunTimeUtc`.
 - DB-level cascades cover `Document→DocumentVersion`, `Note→NoteReminder`, `Note→NoteImageAttachment`, `ChatSession→ChatMessage`. Polymorphic `DocumentChunk` (`SourceType`+`SourceId`) is cascaded manually in the housekeeping service.
 - Design spec: `docs/archive/specs/2026-06-03-archive-and-housekeeping-design.md`.
+- **Postgres backups**: `deploy/postgres-backup.sh` — nightly `pg_dump -F custom` to `/etc/hydraforge/backups/` (override via `HYDRAFORGE_BACKUP_DIR`), pruned after `HYDRAFORGE_BACKUP_RETENTION_DAYS` (default 14). The script auto-detects the repo root from its own path and sources `.env` for real `POSTGRES_USER`/`POSTGRES_DB` — safe to run by hand any time (`./deploy/postgres-backup.sh`). Scheduling is opt-in: `deploy/hydraforge-backup.service` + `.timer` (03:30 daily) are systemd unit templates — the `ExecStart`/path inside `.service` needs editing per host (systemd units can't be repo-relative), same caveat as `hydraforge-cert-renew.service`. Install when ready for real persistence: `sudo cp deploy/hydraforge-backup.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now hydraforge-backup.timer`. Restore: `docker compose exec -T postgres pg_restore -U <user> -d <db> < backup.dump`.
 
 ## Docs
 
@@ -340,5 +353,6 @@ The monolithic `requirements-and-architecture.md` was split in `dc2e092` into fo
 - `docs/glossary.md` — terminology
 - `docs/DECISIONS.md` — every design decision with rationale (D-1 through D-50)
 - `docs/agent-platform-vision.md` — vision, pipeline, feature parity table
+- `docs/admin-llm-providers.md` — how-to: registering LLM providers (OpenRouter, Ollama, etc.) via the admin UI
 
 Read `docs/DECISIONS.md` before changing any architectural pattern — the rationale is there. Keep `docs/data-model.md` and entity code in sync when fields change.

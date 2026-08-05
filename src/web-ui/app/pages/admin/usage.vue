@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { formatCost } from '~/lib/money'
 import type { TableColumn } from '@nuxt/ui'
 import DataTable from '~/components/shared/DataTable.vue'
+import CollapsibleFilterPanel from '~/components/shared/CollapsibleFilterPanel.vue'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -26,14 +28,14 @@ const filterTo = ref('')
 const page = ref(1)
 const pageSize = ref(50)
 
-const hasActiveFilters = computed(() =>
-  Boolean(
-    filterUserId.value
-    || filterFeature.value.length > 0
-    || filterModel.value
-    || filterFrom.value
-    || filterTo.value
-  )
+const activeFilterCount = computed(() =>
+  [
+    !!filterUserId.value,
+    filterFeature.value.length > 0,
+    !!filterModel.value,
+    !!filterFrom.value,
+    !!filterTo.value
+  ].filter(Boolean).length
 )
 
 const featureOptions = [
@@ -94,16 +96,19 @@ const totalCount = ref(0)
 const totalCost = ref(0)
 const loading = ref(false)
 
+// Input/Output/Cached tokens move into the expand-row detail panel (same
+// pattern as audit-log.vue's diff view) instead of their own columns —
+// three numeric columns were the main reason this table forced horizontal
+// scroll before reaching a usable vertical scrollbar.
 const tokenColumns: TableColumn<TokenUsageRecord>[] = [
   { accessorKey: 'createdAt', header: 'Timestamp' },
   { accessorKey: 'userName', header: 'User' },
   { accessorKey: 'feature', header: 'Feature' },
   { accessorKey: 'modelName', header: 'Model' },
-  { accessorKey: 'inputTokens', header: 'Input Tokens' },
-  { accessorKey: 'outputTokens', header: 'Output Tokens' },
-  { accessorKey: 'cachedTokens', header: 'Cached Tokens' },
-  { accessorKey: 'cost', header: 'Cost' }
+  { accessorKey: 'cost', header: 'Cost' },
+  { accessorKey: 'id', header: '' }
 ]
+const expandedTokenRow = ref<Record<string, boolean>>({})
 
 const imageColumns: TableColumn<ImageUsageRecord>[] = [
   { accessorKey: 'createdAt', header: 'Timestamp' },
@@ -300,91 +305,77 @@ onMounted(() => loadRecords())
         />
       </div>
 
-      <div class="rounded-lg border border-muted p-3">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
-            Filters
-          </h2>
-          <UButton
-            v-if="hasActiveFilters"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-x"
-            label="Reset filters"
-            @click="resetFilters"
+      <CollapsibleFilterPanel
+        :active-count="activeFilterCount"
+        @reset="resetFilters"
+      >
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="relative">
+            <div
+              v-if="selectedUser"
+              class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
+            >
+              <span class="truncate font-medium">{{ selectedUser.username }}</span>
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                size="xs"
+                color="neutral"
+                class="ml-auto size-4"
+                aria-label="Clear user filter"
+                @click="clearUserFilter"
+              />
+            </div>
+            <UInput
+              v-else
+              :model-value="userQuery"
+              placeholder="User ID or name"
+              :loading="userSearchLoading"
+              @update:model-value="onUserInput"
+            />
+            <div
+              v-if="!selectedUser && userResults.length > 0"
+              class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
+            >
+              <button
+                v-for="u in userResults"
+                :key="u.id"
+                type="button"
+                class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
+                @click="selectUser(u)"
+              >
+                {{ u.username }}
+              </button>
+            </div>
+          </div>
+
+          <USelect
+            v-model="filterFeature"
+            :items="featureOptions"
+            multiple
+            placeholder="Feature"
+          />
+          <UInput
+            v-model="filterModel"
+            placeholder="Model"
           />
         </div>
 
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="relative">
-              <div
-                v-if="selectedUser"
-                class="flex items-center gap-1 h-8 rounded border border-muted bg-primary/10 px-2 text-xs"
-              >
-                <span class="truncate font-medium">{{ selectedUser.username }}</span>
-                <UButton
-                  icon="i-lucide-x"
-                  variant="ghost"
-                  size="xs"
-                  color="neutral"
-                  class="ml-auto size-4"
-                  aria-label="Clear user filter"
-                  @click="clearUserFilter"
-                />
-              </div>
-              <UInput
-                v-else
-                :model-value="userQuery"
-                placeholder="User ID or name"
-                :loading="userSearchLoading"
-                @update:model-value="onUserInput"
-              />
-              <div
-                v-if="!selectedUser && userResults.length > 0"
-                class="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto rounded border border-muted bg-default shadow-lg"
-              >
-                <button
-                  v-for="u in userResults"
-                  :key="u.id"
-                  type="button"
-                  class="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/50"
-                  @click="selectUser(u)"
-                >
-                  {{ u.username }}
-                </button>
-              </div>
-            </div>
-
-            <USelect
-              v-model="filterFeature"
-              :items="featureOptions"
-              multiple
-              placeholder="Feature"
-            />
+        <div class="flex flex-wrap gap-3">
+          <UFormField label="From">
             <UInput
-              v-model="filterModel"
-              placeholder="Model"
+              v-model="filterFrom"
+              type="date"
             />
-          </div>
-
-          <div class="flex flex-wrap gap-3">
-            <UFormField label="From">
-              <UInput
-                v-model="filterFrom"
-                type="date"
-              />
-            </UFormField>
-            <UFormField label="To">
-              <UInput
-                v-model="filterTo"
-                type="date"
-              />
-            </UFormField>
-          </div>
+          </UFormField>
+          <UFormField label="To">
+            <UInput
+              v-model="filterTo"
+              type="date"
+            />
+          </UFormField>
         </div>
-      </div>
+      </CollapsibleFilterPanel>
     </div>
 
     <!-- Results Table -->
@@ -392,6 +383,7 @@ onMounted(() => loadRecords())
       <!-- Token Table -->
       <DataTable
         v-if="activeTab === 'tokens'"
+        v-model:expanded="expandedTokenRow"
         :data="tokenRecords"
         :columns="tokenColumns"
         :loading="loading"
@@ -419,21 +411,37 @@ onMounted(() => loadRecords())
             {{ row.original.feature }}
           </UBadge>
         </template>
-        <template #inputTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.inputTokens.toLocaleString() }}</span>
-        </template>
-        <template #outputTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.outputTokens.toLocaleString() }}</span>
-        </template>
-        <template #cachedTokens-cell="{ row }">
-          <span class="text-sm tabular-nums">{{ row.original.cachedTokens.toLocaleString() }}</span>
-        </template>
         <template #cost-cell="{ row }">
-          <span class="text-sm tabular-nums">${{ row.original.cost.toFixed(4) }}</span>
+          <span class="text-sm tabular-nums">{{ formatCost(row.original.cost) }}</span>
+        </template>
+        <template #id-cell="{ row }">
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="expandedTokenRow[row.original.id] ? 'Collapse' : 'Details'"
+            @click="row.toggleExpanded()"
+          />
+        </template>
+        <template #expanded="{ row }">
+          <div class="flex flex-wrap gap-x-8 gap-y-2 p-4 text-sm">
+            <div>
+              <span class="text-muted">Input Tokens: </span>
+              <span class="tabular-nums">{{ row.original.inputTokens.toLocaleString() }}</span>
+            </div>
+            <div>
+              <span class="text-muted">Output Tokens: </span>
+              <span class="tabular-nums">{{ row.original.outputTokens.toLocaleString() }}</span>
+            </div>
+            <div>
+              <span class="text-muted">Cached Tokens: </span>
+              <span class="tabular-nums">{{ row.original.cachedTokens.toLocaleString() }}</span>
+            </div>
+          </div>
         </template>
         <template #footer>
           <div class="flex justify-end px-4 py-2 text-sm font-semibold border-t border-muted">
-            <span>Total Cost: ${{ totalCost.toFixed(4) }}</span>
+            <span>Total Cost: {{ formatCost(totalCost) }}</span>
           </div>
         </template>
       </DataTable>
@@ -475,11 +483,11 @@ onMounted(() => loadRecords())
           <span class="text-sm">{{ row.original.resolution }}</span>
         </template>
         <template #cost-cell="{ row }">
-          <span class="text-sm tabular-nums">${{ row.original.cost.toFixed(4) }}</span>
+          <span class="text-sm tabular-nums">{{ formatCost(row.original.cost) }}</span>
         </template>
         <template #footer>
           <div class="flex justify-end px-4 py-2 text-sm font-semibold border-t border-muted">
-            <span>Total Cost: ${{ totalCost.toFixed(4) }}</span>
+            <span>Total Cost: {{ formatCost(totalCost) }}</span>
           </div>
         </template>
       </DataTable>

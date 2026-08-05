@@ -21,7 +21,8 @@ public sealed class ModelRouter : IModelRouter
         Guid userId,
         Guid? projectId,
         int estimatedTokens,
-        CancellationToken ct = default
+        CancellationToken ct = default,
+        Guid? preferredProviderModelConfigId = null
     )
     {
         // TODO: Apply user-specific tier ceiling when user budget/role tiers are implemented.
@@ -48,7 +49,23 @@ public sealed class ModelRouter : IModelRouter
                 .Select(x => new Candidate(x.Model, x.Provider))
                 .ToList();
 
-            candidate = enabledAllowedModels.FirstOrDefault(c =>
+            // A user-preferred model only applies against the admin's curated allowlist —
+            // there's nothing for the user to have "chosen" when routing is tier-automatic.
+            // Falls through to priority order if the preference isn't in the allowlist or
+            // doesn't fit the context window.
+            if (preferredProviderModelConfigId.HasValue)
+            {
+                candidate = enabledAllowedModels.FirstOrDefault(c =>
+                    c.Model.Id == preferredProviderModelConfigId.Value
+                    && (c.Model.MaxTokens is null || c.Model.MaxTokens >= estimatedTokens)
+                );
+            }
+            else
+            {
+                candidate = null;
+            }
+
+            candidate ??= enabledAllowedModels.FirstOrDefault(c =>
                 c.Model.MaxTokens is null || c.Model.MaxTokens >= estimatedTokens
             );
 
@@ -117,6 +134,58 @@ public sealed class ModelRouter : IModelRouter
         return Result<RouteDecision>.Success(
             new RouteDecision(primaryModelDto, primaryProviderDto, fallbackDtos, primaryProvider)
         );
+    }
+
+    public async Task<Result<IReadOnlyList<AvailableModelDto>>> ListAvailableModelsAsync(
+        AiFeature feature,
+        CancellationToken ct = default
+    )
+    {
+        var routingConfig = await _provider.GetRoutingConfigAsync(feature, ct);
+
+        if (routingConfig is null)
+        {
+            return Result<IReadOnlyList<AvailableModelDto>>.Failure(
+                new Error(
+                    DomainErrorCodes.Llm.NoModelForFeature,
+                    $"No routing config found for feature {feature}."
+                )
+            );
+        }
+
+        var allowedModels = await _provider.GetAllowedModelsAsync(routingConfig.Id, ct);
+
+        IReadOnlyList<(ProviderModelConfig Model, LlmProvider Provider)> candidates;
+
+        if (allowedModels.Count > 0)
+        {
+            // Already priority-ordered by DbContextRoutingConfigProvider.GetAllowedModelsAsync.
+            candidates = allowedModels
+                .Where(x => x.Model.IsEnabled && x.Provider.IsEnabled)
+                .ToList();
+        }
+        else
+        {
+            var tier = routingConfig.DefaultTier;
+            if (routingConfig.MaxUserTier.HasValue && tier > routingConfig.MaxUserTier.Value)
+            {
+                tier = routingConfig.MaxUserTier.Value;
+            }
+
+            candidates = await _provider.GetEnabledModelsAtTierAsync(tier, ct);
+        }
+
+        var result = candidates
+            .Select(x => new AvailableModelDto(
+                x.Model.Id,
+                x.Model.Name,
+                x.Provider.Name,
+                x.Model.Tier.ToString(),
+                x.Model.SupportsReasoning
+            ))
+            .ToList();
+
+        return Result<IReadOnlyList<AvailableModelDto>>.Success(result);
     }
 
     private async Task<Candidate?> FindModelAtTierAsync(ModelTier tier, CancellationToken ct)

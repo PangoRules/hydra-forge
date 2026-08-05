@@ -10,6 +10,11 @@ export default defineNuxtConfig({
   devtools: {
     enabled: true
   },
+  app: {
+    head: {
+      title: 'HydraForge'
+    }
+  },
 
   css: ['~/assets/css/main.css'],
 
@@ -31,10 +36,6 @@ export default defineNuxtConfig({
       authCookieMaxAge: parseInt(process.env.NUXT_PUBLIC_AUTH_COOKIE_MAX_AGE ?? '3600', 10),
       authCookieSecure: process.env.NUXT_PUBLIC_AUTH_COOKIE_SECURE === 'true'
     }
-  },
-
-  routeRules: {
-    '/': { prerender: true }
   },
 
   compatibilityDate: '2025-01-15',

@@ -22,7 +22,7 @@ const navGroups = computed(() => getNavGroups(authStore.user?.isAdmin ?? false, 
         :label="collapsed ? undefined : 'New Chat'"
         icon="i-lucide-plus"
         block
-        :to="UiRoutes.Chats"
+        :to="{ path: UiRoutes.Chats, query: { compose: '1' } }"
       />
     </template>
 

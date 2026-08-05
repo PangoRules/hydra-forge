@@ -7,7 +7,7 @@ import type { NotificationItem } from '~/composables/useNotifications'
  * connects once per session (from the default layout), not per-project.
  */
 export function useNotificationHub() {
-  const { getToken } = useAuthToken()
+  const authStore = useAuthStore()
   const config = useRuntimeConfig()
   const { onNotificationReceived } = useNotifications()
 
@@ -16,7 +16,7 @@ export function useNotificationHub() {
   async function connect() {
     if (connection) return
 
-    const token = getToken()
+    const token = authStore.token
     if (!token) return
 
     const hubUrl = `${config.public.signalrBaseUrl}/hubs/notifications`
@@ -25,6 +25,7 @@ export function useNotificationHub() {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Warning)
       .build()
 
     connection.on('onNotificationReceived', (notification: NotificationItem) => {

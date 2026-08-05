@@ -609,15 +609,15 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 > Goal: full chat system built on top of Phase 6 LLM infrastructure.
 
 **General chats (personal, non-project):**
-- [ ] ChatSession CRUD + ChatMessage persistence
+- [ ] ChatSession CRUD + ChatMessage persistence — create/list/send/persist done (Task 16 REST + Task 17 Web UI); close/rename/delete UI still pending (Plan 19)
 - [x] Chat folder system: max 2 levels, free-form naming
-- [ ] Chat search: title + message content
-- [ ] Model selection per session (from admin-configured providers, respects tier ceilings)
-- [ ] File upload + vision in chat
-- [ ] RAG: `DocumentChunk` pipeline — uploaded files chunked, embedded, stored; retrieved at query time via pgvector similarity search
-- [ ] Prompt presets: CRUD, groups, inject into session
-- [ ] AgentPersonality: user-defined system prompt, multiple per user, default
-- [ ] Streaming responses via SignalR
+- [ ] Chat search: title + message content — service layer done (Task 13), no Web UI surface yet (Plan 20)
+- [x] Model selection per session (from admin-configured providers, respects tier ceilings) — `ChatModelPicker.vue`, `GET /api/llm/models/{feature}`
+- [ ] File upload + vision in chat — disabled in the UI pending a real chat-image upload endpoint (see Plan 17 matrix note)
+- [ ] RAG: `DocumentChunk` pipeline — uploaded files chunked, embedded, stored; retrieved at query time via pgvector similarity search (service layer done — Tasks 5/6; no Web UI surface yet — Plan 21)
+- [ ] Prompt presets: CRUD, groups, inject into session — injection into a session works (`ChatInput.vue` preset picker); CRUD manager UI not built yet (Plan 21)
+- [ ] AgentPersonality: user-defined system prompt, multiple per user, default — service layer done (Task 11), no Web UI yet (Plan 21)
+- [x] Streaming responses via SignalR — `ChatHub` (Task 15) + `useChatStream`/`ChatSessionView` (Task 17)
 
 **Project chats:**
 - [ ] Project creation auto-creates matching chat folder

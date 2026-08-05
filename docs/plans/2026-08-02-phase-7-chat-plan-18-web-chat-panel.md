@@ -7,7 +7,7 @@
 
 **Files:**
 - Create: `src/web-ui/app/components/chat/ChatPanel.vue`
-- Modify: `src/web-ui/app/pages/projects/[projectId]/index.vue`
+- Modify: `src/web-ui/app/pages/projects/[id]/board.vue` (route param is `route.params.id`, not `projectId` — verified against the real board route, which didn't exist under `[projectId]/index.vue` when this plan was written)
 
 **Steps:**
 

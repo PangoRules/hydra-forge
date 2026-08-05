@@ -435,7 +435,7 @@ function getChildCount(card: CardResponse): number {
         class="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60 rounded-lg z-10"
       >
         <UIcon
-          name="i-lucide-loader"
+          name="i-lucide-loader-circle"
           class="size-6 animate-spin"
         />
       </div>

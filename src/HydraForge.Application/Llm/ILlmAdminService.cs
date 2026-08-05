@@ -23,6 +23,7 @@ public interface ILlmAdminService
         CancellationToken ct = default
     );
     Task<Result> DisableProviderAsync(Guid id, CancellationToken ct = default);
+    Task<Result> PermanentlyDeleteProviderAsync(Guid id, CancellationToken ct = default);
 
     // Models
     Task<Result<IReadOnlyList<ProviderModelDto>>> ProbeModelsAsync(

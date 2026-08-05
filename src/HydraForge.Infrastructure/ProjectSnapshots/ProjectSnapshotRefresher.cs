@@ -9,6 +9,8 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
 {
     public async Task RefreshAsync(Guid projectId, CancellationToken ct = default)
     {
+        var project = await context.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct);
+
         var columns = await context
             .Columns.Where(c => c.ProjectId == projectId)
             .OrderBy(c => c.Position)
@@ -29,6 +31,8 @@ public class ProjectSnapshotRefresher(HydraForgeDbContext context) : IProjectSna
             .ToListAsync(ct);
 
         var templateContent = ProjectContextSnapshotRenderer.Render(
+            project?.Name ?? string.Empty,
+            project?.Description ?? string.Empty,
             columns,
             activeCards,
             activeRelationships

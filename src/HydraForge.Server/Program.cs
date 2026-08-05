@@ -7,6 +7,7 @@ using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Health;
+using HydraForge.Application.Housekeeping;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Constants;
@@ -18,6 +19,7 @@ using HydraForge.Infrastructure.Chat;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Housekeeping;
 using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
@@ -153,7 +155,15 @@ builder.Services.AddSpecServices();
 builder.Services.AddPlanServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
+builder.Services.AddHousekeepingServices();
 
+// AddHangfire's storage configuration is lazy (only opens a Postgres connection when
+// JobStorage is actually resolved, e.g. by UseHangfireDashboard or AddHangfireServer's
+// hosted service) — safe to register unconditionally so IBackgroundJobClient stays
+// resolvable for HangfireBackgroundTaskQueue/ChatSessionService. hangfireEnabled=false
+// (test-only, see ProductionEnvironmentGatingTests) additionally skips AddHangfireServer
+// and UseHangfireDashboard below, which are what would actually touch Postgres.
+var hangfireEnabled = builder.Configuration.GetValue("Hangfire:Enabled", true);
 if (!builder.Environment.IsEnvironment("Test"))
 {
     var connectionString =
@@ -164,7 +174,11 @@ if (!builder.Environment.IsEnvironment("Test"))
     builder.Services.AddHangfire(c =>
         c.UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString))
     );
-    builder.Services.AddHangfireServer();
+
+    if (hangfireEnabled)
+    {
+        builder.Services.AddHangfireServer();
+    }
 }
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HydraForge";
@@ -194,6 +208,31 @@ if (jwtSigningKey.Length < 32)
     throw new InvalidOperationException(
         "Jwt:SigningKey must be at least 32 characters long for HS256 signing. "
             + "Set it via environment variable Jwt__SigningKey or user-secrets."
+    );
+}
+
+// AdminSeed:Password — mirrors the Jwt:SigningKey check above. Without this, a
+// deployment that never edited .env.example's AdminSeed__Password ships an admin
+// account whose password is public in this repo's git history.
+var adminSeedPassword = builder.Configuration["AdminSeed:Password"];
+if (adminSeedPassword == "change-this-admin-password")
+{
+    throw new InvalidOperationException(
+        "AdminSeed:Password must be changed from the default placeholder. "
+            + "Set it via environment variable AdminSeed__Password or user-secrets."
+    );
+}
+
+// Llm:EncryptionKey — AddLlmInfrastructure already requires this to be present and
+// well-formed (missing/invalid → InvalidOperationException at startup per its own
+// validation), but it does not reject the specific key .env.example ships, which is
+// syntactically valid and would pass that check silently.
+var llmEncryptionKey = builder.Configuration["Llm:EncryptionKey"];
+if (llmEncryptionKey == "ckaOH71rTlfT6cR0r28AObevMLQSJFCz4goqiV2aMwY=")
+{
+    throw new InvalidOperationException(
+        "Llm:EncryptionKey must be changed from the default placeholder shipped in "
+            + ".env.example. Generate your own with: openssl rand -base64 32"
     );
 }
 
@@ -385,6 +424,8 @@ if (initResult.IsFailure)
 // forwarded-headers to run first in the pipeline.
 app.UseForwardedHeaders();
 
+app.UseMiddleware<HydraForge.Server.Middleware.SecurityHeadersMiddleware>();
+
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
@@ -406,7 +447,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (!app.Environment.IsEnvironment("Test"))
+if (!app.Environment.IsEnvironment("Test") && hangfireEnabled)
 {
     app.UseHangfireDashboard(
         "/hangfire",
@@ -428,12 +469,19 @@ if (!app.Environment.IsEnvironment("Test"))
                 svc => svc.GenerateAiNarrativeForAllActiveProjectsAsync(default),
                 () => Cron.Daily(narrativeTime.Hours, narrativeTime.Minutes)
             );
+
+            var housekeepingTime = systemSettings.HousekeepingRunTimeUtc ?? new TimeSpan(3, 0, 0);
+            RecurringJob.AddOrUpdate<HousekeepingJob>(
+                "housekeeping",
+                job => job.RunAsync(default),
+                () => Cron.Daily(housekeepingTime.Hours, housekeepingTime.Minutes)
+            );
         }
         catch (Exception ex)
         {
             var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("Hangfire");
-            logger.LogError(ex, "Failed to register ai-narrative-gen recurring job");
+            logger.LogError(ex, "Failed to register recurring jobs");
         }
     });
 }

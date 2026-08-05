@@ -41,6 +41,22 @@ public sealed class EfLlmAdminRepository : ILlmAdminRepository
 
     public void AddProvider(LlmProvider provider) => _db.LlmProviders.Add(provider);
 
+    public void RemoveProvider(LlmProvider provider) => _db.LlmProviders.Remove(provider);
+
+    // Bulk deletes run straight against the DB rather than loading + tracking
+    // rows; the ON DELETE CASCADE from provider_model_configs to
+    // feature_allowed_models (configured in HydraForgeDbContext) still fires
+    // at the Postgres level regardless of how the DELETE was issued.
+    public Task RemoveModelConfigsByProviderAsync(
+        Guid providerId,
+        CancellationToken ct = default
+    ) => _db.ProviderModelConfigs.Where(c => c.ProviderId == providerId).ExecuteDeleteAsync(ct);
+
+    public Task ClearFallbackReferencesAsync(Guid providerId, CancellationToken ct = default) =>
+        _db
+            .LlmProviders.Where(p => p.FallbackProviderId == providerId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.FallbackProviderId, (Guid?)null), ct);
+
     public Task<List<ProviderModelConfig>> ListModelConfigsAsync(
         Guid providerId,
         CancellationToken ct = default

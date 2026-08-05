@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import DataTable from '~/components/shared/DataTable.vue'
+import ClientDataTable from '~/components/shared/ClientDataTable.vue'
 import AppModal from '~/components/shared/AppModal.vue'
 
 definePageMeta({ middleware: ['auth'] })
@@ -35,6 +36,7 @@ interface ProviderModelConfigDto {
   pricePerToken: number | null
   maxTokens: number | null
   isEnabled: boolean
+  supportsReasoning: boolean
 }
 
 interface CreateModelInput {
@@ -44,6 +46,7 @@ interface CreateModelInput {
   pricePerToken: number | null
   maxTokens: number | null
   isEnabled: boolean
+  supportsReasoning: boolean
 }
 
 interface UpdateModelInput {
@@ -52,6 +55,7 @@ interface UpdateModelInput {
   pricePerToken?: number | null
   maxTokens?: number | null
   isEnabled?: boolean
+  supportsReasoning?: boolean
 }
 
 const MODEL_TIERS = [
@@ -66,10 +70,32 @@ const toast = useAppToast()
 const allProviders = ref<ProviderDto[]>([])
 const selectedProviderId = ref<string | undefined>(undefined)
 const models = ref<ProviderModelConfigDto[]>([])
-const totalCount = ref(0)
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
+
+const modelSearch = ref('')
+const modelTierFilter = ref('all')
+const tierFilterOptions = [{ label: 'All Tiers', value: 'all' }, ...MODEL_TIERS]
+
+const filteredModels = computed(() => {
+  const q = modelSearch.value.trim().toLowerCase()
+  return models.value.filter((m) => {
+    if (modelTierFilter.value !== 'all' && m.tier !== modelTierFilter.value) return false
+    if (!q) return true
+    return m.modelId.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+  })
+})
+
+const totalCount = computed(() => filteredModels.value.length)
+const pagedModels = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredModels.value.slice(start, start + pageSize.value)
+})
+
+watch([modelSearch, modelTierFilter], () => {
+  page.value = 1
+})
 
 // Add/edit modal state
 const showModal = ref(false)
@@ -82,6 +108,21 @@ const showProbeModal = ref(false)
 const probeResults = ref<ProbedModelDto[]>([])
 const probeLoading = ref(false)
 const probeError = ref<string | null>(null)
+const probeFilter = ref('')
+
+const filteredProbeResults = computed(() => {
+  const q = probeFilter.value.trim().toLowerCase()
+  if (!q) return probeResults.value
+  return probeResults.value.filter(
+    m => m.modelId.toLowerCase().includes(q) || (m.name ?? '').toLowerCase().includes(q)
+  )
+})
+
+const probeColumns = [
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'modelId', header: 'Model ID' },
+  { accessorKey: 'actions', header: '', enableSorting: false }
+]
 
 const configuredModelIds = computed(() => new Set(models.value.map(m => m.modelId)))
 
@@ -92,6 +133,19 @@ const formTier = ref('Standard')
 const formPricePerToken = ref<number | null>(null)
 const formMaxTokens = ref<number | null>(null)
 const formEnabled = ref(true)
+const formSupportsReasoning = ref(false)
+
+// $/token values for real-world models are tiny (often < 1e-6) and render in
+// ugly scientific notation ("7.6e-7") in a plain number input. Editing in
+// $/1M-tokens — the unit every provider actually quotes pricing in — keeps
+// the field a normal-looking decimal while `formPricePerToken` (submitted to
+// the API) stays the source of truth.
+const formPricePerMillionTokens = computed({
+  get: () => formPricePerToken.value === null ? null : formPricePerToken.value * 1_000_000,
+  set: (val: number | null) => {
+    formPricePerToken.value = val === null ? null : val / 1_000_000
+  }
+})
 
 // Delete confirm
 const deleteTargetId = ref<string | null>(null)
@@ -122,7 +176,6 @@ async function loadProviders() {
 async function loadModels() {
   if (!selectedProviderId.value) {
     models.value = []
-    totalCount.value = 0
     return
   }
   loading.value = true
@@ -132,7 +185,6 @@ async function loadModels() {
     )
     if (error) throw error
     models.value = data ?? []
-    totalCount.value = models.value.length
   } catch (e) {
     toast.error((e as Error).message || 'Failed to load models')
   } finally {
@@ -160,6 +212,7 @@ function openEditModal(model: ProviderModelConfigDto) {
   formPricePerToken.value = model.pricePerToken
   formMaxTokens.value = model.maxTokens
   formEnabled.value = model.isEnabled
+  formSupportsReasoning.value = model.supportsReasoning
   modalError.value = null
   showModal.value = true
 }
@@ -171,6 +224,7 @@ function resetForm() {
   formPricePerToken.value = null
   formMaxTokens.value = null
   formEnabled.value = true
+  formSupportsReasoning.value = false
 }
 
 async function handleModalSubmit() {
@@ -184,7 +238,8 @@ async function handleModalSubmit() {
         tier: formTier.value,
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
-        isEnabled: formEnabled.value
+        isEnabled: formEnabled.value,
+        supportsReasoning: formSupportsReasoning.value
       }
       await api.PUT(
         ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, editingModel.value.id),
@@ -198,7 +253,8 @@ async function handleModalSubmit() {
         tier: formTier.value,
         pricePerToken: formPricePerToken.value,
         maxTokens: formMaxTokens.value,
-        isEnabled: formEnabled.value
+        isEnabled: formEnabled.value,
+        supportsReasoning: formSupportsReasoning.value
       }
       await api.POST(
         ApiRoutes.Admin.providers.createModel(selectedProviderId.value),
@@ -212,6 +268,20 @@ async function handleModalSubmit() {
     modalError.value = (e as Error).message || 'Operation failed'
   } finally {
     modalLoading.value = false
+  }
+}
+
+async function toggleModelEnabled(model: ProviderModelConfigDto) {
+  if (!selectedProviderId.value) return
+  try {
+    await api.PUT(
+      ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, model.id),
+      { body: { isEnabled: !model.isEnabled } satisfies UpdateModelInput }
+    )
+    toast.success(`Model ${model.isEnabled ? 'disabled' : 'enabled'}`)
+    await loadModels()
+  } catch (e) {
+    toast.error((e as Error).message || 'Action failed')
   }
 }
 
@@ -234,6 +304,7 @@ async function discoverModels() {
   probeLoading.value = true
   probeError.value = null
   probeResults.value = []
+  probeFilter.value = ''
   showProbeModal.value = true
   try {
     const { data, error } = await api.GET<ProbedModelDto[]>(
@@ -248,6 +319,13 @@ async function discoverModels() {
   }
 }
 
+function discoveredPrice(model: ProbedModelDto): number | null {
+  const raw = model.metadata?.pricePerToken
+  if (!raw) return null
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 function addProbedModel(model: ProbedModelDto) {
   if (configuredModelIds.value.has(model.modelId)) return
   showProbeModal.value = false
@@ -255,11 +333,28 @@ function addProbedModel(model: ProbedModelDto) {
   formModelId.value = model.modelId
   formName.value = model.name
   formTier.value = 'Standard'
-  formPricePerToken.value = null
+  formPricePerToken.value = discoveredPrice(model)
   formMaxTokens.value = null
   formEnabled.value = true
+  formSupportsReasoning.value = false
   modalError.value = null
   showModal.value = true
+}
+
+async function applyDiscoveredPrice(model: ProbedModelDto) {
+  const price = discoveredPrice(model)
+  const existing = models.value.find(m => m.modelId === model.modelId)
+  if (!selectedProviderId.value || price === null || !existing) return
+  try {
+    await api.PUT(
+      ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, existing.id),
+      { body: { pricePerToken: price } satisfies UpdateModelInput }
+    )
+    toast.success('Price updated from discovered pricing')
+    await loadModels()
+  } catch (e) {
+    toast.error((e as Error).message || 'Failed to update price')
+  }
 }
 
 onMounted(() => loadProviders())
@@ -288,12 +383,26 @@ onMounted(() => loadProviders())
         </div>
       </div>
 
-      <div class="max-w-xs">
+      <div class="flex flex-wrap gap-3">
         <USelect
           v-model="selectedProviderId"
           :items="allProviders.map(p => ({ label: p.name, value: p.id }))"
           placeholder="Select a provider..."
+          class="w-56"
           @update:model-value="onProviderChange"
+        />
+        <UInput
+          v-if="selectedProviderId"
+          v-model="modelSearch"
+          icon="i-lucide-search"
+          placeholder="Filter by model ID or name..."
+          class="w-64"
+        />
+        <USelect
+          v-if="selectedProviderId"
+          v-model="modelTierFilter"
+          :items="tierFilterOptions"
+          class="w-40"
         />
       </div>
     </div>
@@ -301,7 +410,7 @@ onMounted(() => loadProviders())
     <div class="flex-1 min-h-0 px-6 pb-6 pt-4">
       <DataTable
         v-if="selectedProviderId"
-        :data="models"
+        :data="pagedModels"
         :columns="columns"
         :loading="loading"
         :page="page"
@@ -322,6 +431,15 @@ onMounted(() => loadProviders())
           <div class="flex gap-1">
             <UButton
               size="xs"
+              variant="subtle"
+              :color="row.original.isEnabled ? 'warning' : 'success'"
+              @click="toggleModelEnabled(row.original)"
+            >
+              {{ row.original.isEnabled ? 'Disable' : 'Enable' }}
+            </UButton>
+            <UButton
+              size="xs"
+              variant="subtle"
               color="neutral"
               @click="openEditModal(row.original)"
             >
@@ -329,6 +447,7 @@ onMounted(() => loadProviders())
             </UButton>
             <UButton
               size="xs"
+              variant="solid"
               color="error"
               @click="deleteTargetId = row.original.id"
             >
@@ -352,6 +471,15 @@ onMounted(() => loadProviders())
               <div class="flex gap-1">
                 <UButton
                   size="xs"
+                  variant="subtle"
+                  :color="item.isEnabled ? 'warning' : 'success'"
+                  @click="toggleModelEnabled(item)"
+                >
+                  {{ item.isEnabled ? 'Disable' : 'Enable' }}
+                </UButton>
+                <UButton
+                  size="xs"
+                  variant="subtle"
                   color="neutral"
                   @click="openEditModal(item)"
                 >
@@ -359,6 +487,7 @@ onMounted(() => loadProviders())
                 </UButton>
                 <UButton
                   size="xs"
+                  variant="solid"
                   color="error"
                   @click="deleteTargetId = item.id"
                 >
@@ -423,11 +552,14 @@ onMounted(() => loadProviders())
           </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Price per Token ($)">
+            <UFormField
+              label="Price per 1M Tokens ($)"
+              description="What providers quote — stored internally as $/token"
+            >
               <UInput
-                v-model.number="formPricePerToken"
+                v-model.number="formPricePerMillionTokens"
                 type="number"
-                step="0.000001"
+                step="0.01"
                 min="0"
                 placeholder="0.0"
                 class="w-full"
@@ -448,6 +580,12 @@ onMounted(() => loadProviders())
           <UCheckbox
             v-model="formEnabled"
             label="Enabled"
+          />
+
+          <UCheckbox
+            v-model="formSupportsReasoning"
+            label="Supports reasoning effort"
+            help="Shows the Low/Medium/High effort picker in chat when this model is selected"
           />
         </form>
       </template>
@@ -474,7 +612,7 @@ onMounted(() => loadProviders())
     <AppModal
       v-model:open="showProbeModal"
       title="Discovered Models"
-      width="sm:max-w-xl"
+      width="sm:max-w-3xl"
       :loading="probeLoading"
       :error="probeError"
       @close="showProbeModal = false"
@@ -486,38 +624,60 @@ onMounted(() => loadProviders())
         >
           No models discovered.
         </div>
-        <ul
+        <div
           v-else-if="!probeLoading && !probeError"
-          class="divide-y divide-muted max-h-96 overflow-y-auto"
+          class="flex flex-col gap-3 p-4"
         >
-          <li
-            v-for="model in probeResults"
-            :key="model.modelId"
-            class="p-3 flex items-center justify-between gap-2"
+          <UInput
+            v-model="probeFilter"
+            icon="i-lucide-search"
+            placeholder="Filter by name or model ID..."
+            class="w-full"
+          />
+          <ClientDataTable
+            :data="filteredProbeResults"
+            :columns="probeColumns"
+            :row-key="(m: ProbedModelDto) => m.modelId"
+            :default-page-size="10"
           >
-            <div class="min-w-0">
-              <p class="font-medium text-sm truncate">
-                {{ model.name || model.modelId }}
-              </p>
-              <code class="text-xs text-muted">{{ model.modelId }}</code>
-            </div>
-            <UBadge
-              v-if="configuredModelIds.has(model.modelId)"
-              color="neutral"
-              variant="subtle"
-            >
-              Already added
-            </UBadge>
-            <UButton
-              v-else
-              size="xs"
-              color="neutral"
-              @click="addProbedModel(model)"
-            >
-              Add
-            </UButton>
-          </li>
-        </ul>
+            <template #modelId-cell="{ row }">
+              <code class="text-xs truncate block max-w-56">{{ row.original.modelId }}</code>
+            </template>
+            <template #name-cell="{ row }">
+              <span class="truncate block max-w-40">{{ row.original.name || row.original.modelId }}</span>
+            </template>
+            <template #actions-cell="{ row }">
+              <div class="flex justify-end gap-1">
+                <template v-if="configuredModelIds.has(row.original.modelId)">
+                  <UBadge
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    Already added
+                  </UBadge>
+                  <UButton
+                    v-if="discoveredPrice(row.original) !== null && !models.find(m => m.modelId === row.original.modelId)?.pricePerToken"
+                    size="xs"
+                    color="primary"
+                    variant="subtle"
+                    title="Discovered price not yet applied to this model's config"
+                    @click="applyDiscoveredPrice(row.original)"
+                  >
+                    Apply price
+                  </UButton>
+                </template>
+                <UButton
+                  v-else
+                  size="xs"
+                  color="neutral"
+                  @click="addProbedModel(row.original)"
+                >
+                  Add
+                </UButton>
+              </div>
+            </template>
+          </ClientDataTable>
+        </div>
       </template>
       <template #footer>
         <UButton

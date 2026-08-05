@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly HydraForge Postgres backup
+
+[Service]
+Type=oneshot
+# Path is intentionally not repo-relative — systemd units run outside any
+# working-directory context. Adjust if this repo lives somewhere else on
+# the deployment host. The script itself auto-detects the repo root from
+# its own path, so this is the only path that needs editing per-deployment.
+ExecStart=/home/pango/Projects/hydra-forge/deploy/postgres-backup.sh
+User=pango

@@ -1,7 +1,7 @@
 import * as signalR from '@microsoft/signalr'
 
 export function useRealtime() {
-  const { getToken } = useAuthToken()
+  const authStore = useAuthStore()
   const board = useBoardStore()
   const config = useRuntimeConfig()
 
@@ -12,7 +12,7 @@ export function useRealtime() {
   const isReconnecting = ref(false)
 
   async function connect(projectId: string) {
-    const token = getToken()
+    const token = authStore.token
     if (!token) return
 
     activeProjectId = projectId
@@ -23,6 +23,7 @@ export function useRealtime() {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Warning)
       .build()
 
     connection.on('OnBoardEvent', (envelope: {

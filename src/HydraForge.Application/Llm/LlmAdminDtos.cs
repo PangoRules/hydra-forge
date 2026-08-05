@@ -33,6 +33,8 @@ public sealed record UpdateProviderInput(
     string? Name,
     string? BaseUrl,
     string? ApiKey,
+    string? AdapterType,
+    string? ProviderType,
     string? Tier,
     Guid? FallbackProviderId,
     bool? IsEnabled
@@ -55,7 +57,8 @@ public sealed record ProviderModelConfigDto(
     string Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool IsEnabled
+    bool IsEnabled,
+    bool SupportsReasoning = false
 );
 
 public sealed record CreateModelInput(
@@ -64,7 +67,8 @@ public sealed record CreateModelInput(
     string Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool IsEnabled
+    bool IsEnabled,
+    bool SupportsReasoning = false
 );
 
 public sealed record UpdateModelInput(
@@ -72,7 +76,8 @@ public sealed record UpdateModelInput(
     string? Tier,
     decimal? PricePerToken,
     int? MaxTokens,
-    bool? IsEnabled
+    bool? IsEnabled,
+    bool? SupportsReasoning = null
 );
 
 // Routing DTOs

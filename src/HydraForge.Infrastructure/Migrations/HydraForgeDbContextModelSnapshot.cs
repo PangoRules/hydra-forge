@@ -222,6 +222,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<Guid>("ProviderId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("SupportsReasoning")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Tier")
                         .HasColumnType("integer");
 
@@ -1344,6 +1347,9 @@ namespace HydraForge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<TimeSpan?>("HousekeepingRunTimeUtc")
+                        .HasColumnType("interval");
+
                     b.Property<int>("NotificationRetentionDays")
                         .HasColumnType("integer");
 
@@ -1368,6 +1374,7 @@ namespace HydraForge.Infrastructure.Migrations
                             ArchivedItemRetentionDays = 730,
                             AuditLogRetentionDays = 90,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            HousekeepingRunTimeUtc = new TimeSpan(0, 3, 0, 0, 0),
                             NotificationRetentionDays = 30,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });

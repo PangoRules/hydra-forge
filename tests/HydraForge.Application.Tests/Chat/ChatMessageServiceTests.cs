@@ -108,6 +108,43 @@ public class ChatMessageServiceTests
             int limit,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
+
+        public Task<bool> DeleteFromAsync(
+            Guid sessionId,
+            Guid messageId,
+            CancellationToken ct = default
+        )
+        {
+            var target = Messages.FirstOrDefault(m =>
+                m.Id == messageId && m.SessionId == sessionId
+            );
+            if (target is null)
+                return Task.FromResult(false);
+
+            Messages.RemoveAll(m =>
+                m.SessionId == sessionId
+                && (
+                    m.CreatedAt > target.CreatedAt
+                    || (m.CreatedAt == target.CreatedAt && m.Id.CompareTo(target.Id) >= 0)
+                )
+            );
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class FakeStreamRegistry : IChatStreamRegistry
+    {
+        public List<Guid> CancelledSessions { get; } = [];
+
+        public bool TryRegister(Guid sessionId, CancellationTokenSource cts) => true;
+
+        public bool TryCancel(Guid sessionId)
+        {
+            CancelledSessions.Add(sessionId);
+            return true;
+        }
+
+        public void Remove(Guid sessionId) { }
     }
 
     private sealed class FakeUserRepo : IUserRepository
@@ -215,17 +252,25 @@ public class ChatMessageServiceTests
     private static (
         ChatMessageService service,
         FakeSessionRepo sessionRepo,
-        FakeMessageRepo messageRepo
+        FakeMessageRepo messageRepo,
+        FakeStreamRegistry streamRegistry
     ) CreateSut()
     {
         var sessionRepo = new FakeSessionRepo();
         var messageRepo = new FakeMessageRepo();
         var userRepo = new FakeUserRepo();
         var memberRepo = new FakeMemberRepo();
+        var streamRegistry = new FakeStreamRegistry();
 
-        var service = new ChatMessageService(sessionRepo, messageRepo, userRepo, memberRepo);
+        var service = new ChatMessageService(
+            sessionRepo,
+            messageRepo,
+            userRepo,
+            memberRepo,
+            streamRegistry
+        );
 
-        return (service, sessionRepo, messageRepo);
+        return (service, sessionRepo, messageRepo, streamRegistry);
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -233,7 +278,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task SendUserMessageAsync_ValidSession_PersistsUserMessage()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -255,7 +300,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task SendUserMessageAsync_WithImages_SerializesImagesJson()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -283,7 +328,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task SendUserMessageAsync_ClosedSession_ReturnsSessionClosedError()
     {
-        var (service, sessionRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _) = CreateSut();
         var ownerId = NewId();
         var session = new ChatSession
         {
@@ -302,7 +347,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task SendUserMessageAsync_NonOwner_ReturnsSessionNotOwner()
     {
-        var (service, sessionRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -322,7 +367,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task SendUserMessageAsync_SessionNotFound_ReturnsSessionNotFound()
     {
-        var (service, _, _) = CreateSut();
+        var (service, _, _, _) = CreateSut();
 
         var result = await service.SendUserMessageAsync(NewId(), NewId(), "Hello");
 
@@ -333,7 +378,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_Owner_ReturnsMessages()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var sessionId = NewId();
         var session = new ChatSession
@@ -374,7 +419,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_NonOwnerNonShared_ReturnsAccessDenied()
     {
-        var (service, sessionRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _) = CreateSut();
         var ownerId = NewId();
         var callerId = NewId();
         var session = new ChatSession
@@ -395,7 +440,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_SharedProjectMember_ReturnsMessages()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var projectId = NewId();
         var memberId = NewId();
@@ -430,7 +475,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_Pagination_CursorPagination()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var sessionId = NewId();
         var session = new ChatSession
@@ -486,7 +531,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_SessionNotFound_ReturnsSessionNotFound()
     {
-        var (service, _, _) = CreateSut();
+        var (service, _, _, _) = CreateSut();
 
         var result = await service.GetHistoryAsync(NewId(), NewId(), beforeId: null);
 
@@ -497,7 +542,7 @@ public class ChatMessageServiceTests
     [Fact]
     public async Task GetHistoryAsync_CompositeCursorExcludesItself()
     {
-        var (service, sessionRepo, messageRepo) = CreateSut();
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
         var ownerId = NewId();
         var sessionId = NewId();
         var session = new ChatSession
@@ -547,5 +592,147 @@ public class ChatMessageServiceTests
         Assert.True(secondPage.IsSuccess);
         Assert.Single(secondPage.Value.Items);
         Assert.NotEqual(cursor.Id, secondPage.Value.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task RollbackAsync_UserMessage_DeletesTargetAndEverythingAfter()
+    {
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
+        var ownerId = NewId();
+        var sessionId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = sessionId,
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+
+        var baseTime = DateTime.UtcNow;
+        var kept = new ChatMessage
+        {
+            Id = NewId(),
+            SessionId = sessionId,
+            Role = MessageRole.User,
+            Content = "kept",
+            CreatedAt = baseTime,
+        };
+        var target = new ChatMessage
+        {
+            Id = NewId(),
+            SessionId = sessionId,
+            Role = MessageRole.User,
+            Content = "rolled back",
+            CreatedAt = baseTime.AddMinutes(1),
+        };
+        var trailing = new ChatMessage
+        {
+            Id = NewId(),
+            SessionId = sessionId,
+            Role = MessageRole.Assistant,
+            Content = "reply",
+            CreatedAt = baseTime.AddMinutes(2),
+        };
+        messageRepo.Messages.AddRange([kept, target, trailing]);
+
+        var result = await service.RollbackAsync(sessionId, ownerId, target.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(messageRepo.Messages);
+        Assert.Equal(kept.Id, messageRepo.Messages[0].Id);
+    }
+
+    [Fact]
+    public async Task RollbackAsync_CancelsActiveStreamForSession()
+    {
+        var (service, sessionRepo, messageRepo, streamRegistry) = CreateSut();
+        var ownerId = NewId();
+        var sessionId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = sessionId,
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+        var target = new ChatMessage
+        {
+            Id = NewId(),
+            SessionId = sessionId,
+            Role = MessageRole.User,
+            Content = "msg",
+            CreatedAt = DateTime.UtcNow,
+        };
+        messageRepo.Messages.Add(target);
+
+        await service.RollbackAsync(sessionId, ownerId, target.Id);
+
+        Assert.Contains(sessionId, streamRegistry.CancelledSessions);
+    }
+
+    [Fact]
+    public async Task RollbackAsync_NonOwner_ReturnsSessionNotOwner()
+    {
+        var (service, sessionRepo, messageRepo, _) = CreateSut();
+        var ownerId = NewId();
+        var callerId = NewId();
+        var sessionId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = sessionId,
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+        var target = new ChatMessage
+        {
+            Id = NewId(),
+            SessionId = sessionId,
+            Role = MessageRole.User,
+            Content = "msg",
+            CreatedAt = DateTime.UtcNow,
+        };
+        messageRepo.Messages.Add(target);
+
+        var result = await service.RollbackAsync(sessionId, callerId, target.Id);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
+        Assert.Single(messageRepo.Messages);
+    }
+
+    [Fact]
+    public async Task RollbackAsync_SessionNotFound_ReturnsSessionNotFound()
+    {
+        var (service, _, _, _) = CreateSut();
+
+        var result = await service.RollbackAsync(NewId(), NewId(), NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotFound, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task RollbackAsync_MessageNotFound_ReturnsMessageNotFound()
+    {
+        var (service, sessionRepo, _, _) = CreateSut();
+        var ownerId = NewId();
+        var sessionId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = sessionId,
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+            }
+        );
+
+        var result = await service.RollbackAsync(sessionId, ownerId, NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.MessageNotFound, result.Error.Code);
     }
 }

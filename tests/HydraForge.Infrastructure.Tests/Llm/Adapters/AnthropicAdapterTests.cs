@@ -215,6 +215,62 @@ public class AnthropicAdapterTests
     }
 
     [Fact]
+    public async Task StreamChatAsync_ReasoningEffort_MapsToOutputConfigEffort()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault("test-key"), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-opus-5",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            1024,
+            0.7m,
+            "high"
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.Equal(
+            "high",
+            doc.RootElement.GetProperty("output_config").GetProperty("effort").GetString()
+        );
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_NoReasoningEffort_OmitsOutputConfig()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new AnthropicAdapter(http, new FakeKeyVault("test-key"), provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "claude-opus-5",
+            [new ChatMessage(ChatRole.User, "Hello")],
+            [],
+            [],
+            1024,
+            0.7m
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        Assert.False(doc.RootElement.TryGetProperty("output_config", out _));
+    }
+
+    [Fact]
     public async Task StreamChatAsync_SystemContextCacheBlock_PutsInSystemFieldWithCacheControl()
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "data: [DONE]\n\n");

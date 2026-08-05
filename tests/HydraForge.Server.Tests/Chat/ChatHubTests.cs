@@ -1,24 +1,26 @@
+using System.Linq.Expressions;
 using System.Security.Claims;
-using HydraForge.Application.Admin;
 using HydraForge.Application.Auth;
 using HydraForge.Application.Chat;
-using HydraForge.Application.Llm;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Realtime;
-using HydraForge.Domain.Common;
-using HydraForge.Domain.Constants;
-using HydraForge.Domain.Entities.Admin;
-using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using HydraForge.Infrastructure.Realtime;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace HydraForge.Server.Tests.Chat;
 
+using ChatSession = HydraForge.Domain.Entities.Chat.ChatSession;
+
+/// <summary>
+/// Reply-generation behavior (RAG, budget, model routing, streaming, cancellation-under-load,
+/// etc.) lives in <see cref="ChatReplyGenerator"/> now and is tested in
+/// HydraForge.Application.Tests/Chat/ChatReplyGeneratorTests.cs — SendMessage here is just a
+/// thin enqueue, so these tests cover only what actually still runs in the hub: group
+/// membership (Join/Leave), the access-checked enqueue, and CancelStream's registry wiring.
+/// </summary>
 public class ChatHubTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
@@ -28,51 +30,18 @@ public class ChatHubTests
     private readonly IUserRepository _userRepo;
     private readonly IProjectMemberRepository _memberRepo;
     private readonly IChatSessionRepository _sessionRepo;
-    private readonly IChatMessageRepository _messageRepo;
-    private readonly IPromptPresetRepository _presetRepo;
-    private readonly IAgentPersonalityRepository _personalityRepo;
-    private readonly IChatRagRetriever _ragRetriever;
-    private readonly IModelRouter _modelRouter;
-    private readonly ILlmClientFactory _llmClientFactory;
-    private readonly IUsageRecorder _usageRecorder;
-    private readonly LlmCallGuard _llmCallGuard;
-    private readonly IUserTokenBudgetRepository _budgetRepo;
-    private readonly IContextCompressor _contextCompressor;
-    private readonly ILogger<ChatHub> _logger;
-    private readonly IOptions<LlmOptions> _llmOptions;
+    private readonly IChatStreamRegistry _streamRegistry;
+    private readonly CapturingBackgroundTaskQueue _backgroundTaskQueue;
     private readonly IChatHub _mockCaller;
     private readonly ChatHub _hub;
 
     public ChatHubTests()
     {
         _userRepo = Substitute.For<IUserRepository>();
-        _userRepo.IsAdminAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(false);
         _memberRepo = Substitute.For<IProjectMemberRepository>();
         _sessionRepo = Substitute.For<IChatSessionRepository>();
-        _messageRepo = Substitute.For<IChatMessageRepository>();
-        _presetRepo = Substitute.For<IPromptPresetRepository>();
-        _personalityRepo = Substitute.For<IAgentPersonalityRepository>();
-        _ragRetriever = Substitute.For<IChatRagRetriever>();
-        _modelRouter = Substitute.For<IModelRouter>();
-        _llmClientFactory = Substitute.For<ILlmClientFactory>();
-        _usageRecorder = Substitute.For<IUsageRecorder>();
-        _contextCompressor = Substitute.For<IContextCompressor>();
-        _contextCompressor
-            .CompressAsync(
-                Arg.Any<IReadOnlyList<CacheBlock>>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(Result<CompressedContext>.Success(new CompressedContext([], 0, false)));
-
-        _budgetRepo = Substitute.For<IUserTokenBudgetRepository>();
-        _budgetRepo
-            .GetByUserIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((UserTokenBudget?)null);
-        _llmCallGuard = new LlmCallGuard(_budgetRepo, _usageRecorder);
-        _logger = Substitute.For<ILogger<ChatHub>>();
-        _llmOptions = Substitute.For<IOptions<LlmOptions>>();
-        _llmOptions.Value.Returns(new LlmOptions());
+        _streamRegistry = new ChatStreamRegistry();
+        _backgroundTaskQueue = new CapturingBackgroundTaskQueue();
         _mockCaller = Substitute.For<IChatHub>();
 
         var mockContext = Substitute.For<HubCallerContext>();
@@ -97,17 +66,8 @@ public class ChatHubTests
             _userRepo,
             _memberRepo,
             _sessionRepo,
-            _messageRepo,
-            _presetRepo,
-            _personalityRepo,
-            _ragRetriever,
-            _modelRouter,
-            _llmClientFactory,
-            _usageRecorder,
-            _llmCallGuard,
-            _contextCompressor,
-            _logger,
-            _llmOptions
+            _streamRegistry,
+            _backgroundTaskQueue
         )
         {
             Clients = mockClients,
@@ -119,7 +79,7 @@ public class ChatHubTests
     [Fact]
     public async Task JoinSession_AsOwner_Succeeds()
     {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = UserId,
@@ -129,14 +89,14 @@ public class ChatHubTests
 
         await _hub.JoinSession(SessionId);
 
-        _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
+        _ = _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
     }
 
     [Fact]
     public async Task JoinSession_AsNonMember_ThrowsHubException()
     {
         var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = Guid.NewGuid(),
@@ -156,7 +116,7 @@ public class ChatHubTests
     public async Task JoinSession_AsSharedProjectMember_Succeeds()
     {
         var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = Guid.NewGuid(),
@@ -171,14 +131,14 @@ public class ChatHubTests
 
         await _hub.JoinSession(SessionId);
 
-        _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
+        _ = _mockCaller.DidNotReceiveWithAnyArgs().StreamError(default, default!, default!);
     }
 
     [Fact]
     public async Task JoinSession_AsProjectMemberOnNonSharedSession_ThrowsHubException()
     {
         var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = Guid.NewGuid(),
@@ -195,320 +155,53 @@ public class ChatHubTests
     }
 
     [Fact]
-    public async Task SendMessage_MessageNotFound_ReturnsStreamError()
+    public async Task SendMessage_EnqueuesChatReplyGeneratorWithCallerArgs()
     {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
-        {
-            Id = SessionId,
-            OwnerId = UserId,
-            Status = ChatSessionStatus.Active,
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo
-            .GetByIdAsync(MessageId, Arg.Any<CancellationToken>())
-            .Returns((HydraForge.Domain.Entities.Chat.ChatMessage?)null);
+        var presetId = Guid.NewGuid();
+        var modelConfigId = Guid.NewGuid();
 
-        await _hub.SendMessage(SessionId, MessageId, null);
+        await _hub.SendMessage(SessionId, MessageId, presetId, modelConfigId);
 
-        await _mockCaller
-            .Received(1)
-            .StreamError(MessageId, "CHAT_MESSAGE_NOT_FOUND", Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task SendMessage_ClosedSession_ReturnsStreamError()
-    {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
-        {
-            Id = SessionId,
-            OwnerId = UserId,
-            Status = ChatSessionStatus.Closed,
-        };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-
-        await _hub.SendMessage(SessionId, MessageId, null);
-
-        await _mockCaller
-            .Received(1)
-            .StreamError(MessageId, "CHAT_SESSION_CLOSED", Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task SendMessage_ArchivedSession_ReturnsStreamError()
-    {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
-        {
-            Id = SessionId,
-            OwnerId = UserId,
-            Status = ChatSessionStatus.Active,
-            ArchivedAt = DateTime.UtcNow,
-        };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-
-        await _hub.SendMessage(SessionId, MessageId, null);
-
-        await _mockCaller
-            .Received(1)
-            .StreamError(MessageId, "CHAT_SESSION_ARCHIVED", Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task SendMessage_OneActiveStream_RejectsSecond()
-    {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
-        {
-            Id = SessionId,
-            OwnerId = UserId,
-            Status = ChatSessionStatus.Active,
-        };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-        var secondUserMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = Guid.NewGuid(),
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _messageRepo
-            .GetByIdAsync(secondUserMessage.Id, Arg.Any<CancellationToken>())
-            .Returns(secondUserMessage);
-        _ragRetriever
-            .RetrieveAsync(
-                SessionId,
-                Arg.Any<string>(),
-                Arg.Any<bool>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
-
-        var provider = new LlmProvider
-        {
-            Id = Guid.NewGuid(),
-            Name = "openai",
-            AdapterType = AdapterType.OpenAiCompatible,
-        };
-        var routeDecision = new RouteDecision(
-            new ProviderModelConfigDto(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                "gpt-4",
-                "GPT-4",
-                "standard",
-                null,
-                null,
-                true
-            ),
-            new ProviderDto(
-                Guid.NewGuid(),
-                "openai",
-                "https://api.openai.com",
-                "openai-compatible",
-                "cloud",
-                "standard",
-                null,
-                true,
-                default,
-                default
-            ),
-            [],
-            provider
+        Assert.Equal(typeof(ChatReplyGenerator), _backgroundTaskQueue.JobType);
+        var expr = Assert.IsAssignableFrom<LambdaExpression>(
+            _backgroundTaskQueue.CapturedExpression
         );
-        _modelRouter
-            .ResolveAsync(
-                Arg.Any<AiFeature>(),
-                UserId,
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(Result<RouteDecision>.Success(routeDecision));
+        var call = Assert.IsAssignableFrom<MethodCallExpression>(expr.Body);
+        Assert.Equal(nameof(ChatReplyGenerator.GenerateAsync), call.Method.Name);
 
-        var mockClient = Substitute.For<ILlmClient>();
-        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
-        var streamBlock = new SemaphoreSlim(0, 1);
-        var streamYielded = new SemaphoreSlim(0, 1);
-        var capturedCt = CancellationToken.None;
-        mockClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                capturedCt = callInfo.ArgAt<CancellationToken>(1);
-                return MakeBlockingEnumerable(streamBlock, streamYielded, capturedCt);
-            });
-        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
-        _messageRepo
-            .GetBySessionAsync(
-                SessionId,
-                Arg.Any<DateTime?>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(
-                (IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)
-                    new List<HydraForge.Domain.Entities.Chat.ChatMessage>()
-            );
+        object? Eval(Expression e) => Expression.Lambda(e).Compile().DynamicInvoke();
 
-        // Start first stream and wait for it to block
-        var sendTask = _hub.SendMessage(SessionId, MessageId, null);
-        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5));
-
-        // Try second send while first is blocked
-        await _hub.SendMessage(SessionId, secondUserMessage.Id, null);
-
-        await _mockCaller
-            .Received(1)
-            .StreamError(secondUserMessage.Id, "CHAT_STREAM_IN_PROGRESS", Arg.Any<string>());
-
-        // Release the blocked stream and wait for completion
-        streamBlock.Release();
-        await sendTask;
+        Assert.Equal(SessionId, Eval(call.Arguments[0]));
+        Assert.Equal(MessageId, Eval(call.Arguments[1]));
+        Assert.Equal(UserId, Eval(call.Arguments[2]));
+        Assert.Equal(presetId, Eval(call.Arguments[3]));
+        Assert.Equal(modelConfigId, Eval(call.Arguments[4]));
     }
 
     [Fact]
-    public async Task CancelStream_CancelsActiveStream()
+    public async Task CancelStream_AsOwner_CancelsRegisteredStream()
     {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = UserId,
             Status = ChatSessionStatus.Active,
         };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
         _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-        _ragRetriever
-            .RetrieveAsync(
-                SessionId,
-                Arg.Any<string>(),
-                Arg.Any<bool>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
 
-        var provider = new LlmProvider
-        {
-            Id = Guid.NewGuid(),
-            Name = "openai",
-            AdapterType = AdapterType.OpenAiCompatible,
-        };
-        var routeDecision = new RouteDecision(
-            new ProviderModelConfigDto(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                "gpt-4",
-                "GPT-4",
-                "standard",
-                null,
-                null,
-                true
-            ),
-            new ProviderDto(
-                Guid.NewGuid(),
-                "openai",
-                "https://api.openai.com",
-                "openai-compatible",
-                "cloud",
-                "standard",
-                null,
-                true,
-                default,
-                default
-            ),
-            [],
-            provider
-        );
-        _modelRouter
-            .ResolveAsync(
-                Arg.Any<AiFeature>(),
-                UserId,
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(Result<RouteDecision>.Success(routeDecision));
+        using var cts = new CancellationTokenSource();
+        Assert.True(_streamRegistry.TryRegister(SessionId, cts));
 
-        var mockClient = Substitute.For<ILlmClient>();
-        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
-        var streamBlock = new SemaphoreSlim(0, 1);
-        var streamYielded = new SemaphoreSlim(0, 1);
-        var capturedCt = CancellationToken.None;
-        mockClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                capturedCt = callInfo.ArgAt<CancellationToken>(1);
-                return MakeBlockingEnumerable(streamBlock, streamYielded, capturedCt);
-            });
-        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
-        _messageRepo
-            .GetBySessionAsync(
-                SessionId,
-                Arg.Any<DateTime?>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(
-                (IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)
-                    new List<HydraForge.Domain.Entities.Chat.ChatMessage>()
-            );
-
-        // Start stream and wait for it to block
-        var sendTask = _hub.SendMessage(SessionId, MessageId, null);
-        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5));
-
-        // Cancel
         await _hub.CancelStream(SessionId);
 
-        // Wait for SendMessage to complete (should emit StreamDone via OCE handler)
-        await sendTask;
-
-        // Assert StreamDone was emitted (with null values from OCE path)
-        var doneCalls = _mockCaller
-            .ReceivedCalls()
-            .Where(c => c.GetMethodInfo().Name == "StreamDone")
-            .ToList();
-        Assert.Single(doneCalls);
+        Assert.True(cts.IsCancellationRequested);
     }
 
     [Fact]
-    public async Task SendMessage_NonMemberOfSharedSession_ReturnsStreamError()
+    public async Task CancelStream_AsSharedProjectMember_CancelsRegisteredStream()
     {
         var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = Guid.NewGuid(),
@@ -516,40 +209,24 @@ public class ChatHubTests
             IsShared = true,
             Status = ChatSessionStatus.Active,
         };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
         _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
         _memberRepo
             .GetByProjectAndUserAsync(projectId, UserId, Arg.Any<CancellationToken>())
-            .Returns((ProjectMember?)null);
+            .Returns(new ProjectMember { ProjectId = projectId, UserId = UserId });
 
-        await _hub.SendMessage(SessionId, MessageId, null);
+        using var cts = new CancellationTokenSource();
+        Assert.True(_streamRegistry.TryRegister(SessionId, cts));
 
-        await _mockCaller
-            .Received(1)
-            .StreamError(MessageId, "CHAT_SESSION_NOT_OWNER", Arg.Any<string>());
-        await _messageRepo
-            .DidNotReceive()
-            .GetBySessionAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<DateTime?>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            );
+        await _hub.CancelStream(SessionId);
+
+        Assert.True(cts.IsCancellationRequested);
     }
 
     [Fact]
     public async Task CancelStream_NonMemberOfSharedSession_DoesNotCancel()
     {
         var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        var session = new ChatSession
         {
             Id = SessionId,
             OwnerId = Guid.NewGuid(),
@@ -562,212 +239,29 @@ public class ChatHubTests
             .GetByProjectAndUserAsync(projectId, UserId, Arg.Any<CancellationToken>())
             .Returns((ProjectMember?)null);
 
-        // No active stream registered; CancelStream should just no-op without throwing.
+        using var cts = new CancellationTokenSource();
+        _streamRegistry.TryRegister(SessionId, cts);
+
         await _hub.CancelStream(SessionId);
+
+        Assert.False(cts.IsCancellationRequested);
     }
 
-    [Fact]
-    public async Task SendMessage_And_CancelStream_AsSharedProjectMember_Succeed()
+    private sealed class CapturingBackgroundTaskQueue : IBackgroundTaskQueue
     {
-        var projectId = Guid.NewGuid();
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
+        public object? CapturedExpression { get; private set; }
+        public Type? JobType { get; private set; }
+
+        public Task EnqueueAsync(
+            Func<CancellationToken, Task> workItem,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
+
+        public Task EnqueueJobAsync<TJob>(Expression<Func<TJob, Task>> methodCall)
         {
-            Id = SessionId,
-            OwnerId = Guid.NewGuid(),
-            ProjectId = projectId,
-            IsShared = true,
-            Status = ChatSessionStatus.Active,
-        };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-        _memberRepo
-            .GetByProjectAndUserAsync(projectId, UserId, Arg.Any<CancellationToken>())
-            .Returns(new ProjectMember { ProjectId = projectId, UserId = UserId });
-        _ragRetriever
-            .RetrieveAsync(
-                SessionId,
-                Arg.Any<string>(),
-                Arg.Any<bool>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
-        _messageRepo
-            .GetBySessionAsync(
-                SessionId,
-                Arg.Any<DateTime?>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(
-                (IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)
-                    new List<HydraForge.Domain.Entities.Chat.ChatMessage>()
-            );
-
-        var provider = new LlmProvider
-        {
-            Id = Guid.NewGuid(),
-            Name = "openai",
-            AdapterType = AdapterType.OpenAiCompatible,
-        };
-        var routeDecision = new RouteDecision(
-            new ProviderModelConfigDto(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                "gpt-4",
-                "GPT-4",
-                "standard",
-                null,
-                null,
-                true
-            ),
-            new ProviderDto(
-                Guid.NewGuid(),
-                "openai",
-                "https://api.openai.com",
-                "openai-compatible",
-                "cloud",
-                "standard",
-                null,
-                true,
-                default,
-                default
-            ),
-            [],
-            provider
-        );
-        _modelRouter
-            .ResolveAsync(
-                Arg.Any<AiFeature>(),
-                UserId,
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(Result<RouteDecision>.Success(routeDecision));
-
-        var mockClient = Substitute.For<ILlmClient>();
-        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
-        var streamBlock = new SemaphoreSlim(0, 1);
-        var streamYielded = new SemaphoreSlim(0, 1);
-        var capturedCt = CancellationToken.None;
-        mockClient
-            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                capturedCt = callInfo.ArgAt<CancellationToken>(1);
-                return MakeBlockingEnumerable(streamBlock, streamYielded, capturedCt);
-            });
-        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
-
-        var sendTask = _hub.SendMessage(SessionId, MessageId, null);
-        await streamYielded.WaitAsync(TimeSpan.FromSeconds(5));
-
-        await _mockCaller
-            .DidNotReceive()
-            .StreamError(Arg.Any<Guid>(), "CHAT_SESSION_NOT_OWNER", Arg.Any<string>());
-
-        // A shared member who isn't the owner must still be able to cancel the stream.
-        await _hub.CancelStream(SessionId);
-        await sendTask;
-
-        var doneCalls = _mockCaller
-            .ReceivedCalls()
-            .Where(c => c.GetMethodInfo().Name == "StreamDone")
-            .ToList();
-        Assert.Single(doneCalls);
-    }
-
-    [Fact]
-    public async Task SendMessage_TokenBudgetExceeded_ReturnsStreamError()
-    {
-        var session = new HydraForge.Domain.Entities.Chat.ChatSession
-        {
-            Id = SessionId,
-            OwnerId = UserId,
-            Status = ChatSessionStatus.Active,
-        };
-        var userMessage = new HydraForge.Domain.Entities.Chat.ChatMessage
-        {
-            Id = MessageId,
-            SessionId = SessionId,
-            Role = MessageRole.User,
-            Content = "hello",
-        };
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
-        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
-        _ragRetriever
-            .RetrieveAsync(
-                SessionId,
-                Arg.Any<string>(),
-                Arg.Any<bool>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
-        _messageRepo
-            .GetBySessionAsync(
-                SessionId,
-                Arg.Any<DateTime?>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(
-                (IReadOnlyList<HydraForge.Domain.Entities.Chat.ChatMessage>)
-                    new List<HydraForge.Domain.Entities.Chat.ChatMessage>()
-            );
-        _budgetRepo
-            .GetByUserIdAsync(UserId, Arg.Any<CancellationToken>())
-            .Returns(
-                new UserTokenBudget
-                {
-                    UserId = UserId,
-                    MonthlyTokenBudget = 1,
-                    MonthlyTokenUsed = 1,
-                    PeriodEnd = DateTime.UtcNow.AddDays(30),
-                }
-            );
-
-        await _hub.SendMessage(SessionId, MessageId, null);
-
-        await _mockCaller
-            .Received(1)
-            .StreamError(
-                Arg.Any<Guid>(),
-                DomainErrorCodes.Llm.TokenBudgetExceeded,
-                Arg.Any<string>()
-            );
-        await _modelRouter
-            .DidNotReceive()
-            .ResolveAsync(
-                Arg.Any<AiFeature>(),
-                Arg.Any<Guid>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<int>(),
-                Arg.Any<CancellationToken>()
-            );
-    }
-
-    /// <summary>
-    /// Yields one chunk, signals it yielded, then blocks until cancellation or semaphore release.
-    /// </summary>
-    private static async IAsyncEnumerable<ChatChunk> MakeBlockingEnumerable(
-        SemaphoreSlim block,
-        SemaphoreSlim yielded,
-        CancellationToken cancellationToken
-    )
-    {
-        yield return new ChatChunk("Hello", null, null);
-        yielded.Release();
-        await block.WaitAsync(cancellationToken);
+            CapturedExpression = methodCall;
+            JobType = typeof(TJob);
+            return Task.CompletedTask;
+        }
     }
 }

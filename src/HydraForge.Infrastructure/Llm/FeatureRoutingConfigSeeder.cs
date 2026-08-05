@@ -100,6 +100,12 @@ public class FeatureRoutingConfigSeeder
                 DefaultTier = ModelTier.Economy,
                 MaxUserTier = ModelTier.Standard,
             },
+            new FeatureRoutingConfig
+            {
+                Feature = AiFeature.ChatTitle,
+                DefaultTier = ModelTier.Economy,
+                MaxUserTier = ModelTier.Standard,
+            },
         };
 
         var missing = configs.Where(c => !existingFeatures.Contains(c.Feature)).ToList();
