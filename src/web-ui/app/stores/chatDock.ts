@@ -44,7 +44,9 @@ export const useChatDockStore = defineStore('chatDock', () => {
 
   function openDock() {
     isOpen.value = true
-    // Resume last active session from localStorage
+    // Resume last active session from localStorage — only if we don't already
+    // have one in memory (Pinia store survives client-side navigation, so this
+    // is mainly for the first open after a page load / hard reload).
     if (!activeSessionId.value) {
       const saved = localStorage.getItem(LS_ACTIVE_SESSION_KEY)
       if (saved) {
@@ -61,23 +63,32 @@ export const useChatDockStore = defineStore('chatDock', () => {
 
   function closeDock() {
     isOpen.value = false
-    // Preserve activeSessionId in localStorage for resume
-    if (activeSessionId.value) {
-      localStorage.setItem(LS_ACTIVE_SESSION_KEY, activeSessionId.value)
-    }
+    // activeSessionId is persisted by the watcher below — nothing to do here.
   }
+
+  // Persist activeSessionId to localStorage on every change, not just on
+  // closeDock(). The dock is a fixed overlay in the layout that survives
+  // client-side navigation, but a hard reload / typed URL resets Pinia and
+  // falls back to localStorage. Without this watcher, a session selected in
+  // the dock but never explicitly "closed" would be lost on reload — closeDock
+  // was the only write point, and it only fires on the X button.
+  watch(activeSessionId, (id) => {
+    if (id) {
+      localStorage.setItem(LS_ACTIVE_SESSION_KEY, id)
+    } else {
+      localStorage.removeItem(LS_ACTIVE_SESSION_KEY)
+    }
+  })
 
   function loadSession(sessionId: string) {
     activeSessionId.value = sessionId
     mode.value = 'session'
     pendingMessage.value = null
-    localStorage.setItem(LS_ACTIVE_SESSION_KEY, sessionId)
   }
 
   function newChat() {
     activeSessionId.value = null
     pendingMessage.value = null
-    localStorage.removeItem(LS_ACTIVE_SESSION_KEY)
     mode.value = 'draft'
   }
 
@@ -123,7 +134,6 @@ export const useChatDockStore = defineStore('chatDock', () => {
               reasoningEffort: reasoningEffort ?? null
             }
           : null
-        localStorage.setItem(LS_ACTIVE_SESSION_KEY, data.id)
       }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to create chat session')

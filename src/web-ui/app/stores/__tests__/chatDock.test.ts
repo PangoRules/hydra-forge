@@ -141,6 +141,28 @@ describe('chatDock store', () => {
     store.loadSession('other-session')
     expect(store.pendingMessage).toBe(null)
   })
+
+  it('loadSession persists activeSessionId to localStorage for cross-page resume', async () => {
+    localStorage.clear()
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('hello')
+    await nextTick()
+    // The watcher fires on activeSessionId change — no explicit closeDock needed.
+    expect(localStorage.getItem('hydraforge:chat:activeSessionId')).toBe('new-session')
+  })
+
+  it('newChat clears activeSessionId from localStorage', async () => {
+    localStorage.clear()
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    await store.startNewChat('hello')
+    await nextTick()
+    expect(localStorage.getItem('hydraforge:chat:activeSessionId')).toBe('new-session')
+    store.newChat()
+    await nextTick()
+    expect(localStorage.getItem('hydraforge:chat:activeSessionId')).toBe(null)
+  })
 })
 
 import { useChatDockStore } from '~/stores/chatDock'
