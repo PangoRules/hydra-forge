@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import type { ChatSessionDto, ChatSessionPageDto } from '~/types/chat'
+import type { ChatSessionDto } from '~/types/chat'
+import { useChatSessionList } from '~/composables/useChatSessionList'
+import { useChatDockStore } from '~/stores/chatDock'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -12,10 +14,36 @@ const toast = useAppToast()
 
 const route = useRoute()
 
-const sessions = ref<ChatSessionDto[]>([])
-const loading = ref(true)
+const dock = useChatDockStore()
+const { sessions, loading, hasMore, loadMore, refresh } = useChatSessionList()
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
+
+const sentinel = ref<HTMLElement | null>(null)
+const observer = ref<IntersectionObserver | null>(null)
+
+onMounted(() => {
+  if (dock.activeSessionId) {
+    activeSessionId.value = dock.activeSessionId
+  } else {
+    const saved = localStorage.getItem('hydraforge:chat:activeSessionId')
+    if (saved) activeSessionId.value = saved
+  }
+
+  observer.value = new IntersectionObserver(
+    ([entry]) => {
+      if (entry?.isIntersecting && !loading.value && hasMore.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '100px' }
+  )
+  if (sentinel.value) observer.value.observe(sentinel.value)
+})
+
+onUnmounted(() => {
+  observer.value?.disconnect()
+})
 
 // Arriving via the top-nav "+ New Chat" button (?compose=1) means "go straight to
 // composing" — start collapsed. Arriving via the Chats menu item (no query) means
@@ -53,18 +81,6 @@ function deriveTitle(content: string): string {
     : firstLine
 }
 
-async function fetchSessions() {
-  loading.value = true
-  try {
-    const { data } = await api.GET<ChatSessionPageDto>(ApiRoutes.Chat.sessions.list())
-    sessions.value = data?.items ?? []
-  } catch {
-    toast.error('Failed to load chat sessions')
-  } finally {
-    loading.value = false
-  }
-}
-
 async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null) {
   starting.value = true
   try {
@@ -72,7 +88,6 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
       body: { title: deriveTitle(content) }
     })
     if (data) {
-      sessions.value.unshift(data)
       pendingMessage.value = {
         content,
         presetId: presetId ?? null,
@@ -80,6 +95,7 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
         reasoningEffort: reasoningEffort ?? null
       }
       activeSessionId.value = data.id
+      await refresh()
     }
   } catch {
     toast.error('Failed to create chat session')
@@ -88,12 +104,9 @@ async function startNewChat(content: string, presetId?: string | null, modelId?:
   }
 }
 
-function syncSession(id: string, title: string, status: string) {
-  const entry = sessions.value.find(s => s.id === id)
-  if (entry) {
-    entry.title = title
-    entry.status = status as ChatSessionDto['status']
-  }
+function syncSession(_id: string, _title: string, _status: string) {
+  // Session state is managed by ChatSessionView; refresh list to pick up title/status changes
+  refresh()
 }
 
 const archiveTargetId = ref<string | null>(null)
@@ -107,16 +120,14 @@ async function confirmArchive() {
   if (!id) return
   try {
     await api.DELETE(ApiRoutes.Chat.sessions.archive(id))
-    sessions.value = sessions.value.filter(s => s.id !== id)
     if (activeSessionId.value === id) activeSessionId.value = null
+    await refresh()
   } catch {
     toast.error('Failed to archive chat')
   } finally {
     archiveTargetId.value = null
   }
 }
-
-onMounted(fetchSessions)
 </script>
 
 <template>
@@ -187,6 +198,11 @@ onMounted(fetchSessions)
               @click.stop="requestArchive(s.id)"
             />
           </li>
+          <div
+            v-if="hasMore"
+            ref="sentinel"
+            class="h-4 shrink-0"
+          />
         </ul>
       </div>
     </div>

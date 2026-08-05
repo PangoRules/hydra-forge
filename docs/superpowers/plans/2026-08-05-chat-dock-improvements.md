@@ -1323,12 +1323,12 @@ Replace the sidebar list template to use `sessions` from the composable and add 
 
 **Preserve existing state this file already has and the snippet above doesn't mention:** `pendingMessage`, `syncSession`, `archiveTargetId`. Don't drop them while swapping in `useChatSessionList` — they're unrelated to the fetch-and-paginate change (archive flow, cross-session message handoff).
 
-- [ ] **Step 2: Verify typecheck + lint**
+- [x] **Step 2: Verify typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: All pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/web-ui/app/pages/chats/index.vue
