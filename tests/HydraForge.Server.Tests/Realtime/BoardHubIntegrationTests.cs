@@ -1,8 +1,10 @@
+using NSubstitute;
 namespace HydraForge.Server.Tests.Realtime;
 
 using System.Reflection;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Notifications;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Enums;
 using HydraForge.Server.Tests.Projects;
@@ -47,6 +49,8 @@ public class BoardHubIntegrationTests
                             || d.ServiceType == typeof(Application.Projects.IChatArchiveService)
                             || d.ServiceType
                                 == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
+                            || d.ServiceType == typeof(IProjectDocumentRepository)
+                            || d.ServiceType == typeof(ProjectDocumentService)
                         )
                         .ToList()
                 )
@@ -128,6 +132,8 @@ public class BoardHubIntegrationTests
                     Infrastructure.Realtime.SignalRProjectBoardEventPublisher
                 >();
                 services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+                services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+                services.AddScoped<ProjectDocumentService>();
                 services.AddScoped<Application.Projects.ProjectService>();
                 services.AddScoped<Application.Columns.ColumnService>();
                 services.AddScoped<Application.Cards.CardService>();

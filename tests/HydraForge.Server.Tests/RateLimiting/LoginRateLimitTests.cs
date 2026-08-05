@@ -1,7 +1,9 @@
+using NSubstitute;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Server.Tests.Auth;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -95,6 +97,8 @@ internal class RateLimitWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(IPasswordHasher)
                         || d.ServiceType == typeof(IAccessTokenIssuer)
                         || d.ServiceType == typeof(IAuditLogWriter)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -112,6 +116,8 @@ internal class RateLimitWebApplicationFactory : WebApplicationFactory<Program>
             // LoginUserHandler now audit-logs failed attempts — swap in the in-memory fake
             // so the handler doesn't try to reach a real Postgres instance.
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
+            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<ProjectDocumentService>();
 
             // Runs before every other pipeline middleware (including UseRateLimiter), so the
             // simulated source IP is in place before the rate limiter reads the partition key.

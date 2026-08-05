@@ -1,3 +1,4 @@
+using NSubstitute;
 namespace HydraForge.Server.Tests.Plans;
 
 using System.Net;
@@ -8,6 +9,7 @@ using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
@@ -692,6 +694,8 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(ICardAssigneeRepository)
                         || d.ServiceType == typeof(ICardWatcherRepository)
                         || d.ServiceType == typeof(ICardRelationshipRepository)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -721,6 +725,8 @@ internal class PlansTestWebApplicationFactory : WebApplicationFactory<Program>
             );
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
+            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<ProjectDocumentService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<PlanService>();
         });

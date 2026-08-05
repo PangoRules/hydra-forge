@@ -1,3 +1,4 @@
+using NSubstitute;
 namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
@@ -8,6 +9,7 @@ using HydraForge.Application.Cards;
 using HydraForge.Application.Columns;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Projects;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
@@ -568,6 +570,8 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(IChatArchiveService)
                         || d.ServiceType
                             == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -594,6 +598,8 @@ internal class ColumnsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
+            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<ProjectDocumentService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<ColumnService>();
             services.AddScoped<ProjectMemberService>();

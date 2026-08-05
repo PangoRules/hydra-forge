@@ -493,6 +493,106 @@ public class PlanServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_GoalCard_ReturnsInvalidCardType()
+    {
+        var (
+            planRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        ) = CreateMocks();
+        var service = new PlanService(
+            planRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Type = CardType.Goal,
+            }
+        );
+
+        var result = await service.CreateAsync(
+            new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SecurityCard_ReturnsInvalidCardType()
+    {
+        var (
+            planRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        ) = CreateMocks();
+        var service = new PlanService(
+            planRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Type = CardType.Security,
+            }
+        );
+
+        var result = await service.CreateAsync(
+            new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Error.Code);
+    }
+
+    [Fact]
     public async Task CreateAsync_IssueWithoutSpecId_Succeeds()
     {
         var (

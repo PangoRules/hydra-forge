@@ -1,7 +1,9 @@
+using NSubstitute;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using Microsoft.AspNetCore.Hosting;
@@ -82,6 +84,8 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
                         || d.ServiceType == typeof(IPasswordHasher)
                         || d.ServiceType == typeof(IAccessTokenIssuer)
                         || d.ServiceType == typeof(IAuditLogWriter)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -96,6 +100,8 @@ internal class AuthWebApplicationFactory(bool userDisabled, bool passwordValid)
             // needs a live Postgres connection this factory doesn't provide, so swap in the
             // in-memory fake (same pattern as ProjectsTestWebApplicationFactory).
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
+            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<ProjectDocumentService>();
         });
     }
 }

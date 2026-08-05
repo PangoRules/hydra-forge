@@ -314,4 +314,76 @@ public class CardTests
         Assert.True(card.ArchivedAt <= DateTime.UtcNow);
         Assert.Equal(4, card.Version);
     }
+
+    // ─── Card-type → doc-type validation (D-44, D-XX1, D-XX2, D-XX3) ─────────
+
+    [Theory]
+    [InlineData(CardType.Goal)]
+    [InlineData(CardType.Idea)]
+    [InlineData(CardType.Issue)]
+    [InlineData(CardType.Security)]
+    [InlineData(CardType.Task)]
+    public void ValidateAllowsSpec_AllowedTypes_ReturnsNull(CardType type)
+    {
+        var result = Card.ValidateAllowsSpec(type);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ValidateAllowsSpec_Task_ReturnsNull()
+    {
+        var result = Card.ValidateAllowsSpec(CardType.Task);
+
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData(CardType.Issue)]
+    [InlineData(CardType.Task)]
+    public void ValidateAllowsPlan_AllowedTypes_ReturnsNull(CardType type)
+    {
+        var result = Card.ValidateAllowsPlan(type);
+
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData(CardType.Goal)]
+    [InlineData(CardType.Idea)]
+    [InlineData(CardType.Security)]
+    public void ValidateAllowsPlan_DisallowedTypes_ReturnsError(CardType type)
+    {
+        var result = Card.ValidateAllowsPlan(type);
+
+        Assert.NotNull(result);
+        Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Code);
+    }
+
+    [Theory]
+    [InlineData(CardType.Goal, DocType.Specification, true)]
+    [InlineData(CardType.Goal, DocType.ValidationMatrix, true)]
+    [InlineData(CardType.Goal, DocType.Concept, false)]
+    [InlineData(CardType.Goal, DocType.Report, false)]
+    [InlineData(CardType.Task, DocType.ValidationMatrix, true)]
+    [InlineData(CardType.Task, DocType.Specification, false)]
+    [InlineData(CardType.Task, DocType.Report, false)]
+    [InlineData(CardType.Task, DocType.Concept, false)]
+    [InlineData(CardType.Idea, DocType.Concept, true)]
+    [InlineData(CardType.Idea, DocType.Specification, false)]
+    [InlineData(CardType.Idea, DocType.Report, false)]
+    [InlineData(CardType.Issue, DocType.Report, true)]
+    [InlineData(CardType.Issue, DocType.Specification, false)]
+    [InlineData(CardType.Security, DocType.Report, true)]
+    [InlineData(CardType.Security, DocType.Concept, false)]
+    public void IsValidSpecDocType_ReturnsExpectedResult(
+        CardType cardType,
+        DocType docType,
+        bool expected
+    )
+    {
+        var result = Card.IsValidSpecDocType(cardType, docType);
+
+        Assert.Equal(expected, result);
+    }
 }

@@ -1,9 +1,11 @@
+using NSubstitute;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Application.Settings;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.PersonalSpace;
@@ -255,6 +257,8 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(ISettingsRepository)
                         || d.ServiceType == typeof(ISettingsProvider)
                         || d.ServiceType == typeof(IAuditLogReader)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -266,6 +270,8 @@ internal class AdminTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IPasswordHasher>(_ => new TestPasswordHasher());
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<ProjectDocumentService>();
             services.AddScoped<ISettingsRepository>(_ => _settingsRepo);
             services.AddScoped<ISettingsProvider>(_ => new TestCachedSettingsProvider(
                 _settingsRepo

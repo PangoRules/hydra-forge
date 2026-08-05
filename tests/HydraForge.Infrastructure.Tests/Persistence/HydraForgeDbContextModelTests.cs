@@ -264,6 +264,23 @@ public class HydraForgeDbContextModelTests
     }
 
     [Fact]
+    public void FindEntityTypes_ProjectDocumentSchema_MatchesRequirements()
+    {
+        using var context = new HydraForgeDbContext(CreateOptions());
+        var model = context.Model;
+
+        var doc = model.FindEntityType(typeof(ProjectDocument));
+        Assert.NotNull(doc);
+        AssertProperties(doc, "Id", "ProjectId", "DocType", "Title", "Description",
+            "Content", "Version", "CreatedByUserId", "CreatedAt", "UpdatedAt", "ArchivedAt");
+
+        var version = model.FindEntityType(typeof(ProjectDocumentVersion));
+        Assert.NotNull(version);
+        AssertProperties(version, "Id", "ProjectDocumentId", "Title", "Description",
+            "Content", "Version", "CreatedAt", "CreatedByUserId");
+    }
+
+    [Fact]
     public void FindEntityTypes_ProjectDocsAndSnapshotSchema_MatchesFoundationRequirements()
     {
         using var context = new HydraForgeDbContext(CreateOptions());
