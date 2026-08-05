@@ -12,6 +12,7 @@ const storeState = reactive({
   activeSessionId: 'abc',
   isCreating: false,
   currentProjectId: 'proj1',
+  position: { x: 0, y: 0 },
   toggleDock: mockToggleDock,
   closeDock: mockCloseDock,
   startNewChat: mockStartNewChat
@@ -40,6 +41,7 @@ describe('ChatDock', () => {
     storeState.activeSessionId = 'abc'
     storeState.isCreating = false
     storeState.currentProjectId = 'proj1'
+    storeState.position = { x: 0, y: 0 }
     routeState.path = '/projects/proj1/board'
     routeState.params = { id: 'proj1' }
   })

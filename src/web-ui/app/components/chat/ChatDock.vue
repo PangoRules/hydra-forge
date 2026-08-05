@@ -10,10 +10,25 @@ const isHidden = computed(() => route.path.startsWith('/chats'))
 const dragHandle = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
 
+// Default bottom-right (above the FAB) on first-ever open; reuse the last
+// dragged position (persisted in the store) on subsequent opens, including
+// after a round-trip through /chats (v-if above unmounts this component,
+// so local drag state alone doesn't survive that navigation).
 const { x, y } = useDraggable(popupRef, {
   handle: dragHandle,
-  initialValue: { x: 0, y: 0 },
+  initialValue: () => (
+    dock.position.x !== 0 || dock.position.y !== 0
+      ? { ...dock.position }
+      : {
+          x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 400) : 0,
+          y: typeof window !== 'undefined' ? Math.max(16, window.innerHeight - 600) : 0
+        }
+  ),
   preventDefault: true
+})
+
+watch([x, y], ([nx, ny]) => {
+  dock.position = { x: nx, y: ny }
 })
 
 function onKeydown(e: KeyboardEvent) {
