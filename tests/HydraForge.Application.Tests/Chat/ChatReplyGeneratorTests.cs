@@ -533,7 +533,13 @@ public class ChatReplyGeneratorTests
         _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
         _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
         _messageRepo
-            .GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<ChatMessage> { identityMessage, userMessage });
         _ragRetriever
             .RetrieveAsync(
@@ -601,8 +607,11 @@ public class ChatReplyGeneratorTests
         // never delay this job's own StreamDone, so all we assert here is that the right
         // job was enqueued with the right args; the fallback/success logic itself is
         // covered in ChatTitleGenerationJobTests.
-        await _backgroundTaskQueue.Received(1).EnqueueJobAsync<ChatTitleGenerationJob>(
-            Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>());
+        await _backgroundTaskQueue
+            .Received(1)
+            .EnqueueJobAsync<ChatTitleGenerationJob>(
+                Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>()
+            );
     }
 
     [Fact]
@@ -631,7 +640,13 @@ public class ChatReplyGeneratorTests
         _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
         _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
         _messageRepo
-            .GetBySessionAsync(SessionId, Arg.Any<DateTime?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(new List<ChatMessage> { userMessage });
         _ragRetriever
             .RetrieveAsync(
@@ -650,13 +665,39 @@ public class ChatReplyGeneratorTests
             AdapterType = AdapterType.OpenAiCompatible,
         };
         var routeDecision = new RouteDecision(
-            new ProviderModelConfigDto(Guid.NewGuid(), Guid.NewGuid(), "gpt-4", "GPT-4", "standard", null, null, true),
-            new ProviderDto(Guid.NewGuid(), "openai", "https://api.openai.com", "openai-compatible", "cloud", "standard", null, true, default, default),
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
             [],
             provider
         );
         _modelRouter
-            .ResolveAsync(Arg.Any<AiFeature>(), UserId, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(Result<RouteDecision>.Success(routeDecision));
 
         var mockClient = Substitute.For<ILlmClient>();
@@ -668,10 +709,20 @@ public class ChatReplyGeneratorTests
 
         await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
 
-        await _backgroundTaskQueue.Received(1).EnqueueJobAsync<ChatTitleGenerationJob>(
-            Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>());
-        await _mockCaller.Received(1).StreamDone(
-            Arg.Any<Guid>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<string>());
+        await _backgroundTaskQueue
+            .Received(1)
+            .EnqueueJobAsync<ChatTitleGenerationJob>(
+                Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>()
+            );
+        await _mockCaller
+            .Received(1)
+            .StreamDone(
+                Arg.Any<Guid>(),
+                Arg.Any<int?>(),
+                Arg.Any<int?>(),
+                Arg.Any<int?>(),
+                Arg.Any<string>()
+            );
     }
 
     [Fact]

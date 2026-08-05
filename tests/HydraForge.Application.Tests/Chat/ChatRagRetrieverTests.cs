@@ -483,18 +483,19 @@ public class ChatRagRetrieverTests
         SetupSessionFound(deps, session);
 
         // Only the identity System message is present (first real user message not yet sent)
-        deps.MessageRepo
-            .GetBySessionAsync(SessionId, null, null, 1, Arg.Any<CancellationToken>())
-            .Returns(new List<DomainChatMessage>
-            {
-                new()
+        deps.MessageRepo.GetBySessionAsync(SessionId, null, null, 1, Arg.Any<CancellationToken>())
+            .Returns(
+                new List<DomainChatMessage>
                 {
-                    Id = Guid.NewGuid(),
-                    SessionId = SessionId,
-                    Role = MessageRole.System,
-                    Content = "You are HydraForge's assistant.",
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        SessionId = SessionId,
+                        Role = MessageRole.System,
+                        Content = "You are HydraForge's assistant.",
+                    },
                 }
-            });
+            );
 
         deps.SnapshotRepo.GetByProjectIdAsync(ProjectId, Arg.Any<CancellationToken>())
             .Returns(new ProjectContextSnapshot { TemplateContent = "snapshot content" });

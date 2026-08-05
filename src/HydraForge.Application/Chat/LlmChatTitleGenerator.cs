@@ -189,23 +189,26 @@ public sealed class LlmChatTitleGenerator : IChatTitleGenerator
             // unlike a length-ratio check which would misfire on short messages).
             var normalizedTitle = rawTitle.Trim().TrimEnd('.', '!', '?');
             var normalizedUserMessage = userMessage.Trim().TrimEnd('.', '!', '?');
-            var titleWordCount = normalizedTitle.Split(
-                (char[]?)null,
-                StringSplitOptions.RemoveEmptyEntries
-            ).Length;
+            var titleWordCount = normalizedTitle
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .Length;
             if (
                 normalizedTitle.Equals(normalizedUserMessage, StringComparison.OrdinalIgnoreCase)
                 || titleWordCount > 12
             )
             {
                 return Result<string>.Failure(
-                    new Error(DomainErrorCodes.Chat.TitleFailed, "Generated title was an echo of the input.")
+                    new Error(
+                        DomainErrorCodes.Chat.TitleFailed,
+                        "Generated title was an echo of the input."
+                    )
                 );
             }
 
-            var title = normalizedTitle.Length > TitleMaxLength
-                ? normalizedTitle[..TitleMaxLength].TrimEnd() + "…"
-                : normalizedTitle;
+            var title =
+                normalizedTitle.Length > TitleMaxLength
+                    ? normalizedTitle[..TitleMaxLength].TrimEnd() + "…"
+                    : normalizedTitle;
 
             return Result<string>.Success(title);
         }

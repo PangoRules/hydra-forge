@@ -527,8 +527,7 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task CreateAsync_PersistsIdentitySystemMessage()
     {
-        var (service, _, messageRepo, _, _, _, _, _, _, _, _, settingsProvider) =
-            CreateSut();
+        var (service, _, messageRepo, _, _, _, _, _, _, _, _, settingsProvider) = CreateSut();
         settingsProvider.Settings = new SystemSettings { AiIdentityPrompt = null };
         var actorId = NewId();
 
@@ -1269,7 +1268,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task AttachDocumentAsync_OwnedDocument_AttachesSuccessfully()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) =
+            CreateSut();
         var ownerId = NewId();
         var documentId = NewId();
         var session = new ChatSession
@@ -1322,7 +1322,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task AttachDocumentAsync_AlreadyAttached_ReturnsError()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) =
+            CreateSut();
         var ownerId = NewId();
         var documentId = NewId();
         var session = new ChatSession
@@ -1357,7 +1358,8 @@ public class ChatSessionServiceTests
     [Fact]
     public async Task ListDocumentsAsync_ReturnsAttachedNonArchivedDocuments()
     {
-        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) = CreateSut();
+        var (service, sessionRepo, _, _, _, _, _, documentRepo, _, _, sessionDocRepo, _) =
+            CreateSut();
         var ownerId = NewId();
         var attachedId = NewId();
         var archivedId = NewId();

@@ -355,7 +355,13 @@ public sealed class ChatReplyGenerator(
                 try
                 {
                     await backgroundTaskQueue.EnqueueJobAsync<ChatTitleGenerationJob>(j =>
-                        j.RunAsync(sessionId, userId, userMessage.Content, content, CancellationToken.None)
+                        j.RunAsync(
+                            sessionId,
+                            userId,
+                            userMessage.Content,
+                            content,
+                            CancellationToken.None
+                        )
                     );
                 }
                 catch (Exception ex)

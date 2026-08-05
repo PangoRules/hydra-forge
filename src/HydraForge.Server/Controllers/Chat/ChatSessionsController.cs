@@ -37,7 +37,14 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
     )
     {
         var userId = User.GetRequiredUserId();
-        var result = await sessionService.ListAsync(userId, folderId, projectId, before, beforeId, limit);
+        var result = await sessionService.ListAsync(
+            userId,
+            folderId,
+            projectId,
+            before,
+            beforeId,
+            limit
+        );
 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);

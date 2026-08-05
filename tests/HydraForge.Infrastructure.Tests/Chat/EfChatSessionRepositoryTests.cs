@@ -89,12 +89,28 @@ public class EfChatSessionRepositoryTests
         await context.SaveChangesAsync();
 
         // Page 1: before = DateTime.MaxValue, beforeId = null — should return all 3 ordered by UpdatedAt desc, Id desc
-        var page1 = await repo.ListAsync(userId, null, null, DateTime.MaxValue, null, 3, CancellationToken.None);
+        var page1 = await repo.ListAsync(
+            userId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            3,
+            CancellationToken.None
+        );
         Assert.Equal(3, page1.Count);
 
         // Page 2: limit 2, before = sameTime, beforeId = page1[1].Id (the 2nd item = 2nd newest by UpdatedAt desc, Id desc)
         var secondItemId = page1[1].Id;
-        var page2 = await repo.ListAsync(userId, null, null, sameTime, secondItemId, 2, CancellationToken.None);
+        var page2 = await repo.ListAsync(
+            userId,
+            null,
+            null,
+            sameTime,
+            secondItemId,
+            2,
+            CancellationToken.None
+        );
         // Should get exactly 1 remaining item (session1 — the oldest by UpdatedAt==sameTime, Id smallest)
         Assert.Single(page2);
         Assert.DoesNotContain(page1[0].Id, page2.Select(s => s.Id));
@@ -140,7 +156,15 @@ public class EfChatSessionRepositoryTests
         context.ChatSessions.AddRange(session1, session2);
         await context.SaveChangesAsync();
 
-        var results = await repo.ListAsync(userId, null, null, DateTime.MaxValue, null, 10, CancellationToken.None);
+        var results = await repo.ListAsync(
+            userId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            CancellationToken.None
+        );
 
         Assert.Equal(2, results.Count);
         Assert.Equal(session2.Id, results[0].Id);
@@ -195,7 +219,15 @@ public class EfChatSessionRepositoryTests
         context.ChatSessions.AddRange(mySession, otherSession, archivedSession);
         await context.SaveChangesAsync();
 
-        var results = await repo.ListAsync(ownerId, null, null, DateTime.MaxValue, null, 10, CancellationToken.None);
+        var results = await repo.ListAsync(
+            ownerId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            CancellationToken.None
+        );
 
         Assert.Single(results);
         Assert.Equal(mySession.Id, results[0].Id);

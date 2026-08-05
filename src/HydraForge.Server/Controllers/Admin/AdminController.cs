@@ -224,10 +224,7 @@ public class AdminController(
                 "housekeepingRunTimeUtc",
                 out _
             );
-            hasAiIdentityPrompt = jsonDoc.RootElement.TryGetProperty(
-                "aiIdentityPrompt",
-                out _
-            );
+            hasAiIdentityPrompt = jsonDoc.RootElement.TryGetProperty("aiIdentityPrompt", out _);
         }
         catch (JsonException)
         {

@@ -140,7 +140,15 @@ public class ChatSessionTests
         var folderId = Guid.NewGuid();
         var personalityId = Guid.NewGuid();
 
-        session.UpdateSettings("New", folderId, personalityId, AiEditMode.Blanket, true, null, null);
+        session.UpdateSettings(
+            "New",
+            folderId,
+            personalityId,
+            AiEditMode.Blanket,
+            true,
+            null,
+            null
+        );
 
         Assert.Equal("New", session.Title);
         Assert.Equal(folderId, session.FolderId);

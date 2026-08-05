@@ -42,11 +42,10 @@ public sealed class ChatTitleGenerationJob(
                 assistantMessageContent,
                 ct
             );
-            var title = titleResult.IsSuccess
-                ? titleResult.Value
-                : userMessageContent.Length <= 60
-                    ? userMessageContent
-                    : userMessageContent[..60] + "…";
+            var title =
+                titleResult.IsSuccess ? titleResult.Value
+                : userMessageContent.Length <= 60 ? userMessageContent
+                : userMessageContent[..60] + "…";
 
             session.UpdateSettings(title, null, null, null, null, null, null);
             await sessionRepo.UpdateAsync(session, ct);
@@ -56,13 +55,19 @@ public sealed class ChatTitleGenerationJob(
             // result, a connected client has no way to learn the title changed short of a
             // manual refresh. Best-effort: a client that isn't connected just sees the new
             // title on its next fetch, same as before this push existed.
-            await broadcaster.Group(sessionId).SessionUpdated(sessionId, title, session.Status.ToString());
+            await broadcaster
+                .Group(sessionId)
+                .SessionUpdated(sessionId, title, session.Status.ToString());
         }
         catch (Exception ex)
         {
             // External LLM call — must never surface as a failed/retried Hangfire job
             // spamming the dashboard over something as low-stakes as a chat title.
-            logger.LogWarning(ex, "Chat title generation failed for session {SessionId}", sessionId);
+            logger.LogWarning(
+                ex,
+                "Chat title generation failed for session {SessionId}",
+                sessionId
+            );
         }
     }
 }

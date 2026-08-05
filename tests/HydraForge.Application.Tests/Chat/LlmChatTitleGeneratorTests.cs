@@ -24,7 +24,12 @@ public class LlmChatTitleGeneratorTests
         _clientFactory = Substitute.For<ILlmClientFactory>();
         _usageRecorder = Substitute.For<IUsageRecorder>();
         _logger = Substitute.For<ILogger<LlmChatTitleGenerator>>();
-        _generator = new LlmChatTitleGenerator(_modelRouter, _clientFactory, _usageRecorder, _logger);
+        _generator = new LlmChatTitleGenerator(
+            _modelRouter,
+            _clientFactory,
+            _usageRecorder,
+            _logger
+        );
 
         var provider = new LlmProvider
         {
@@ -33,8 +38,28 @@ public class LlmChatTitleGeneratorTests
             AdapterType = AdapterType.OpenAiCompatible,
         };
         var routeDecision = new RouteDecision(
-            new ProviderModelConfigDto(Guid.NewGuid(), Guid.NewGuid(), "gpt-4", "GPT-4", "standard", null, null, true),
-            new ProviderDto(Guid.NewGuid(), "openai", "https://api.openai.com", "openai-compatible", "cloud", "standard", null, true, default, default),
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
             [],
             provider
         );
@@ -82,7 +107,11 @@ public class LlmChatTitleGeneratorTests
         const string userMessage = "I need an introduction of who you are and what we can do";
         SetLlmResponse(userMessage);
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsFailure);
     }
@@ -95,7 +124,11 @@ public class LlmChatTitleGeneratorTests
             "This is a very long response that goes on and on and completely ignores the instruction to keep it short"
         );
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsFailure);
     }
@@ -106,7 +139,11 @@ public class LlmChatTitleGeneratorTests
         const string userMessage = "Hello, testing title generation";
         SetLlmResponse("Testing Title Generation");
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Testing Title Generation", result.Value);
@@ -121,7 +158,11 @@ public class LlmChatTitleGeneratorTests
         const string userMessage = "Hi there";
         SetLlmResponse("Greeting");
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Greeting", result.Value);
@@ -182,7 +223,11 @@ public class LlmChatTitleGeneratorTests
         const string userMessage = "Hello, testing retry behavior";
         var mockClient = SetLlmResponseSequence("", "", "Retry Behavior Test");
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Retry Behavior Test", result.Value);
@@ -197,7 +242,11 @@ public class LlmChatTitleGeneratorTests
         const string userMessage = "Hello, testing exhausted retries";
         var mockClient = SetLlmResponse(""); // empty every attempt
 
-        var result = await _generator.GenerateTitleAsync(UserId, userMessage, "some assistant reply");
+        var result = await _generator.GenerateTitleAsync(
+            UserId,
+            userMessage,
+            "some assistant reply"
+        );
 
         Assert.True(result.IsFailure);
         mockClient

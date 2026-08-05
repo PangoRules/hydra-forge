@@ -32,7 +32,12 @@ public class ChatTitleGenerationJobTests
     }
 
     private ChatSession ActiveSession() =>
-        new() { Id = SessionId, OwnerId = UserId, Status = ChatSessionStatus.Active };
+        new()
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
 
     [Fact]
     public async Task RunAsync_TitleGenSucceeds_SavesGeneratedTitle()
@@ -45,9 +50,12 @@ public class ChatTitleGenerationJobTests
 
         await _job.RunAsync(SessionId, UserId, "hello", "hi there", CancellationToken.None);
 
-        await _sessionRepo.Received(1).UpdateAsync(
-            Arg.Is<ChatSession>(s => s.Title == "Greeting Exchange"),
-            Arg.Any<CancellationToken>());
+        await _sessionRepo
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<ChatSession>(s => s.Title == "Greeting Exchange"),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -93,9 +101,12 @@ public class ChatTitleGenerationJobTests
 
         await _job.RunAsync(SessionId, UserId, userMessage, "reply", CancellationToken.None);
 
-        await _sessionRepo.Received(1).UpdateAsync(
-            Arg.Is<ChatSession>(s => s.Title == userMessage),
-            Arg.Any<CancellationToken>());
+        await _sessionRepo
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<ChatSession>(s => s.Title == userMessage),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -111,21 +122,34 @@ public class ChatTitleGenerationJobTests
 
         await _job.RunAsync(SessionId, UserId, longContent, "reply", CancellationToken.None);
 
-        await _sessionRepo.Received(1).UpdateAsync(
-            Arg.Is<ChatSession>(s => s.Title == expectedTruncatedTitle),
-            Arg.Any<CancellationToken>());
+        await _sessionRepo
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<ChatSession>(s => s.Title == expectedTruncatedTitle),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task RunAsync_SessionNotFound_DoesNotCallTitleGeneratorOrUpdate()
     {
-        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns((ChatSession?)null);
+        _sessionRepo
+            .GetByIdAsync(SessionId, Arg.Any<CancellationToken>())
+            .Returns((ChatSession?)null);
 
         await _job.RunAsync(SessionId, UserId, "hello", "hi", CancellationToken.None);
 
-        await _titleGenerator.DidNotReceive().GenerateTitleAsync(
-            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _sessionRepo.DidNotReceive().UpdateAsync(Arg.Any<ChatSession>(), Arg.Any<CancellationToken>());
+        await _titleGenerator
+            .DidNotReceive()
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            );
+        await _sessionRepo
+            .DidNotReceive()
+            .UpdateAsync(Arg.Any<ChatSession>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -139,8 +163,14 @@ public class ChatTitleGenerationJobTests
 
         await _job.RunAsync(SessionId, UserId, "hello", "hi", CancellationToken.None);
 
-        await _titleGenerator.DidNotReceive().GenerateTitleAsync(
-            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _titleGenerator
+            .DidNotReceive()
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -149,12 +179,19 @@ public class ChatTitleGenerationJobTests
         var session = ActiveSession();
         _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
         _titleGenerator
-            .GenerateTitleAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .GenerateTitleAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns<Result<string>>(_ => throw new InvalidOperationException("boom"));
 
         // Must not throw — a flaky LLM call is not allowed to fail this Hangfire job.
         await _job.RunAsync(SessionId, UserId, "hello", "hi", CancellationToken.None);
 
-        await _sessionRepo.DidNotReceive().UpdateAsync(Arg.Any<ChatSession>(), Arg.Any<CancellationToken>());
+        await _sessionRepo
+            .DidNotReceive()
+            .UpdateAsync(Arg.Any<ChatSession>(), Arg.Any<CancellationToken>());
     }
 }

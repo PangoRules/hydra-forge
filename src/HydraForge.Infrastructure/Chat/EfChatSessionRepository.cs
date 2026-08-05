@@ -48,10 +48,14 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
             query = query.Where(s => s.ProjectId == projectId.Value);
         if (before.HasValue)
             query = query.Where(s =>
-                s.UpdatedAt < before.Value
-                || (s.UpdatedAt == before.Value && s.Id < beforeId));
+                s.UpdatedAt < before.Value || (s.UpdatedAt == before.Value && s.Id < beforeId)
+            );
 
-        return await query.OrderByDescending(s => s.UpdatedAt).ThenByDescending(s => s.Id).Take(limit).ToListAsync(ct);
+        return await query
+            .OrderByDescending(s => s.UpdatedAt)
+            .ThenByDescending(s => s.Id)
+            .Take(limit)
+            .ToListAsync(ct);
     }
 
     public async Task<int> CountAsync(
