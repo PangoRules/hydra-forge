@@ -43,6 +43,11 @@ const canSave = computed(() => title.value.trim().length > 0 && columnId.value.l
 const availableMembers = computed(() =>
   (props.members ?? []).filter(m => !selectedAssignees.value.includes(m.userId))
 )
+const selectedParent = computed(() =>
+  selectedParentId.value
+    ? parentCandidates.value.find(c => c.id === selectedParentId.value) ?? null
+    : null
+)
 
 async function fetchParentCandidates() {
   try {
@@ -199,13 +204,28 @@ function closeWithAnimation() {
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Parent</label>
+          <div
+            v-if="selectedParent"
+            class="inline-flex items-center gap-1 px-2 py-0.5 mb-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
+          >
+            #{{ selectedParent.cardNumber }} — {{ selectedParent.title }}
+            <button
+              class="ml-0.5 text-gray-400 hover:text-red-500"
+              @click="selectedParentId = undefined"
+            >
+              <UIcon
+                name="i-lucide-x"
+                class="size-3"
+              />
+            </button>
+          </div>
           <USelectMenu
             :model-value="''"
             :items="parentCandidates.map(c => ({ label: `#${c.cardNumber} — ${c.title}`, value: c.id }))"
             value-key="value"
             size="xs"
             class="w-full"
-            placeholder="Search cards..."
+            :placeholder="selectedParent ? 'Change parent...' : 'Search cards...'"
             @update:model-value="(v: string) => v && (selectedParentId = v)"
           />
         </div>
