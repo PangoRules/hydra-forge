@@ -638,7 +638,7 @@ git commit -m "fix(chat): hide System-role messages from chat UI"
 
 The store owns the sticky session (`activeSessionId`), window open state (`isOpen`), creation state (`isCreating`), and window position (`position: { x, y }`). It detects page context (projectId from board route) and creates sessions via the API.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/stores/__tests__/chatDock.test.ts`. Test the store's core logic: initial state, `toggleDock`, `openDock`/`closeDock`, `startNewChat` creates a session with the right projectId context, page-context detection.
 
@@ -709,12 +709,12 @@ describe('chatDock store', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- chatDock`
 Expected: FAIL — store module doesn't exist.
 
-- [ ] **Step 3: Implement the store**
+- [x] **Step 3: Implement the store**
 
 Create `src/web-ui/app/stores/chatDock.ts`:
 
@@ -784,12 +784,12 @@ export const useChatDockStore = defineStore('chatDock', () => {
 })
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd src/web-ui && pnpm test -- chatDock`
 Expected: PASS. If `useRoute`/`useApi`/`useAppToast` auto-imports don't resolve in the test, stub them per the existing store test convention (check `src/web-ui/app/stores/__tests__/` for the mocking pattern).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/stores/chatDock.ts src/web-ui/app/stores/__tests__/chatDock.test.ts
