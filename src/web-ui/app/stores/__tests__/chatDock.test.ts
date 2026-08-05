@@ -104,7 +104,17 @@ describe('chatDock store', () => {
     const store = useChatDockStore()
     await store.startNewChat('hello', null, 'model-1', 'high')
     expect(mockPOST).toHaveBeenCalledWith('/api/chat/sessions', {
-      body: { title: '', projectId: 'abc', preferredModelConfigId: 'model-1', preferredEffort: 'high' }
+      body: { title: 'hello', projectId: 'abc', preferredModelConfigId: 'model-1', preferredEffort: 'high' }
+    })
+  })
+
+  it('startNewChat derives temp title from the first line of content', async () => {
+    mockPOST.mockResolvedValue({ data: { id: 'new-session' }, error: undefined })
+    const store = useChatDockStore()
+    const longLine = 'A'.repeat(100) + '\nsecond line ignored'
+    await store.startNewChat(longLine)
+    expect(mockPOST).toHaveBeenCalledWith('/api/chat/sessions', {
+      body: { title: 'A'.repeat(60) + '…', projectId: 'abc' }
     })
   })
 

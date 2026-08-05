@@ -5,6 +5,15 @@ import type { ChatSessionDto } from '~/types/chat'
 
 const LS_ACTIVE_SESSION_KEY = 'hydraforge:chat:activeSessionId'
 
+const TITLE_MAX_LENGTH = 60
+
+function deriveTitle(content: string): string {
+  const firstLine = content.trim().split('\n')[0] ?? content.trim()
+  return firstLine.length > TITLE_MAX_LENGTH
+    ? `${firstLine.slice(0, TITLE_MAX_LENGTH)}…`
+    : firstLine
+}
+
 export const useChatDockStore = defineStore('chatDock', () => {
   const isOpen = ref(false)
   const mode = ref<'draft' | 'session' | 'history'>('draft')
@@ -97,7 +106,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
       // the store on first call) — no try/catch needed here. On a page with
       // no board mounted, openCardId is simply the store's untouched default (null).
       const openCardId = currentProjectId.value ? useBoardStore().openCardId : null
-      const body: Record<string, unknown> = { title: '' }
+      const body: Record<string, unknown> = { title: content ? deriveTitle(content) : '' }
       if (currentProjectId.value) body.projectId = currentProjectId.value
       if (openCardId) body.openCardId = openCardId
       if (modelId) body.preferredModelConfigId = modelId
