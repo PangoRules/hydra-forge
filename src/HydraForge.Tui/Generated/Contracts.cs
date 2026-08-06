@@ -2245,8 +2245,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = "Auto";
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = "Auto";
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3580,8 +3580,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = "Auto";
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = "Auto";
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -4360,8 +4360,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
