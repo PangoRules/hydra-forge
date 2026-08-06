@@ -11,6 +11,13 @@ const route = useRoute()
 
 const isHidden = computed(() => route.path.startsWith('/chats'))
 
+// Single source of truth for the popup's width — used both for the inline
+// style below and for anchoring the initial x position, so the two can never
+// drift out of sync again (this drifted once already: the width moved from
+// 380px to 440px but the initial-x margin stayed hardcoded at the old value,
+// pushing the popup partly off the right edge of the screen on first open).
+const DOCK_WIDTH_PX = 480
+
 const dragHandle = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
 const sessionViewRef = ref<InstanceType<typeof ChatSessionView> | null>(null)
@@ -21,7 +28,7 @@ const { x, y } = useDraggable(popupRef, {
     dock.position.x !== 0 || dock.position.y !== 0
       ? { ...dock.position }
       : {
-          x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 400) : 0,
+          x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - DOCK_WIDTH_PX - 16) : 0,
           // Popup height is h-[50vh] (see template) — anchor off half the
           // viewport height, not a stale fixed-pixel assumption from when
           // the popup was h-[560px]. Leaves a 16px margin above the bottom edge.
@@ -34,6 +41,26 @@ const { x, y } = useDraggable(popupRef, {
 watch([x, y], ([nx, ny]) => {
   dock.position = { x: nx, y: ny }
 })
+
+// Full-height mode forces top:1rem, bypassing the normal top:${y}px binding —
+// remember where the popup was right before entering it and restore that
+// exact x/y on the way back out, rather than assuming useDraggable's x/y refs
+// are untouched by whatever happened on-screen while full-height was active.
+const preFullHeightPosition = ref<{ x: number, y: number } | null>(null)
+
+function handleToggleFullHeight() {
+  if (!dock.isFullHeight) {
+    preFullHeightPosition.value = { x: x.value, y: y.value }
+    dock.toggleFullHeight()
+  } else {
+    dock.toggleFullHeight()
+    if (preFullHeightPosition.value) {
+      x.value = preFullHeightPosition.value.x
+      y.value = preFullHeightPosition.value.y
+      preFullHeightPosition.value = null
+    }
+  }
+}
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && dock.isOpen) {
@@ -80,8 +107,12 @@ async function sendDraftMessage(
         v-if="dock.isOpen"
         ref="popupRef"
         class="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
-        :class="dock.isFullHeight ? 'w-[440px] h-[calc(100vh-2rem)]' : 'w-[440px] h-[50vh]'"
-        :style="dock.isFullHeight ? { left: `${x}px`, top: '1rem' } : { left: `${x}px`, top: `${y}px` }"
+        :class="dock.isFullHeight ? 'h-[calc(100vh-2rem)]' : 'h-[50vh]'"
+        :style="{
+          width: `${DOCK_WIDTH_PX}px`,
+          left: `${x}px`,
+          top: dock.isFullHeight ? '1rem' : `${y}px`
+        }"
       >
         <!-- Header — single row, drag handle wraps whichever header is showing.
              Session mode drives the real ChatSessionHeader through a ref to the
@@ -105,7 +136,7 @@ async function sendDraftMessage(
             @back="dock.showHistory()"
             @new-chat="dock.newChat()"
             @dismiss="dock.closeDock()"
-            @toggle-full-height="dock.toggleFullHeight()"
+            @toggle-full-height="handleToggleFullHeight"
             @close-session="sessionViewRef.handleCloseSession()"
             @archive-session="sessionViewRef.handleArchiveSession()"
             @reopen-session="sessionViewRef.handleReopen()"
@@ -146,7 +177,7 @@ async function sendDraftMessage(
                 variant="ghost"
                 size="xs"
                 :title="dock.isFullHeight ? 'Exit full height' : 'Full height'"
-                @click="dock.toggleFullHeight()"
+                @click="handleToggleFullHeight"
               />
               <UButton
                 icon="i-lucide-x"
