@@ -86,6 +86,16 @@ async function sendDraftMessage(
   if (!content.trim() || dock.isCreating) return
   await dock.startNewChat(content, presetId, modelId, reasoningEffort, personalityId)
 }
+
+// Archive fired from inside the open session view — the API call already
+// happened in ChatSessionView.handleArchiveSession(). The archived session
+// must not stay open in the dock: drop back to draft mode (this also clears
+// the localStorage resume key via the store's activeSessionId watcher). The
+// history list needs no patch here — it remounts with a fresh fetch every
+// time the user opens it (v-if mode branches), so it can never be stale.
+function onArchiveFromSession() {
+  dock.newChat()
+}
 </script>
 
 <template>
@@ -233,6 +243,7 @@ async function sendDraftMessage(
             :initial-effort="dock.pendingMessage?.reasoningEffort ?? null"
             compact
             @initial-message-sent="dock.clearPendingMessage()"
+            @archive-session="onArchiveFromSession"
           />
         </div>
       </div>

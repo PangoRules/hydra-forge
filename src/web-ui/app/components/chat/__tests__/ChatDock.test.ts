@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 
@@ -20,7 +20,10 @@ const storeState = reactive({
   closeDock: mockCloseDock,
   startNewChat: mockStartNewChat,
   openDock: vi.fn(),
-  newChat: vi.fn(),
+  newChat: vi.fn(() => {
+    storeState.mode = 'draft'
+    storeState.activeSessionId = null
+  }),
   showHistory: vi.fn(),
   hideHistory: vi.fn(),
   loadSession: vi.fn(),
@@ -110,6 +113,11 @@ describe('ChatDock', () => {
     storeState.pendingMessage = null
     routeState.path = '/projects/proj1/board'
     routeState.params = { id: 'proj1' }
+    // Re-configure newChat impl each run so state doesn't bleed between tests
+    storeState.newChat.mockImplementation(() => {
+      storeState.mode = 'draft'
+      storeState.activeSessionId = null
+    })
   })
 
   it('renders the FAB button when dock is closed', async () => {
@@ -199,5 +207,39 @@ describe('ChatDock', () => {
     storeState.mode = 'history'
     const wrapper = await mountSuspended(ChatDock)
     expect(wrapper.find('button[title="History"]').exists()).toBe(false)
+  })
+
+  it('returns to draft mode when the active session is archived from inside the view', async () => {
+    storeState.mode = 'session'
+    storeState.activeSessionId = 'abc'
+    const wrapper = await mountSuspended(ChatDock, {
+      global: {
+        stubs: {
+          ChatSessionView: {
+            name: 'ChatSessionView',
+            template: '<div data-testid="stub-session-view" />',
+            setup() {
+              return {
+                session: computed(() => ({
+                  id: 'abc',
+                  title: 'Test',
+                  status: 'Active',
+                  projectId: 'p1',
+                  openCardId: null
+                })),
+                isOwner: true
+              }
+            }
+          }
+        }
+      }
+    })
+    await flushPromises()
+
+    await wrapper.findComponent({ name: 'ChatSessionView' }).vm.$emit('archiveSession', 'abc')
+    await flushPromises()
+
+    expect(storeState.activeSessionId).toBeNull()
+    expect(storeState.mode).toBe('draft')
   })
 })
