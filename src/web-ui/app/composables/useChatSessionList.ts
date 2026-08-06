@@ -10,6 +10,7 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
   const sessions = ref<ChatSessionDto[]>([])
   const loading = ref(false)
   const hasMore = ref(true)
+  const statusFilter = ref<'ActiveAndClosed' | 'Active' | 'Closed' | 'Archived'>('ActiveAndClosed')
   const api = useApi()
 
   async function loadMore() {
@@ -17,13 +18,17 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     loading.value = true
     try {
       const last = sessions.value[sessions.value.length - 1]
-      const url = ApiRoutes.Chat.sessions.list(
+      const base = ApiRoutes.Chat.sessions.list(
         options?.folderId,
         options?.projectId,
         last?.updatedAt,
         last?.id,
         20
       )
+      const statusParam = statusFilter.value !== 'ActiveAndClosed'
+        ? `&status=${statusFilter.value}`
+        : ''
+      const url = `${base}${statusParam}`
       const { data } = await api.GET<ChatSessionPageDto>(url)
       if (data) {
         sessions.value.push(...data.items)
@@ -72,6 +77,7 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     sessions: readonly(sessions),
     loading: readonly(loading),
     hasMore: readonly(hasMore),
+    statusFilter,
     loadMore,
     refresh,
     patchSession,

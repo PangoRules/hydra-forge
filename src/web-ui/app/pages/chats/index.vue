@@ -2,7 +2,7 @@
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import ChatSessionList from '~/components/shared/ChatSessionList.vue'
-import type { ChatSessionDto } from '~/types/chat'
+import { type ChatSessionDto, ChatSessionStatus } from '~/types/chat'
 import { useChatSessionList } from '~/composables/useChatSessionList'
 import { useChatDockStore } from '~/stores/chatDock'
 
@@ -16,9 +16,20 @@ const toast = useAppToast()
 const route = useRoute()
 
 const dock = useChatDockStore()
-const { sessions, loading, hasMore, loadMore, patchSession, prependSession, removeSession } = useChatSessionList()
+const { sessions, loading, hasMore, statusFilter, loadMore, refresh, patchSession, prependSession, removeSession } = useChatSessionList()
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
+
+const statusFilterItems = [
+  { label: 'Active & Closed', value: 'ActiveAndClosed' },
+  { label: 'Active', value: 'Active' },
+  { label: 'Closed', value: 'Closed' },
+  { label: 'Archived', value: 'Archived' }
+]
+
+watch(statusFilter, () => {
+  refresh()
+})
 
 onMounted(() => {
   if (dock.activeSessionId) {
@@ -128,6 +139,15 @@ async function confirmArchive() {
     archiveTargetId.value = null
   }
 }
+
+async function reopenSession(id: string) {
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.reopen(id))
+    patchSession(id, { status: ChatSessionStatus.Active, archivedAt: null })
+  } catch {
+    toast.error('Failed to reopen chat')
+  }
+}
 </script>
 
 <template>
@@ -147,6 +167,14 @@ async function confirmArchive() {
             size="sm"
             title="Start a new chat"
             @click="startCompose"
+          />
+        </div>
+
+        <div class="shrink-0 px-4 pb-3">
+          <USelect
+            v-model="statusFilter"
+            :items="statusFilterItems"
+            size="xs"
           />
         </div>
 
@@ -188,6 +216,16 @@ async function confirmArchive() {
                 title="Archive chat"
                 class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                 @click.stop="requestArchive(session.id)"
+              />
+              <UButton
+                v-if="session.status !== 'Active' || session.archivedAt"
+                icon="i-lucide-folder-open"
+                variant="ghost"
+                color="neutral"
+                size="xs"
+                title="Reopen chat"
+                class="absolute right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click.stop="reopenSession(session.id)"
               />
             </li>
           </template>
