@@ -24,14 +24,19 @@ public class ChatSession
     public Guid? PreferredModelConfigId { get; set; }
     public string? PreferredEffort { get; set; }
 
-    public void Open(Guid? personalityId, Guid? openCardId, AiEditMode aiEditMode)
+    public void Reopen()
     {
         Status = ChatSessionStatus.Active;
-        PersonalityId = personalityId;
-        OpenCardId = openCardId;
-        AiEditMode = aiEditMode;
         ClosedAt = null;
         Summary = null;
+        ArchivedAt = null;
+        AiEditMode = AiEditMode.PerMutation;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Unarchive()
+    {
+        ArchivedAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
