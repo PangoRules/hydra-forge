@@ -1057,7 +1057,7 @@ Chats
 | **Decision** | **`CardType.Security = 6`.** Same doc shape as Issue (one Report Spec, no Plans) but distinct type for filtering and reporting. General projects have security concerns too (physical security, compliance, access control) — Security is not limited to software projects. |
 | **Rationale** | Security findings (XSS, authz gaps, secret leaks) are not bugs — they have different severity, triage, and reporting workflows. A separate card type makes them filterable and reportable without conflating them with general issues. |
 | **Alternatives considered** | Use Issue for everything (rejected — no way to filter/report on security findings specifically without a tag or custom field). |
-| **Impact** | New enum value `Security = 6`. `Card.ValidateAllowsSpec` accepts Security. `Card.ExpectedSpecDocType` returns Report. Web UI card-type selector gains Security option. |
+| **Impact** | New enum value `Security = 6`. `Card.ValidateAllowsSpec` accepts Security. `Card.IsValidSpecDocType` maps Security to Report. Web UI card-type selector gains Security option. |
 
 ---
 
