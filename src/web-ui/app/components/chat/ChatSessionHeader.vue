@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const api = useApi()
+const toast = useAppToast()
 
 const isActive = computed(() => props.session.status === 'Active')
 
@@ -60,7 +61,9 @@ async function fetchPersonalities() {
     const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
     personalities.value = (data ?? []).filter(p => !p.archivedAt)
   } catch (err) {
-    personalityError.value = err instanceof Error ? err.message : 'Failed to load personalities'
+    const msg = err instanceof Error ? err.message : 'Failed to load personalities'
+    personalityError.value = msg
+    toast.error(msg)
   } finally {
     loadingPersonalities.value = false
   }
@@ -88,12 +91,13 @@ onMounted(fetchPersonalities)
 
     <!-- Title edit pencil (owner, active only) -->
     <UButton
-      v-if="isOwner && isActive"
+      v-if="isOwner"
       icon="i-lucide-pencil"
       variant="ghost"
       color="neutral"
       size="xs"
       title="Rename chat"
+      :disabled="!isActive"
       @click="emit('startEditTitle')"
     />
 

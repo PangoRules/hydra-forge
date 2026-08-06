@@ -3,6 +3,7 @@ import { ApiError } from '~/lib/api-error'
 import { randomId } from '~/lib/id'
 import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
 import ChatDocAttach from '~/components/chat/ChatDocAttach.vue'
 import type { AiEditMode, ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
 import { ChatSessionStatus, MessageRole } from '~/types/chat'
@@ -340,19 +341,16 @@ async function updateSessionSettings(overrides: {
 async function handleToggleScope(searchAllMyDocs: boolean) {
   if (!session.value) return
   await updateSessionSettings({ searchAllMyDocs })
-  session.value.searchAllMyDocs = searchAllMyDocs
 }
 
 async function handleEditPersonality(personalityId: string | null) {
   if (!session.value) return
   await updateSessionSettings({ personalityId })
-  session.value.personalityId = personalityId
 }
 
 async function handleEditMode(mode: AiEditMode) {
   if (!session.value) return
   await updateSessionSettings({ aiEditMode: mode })
-  session.value.aiEditMode = mode
 }
 
 async function handleClose() {
@@ -444,6 +442,22 @@ function startEditTitle() {
   nextTick(() => titleInputRef.value?.focus())
 }
 
+function cancelTitleEdit() {
+  isEditingTitle.value = false
+  editedTitle.value = ''
+}
+
+async function submitTitleEdit() {
+  if (!session.value || !isActive.value) return
+  const trimmed = editedTitle.value.trim()
+  if (!trimmed || trimmed === session.value.title) {
+    cancelTitleEdit()
+    return
+  }
+  await updateSessionSettings({ title: trimmed })
+  cancelTitleEdit()
+}
+
 function exportChat() {
   if (!session.value) return
   const markdown = session.value.messages
@@ -524,6 +538,23 @@ onUnmounted(() => {
       @export-chat="exportChat"
       @toggle-find="toggleFind"
     />
+
+    <!-- Inline title edit input (rendered alongside/after the header) -->
+    <div
+      v-if="isEditingTitle && session"
+      class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2"
+    >
+      <input
+        ref="titleInputRef"
+        v-model="editedTitle"
+        type="text"
+        data-testid="title-input"
+        class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        @keydown.enter.prevent="submitTitleEdit"
+        @keydown.escape.prevent="cancelTitleEdit"
+        @blur="submitTitleEdit"
+      >
+    </div>
 
     <!-- Find bar -->
     <div

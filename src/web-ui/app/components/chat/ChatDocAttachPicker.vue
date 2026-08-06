@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
+import { watchDebounced } from '@vueuse/core'
 import AppModal from '~/components/shared/AppModal.vue'
 
 interface DocItem {
@@ -30,26 +31,28 @@ const docs = ref<DocItem[]>([])
 const loading = ref(false)
 const fetchError = ref<string | null>(null)
 const picking = ref(false)
-const cancelled = ref(false)
 
-watch([isOpen, search], async ([open, q]) => {
+watch(isOpen, async (open) => {
   if (!open) return
-  await fetchDocs(q)
+  await fetchDocs(search.value)
 }, { immediate: true })
 
+watchDebounced(search, async (q) => {
+  if (!isOpen.value) return
+  await fetchDocs(q)
+}, { debounce: 250 })
+
 async function fetchDocs(q?: string) {
-  cancelled.value = false
   const searchAtFetch = q
 
   loading.value = true
   fetchError.value = null
   try {
     const { data } = await api.GET<DocItem[]>(ApiRoutes.Chat.documents.list(q))
-    if (cancelled.value) return
     if (searchAtFetch !== search.value) return
     docs.value = data ?? []
   } catch (err) {
-    if (cancelled.value) return
+    if (searchAtFetch !== search.value) return
     fetchError.value = err instanceof Error ? err.message : 'Failed to search documents'
     docs.value = []
   } finally {

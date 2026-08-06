@@ -43,6 +43,10 @@ const mockChatStream = {
 
 mockNuxtImport('useChatStream', () => () => mockChatStream)
 
+mockNuxtImport('useAuthStore', () => () => ({
+  user: { userId: 'u1' }
+}))
+
 const baseSession = {
   id: 's1',
   title: 'Original Title',
@@ -64,7 +68,19 @@ const baseSession = {
   messages: []
 }
 
-const stubs = { ChatMessageList: true, ChatInput: true, ConfirmDialog: true }
+const ChatSessionHeaderStub = {
+  props: ['session', 'isOwner'],
+  emits: ['close', 'toggleScope', 'editPersonality', 'editMode', 'fork', 'startEditTitle', 'exportChat', 'toggleFind'],
+  template: `<div>
+    <span data-testid="session-title">{{ session?.title }}</span>
+    <button v-if="isOwner" :disabled="session?.status !== 'Active'" title="Rename chat" @click="$emit('startEditTitle')">Rename</button>
+    <button v-if="isOwner" title="Export chat" @click="$emit('exportChat')">Export</button>
+    <button title="Find in conversation" @click="$emit('toggleFind')">Find</button>
+    <button v-if="isOwner && session?.status === 'Active'" title="Close chat" @click="$emit('close')">Close</button>
+  </div>`
+}
+
+const stubs = { ChatMessageList: true, ChatInput: true, ConfirmDialog: true, ChatSessionHeader: ChatSessionHeaderStub }
 
 async function mountView() {
   const wrapper = await mountSuspended(ChatSessionView, {

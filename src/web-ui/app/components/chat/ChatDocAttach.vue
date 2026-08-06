@@ -38,6 +38,10 @@ async function fetchAttached() {
   }
 }
 
+function dismissError() {
+  fetchError.value = null
+}
+
 async function removeDoc(documentId: string) {
   const doc = attachedDocs.value.find(d => d.documentId === documentId)
   const label = doc?.title ?? 'document'
@@ -52,7 +56,6 @@ async function removeDoc(documentId: string) {
 }
 
 function handlePicked() {
-  showPicker.value = false
   void fetchAttached()
   emit('attached')
 }
@@ -85,17 +88,31 @@ onMounted(fetchAttached)
       />
     </div>
 
-    <!-- Error state -->
-    <p
-      v-else-if="fetchError"
-      class="text-xs text-error text-center py-2"
+    <!-- Error banner (dismissible, shown above list) -->
+    <div
+      v-if="fetchError"
+      class="flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 rounded px-3 py-2"
     >
-      {{ fetchError }}
-    </p>
+      <UIcon
+        name="i-lucide-alert-circle"
+        class="size-3.5 shrink-0"
+      />
+      <span class="flex-1 min-w-0 truncate">{{ fetchError }}</span>
+      <button
+        class="shrink-0 hover:text-error/70 transition-colors"
+        title="Dismiss"
+        @click="dismissError"
+      >
+        <UIcon
+          name="i-lucide-x"
+          class="size-3.5"
+        />
+      </button>
+    </div>
 
     <!-- Empty state -->
     <p
-      v-else-if="attachedDocs.length === 0"
+      v-if="!loading && !fetchError && attachedDocs.length === 0"
       class="text-xs text-muted text-center py-2"
     >
       No documents attached
@@ -103,7 +120,7 @@ onMounted(fetchAttached)
 
     <!-- Doc list -->
     <ul
-      v-else
+      v-if="!loading && attachedDocs.length > 0"
       class="space-y-1"
     >
       <li
