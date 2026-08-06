@@ -340,7 +340,7 @@ public class ProjectDocumentsScreen(
     {
         var docTypes = Enum.GetValues<ProjectDocType>().Select(d => d.ToString()).ToList();
         var typeIdx = await ListPrompt.Show(
-            "Document type:",
+            "Document type: (Reference = catch-all, allows any number)",
             docTypes,
             renderBackdrop: RenderAsync
         );
