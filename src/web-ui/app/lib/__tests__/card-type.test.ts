@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { CARD_TYPE_OPTIONS, CARD_TYPE_FILTER_OPTIONS, cardTypeToApiString, cardTypeOption } from '~/lib/card-type'
 
 describe('card-type', () => {
-  it('has four options: Task, Issue, Goal, Idea', () => {
-    expect(CARD_TYPE_OPTIONS.map(o => o.label)).toEqual(['Task', 'Issue', 'Goal', 'Idea'])
+  it('has five options: Task, Issue, Goal, Idea, Security', () => {
+    expect(CARD_TYPE_OPTIONS.map(o => o.label)).toEqual(['Task', 'Issue', 'Goal', 'Idea', 'Security'])
   })
 
   it('filter options include All first', () => {

@@ -173,7 +173,7 @@ async function createDocument() {
   try {
     const { data } = await api.POST<ProjectDocumentResponse>(
       ApiRoutes.Documents.create(props.projectId),
-      { body: { docType: createDocType, title: createTitle.value.trim(), description: null, content: '' } }
+      { body: { docType: createDocType.value, title: createTitle.value.trim(), description: null, content: '' } }
     )
     if (data) {
       documents.value.push(data)
@@ -383,7 +383,7 @@ onMounted(() => fetchDocuments())
     <AppModal
       v-model:open="showCreateModal"
       title="New Document"
-      width="sm:max-w-md"
+      width="sm:max-w-lg"
     >
       <template #body>
         <div class="space-y-3">
@@ -393,7 +393,13 @@ onMounted(() => fetchDocuments())
               v-model="createDocType"
               :items="Object.entries(DOC_TYPE_LABELS).map(([value, label]) => ({ value: Number(value), label }))"
               size="sm"
+              class="w-full"
             />
+            <p class="text-xs text-muted mt-1">
+              Not one of the fixed categories? Pick <strong>Reference</strong> — it allows any
+              number of docs, so it doubles as a catch-all for anything project-specific
+              (meeting notes, policies, runbooks, etc). The title is yours to name.
+            </p>
           </div>
           <div>
             <label class="text-xs font-medium text-muted uppercase tracking-wide mb-1 block">Title</label>
@@ -401,6 +407,7 @@ onMounted(() => fetchDocuments())
               v-model="createTitle"
               placeholder="Document title"
               size="sm"
+              class="w-full"
               @keydown.enter="createDocument"
             />
           </div>

@@ -65,7 +65,15 @@ async function mountForType(type: string) {
         CardAttachments: true,
         CardDependencies: true,
         CardSpec: true,
-        CardPlan: true
+        // Not the `true` shorthand — CardModal calls cardPlanRef.value.loadAndExpandFirst()
+        // via a template ref, which an auto-stub doesn't expose (caused an unhandled
+        // rejection on every mount with a Plan tab). Custom stub keeps the same
+        // `card-plan-stub` tag the auto-stub would produce, plus a no-op for that method.
+        CardPlan: {
+          name: 'CardPlan',
+          template: '<card-plan-stub />',
+          methods: { loadAndExpandFirst() {} }
+        }
       }
     }
   })
@@ -80,12 +88,12 @@ describe('CardModal Docs tab visibility (real component, not duplicated constant
     mockGET.mockReset()
   })
 
-  it('Goal: Docs tab present, Spec labeled Specification, Plan present', async () => {
+  it('Goal: Docs tab present, Spec labeled Specification, no Plan (D-65: Goal cards do not own Plans)', async () => {
     const wrapper = await mountForType('Goal')
     expect((wrapper.vm as any).hasDocsTab).toBe(true)
     expect(wrapper.find('card-spec-stub').exists()).toBe(true)
     expect(wrapper.find('card-spec-stub').attributes('doctype')).toBe('Specification')
-    expect(wrapper.find('card-plan-stub').exists()).toBe(true)
+    expect(wrapper.find('card-plan-stub').exists()).toBe(false)
   })
 
   it('Idea: Docs tab present, Spec labeled Concept, no Plan', async () => {
@@ -104,10 +112,11 @@ describe('CardModal Docs tab visibility (real component, not duplicated constant
     expect(wrapper.find('card-plan-stub').exists()).toBe(true)
   })
 
-  it('Task: Docs tab present, no Spec, Plan present', async () => {
+  it('Task: Docs tab present, Spec labeled ValidationMatrix, Plan present (D-68: Task gets a ValidationMatrix Spec)', async () => {
     const wrapper = await mountForType('Task')
     expect((wrapper.vm as any).hasDocsTab).toBe(true)
-    expect(wrapper.find('card-spec-stub').exists()).toBe(false)
+    expect(wrapper.find('card-spec-stub').exists()).toBe(true)
+    expect(wrapper.find('card-spec-stub').attributes('doctype')).toBe('ValidationMatrix')
     expect(wrapper.find('card-plan-stub').exists()).toBe(true)
   })
 })
