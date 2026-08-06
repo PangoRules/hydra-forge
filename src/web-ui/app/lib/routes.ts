@@ -16,6 +16,9 @@ export const UiRoutes = {
   Login: '/login',
   Setup: '/setup',
   Chats: '/chats',
+  ChatSessions: {
+    Detail: (sessionId: string) => `/chats/${sessionId}`
+  },
   Projects: {
     List: '/projects',
     Board: (projectId: string) => `/projects/${projectId}`

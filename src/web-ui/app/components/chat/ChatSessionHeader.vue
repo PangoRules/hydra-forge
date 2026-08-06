@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
-import type { ChatSessionDetailDto, PromptPresetDto } from '~/types/chat'
+import type { AgentPersonalityDto, ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
 
 const props = defineProps<{
   session: ChatSessionDetailDto
+  isOwner: boolean
 }>()
 
 const emit = defineEmits<{
@@ -13,9 +14,14 @@ const emit = defineEmits<{
   editPersonality: [personalityId: string | null]
   editMode: [mode: AiEditMode]
   fork: []
+  startEditTitle: []
+  exportChat: []
+  toggleFind: []
 }>()
 
 const api = useApi()
+
+const isActive = computed(() => props.session.status === 'Active')
 
 const aiEditModeOptions = [
   { label: 'Per mutation', value: AiEditMode.PerMutation },
@@ -23,56 +29,98 @@ const aiEditModeOptions = [
 ]
 
 const selectedPersonalityId = ref<string | null>(props.session.personalityId)
-const personalities = ref<PromptPresetDto[]>([])
+const personalities = ref<AgentPersonalityDto[]>([])
 const loadingPersonalities = ref(false)
+const personalityError = ref<string | null>(null)
 
 watch(() => props.session.personalityId, (v) => {
   selectedPersonalityId.value = v
 })
 
 watch(selectedPersonalityId, (v) => {
+  if (!isActive.value) return
   emit('editPersonality', v)
 })
 
 function handleScopeToggle(e: Event) {
+  if (!isActive.value) return
   const target = e.target as HTMLInputElement
   emit('toggleScope', target.checked)
 }
 
 async function handleEditModeChange(val: AiEditMode) {
+  if (!isActive.value) return
   emit('editMode', val)
 }
 
 async function fetchPersonalities() {
   loadingPersonalities.value = true
+  personalityError.value = null
   try {
-    const { data } = await api.GET<PromptPresetDto[]>(ApiRoutes.Chat.personalities.list())
+    const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
     personalities.value = (data ?? []).filter(p => !p.archivedAt)
-  } catch {
-    // personalities degrade to "none" on error
+  } catch (err) {
+    personalityError.value = err instanceof Error ? err.message : 'Failed to load personalities'
   } finally {
     loadingPersonalities.value = false
   }
 }
 
-const personalityItems = computed(() => [
-  { label: 'Default', value: null as string | null },
-  ...personalities.value.map(p => ({ label: p.name, value: p.id }))
-])
+const personalityItems = computed(() => {
+  const items = personalities.value.map(p => ({ label: p.name, value: p.id }))
+  // Only include "Default" option when there is an actual default personality to clear to
+  const defaultPersonality = personalities.value.find(p => p.isDefault)
+  if (defaultPersonality) {
+    return [{ label: 'Default', value: defaultPersonality.id as string | null }, ...items]
+  }
+  return items
+})
 
 onMounted(fetchPersonalities)
 </script>
 
 <template>
-  <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
-    <!-- Title -->
+  <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
+    <!-- Title (editable by owner) -->
     <h2 class="font-semibold truncate flex-1 min-w-0 text-sm">
       {{ session.title || 'Chat' }}
     </h2>
 
-    <!-- Scope toggle (personal chats only) -->
+    <!-- Title edit pencil (owner, active only) -->
+    <UButton
+      v-if="isOwner && isActive"
+      icon="i-lucide-pencil"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Rename chat"
+      @click="emit('startEditTitle')"
+    />
+
+    <!-- Export (owner only) -->
+    <UButton
+      v-if="isOwner"
+      icon="i-lucide-download"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Export chat"
+      @click="emit('exportChat')"
+    />
+
+    <!-- Find -->
+    <UButton
+      icon="i-lucide-search"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Find in conversation"
+      @click="emit('toggleFind')"
+    />
+
+    <!-- Scope toggle — owner, active, non-project -->
     <label
-      v-if="!session.projectId"
+      v-if="isOwner && isActive && !session.projectId"
       class="flex items-center gap-1.5 text-xs text-muted shrink-0 cursor-pointer"
       title="When enabled, the AI searches all your documents"
     >
@@ -85,9 +133,9 @@ onMounted(fetchPersonalities)
       <span>All docs</span>
     </label>
 
-    <!-- Personality picker -->
+    <!-- Personality picker — owner, active, non-project -->
     <USelect
-      v-if="!session.projectId"
+      v-if="isOwner && isActive && !session.projectId"
       v-model="selectedPersonalityId"
       :items="personalityItems"
       :loading="loadingPersonalities"
@@ -96,9 +144,9 @@ onMounted(fetchPersonalities)
       placeholder="Personality"
     />
 
-    <!-- AI edit mode picker (project chats only) -->
+    <!-- AI edit mode picker — owner, active, project chats -->
     <USelect
-      v-if="session.projectId"
+      v-if="isOwner && isActive && session.projectId"
       :model-value="session.aiEditMode"
       :items="aiEditModeOptions"
       size="xs"
@@ -108,7 +156,7 @@ onMounted(fetchPersonalities)
 
     <!-- Fork button: visible on shared project chats the caller doesn't own -->
     <UButton
-      v-if="session.isShared && session.projectId"
+      v-if="session.isShared && session.projectId && !isOwner"
       icon="i-lucide-git-fork"
       variant="soft"
       color="neutral"
@@ -119,9 +167,9 @@ onMounted(fetchPersonalities)
       Fork
     </UButton>
 
-    <!-- Close button -->
+    <!-- Close button — owner, active -->
     <UButton
-      v-if="session.status === 'Active'"
+      v-if="isOwner && isActive"
       icon="i-lucide-x"
       variant="ghost"
       color="neutral"

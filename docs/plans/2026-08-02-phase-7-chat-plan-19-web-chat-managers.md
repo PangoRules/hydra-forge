@@ -19,5 +19,7 @@
 - [x] Close button: `POST /api/chat/sessions/{sessionId}/close` → F3 explicit close
 - [x] Manual validation: `docs/manual-validation/2026-08-02-phase-7-chat-plan-19-web-chat-managers-matrix.md` — scope toggle changes retrieval on next send; fork button appears only on shared chats the caller doesn't own and produces a new session
 
+**Test scope:** e2e
+
 **Acceptance:**
 - `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`

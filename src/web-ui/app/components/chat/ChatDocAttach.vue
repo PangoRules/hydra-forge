@@ -2,7 +2,7 @@
 import { ApiRoutes } from '~/lib/routes'
 
 interface AttachedDoc {
-  id: string
+  documentId: string
   title: string
 }
 
@@ -19,26 +19,32 @@ const toast = useAppToast()
 
 const attachedDocs = ref<AttachedDoc[]>([])
 const loading = ref(true)
+const fetchError = ref<string | null>(null)
 const showPicker = ref(false)
 
 async function fetchAttached() {
   loading.value = true
+  fetchError.value = null
   try {
     const { data } = await api.GET<AttachedDoc[]>(
       ApiRoutes.Chat.sessions.listDocuments(props.sessionId)
     )
     attachedDocs.value = data ?? []
-  } catch {
-    // non-critical — panel degrades gracefully
+  } catch (err) {
+    fetchError.value = err instanceof Error ? err.message : 'Failed to load documents'
+    toast.error(fetchError.value)
   } finally {
     loading.value = false
   }
 }
 
-async function removeDoc(docId: string) {
+async function removeDoc(documentId: string) {
+  const doc = attachedDocs.value.find(d => d.documentId === documentId)
+  const label = doc?.title ?? 'document'
   try {
-    await api.DELETE(ApiRoutes.Chat.sessions.detachDocument(props.sessionId, docId))
-    attachedDocs.value = attachedDocs.value.filter(d => d.id !== docId)
+    await api.DELETE(ApiRoutes.Chat.sessions.detachDocument(props.sessionId, documentId))
+    attachedDocs.value = attachedDocs.value.filter(d => d.documentId !== documentId)
+    toast.success(`"${label}" removed`)
     emit('attached')
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to remove document')
@@ -79,6 +85,14 @@ onMounted(fetchAttached)
       />
     </div>
 
+    <!-- Error state -->
+    <p
+      v-else-if="fetchError"
+      class="text-xs text-error text-center py-2"
+    >
+      {{ fetchError }}
+    </p>
+
     <!-- Empty state -->
     <p
       v-else-if="attachedDocs.length === 0"
@@ -94,8 +108,8 @@ onMounted(fetchAttached)
     >
       <li
         v-for="doc in attachedDocs"
-        :key="doc.id"
-        class="flex items-center gap-2 text-xs group"
+        :key="doc.documentId"
+        class="flex items-center gap-2 text-xs group focus-within:relative"
       >
         <UIcon
           name="i-lucide-file-text"
@@ -107,9 +121,9 @@ onMounted(fetchAttached)
           variant="ghost"
           size="xs"
           color="error"
-          class="opacity-0 group-hover:opacity-100 shrink-0"
+          class="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
           title="Remove attachment"
-          @click="removeDoc(doc.id)"
+          @click="removeDoc(doc.documentId)"
         />
       </li>
     </ul>
