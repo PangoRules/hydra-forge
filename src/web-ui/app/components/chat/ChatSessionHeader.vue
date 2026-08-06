@@ -3,10 +3,16 @@ import { ApiRoutes } from '~/lib/routes'
 import type { AgentPersonalityDto, ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
 
-const props = defineProps<{
-  session: ChatSessionDetailDto
-  isOwner: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    session: ChatSessionDetailDto
+    isOwner: boolean
+    compact?: boolean
+  }>(),
+  {
+    compact: false
+  }
+)
 
 const emit = defineEmits<{
   close: []
@@ -76,19 +82,75 @@ const personalityItems = computed(() => {
   return items
 })
 
+const compactMenuItems = computed(() => {
+  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>> = []
+
+  if (props.isOwner) {
+    groups.push([
+      { label: 'Rename chat', icon: 'i-lucide-pencil', disabled: !isActive.value, onSelect: () => emit('startEditTitle') },
+      { label: 'Export chat', icon: 'i-lucide-download', onSelect: () => emit('exportChat') },
+      { label: 'Find in conversation', icon: 'i-lucide-search', onSelect: () => emit('toggleFind') }
+    ])
+  } else {
+    groups.push([
+      { label: 'Find in conversation', icon: 'i-lucide-search', onSelect: () => emit('toggleFind') }
+    ])
+  }
+
+  if (props.isOwner && isActive.value && !props.session.projectId) {
+    groups.push([
+      {
+        label: props.session.searchAllMyDocs ? 'All docs (on)' : 'All docs (off)',
+        icon: props.session.searchAllMyDocs ? 'i-lucide-check' : undefined,
+        onSelect: () => emit('toggleScope', !props.session.searchAllMyDocs)
+      },
+      ...personalityItems.value.map(p => ({
+        label: p.label,
+        icon: selectedPersonalityId.value === p.value ? 'i-lucide-check' : undefined,
+        onSelect: () => { selectedPersonalityId.value = p.value }
+      }))
+    ])
+  }
+
+  if (props.isOwner && isActive.value && props.session.projectId) {
+    groups.push(
+      aiEditModeOptions.map(opt => ({
+        label: opt.label,
+        icon: props.session.aiEditMode === opt.value ? 'i-lucide-check' : undefined,
+        onSelect: () => emit('editMode', opt.value)
+      }))
+    )
+  }
+
+  if (props.session.isShared && props.session.projectId && !props.isOwner) {
+    groups.push([
+      { label: 'Fork (summarize → start my own)', icon: 'i-lucide-git-fork', onSelect: () => emit('fork') }
+    ])
+  }
+
+  return groups
+})
+
 onMounted(fetchPersonalities)
 </script>
 
 <template>
   <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
     <!-- Title (editable by owner) -->
-    <h2 class="font-semibold truncate flex-1 min-w-0 text-sm">
+    <h2
+      v-if="!compact"
+      class="font-semibold truncate flex-1 min-w-0 text-sm"
+    >
       {{ session.title || 'Chat' }}
     </h2>
+    <div
+      v-else
+      class="flex-1 min-w-0"
+    />
 
     <!-- Title edit pencil (owner, active only) -->
     <UButton
-      v-if="isOwner"
+      v-if="!compact && isOwner"
       icon="i-lucide-pencil"
       variant="ghost"
       color="neutral"
@@ -100,7 +162,7 @@ onMounted(fetchPersonalities)
 
     <!-- Export (owner only) -->
     <UButton
-      v-if="isOwner"
+      v-if="!compact && isOwner"
       icon="i-lucide-download"
       variant="ghost"
       color="neutral"
@@ -111,6 +173,7 @@ onMounted(fetchPersonalities)
 
     <!-- Find -->
     <UButton
+      v-if="!compact"
       icon="i-lucide-search"
       variant="ghost"
       color="neutral"
@@ -121,7 +184,7 @@ onMounted(fetchPersonalities)
 
     <!-- Scope toggle — owner, active, non-project -->
     <label
-      v-if="isOwner && isActive && !session.projectId"
+      v-if="!compact && isOwner && isActive && !session.projectId"
       class="flex items-center gap-1.5 text-xs text-muted shrink-0 cursor-pointer"
       title="When enabled, the AI searches all your documents"
     >
@@ -136,7 +199,7 @@ onMounted(fetchPersonalities)
 
     <!-- Personality picker — owner, active, non-project -->
     <USelect
-      v-if="isOwner && isActive && !session.projectId"
+      v-if="!compact && isOwner && isActive && !session.projectId"
       v-model="selectedPersonalityId"
       :items="personalityItems"
       :loading="loadingPersonalities"
@@ -147,7 +210,7 @@ onMounted(fetchPersonalities)
 
     <!-- AI edit mode picker — owner, active, project chats -->
     <USelect
-      v-if="isOwner && isActive && session.projectId"
+      v-if="!compact && isOwner && isActive && session.projectId"
       :model-value="session.aiEditMode"
       :items="aiEditModeOptions"
       size="xs"
@@ -157,7 +220,7 @@ onMounted(fetchPersonalities)
 
     <!-- Fork button: visible on shared project chats the caller doesn't own -->
     <UButton
-      v-if="session.isShared && session.projectId && !isOwner"
+      v-if="!compact && session.isShared && session.projectId && !isOwner"
       icon="i-lucide-git-fork"
       variant="soft"
       color="neutral"
@@ -167,6 +230,20 @@ onMounted(fetchPersonalities)
     >
       Fork
     </UButton>
+
+    <!-- Kebab menu — compact mode only -->
+    <UDropdownMenu
+      v-if="compact"
+      :items="compactMenuItems"
+    >
+      <UButton
+        icon="i-lucide-more-vertical"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        title="More actions"
+      />
+    </UDropdownMenu>
 
     <!-- Close button — owner, active -->
     <UButton

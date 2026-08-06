@@ -211,6 +211,7 @@ async function submitTitleEdit() {
             :initial-preset-id="dock.pendingMessage?.presetId ?? null"
             :initial-model-id="dock.pendingMessage?.modelId ?? null"
             :initial-effort="dock.pendingMessage?.reasoningEffort ?? null"
+            compact
             @session-refreshed="onSessionRefreshed"
             @initial-message-sent="dock.clearPendingMessage()"
           />

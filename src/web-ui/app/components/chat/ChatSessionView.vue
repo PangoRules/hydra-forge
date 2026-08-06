@@ -19,6 +19,7 @@ const props = withDefaults(
     initialModelId?: string | null
     initialEffort?: string | null
     feature?: string
+    compact?: boolean
   }>(),
   {
     initialMessage: null,
@@ -26,7 +27,8 @@ const props = withDefaults(
     initialPresetId: null,
     initialModelId: null,
     initialEffort: null,
-    feature: 'PersonalChat'
+    feature: 'PersonalChat',
+    compact: false
   }
 )
 
@@ -529,6 +531,7 @@ onUnmounted(() => {
       v-if="session"
       :session="session"
       :is-owner="isOwner"
+      :compact="compact"
       @toggle-scope="handleToggleScope"
       @edit-personality="handleEditPersonality"
       @edit-mode="handleEditMode"

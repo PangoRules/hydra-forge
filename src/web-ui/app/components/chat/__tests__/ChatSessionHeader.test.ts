@@ -133,6 +133,62 @@ describe('ChatSessionHeader — disabled-when-closed state', () => {
   })
 })
 
+describe('ChatSessionHeader — compact mode (ChatDock)', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockToastAdd.mockReset()
+    mockGET.mockResolvedValue({
+      data: [
+        { id: 'p1', name: 'Helper', description: null, systemPrompt: '', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null }
+      ],
+      error: undefined
+    })
+  })
+
+  it('hides the title when compact', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ title: 'My Chat' }), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('h2').exists()).toBe(false)
+  })
+
+  it('shows the title when not compact', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ title: 'My Chat' }), isOwner: true, compact: false }
+    })
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('My Chat')
+  })
+
+  it('shows a single kebab menu button instead of individual icon buttons when compact', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="More actions"]').exists()).toBe(true)
+    expect(wrapper.find('[title="Rename chat"]').exists()).toBe(false)
+    expect(wrapper.find('[title="Export chat"]').exists()).toBe(false)
+  })
+
+  it('close button stays visible outside the kebab menu when compact', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
+  })
+
+  it('shows all individual icon buttons when not compact (unchanged behavior)', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: false }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Rename chat"]').exists()).toBe(true)
+    expect(wrapper.find('[title="More actions"]').exists()).toBe(false)
+  })
+})
+
 describe('ChatSessionHeader — personality fetch error path', () => {
   it('shows error toast when personalities GET fails', async () => {
     mockGET.mockReset()
