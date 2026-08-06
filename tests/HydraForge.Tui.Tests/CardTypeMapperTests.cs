@@ -117,14 +117,9 @@ public class CardTypeMapperTests
     [InlineData(CardType.Idea, DocType.Concept)]
     [InlineData(CardType.Issue, DocType.Report)]
     [InlineData(CardType.Security, DocType.Report)]
+    [InlineData(CardType.Task, DocType.ValidationMatrix)]
     public void ToDocType_Should_Return_Correct_Doc_Type(CardType cardType, DocType expected)
     {
         Assert.Equal(expected, CardTypeMapper.ToDocType(cardType));
-    }
-
-    [Fact]
-    public void ToDocType_Should_Throw_For_Task()
-    {
-        Assert.Throws<ArgumentException>(() => CardTypeMapper.ToDocType(CardType.Task));
     }
 }

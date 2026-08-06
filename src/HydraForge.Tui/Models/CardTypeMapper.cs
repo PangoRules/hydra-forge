@@ -65,10 +65,14 @@ public static class CardTypeMapper
     // Mirrors CardModal.vue's SPEC_CARD_TYPES/PLAN_CARD_TYPES/CARD_TYPE_TO_DOC_TYPE —
     // keep in sync with that file if the card-type doc rules change (see D-44).
     public static bool AllowsSpec(CardType cardType) =>
-        cardType is CardType.Goal or CardType.Idea or CardType.Issue or CardType.Security or CardType.Task;
+        cardType
+            is CardType.Goal
+                or CardType.Idea
+                or CardType.Issue
+                or CardType.Security
+                or CardType.Task;
 
-    public static bool AllowsPlan(CardType cardType) =>
-        cardType is CardType.Issue or CardType.Task;
+    public static bool AllowsPlan(CardType cardType) => cardType is CardType.Issue or CardType.Task;
 
     public static DocType ToDocType(CardType cardType) =>
         cardType switch
@@ -77,6 +81,7 @@ public static class CardTypeMapper
             CardType.Idea => DocType.Concept,
             CardType.Issue => DocType.Report,
             CardType.Security => DocType.Report,
+            CardType.Task => DocType.ValidationMatrix,
             _ => throw new ArgumentException(
                 $"Card type {cardType} has no Spec.",
                 nameof(cardType)
