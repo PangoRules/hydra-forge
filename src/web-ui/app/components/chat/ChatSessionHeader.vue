@@ -94,22 +94,22 @@ const compactMenuItems = computed(() => {
     ])
   }
 
-    // Close/Archive/Reopen are independent, not mutually exclusive — Archive is
-    // reachable regardless of Active/Closed (same as the /chats list page's
-    // always-present archive button), and Reopen covers both Closed-only and
-    // Archived-only (including an Active-but-Archived session).
-    // Close is only meaningful for project/card chats — closing a normal
-    // chat produces no summary and no card link, so archiving is the only
-    // "finished" path there (see spec: Actions by chat type).
-    if (props.isOwner) {
-      const lifecycle: Array<{ label: string, icon: string, onSelect: () => void }> = []
-      if (isActive.value && props.session.projectId) {
-        lifecycle.push({
-          label: 'Close chat',
-          icon: 'i-lucide-check-circle',
-          onSelect: () => { showCloseConfirm.value = true }
-        })
-      }
+  // Close/Archive/Reopen are independent, not mutually exclusive — Archive is
+  // reachable regardless of Active/Closed (same as the /chats list page's
+  // always-present archive button), and Reopen covers both Closed-only and
+  // Archived-only (including an Active-but-Archived session).
+  // Close is only meaningful for project/card chats — closing a normal
+  // chat produces no summary and no card link, so archiving is the only
+  // "finished" path there (see spec: Actions by chat type).
+  if (props.isOwner) {
+    const lifecycle: Array<{ label: string, icon: string, onSelect: () => void }> = []
+    if (isActive.value && props.session.projectId) {
+      lifecycle.push({
+        label: 'Close chat',
+        icon: 'i-lucide-check-circle',
+        onSelect: () => { showCloseConfirm.value = true }
+      })
+    }
     if (!isActive.value || props.session.archivedAt) {
       lifecycle.push({
         label: 'Reopen chat',

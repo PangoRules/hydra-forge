@@ -11,7 +11,7 @@ const mockStartNewChat = vi.fn()
 const storeState = reactive({
   isOpen: true,
   mode: 'session' as 'draft' | 'session' | 'history',
-  activeSessionId: 'abc',
+  activeSessionId: 'abc' as string | null,
   isCreating: false,
   currentProjectId: 'proj1',
   position: { x: 0, y: 0 },
