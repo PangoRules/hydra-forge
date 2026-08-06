@@ -99,6 +99,22 @@ describe('ChatDockHistory', () => {
     expect(wrapper.text()).toContain('Back')
     expect(wrapper.text()).toContain('History')
   })
+
+  it('shows a type badge on each history item', async () => {
+    mockUseChatSessionList.mockReturnValue({
+      sessions: ref([{
+        ...makeSession('s1', 'Proj chat', null),
+        projectId: 'p1',
+        openCardId: null
+      }]),
+      loading: ref(false),
+      hasMore: ref(false),
+      loadMore: vi.fn(),
+      refresh: vi.fn()
+    })
+    const wrapper = await mountSuspended(ChatDockHistory)
+    expect(wrapper.text()).toContain('Project')
+  })
 })
 
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
