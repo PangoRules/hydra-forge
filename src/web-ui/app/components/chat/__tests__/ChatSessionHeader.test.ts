@@ -54,24 +54,26 @@ describe('ChatSessionHeader — ownership visibility', () => {
     })
   })
 
-  it('owner sees rename pencil, export, and close buttons', async () => {
+  it('owner sees rename pencil, export, and dismiss buttons', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession(), isOwner: true }
     })
     await flushPromises()
     expect(wrapper.find('[title="Rename chat"]').exists()).toBe(true)
     expect(wrapper.find('[title="Export chat"]').exists()).toBe(true)
-    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
+    // Dismiss replaces the old "Close chat" inline button for non-compact mode
+    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(true)
   })
 
-  it('non-owner does not see rename pencil, export, or close buttons', async () => {
+  it('non-owner does not see rename pencil, export, or dismiss buttons', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ ownerId: 'u2' }), isOwner: false }
     })
     await flushPromises()
     expect(wrapper.find('[title="Rename chat"]').exists()).toBe(false)
     expect(wrapper.find('[title="Export chat"]').exists()).toBe(false)
-    expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
+    // Dismiss (old "Close chat" inline button) is owner-only
+    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(false)
   })
 
   it('shows fork button on shared project chat the caller does not own', async () => {
@@ -100,6 +102,7 @@ describe('ChatSessionHeader — ownership visibility', () => {
 describe('ChatSessionHeader — disabled-when-closed state', () => {
   beforeEach(() => {
     mockGET.mockReset()
+    mockToastAdd.mockReset()
     mockGET.mockResolvedValue({
       data: [
         { id: 'p1', name: 'Helper', description: null, systemPrompt: '', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null }
@@ -116,12 +119,16 @@ describe('ChatSessionHeader — disabled-when-closed state', () => {
     expect(wrapper.find('[title="Rename chat"]').attributes('disabled')).toBeDefined()
   })
 
-  it('close button is absent when session is Closed', async () => {
+  it('dismiss button is absent when session is Closed (replaces old Close chat inline button)', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ status: ChatSessionStatus.Closed }), isOwner: true }
     })
     await flushPromises()
-    expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
+    // Dism button (v-if="isOwner && isActive") should not show for Closed sessions
+    // Active sessions should show Dism; Closed sessions should not
+    const vm = wrapper.vm as any
+    expect(vm.isActive).toBe(false)
+    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(false)
   })
 
   it('scope toggle is absent when session is Closed', async () => {
@@ -189,9 +196,58 @@ describe('ChatSessionHeader — compact mode (ChatDock)', () => {
   })
 })
 
+describe('ChatSessionHeader — dismiss vs close/archive', () => {
+  it('emits dismiss (not close) when the X button is clicked', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true }
+    })
+    await flushPromises()
+    await wrapper.find('[title="Dismiss"]').trigger('click')
+    expect(wrapper.emitted('dismiss')).toBeTruthy()
+    expect(wrapper.emitted('close')).toBeFalsy()
+  })
+
+  it('shows a confirm dialog before emitting closeSession from the kebab', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const closeItem = wrapper.vm.compactMenuItems.flat().find((i: { label: string }) => i.label === 'Close chat') as { onSelect: () => void }
+    closeItem.onSelect()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="close-session-confirm"]').exists()).toBe(true)
+  })
+
+  it('every compact menu item has an icon', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const items = wrapper.vm.compactMenuItems.flat()
+    expect(items.length).toBeGreaterThan(0)
+    expect(items.every((i: { icon?: string }) => !!i.icon)).toBe(true)
+  })
+
+  it('Select Personality is a single item with children, separate from Manage personalities', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const items = wrapper.vm.compactMenuItems.flat()
+    const selectPersonality = items.find((i: { label: string }) => i.label === 'Select Personality') as { label: string, children?: unknown[], [key: string]: unknown }
+    const manage = items.find((i: { label: string }) => i.label === 'Manage personalities…')
+    expect(selectPersonality).toBeTruthy()
+    expect(Array.isArray(selectPersonality.children)).toBe(true)
+    expect(manage).toBeTruthy()
+    expect(manage).not.toBe(selectPersonality)
+  })
+})
+
 describe('ChatSessionHeader — personality fetch error path', () => {
   it('shows error toast when personalities GET fails', async () => {
     mockGET.mockReset()
+    // Reset toast mock BEFORE mounting so the captured ref inside the component
+    // points to the fresh spy, not a reference obtained before the reset
     mockToastAdd.mockReset()
     mockGET.mockRejectedValue(new Error('Server error'))
     const wrapper = await mountSuspended(ChatSessionHeader, {

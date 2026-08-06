@@ -38,6 +38,7 @@ const emit = defineEmits<{
    * this session's title (e.g. the AI-generated title landing after the first
    * exchange) without polling or a shared store. */
   sessionRefreshed: [id: string, title: string, status: string]
+  dismiss: []
 }>()
 
 const toast = useAppToast()
@@ -355,7 +356,7 @@ async function handleEditMode(mode: AiEditMode) {
   await updateSessionSettings({ aiEditMode: mode })
 }
 
-async function handleClose() {
+async function handleCloseSession() {
   if (!session.value) return
   try {
     await api.POST(ApiRoutes.Chat.sessions.close(props.sessionId))
@@ -364,6 +365,35 @@ async function handleClose() {
     toast.success('Chat closed')
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to close chat')
+  }
+}
+
+async function handleArchiveSession() {
+  if (!session.value) return
+  try {
+    await api.DELETE(ApiRoutes.Chat.sessions.archive(props.sessionId))
+    session.value.status = ChatSessionStatus.Archived
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    toast.success('Chat archived')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to archive chat')
+  }
+}
+
+function handleDismiss() {
+  emit('dismiss')
+}
+
+async function handleReopen() {
+  if (!session.value) return
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.reopen(props.sessionId))
+    session.value.status = ChatSessionStatus.Active
+    session.value.archivedAt = null
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    toast.success('Chat reopened')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to reopen chat')
   }
 }
 
@@ -535,7 +565,10 @@ onUnmounted(() => {
       @toggle-scope="handleToggleScope"
       @edit-personality="handleEditPersonality"
       @edit-mode="handleEditMode"
-      @close="handleClose"
+      @close-session="handleCloseSession"
+      @archive-session="handleArchiveSession"
+      @reopen-session="handleReopen"
+      @dismiss="handleDismiss"
       @fork="handleFork"
       @start-edit-title="startEditTitle"
       @export-chat="exportChat"

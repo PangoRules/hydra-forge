@@ -16,7 +16,10 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  close: []
+  dismiss: []
+  closeSession: []
+  archiveSession: []
+  reopenSession: []
   toggleScope: [searchAllMyDocs: boolean]
   editPersonality: [personalityId: string | null]
   editMode: [mode: AiEditMode]
@@ -51,10 +54,17 @@ watch(selectedPersonalityId, (v, oldValue) => {
   }
 })
 
-function handleScopeToggle(e: Event) {
-  if (!isActive.value) return
-  const target = e.target as HTMLInputElement
-  emit('toggleScope', target.checked)
+const showCloseConfirm = ref(false)
+const showArchiveConfirm = ref(false)
+
+function confirmClose() {
+  showCloseConfirm.value = false
+  emit('closeSession')
+}
+
+function confirmArchive() {
+  showArchiveConfirm.value = false
+  emit('archiveSession')
 }
 
 async function handleEditModeChange(val: AiEditMode) {
@@ -74,18 +84,8 @@ async function fetchPersonalities() {
   }
 }
 
-const personalityItems = computed(() => {
-  const items = personalities.value.map(p => ({ label: p.name, value: p.id }))
-  // Only include "Default" option when there is an actual default personality to clear to
-  const defaultPersonality = personalities.value.find(p => p.isDefault)
-  if (defaultPersonality) {
-    return [{ label: 'Default', value: defaultPersonality.id as string | null }, ...items]
-  }
-  return items
-})
-
 const compactMenuItems = computed(() => {
-  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>> = []
+  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, children?: Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>, onSelect?: () => void }>> = []
 
   if (props.isOwner) {
     groups.push([
@@ -102,15 +102,16 @@ const compactMenuItems = computed(() => {
   if (props.isOwner && isActive.value && !props.session.projectId) {
     groups.push([
       {
-        label: props.session.searchAllMyDocs ? 'All docs (on)' : 'All docs (off)',
-        icon: props.session.searchAllMyDocs ? 'i-lucide-check' : undefined,
-        onSelect: () => emit('toggleScope', !props.session.searchAllMyDocs)
+        label: 'Select Personality',
+        icon: 'i-lucide-user-round',
+        children: [
+          ...personalities.value.map(p => ({
+            label: p.name,
+            icon: selectedPersonalityId.value === p.id ? 'i-lucide-check' : undefined,
+            onSelect: () => { selectedPersonalityId.value = p.id }
+          }))
+        ]
       },
-      ...personalityItems.value.map(p => ({
-        label: p.label,
-        icon: selectedPersonalityId.value === p.value ? 'i-lucide-check' : undefined,
-        onSelect: () => { selectedPersonalityId.value = p.value }
-      })),
       { label: 'Manage personalities…', icon: 'i-lucide-users', onSelect: () => { showManageModal.value = true } }
     ])
   }
@@ -131,10 +132,38 @@ const compactMenuItems = computed(() => {
     ])
   }
 
+  if (props.isOwner && isActive.value) {
+    groups.push([
+      {
+        label: 'Close chat',
+        icon: 'i-lucide-check-circle',
+        onSelect: () => { showCloseConfirm.value = true }
+      }
+    ])
+  } else if (props.isOwner && props.session.status === 'Closed' && !props.session.archivedAt) {
+    groups.push([
+      {
+        label: 'Archive chat',
+        icon: 'i-lucide-archive',
+        onSelect: () => { showArchiveConfirm.value = true }
+      }
+    ])
+  } else if (props.isOwner && props.session.archivedAt) {
+    groups.push([
+      {
+        label: 'Reopen chat',
+        icon: 'i-lucide-folder-open',
+        onSelect: () => emit('reopenSession')
+      }
+    ])
+  }
+
   return groups
 })
 
 onMounted(fetchPersonalities)
+
+defineExpose({ compactMenuItems })
 </script>
 
 <template>
@@ -185,52 +214,47 @@ onMounted(fetchPersonalities)
       @click="emit('toggleFind')"
     />
 
-    <!-- Scope toggle — owner, active, non-project -->
-    <label
-      v-if="!compact && isOwner && isActive && !session.projectId"
-      class="flex items-center gap-1.5 text-xs text-muted shrink-0 cursor-pointer"
-      title="When enabled, the AI searches all your documents"
-    >
-      <input
-        type="checkbox"
-        :checked="session.searchAllMyDocs"
-        class="size-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-        @change="handleScopeToggle"
-      >
-      <span>All docs</span>
-    </label>
+    <!-- Lifecycle actions — owner, non-compact only -->
+    <template v-if="!compact && isOwner && isActive">
+      <!-- AI edit mode picker — owner, active, project chats -->
+      <USelect
+        v-if="session.projectId"
+        :model-value="session.aiEditMode"
+        :items="aiEditModeOptions"
+        size="xs"
+        class="w-32 shrink-0"
+        @update:model-value="handleEditModeChange"
+      />
 
-    <!-- Personality picker — owner, active, non-project -->
-    <USelect
-      v-if="!compact && isOwner && isActive && !session.projectId"
-      v-model="selectedPersonalityId"
-      :items="personalityItems"
-      :loading="loadingPersonalities"
-      size="xs"
-      class="w-36 shrink-0"
-      placeholder="Personality"
-    />
-
-    <!-- Manage personalities button — owner, active, non-project -->
-    <UButton
-      v-if="!compact && isOwner && isActive && !session.projectId"
-      icon="i-lucide-users"
-      variant="ghost"
-      color="neutral"
-      size="xs"
-      title="Manage personalities"
-      @click="showManageModal = true"
-    />
-
-    <!-- AI edit mode picker — owner, active, project chats -->
-    <USelect
-      v-if="!compact && isOwner && isActive && session.projectId"
-      :model-value="session.aiEditMode"
-      :items="aiEditModeOptions"
-      size="xs"
-      class="w-32 shrink-0"
-      @update:model-value="handleEditModeChange"
-    />
+      <!-- Inline lifecycle buttons (mirror kebab items in compact) -->
+      <UButton
+        v-if="session.status === 'Active'"
+        icon="i-lucide-check-circle"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        title="Close chat"
+        @click="showCloseConfirm = true"
+      />
+      <UButton
+        v-if="session.status === 'Closed'"
+        icon="i-lucide-archive"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        title="Archive chat"
+        @click="showArchiveConfirm = true"
+      />
+      <UButton
+        v-if="session.archivedAt"
+        icon="i-lucide-folder-open"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        title="Reopen chat"
+        @click="emit('reopenSession')"
+      />
+    </template>
 
     <!-- Fork button: visible on shared project chats the caller doesn't own -->
     <UButton
@@ -259,20 +283,38 @@ onMounted(fetchPersonalities)
       />
     </UDropdownMenu>
 
-    <!-- Close button — owner, active -->
+    <!-- Dismiss button — owner, active -->
     <UButton
       v-if="isOwner && isActive"
       icon="i-lucide-x"
       variant="ghost"
       color="neutral"
       size="xs"
-      title="Close chat"
-      @click="emit('close')"
+      title="Dismiss"
+      @click="emit('dismiss')"
     />
 
     <PersonalityManageModal
       v-model:open="showManageModal"
       @changed="fetchPersonalities"
+    />
+
+    <ConfirmDialog
+      v-model:open="showCloseConfirm"
+      data-testid="close-session-confirm"
+      title="Close chat"
+      message="This chat will be marked as closed. You can still view the conversation and messages."
+      confirm-text="Close"
+      @confirm="confirmClose"
+    />
+
+    <ConfirmDialog
+      v-model:open="showArchiveConfirm"
+      title="Archive chat"
+      message="This chat will be archived. You can reopen it later from the chat list."
+      confirm-text="Archive"
+      confirm-color="error"
+      @confirm="confirmArchive"
     />
   </div>
 </template>

@@ -256,6 +256,7 @@ async function reopenSession(id: string) {
       :initial-effort="pendingMessage?.reasoningEffort ?? null"
       @initial-message-sent="pendingMessage = null"
       @session-refreshed="syncSession"
+      @dismiss="activeSessionId = null"
     />
     <div
       v-else
