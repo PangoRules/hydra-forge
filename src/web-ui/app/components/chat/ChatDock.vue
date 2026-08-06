@@ -208,7 +208,6 @@ async function sendDraftMessage(
             <ChatInput
               :disabled="dock.isCreating"
               :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
-              show-personality-picker
               @send="sendDraftMessage"
             />
           </div>

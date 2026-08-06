@@ -6,23 +6,22 @@ import PersonalityManageModal from '~/components/chat/PersonalityManageModal.vue
 const props = withDefaults(
   defineProps<{
     disabled?: boolean
+    /** The session's current personality, when one already exists — syncs the
+     * picker's selection so it reflects what's actually set, and lets a
+     * change made here (mid-conversation) update the live session. Null/
+     * absent for a composer with no session yet (personality only takes
+     * effect at send time then, via the send emit's 5th argument). */
     personalityId?: string | null
     feature?: string
     initialModelId?: string | null
     initialEffort?: string | null
-    /** Show the personality picker + manage button. Only true for composers
-     * with no session yet (chats/index.vue empty state, ChatDock draft mode) —
-     * once a session exists, ChatSessionHeader is the personality control;
-     * showing a second one here would be a duplicate/competing control. */
-    showPersonalityPicker?: boolean
   }>(),
   {
     disabled: false,
     personalityId: null,
     feature: 'PersonalChat',
     initialModelId: null,
-    initialEffort: null,
-    showPersonalityPicker: false
+    initialEffort: null
   }
 )
 
@@ -35,6 +34,13 @@ const emit = defineEmits<{
     personalityId?: string | null
   ]
   cancel: []
+  /** Fires immediately on selection change (not just bundled into send) so an
+   * already-existing session can react right away — mirrors what the old
+   * ChatSessionHeader personality select used to do before this picker
+   * consolidated into the single composer icon. No-op for callers with no
+   * session yet (chats/index.vue empty state, ChatDock draft mode); they just
+   * hold the selection locally until the first send creates the session. */
+  personalityChanged: [personalityId: string | null]
 }>()
 
 const api = useApi()
@@ -46,8 +52,18 @@ const selectedPresetId = ref<string | null>(null)
 const selectedModelId = ref<string | null>(null)
 const selectedEffort = ref<string | null>(null)
 const personalities = ref<AgentPersonalityDto[]>([])
-const selectedPersonalityId = ref<string | null>(null)
+const selectedPersonalityId = ref<string | null>(props.personalityId)
 const showManageModal = ref(false)
+
+watch(() => props.personalityId, (v) => {
+  selectedPersonalityId.value = v
+})
+
+watch(selectedPersonalityId, (v, oldValue) => {
+  if (oldValue !== v) {
+    emit('personalityChanged', v)
+  }
+})
 
 const selectedPresetName = computed(
   () => presets.value.find(p => p.id === selectedPresetId.value)?.name ?? null
@@ -122,7 +138,7 @@ function submit() {
 
 onMounted(() => {
   void fetchPresets()
-  if (props.showPersonalityPicker) void fetchPersonalities()
+  void fetchPersonalities()
 })
 
 function setContent(text: string) {
@@ -136,7 +152,7 @@ function setContent(text: string) {
   })
 }
 
-defineExpose({ setContent, selectedPersonalityId })
+defineExpose({ setContent, selectedPersonalityId, personalityMenuItems })
 </script>
 
 <template>
@@ -202,28 +218,16 @@ defineExpose({ setContent, selectedPersonalityId })
         </div>
 
         <div class="flex items-center gap-1.5">
-          <template v-if="showPersonalityPicker">
-            <UDropdownMenu :items="personalityMenuItems">
-              <UButton
-                icon="i-lucide-user-round"
-                :variant="selectedPersonalityId ? 'soft' : 'ghost'"
-                :color="selectedPersonalityId ? 'primary' : 'neutral'"
-                size="sm"
-                :disabled="disabled"
-                title="Personality"
-              />
-            </UDropdownMenu>
-
+          <UDropdownMenu :items="personalityMenuItems">
             <UButton
-              icon="i-lucide-users"
-              variant="ghost"
-              color="neutral"
+              icon="i-lucide-user-round"
+              :variant="selectedPersonalityId ? 'soft' : 'ghost'"
+              :color="selectedPersonalityId ? 'primary' : 'neutral'"
               size="sm"
               :disabled="disabled"
-              title="Manage personalities"
-              @click="showManageModal = true"
+              title="Personality"
             />
-          </template>
+          </UDropdownMenu>
 
           <UDropdownMenu :items="presetMenuItems">
             <UButton
@@ -248,7 +252,6 @@ defineExpose({ setContent, selectedPersonalityId })
     </div>
 
     <PersonalityManageModal
-      v-if="showPersonalityPicker"
       v-model:open="showManageModal"
       @changed="fetchPersonalities"
     />

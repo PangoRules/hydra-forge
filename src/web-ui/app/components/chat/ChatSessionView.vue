@@ -691,10 +691,12 @@ defineExpose({
         ref="chatInputRef"
         :disabled="awaitingReply || !isActive"
         :feature="feature"
+        :personality-id="session.personalityId"
         :initial-model-id="resolvedInitialModelId"
         :initial-effort="resolvedInitialEffort"
         @send="handleSend"
         @cancel="handleCancel"
+        @personality-changed="handleEditPersonality"
       >
         <template
           v-if="awaitingReply"

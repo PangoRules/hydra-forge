@@ -19,38 +19,44 @@ function routedGet(url: string) {
   return Promise.resolve({ data: [], error: undefined })
 }
 
-describe('ChatInput — personality picker (before a session exists)', () => {
+describe('ChatInput — personality picker (single icon, always present)', () => {
   beforeEach(() => {
     mockGET.mockReset()
     mockGET.mockImplementation(routedGet)
   })
 
-  it('does not show the personality picker by default', async () => {
+  it('always shows exactly one personality icon (no separate manage button)', async () => {
     const wrapper = await mountSuspended(ChatInput)
     await flushPromises()
-    expect(wrapper.find('[title="Personality"]').exists()).toBe(false)
+    expect(wrapper.find('[title="Personality"]').exists()).toBe(true)
     expect(wrapper.find('[title="Manage personalities"]').exists()).toBe(false)
   })
 
-  it('shows the personality picker and manage button when showPersonalityPicker is true', async () => {
-    const wrapper = await mountSuspended(ChatInput, {
-      props: { showPersonalityPicker: true }
-    })
+  it('the personality dropdown items include a Manage personalities entry', async () => {
+    const wrapper = await mountSuspended(ChatInput)
     await flushPromises()
-    expect(wrapper.find('[title="Personality"]').exists()).toBe(true)
-    expect(wrapper.find('[title="Manage personalities"]').exists()).toBe(true)
+    const items = (wrapper.vm as unknown as { personalityMenuItems: Array<Array<{ label: string }>> }).personalityMenuItems.flat()
+    expect(items.some(i => i.label === 'Manage personalities…')).toBe(true)
   })
 
-  it('does not fetch personalities when showPersonalityPicker is false', async () => {
-    await mountSuspended(ChatInput)
+  it('initializes the selection from the personalityId prop (existing session)', async () => {
+    const wrapper = await mountSuspended(ChatInput, {
+      props: { personalityId: 'p1' }
+    })
     await flushPromises()
-    expect(mockGET).not.toHaveBeenCalledWith(expect.stringContaining('/personalities'))
+    expect(wrapper.text()).toContain('Personality: well')
+  })
+
+  it('emits personalityChanged immediately when the selection changes', async () => {
+    const wrapper = await mountSuspended(ChatInput)
+    await flushPromises()
+    ;(wrapper.vm as unknown as { selectedPersonalityId: string | null }).selectedPersonalityId = 'p1'
+    await flushPromises()
+    expect(wrapper.emitted('personalityChanged')).toEqual([['p1']])
   })
 
   it('emits the selected personalityId as the 5th send argument', async () => {
-    const wrapper = await mountSuspended(ChatInput, {
-      props: { showPersonalityPicker: true }
-    })
+    const wrapper = await mountSuspended(ChatInput)
     await flushPromises()
     ;(wrapper.vm as unknown as { selectedPersonalityId: string | null }).selectedPersonalityId = 'p1'
     await wrapper.find('textarea').setValue('hi')
@@ -60,9 +66,7 @@ describe('ChatInput — personality picker (before a session exists)', () => {
   })
 
   it('shows the real personality name in the active chip once selected', async () => {
-    const wrapper = await mountSuspended(ChatInput, {
-      props: { showPersonalityPicker: true }
-    })
+    const wrapper = await mountSuspended(ChatInput)
     await flushPromises()
     ;(wrapper.vm as unknown as { selectedPersonalityId: string | null }).selectedPersonalityId = 'p1'
     await flushPromises()

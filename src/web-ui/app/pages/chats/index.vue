@@ -32,6 +32,16 @@ watch(statusFilter, () => {
 })
 
 onMounted(() => {
+  // A fresh navigation straight to /chats?compose=1 (e.g. the top-nav "New Chat"
+  // link, clicked from the mini dock or anywhere else) must land on a blank
+  // compose view — resuming the last session here was the bug: this resume
+  // logic ran unconditionally, and the compose-query watcher below only fires
+  // on a query CHANGE (no `immediate: true`), so it never got a chance to
+  // override this on the very first load of the page.
+  if (route.query.compose === '1') {
+    startCompose()
+    return
+  }
   if (dock.activeSessionId) {
     activeSessionId.value = dock.activeSessionId
   } else {
@@ -267,7 +277,6 @@ async function reopenSession(id: string) {
       </div>
       <ChatInput
         :disabled="starting"
-        show-personality-picker
         @send="startNewChat"
       />
     </div>

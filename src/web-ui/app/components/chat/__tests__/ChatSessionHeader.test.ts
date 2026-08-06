@@ -1,20 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { describe, it, expect } from 'vitest'
+import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
 import { AiEditMode, ChatSessionStatus } from '~/types/chat'
 import type { ChatSessionDetailDto } from '~/types/chat'
-
-const mockGET = vi.fn()
-const mockPATCH = vi.fn()
-const mockToastAdd = vi.fn()
-
-mockNuxtImport('useApi', () => () => ({
-  GET: mockGET,
-  PATCH: mockPATCH
-}))
-
-mockNuxtImport('useToast', () => () => ({ add: mockToastAdd }))
 
 function makeSession(overrides: Partial<ChatSessionDetailDto> = {}): ChatSessionDetailDto {
   return {
@@ -43,17 +32,6 @@ function makeSession(overrides: Partial<ChatSessionDetailDto> = {}): ChatSession
 }
 
 describe('ChatSessionHeader — ownership visibility', () => {
-  beforeEach(() => {
-    mockGET.mockReset()
-    mockToastAdd.mockReset()
-    mockGET.mockResolvedValue({
-      data: [
-        { id: 'p1', name: 'Helper', description: null, systemPrompt: '', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null }
-      ],
-      error: undefined
-    })
-  })
-
   it('owner sees rename pencil, export, and dismiss buttons', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession(), isOwner: true }
@@ -100,17 +78,6 @@ describe('ChatSessionHeader — ownership visibility', () => {
 })
 
 describe('ChatSessionHeader — disabled-when-closed state', () => {
-  beforeEach(() => {
-    mockGET.mockReset()
-    mockToastAdd.mockReset()
-    mockGET.mockResolvedValue({
-      data: [
-        { id: 'p1', name: 'Helper', description: null, systemPrompt: '', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null }
-      ],
-      error: undefined
-    })
-  })
-
   it('rename pencil is disabled when session is Closed', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ status: ChatSessionStatus.Closed }), isOwner: true }
@@ -157,17 +124,6 @@ describe('ChatSessionHeader — disabled-when-closed state', () => {
 })
 
 describe('ChatSessionHeader — compact mode (ChatDock)', () => {
-  beforeEach(() => {
-    mockGET.mockReset()
-    mockToastAdd.mockReset()
-    mockGET.mockResolvedValue({
-      data: [
-        { id: 'p1', name: 'Helper', description: null, systemPrompt: '', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null }
-      ],
-      error: undefined
-    })
-  })
-
   it('still shows the real title when compact (ChatDock owns the single header row)', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ title: 'My Chat' }), isOwner: true, compact: true }
@@ -251,54 +207,9 @@ describe('ChatSessionHeader — dismiss vs close/archive', () => {
     expect(items.every((i: { icon?: string }) => !!i.icon)).toBe(true)
   })
 
-  it('Select Personality is a single item with children, separate from Manage personalities', async () => {
-    const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession(), isOwner: true, compact: true }
-    })
-    await flushPromises()
-    const items = wrapper.vm.compactMenuItems.flat()
-    const selectPersonality = items.find((i: { label: string }) => i.label === 'Select Personality') as { label: string, children?: unknown[], [key: string]: unknown }
-    const manage = items.find((i: { label: string }) => i.label === 'Manage personalities…')
-    expect(selectPersonality).toBeTruthy()
-    expect(Array.isArray(selectPersonality.children)).toBe(true)
-    expect(manage).toBeTruthy()
-    expect(manage).not.toBe(selectPersonality)
-  })
-})
-
-describe('ChatSessionHeader — personality fetch error path', () => {
-  it('shows error toast when personalities GET fails', async () => {
-    mockGET.mockReset()
-    // Reset toast mock BEFORE mounting so the captured ref inside the component
-    // points to the fresh spy, not a reference obtained before the reset
-    mockToastAdd.mockReset()
-    mockGET.mockRejectedValue(new Error('Server error'))
-    const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession(), isOwner: true }
-    })
-    await flushPromises()
-    expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'error', title: 'Server error' })
-    )
-  })
-
-  it('renders session title even when personalities fetch fails', async () => {
-    mockGET.mockReset()
-    mockGET.mockRejectedValue(new Error('Server error'))
-    const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession({ title: 'My Chat' }), isOwner: true }
-    })
-    await flushPromises()
-    expect(wrapper.text()).toContain('My Chat')
-  })
 })
 
 describe('ChatSessionHeader — dock chrome (back/new-chat/full-height)', () => {
-  beforeEach(() => {
-    mockGET.mockReset()
-    mockGET.mockResolvedValue({ data: [], error: undefined })
-  })
-
   it('shows a back button only when showBackButton is true', async () => {
     const withBack = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession(), isOwner: true, compact: true, showBackButton: true }

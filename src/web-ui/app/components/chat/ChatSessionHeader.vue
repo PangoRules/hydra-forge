@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ApiRoutes } from '~/lib/routes'
-import type { AgentPersonalityDto, ChatSessionDetailDto } from '~/types/chat'
+import type { ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
-import PersonalityManageModal from '~/components/chat/PersonalityManageModal.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 const props = withDefaults(
@@ -29,7 +27,6 @@ const emit = defineEmits<{
   closeSession: []
   archiveSession: []
   reopenSession: []
-  editPersonality: [personalityId: string | null]
   editMode: [mode: AiEditMode]
   fork: []
   startEditTitle: []
@@ -40,30 +37,12 @@ const emit = defineEmits<{
   toggleFullHeight: []
 }>()
 
-const api = useApi()
-const toast = useAppToast()
-
 const isActive = computed(() => props.session.status === 'Active')
 
 const aiEditModeOptions = [
   { label: 'Per mutation', value: AiEditMode.PerMutation },
   { label: 'Blanket', value: AiEditMode.Blanket }
 ]
-
-const selectedPersonalityId = ref<string | null>(props.session.personalityId)
-const personalities = ref<AgentPersonalityDto[]>([])
-const loadingPersonalities = ref(false)
-const showManageModal = ref(false)
-watch(() => props.session.personalityId, (v) => {
-  selectedPersonalityId.value = v
-})
-
-watch(selectedPersonalityId, (v, oldValue) => {
-  if (!isActive.value) return
-  if (oldValue !== v) {
-    emit('editPersonality', v)
-  }
-})
 
 const showCloseConfirm = ref(false)
 const showArchiveConfirm = ref(false)
@@ -83,29 +62,8 @@ async function handleEditModeChange(val: AiEditMode) {
   emit('editMode', val)
 }
 
-async function fetchPersonalities() {
-  loadingPersonalities.value = true
-  try {
-    const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
-    personalities.value = (data ?? []).filter(p => !p.archivedAt)
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : 'Failed to load personalities')
-  } finally {
-    loadingPersonalities.value = false
-  }
-}
-
-const personalityItems = computed(() => {
-  const items = personalities.value.map(p => ({ label: p.name, value: p.id }))
-  const defaultPersonality = personalities.value.find(p => p.isDefault)
-  if (defaultPersonality) {
-    return [{ label: 'Default', value: defaultPersonality.id as string | null }, ...items]
-  }
-  return items
-})
-
 const compactMenuItems = computed(() => {
-  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, children?: Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>, onSelect?: () => void }>> = []
+  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>> = []
 
   if (props.isOwner) {
     groups.push([
@@ -116,23 +74,6 @@ const compactMenuItems = computed(() => {
   } else {
     groups.push([
       { label: 'Find in conversation', icon: 'i-lucide-search', onSelect: () => emit('toggleFind') }
-    ])
-  }
-
-  if (props.isOwner && isActive.value && !props.session.projectId) {
-    groups.push([
-      {
-        label: 'Select Personality',
-        icon: 'i-lucide-user-round',
-        children: [
-          ...personalities.value.map(p => ({
-            label: p.name,
-            icon: selectedPersonalityId.value === p.id ? 'i-lucide-check' : undefined,
-            onSelect: () => { selectedPersonalityId.value = p.id }
-          }))
-        ]
-      },
-      { label: 'Manage personalities…', icon: 'i-lucide-users', onSelect: () => { showManageModal.value = true } }
     ])
   }
 
@@ -182,8 +123,6 @@ const compactMenuItems = computed(() => {
 
   return groups
 })
-
-onMounted(fetchPersonalities)
 
 defineExpose({ compactMenuItems })
 </script>
@@ -245,28 +184,6 @@ defineExpose({ compactMenuItems })
       size="xs"
       title="Find in conversation"
       @click="emit('toggleFind')"
-    />
-
-    <!-- Personality picker — owner, active, non-project, non-compact -->
-    <USelect
-      v-if="!compact && isOwner && isActive && !session.projectId"
-      v-model="selectedPersonalityId"
-      :items="personalityItems"
-      :loading="loadingPersonalities"
-      size="xs"
-      class="w-36 shrink-0"
-      placeholder="Personality"
-    />
-
-    <!-- Manage personalities button — owner, active, non-project, non-compact -->
-    <UButton
-      v-if="!compact && isOwner && isActive && !session.projectId"
-      icon="i-lucide-users"
-      variant="ghost"
-      color="neutral"
-      size="xs"
-      title="Manage personalities"
-      @click="showManageModal = true"
     />
 
     <!-- AI edit mode picker — owner, active, project chats -->
@@ -370,11 +287,6 @@ defineExpose({ compactMenuItems })
       size="xs"
       title="Dismiss"
       @click="emit('dismiss')"
-    />
-
-    <PersonalityManageModal
-      v-model:open="showManageModal"
-      @changed="fetchPersonalities"
     />
 
     <ConfirmDialog
