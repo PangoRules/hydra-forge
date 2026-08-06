@@ -5,7 +5,7 @@ import { setActivePinia, createPinia } from 'pinia'
 const mockPOST = vi.fn()
 
 // Route state — mutable so tests can change it
-const routeState = { path: '/projects/abc/board', params: { id: 'abc' } }
+const routeState = { path: '/projects/abc', params: { id: 'abc' } }
 
 mockNuxtImport('useApi', () => () => ({
   GET: vi.fn(),
@@ -22,7 +22,7 @@ describe('chatDock store', () => {
     setActivePinia(createPinia())
     mockPOST.mockReset()
     // Reset route to board context
-    routeState.path = '/projects/abc/board'
+    routeState.path = '/projects/abc'
     routeState.params = { id: 'abc' }
   })
 
