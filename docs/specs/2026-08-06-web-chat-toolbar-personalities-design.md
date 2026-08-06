@@ -138,3 +138,54 @@ Mapping to `docs/agent-platform-vision.md`'s future Agent Crew (for whoever even
 ## Error handling
 
 All API calls in `PersonalityManageModal` follow the existing `useApi()` try/catch convention (D-40) — every call wrapped, errors surfaced via `useToast().add()`. No new error codes needed; existing `PersonalityNotOwner` and validation errors from the service surface through the same path already used by `ChatSessionHeader.fetchPersonalities()`.
+
+---
+
+## Addendum 2026-08-06b — Dismiss vs Close, Reopen/Unarchive, status visibility, composer parity
+
+Second round of manual-validation feedback (post Task 1-5 implementation) surfaced a real bug and a genuine product-semantics gap, plus scoped-down UI follow-ups. This addendum covers all of it; Tasks 7-13 in the plan implement it.
+
+### A. Root-cause bugs fixed prior to this addendum (already shipped, no plan tasks needed)
+
+Investigated via `superpowers:systematic-debugging` against the live dev server, not static reading. One root cause explained three separate symptom reports:
+
+- Migration `20260805164019_AddOllamaThinkModeToProviderModelConfig` created column `ollama_think_mode`; `HydraForgeDbContext` has always mapped `ThinkMode` to `think_mode`. Every query touching `provider_model_configs` (`ModelRouter.ResolveAsync`, `/api/llm/models`, `LlmChatSummaryGenerator`) threw Postgres `42703`, caught by broad catch-alls and surfaced as either a generic "internal error" chat bubble, a silent empty model list (`ChatModelPicker.vue` swallows fetch errors with no fallback UI), or the session-close 500.
+- Fixed by migration `20260806142546_FixThinkModeColumnName` (`RenameColumn`), applied to the shared dev database. Verified end-to-end (send → reply → close) against the real running server.
+- Separately: `20260731000000_ReencryptLlmProviderApiKeys.cs` had no `.Designer.cs` companion, so EF's migration scanner never discovered it — dead code, deleted outright (no functional change, never applied anywhere).
+
+### B. Dismiss vs Close — these were wrongly fused into one button
+
+`ChatDock`'s and the full-page view's X button both call `POST /api/chat/sessions/{id}/close` directly. That means **dismissing the floating popup permanently ends the conversation** (generates an AI summary, revokes AI-edit mode, makes the session read-only) — there's no way to just hide the panel and come back later. This is the root of "closed = can no longer interact, that caught me off guard."
+
+Close itself is not redundant with Archive — confirmed by reading `ChatSessionService`:
+- `Close()` generates a summary that (a) becomes a `CardChatLink` breadcrumb on the originating card for card-scoped panel chats, and (b) is the preview subtitle in `ChatDockHistory`'s recent-chats list. It also revokes AI-edit mode, matching the documented rule that AI-edit trust is revoked when a session ends. The session stays visible in the list, just read-only.
+- `Archive()` is a separate axis (`ArchivedAt`) — hides the session from the list entirely, eventually hard-deleted by housekeeping (`ArchivedItemRetentionDays`). Already wired on the `/chats` list page's per-row archive button, just never reachable from inside an open chat.
+- Closing a card panel chat also happens automatically and silently today when a new panel chat is opened for the same card (`ChatSessionService.cs` "F6" implicit-close) — Close is a real system mechanic, not purely a manual user action.
+
+**Fix:** split the two concerns.
+- The X button (both `ChatDock` and full-page `ChatSessionHeader`) becomes a pure dismiss/navigate-away action — no API call, session state untouched.
+- "Close chat" and "Archive chat" become explicit, confirmed actions inside the kebab menu (`ConfirmDialog`, same component already used on the `/chats` list page for archive).
+
+### C. Reopen + Unarchive — real gaps, not deferred features
+
+`ChatSession.Open(personalityId, openCardId, aiEditMode)` exists but is dead code — nothing calls it outside its own domain unit tests; `CreateAsync` builds new sessions with a plain object initializer. No `Unarchive` domain method exists at all. Per the "no dead code" principle, `Open` is replaced (not kept alongside a new method) by a `Reopen()` that matches what's actually needed:
+
+- **One-step revive** (per product decision): a single action clears `ArchivedAt` and flips `Status` back to `Active`, regardless of whether the session was Closed, Archived-while-Active, or both. No two-step "unarchive then reopen."
+- **AI-edit mode resets to `PerMutation`** on reopen (per product decision) — matches the existing "AI-edit revoked when session ends" rule; reopening resumes the conversation but doesn't silently restore standing AI-mutation trust.
+- Reopen does not clear `Summary` — it's left as a snapshot of the prior close, naturally overwritten next time the session closes again.
+
+### D. Status visibility on `/chats` — the actual missing piece
+
+Today the list mixes Active + Closed sessions (with a small "Closed" badge, no filter), and hides Archived entirely with no way back. Fix: a status filter control (All / Active / Closed / Archived) on the `/chats` list page, plus a "Revive" row action (visible for Closed and/or Archived rows) calling the new Reopen endpoint. This is what makes Close/Archive/Reopen legible instead of hidden.
+
+### E. Composer parity + drop All-docs checkbox
+
+- **Drop the "All docs" checkbox entirely** (not just reposition it). There's no good reason a growing personal document library should ever be attached in full to one chat — it doesn't scale and it's not what anyone actually wants. `ChatSessionHeader`'s scope-toggle control and `ChatSession.SearchAllMyDocs`/`ToggleSearchAllMyDocs` are removed from the UI surface (backend field can stay dormant/unused rather than a data migration — out of scope to strip the column here).
+- **Personality select, Manage-personalities, and Attach-docs become reachable from `ChatInput.vue`** before any session exists (the composer used both on the empty `/chats` state and inside `ChatDock`'s draft mode) — currently these only appear once a session is created. Staged personality/doc selections are passed along on session creation (`CreateChatSessionRequest` already accepts `PersonalityId`; staged doc attachment happens via a follow-up `AttachDocumentAsync` call right after the session is created, since `attachDocument` requires a `sessionId`).
+- **Kebab-menu icon consistency + "Select Personality" as a real submenu** — every kebab item gets an icon (not just some); the flat list of personality names is restructured into a single "Select Personality" entry with `children` (Nuxt UI v4's `DropdownMenuItem.children` nested-submenu support), separate from the standalone "Manage personalities…" entry, matching how the user actually thinks about the two (browse-and-pick vs. administer).
+- **ChatDock**: single-row header (`< Chat TITLE : + x`) with the title bound to the real session title (fixing the hardcoded `'Chat' : 'New Chat'` literal and the currently-empty `onSessionRefreshed` handler), a width increase, and a full-height toggle.
+
+### Out of scope (unchanged from the original spec, restated for clarity)
+
+- **Document upload from chat** (drag/drop/paste/import → saved to personal Documents library → later referenced via attach or `@`-mention). Confirmed via code read: `ChatDocAttachPicker.vue` only ever lists+searches existing Documents, there is no upload UI anywhere in the app, and there is no Documents page at all — "no documents found" is structurally guaranteed for any account, not a bug. This is real, sized feature work (upload pipeline, on-the-fly Document creation, `@`-mention autocomplete) and gets its own future spec, same treatment as the CardModal chat icon.
+- CardModal → floating/draggable multi-instance panel (unchanged, still deferred).
