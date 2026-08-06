@@ -2,6 +2,7 @@
 import { ApiRoutes } from '~/lib/routes'
 import type { AgentPersonalityDto, ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
+import PersonalityManageModal from '~/components/chat/PersonalityManageModal.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -38,6 +39,7 @@ const aiEditModeOptions = [
 const selectedPersonalityId = ref<string | null>(props.session.personalityId)
 const personalities = ref<AgentPersonalityDto[]>([])
 const loadingPersonalities = ref(false)
+const showManageModal = ref(false)
 watch(() => props.session.personalityId, (v) => {
   selectedPersonalityId.value = v
 })
@@ -108,7 +110,8 @@ const compactMenuItems = computed(() => {
         label: p.label,
         icon: selectedPersonalityId.value === p.value ? 'i-lucide-check' : undefined,
         onSelect: () => { selectedPersonalityId.value = p.value }
-      }))
+      })),
+      { label: 'Manage personalities…', icon: 'i-lucide-users', onSelect: () => { showManageModal.value = true } }
     ])
   }
 
@@ -208,6 +211,17 @@ onMounted(fetchPersonalities)
       placeholder="Personality"
     />
 
+    <!-- Manage personalities button — owner, active, non-project -->
+    <UButton
+      v-if="!compact && isOwner && isActive && !session.projectId"
+      icon="i-lucide-users"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Manage personalities"
+      @click="showManageModal = true"
+    />
+
     <!-- AI edit mode picker — owner, active, project chats -->
     <USelect
       v-if="!compact && isOwner && isActive && session.projectId"
@@ -254,6 +268,11 @@ onMounted(fetchPersonalities)
       size="xs"
       title="Close chat"
       @click="emit('close')"
+    />
+
+    <PersonalityManageModal
+      v-model:open="showManageModal"
+      @changed="fetchPersonalities"
     />
   </div>
 </template>
