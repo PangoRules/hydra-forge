@@ -27,7 +27,7 @@
 - Create: `src/web-ui/app/lib/chat-type.ts`
 - Test: `src/web-ui/app/lib/__tests__/chat-type.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/web-ui/app/lib/__tests__/chat-type.test.ts`:
 
@@ -62,12 +62,12 @@ describe('CHAT_TYPE_BADGE', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- chat-type`
 Expected: FAIL — `Cannot find module '~/lib/chat-type'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/web-ui/app/lib/chat-type.ts`:
 
@@ -93,12 +93,12 @@ export const CHAT_TYPE_BADGE: Record<ChatType, { label: string, color: 'neutral'
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd src/web-ui && pnpm test -- chat-type`
 Expected: PASS (5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/lib/chat-type.ts src/web-ui/app/lib/__tests__/chat-type.test.ts
@@ -113,7 +113,7 @@ git commit -m "feat(chat): add chat-type util — getChatType + badge metadata"
 - Modify: `src/web-ui/app/composables/useChatSessionList.ts:13,28-31`
 - Test: `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`, inside the existing `describe('useChatSessionList', ...)` block:
 
@@ -132,12 +132,12 @@ Append to `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`, ins
   })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: FAIL — `statusFilter.value` is `'ActiveAndClosed'` and the URL has no `status=` param
 
-- [ ] **Step 3: Update the composable**
+- [x] **Step 3: Update the composable**
 
 In `src/web-ui/app/composables/useChatSessionList.ts`, replace line 13:
 
@@ -169,12 +169,12 @@ with:
       const url = `${base}&status=${statusFilter.value}`
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: PASS (6 tests — 5 existing + 1 new)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/composables/useChatSessionList.ts src/web-ui/app/composables/__tests__/useChatSessionList.test.ts
@@ -190,7 +190,7 @@ git commit -m "feat(chat): default session list filter to Active, drop ActiveAnd
 
 Note: this page has no dedicated test file (page-level composition is covered by component tests on `ChatSessionHeader`/`ChatSessionList` and the composable test). Verification here is typecheck + lint + manual.
 
-- [ ] **Step 1: Filter dropdown — three options**
+- [x] **Step 1: Filter dropdown — three options**
 
 In `src/web-ui/app/pages/chats/index.vue`, replace the `statusFilterItems` declaration (lines 23-28):
 
@@ -217,7 +217,7 @@ const statusFilterItems = [
 
 The default comes from `useChatSessionList` (Task 2), so no other change is needed here — `statusFilter` now starts at `'Active'`.
 
-- [ ] **Step 2: Import the chat-type util**
+- [x] **Step 2: Import the chat-type util**
 
 Add to the imports at the top of the `<script setup>` block:
 
@@ -225,7 +225,7 @@ Add to the imports at the top of the `<script setup>` block:
 import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
 ```
 
-- [ ] **Step 3: Type badge + summary subtitle in the sidebar item slot**
+- [x] **Step 3: Type badge + summary subtitle in the sidebar item slot**
 
 Replace the button content inside the `#item` template (lines 217-227 — the `<p class="truncate text-sm font-medium">` title and the status `<p>` below it):
 
@@ -275,7 +275,7 @@ with:
                 </p>
 ```
 
-- [ ] **Step 4: Archive ConfirmDialog — deletion-warning message**
+- [x] **Step 4: Archive ConfirmDialog — deletion-warning message**
 
 Replace the page-level archive dialog (lines 293-301):
 
@@ -305,12 +305,12 @@ with (retention days are admin-configurable — say "eventually deleted", never 
     />
 ```
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: clean (no errors)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/web-ui/app/pages/chats/index.vue
@@ -325,7 +325,7 @@ git commit -m "feat(chat): three-option filter, type badge, summary subtitle, ar
 - Modify: `src/web-ui/app/components/chat/ChatSessionHeader.vue:102-108` (kebab Close item), `:203-211` (inline Close button), `:301-308` (archive ConfirmDialog), `:146-153` (title block — badge)
 - Test: `src/web-ui/app/components/chat/__tests__/ChatSessionHeader.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/web-ui/app/components/chat/__tests__/ChatSessionHeader.test.ts` as a new describe block (reuses the existing `makeSession` helper at the top of that file):
 
@@ -379,12 +379,12 @@ describe('ChatSessionHeader — close button gating by chat type', () => {
 })
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionHeader`
 Expected: FAIL — normal-chat cases currently show/offer Close
 
-- [ ] **Step 3: Gate the kebab Close item on `projectId`**
+- [x] **Step 3: Gate the kebab Close item on `projectId`**
 
 In `ChatSessionHeader.vue`, inside `compactMenuItems`, change the lifecycle block (lines 102-108) from:
 
@@ -413,7 +413,7 @@ to:
     }
 ```
 
-- [ ] **Step 4: Gate the inline Close button on `projectId`**
+- [x] **Step 4: Gate the inline Close button on `projectId`**
 
 Change the inline button (line 204) from:
 
@@ -431,7 +431,7 @@ to:
       icon="i-lucide-check-circle"
 ```
 
-- [ ] **Step 5: Archive ConfirmDialog — deletion-warning message + warning color**
+- [x] **Step 5: Archive ConfirmDialog — deletion-warning message + warning color**
 
 Replace the archive dialog (lines 301-308):
 
@@ -459,7 +459,7 @@ with:
     />
 ```
 
-- [ ] **Step 6: Type badge next to the title (non-compact only — compact dock header has no room)**
+- [x] **Step 6: Type badge next to the title (non-compact only — compact dock header has no room)**
 
 Add the import at the top of `<script setup>`:
 
@@ -506,12 +506,12 @@ to:
 
 (The `flex-1` moves from the `<h2>` to the wrapper `<div>` so the title still claims the free space and truncates correctly.)
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionHeader`
 Expected: PASS (all existing + 5 new)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatSessionHeader.vue src/web-ui/app/components/chat/__tests__/ChatSessionHeader.test.ts
@@ -530,7 +530,7 @@ git commit -m "feat(chat): gate Close on project/card chats, archive deletion wa
 
 The summary subtitle is already present (`{{ session.summary || 'No messages' }}` on line 43) — no change needed for that spec point.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts` (reuse the file's existing session-fixture helper and mount pattern; the mock API must return a session with `projectId: 'p1'` and `openCardId: null`):
 
@@ -548,12 +548,12 @@ Append to `src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts` (re
 
 If the existing test file's fixture helper has a different name/signature, adapt the arrange step to it — the assertion (`wrapper.text()` contains the badge label) stays.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- ChatDockHistory`
 Expected: FAIL — no badge rendered
 
-- [ ] **Step 3: Add the badge to the item slot**
+- [x] **Step 3: Add the badge to the item slot**
 
 Add the import at the top of `<script setup>`:
 
@@ -587,12 +587,12 @@ with:
           </div>
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd src/web-ui && pnpm test -- ChatDockHistory`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatDockHistory.vue src/web-ui/app/components/chat/__tests__/ChatDockHistory.test.ts
@@ -609,7 +609,7 @@ git commit -m "feat(chat): type badge in dock history items"
 
 **Spec deviation (deliberate):** the spec asks the dock to listen to both `@session-refreshed` and `@archive-session` and patch the history list in place. Only `@archive-session` is needed: (a) on close/reopen, `ChatSessionView` already mutates its own `session` ref, which the compact header reads reactively through `sessionViewRef.session` — the open view updates with no listener; (b) the dock's history list is never mounted at the same time as the session view (`v-if` mode branches), and remounting it always fetches a fresh first page — there is no stale list to patch. Wiring a listener for it would be dead code.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `src/web-ui/app/components/chat/__tests__/ChatDock.test.ts`, following the file's existing mount/stub pattern (Pinia via `setActivePinia(createPinia())`, dock store opened into session mode, `ChatSessionView` stubbed or shallow-mounted — match what the existing tests in that file do):
 
@@ -635,12 +635,12 @@ If the existing file doesn't stub `ChatSessionView` by name, stub it explicitly 
 global: { stubs: { ChatSessionView: { name: 'ChatSessionView', template: '<div />' } } }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- ChatDock`
 Expected: FAIL — dock stays in session mode with the archived id
 
-- [ ] **Step 3: Wire the listener**
+- [x] **Step 3: Wire the listener**
 
 In `ChatDock.vue`, add the handler to the script (after `sendDraftMessage`):
 
@@ -678,12 +678,12 @@ Then on the `<ChatSessionView>` in the dock body (around line 223), add the list
 
 (Only the last `@archive-session` line is new — the rest is shown for placement.)
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd src/web-ui && pnpm test -- ChatDock`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/web-ui/app/components/chat/ChatDock.vue src/web-ui/app/components/chat/__tests__/ChatDock.test.ts
@@ -694,9 +694,9 @@ git commit -m "fix(chat): dock returns to draft mode when active session is arch
 
 ### Final verification
 
-- [ ] Run the full web suite: `cd src/web-ui && pnpm test` — all PASS
-- [ ] Run: `cd src/web-ui && pnpm typecheck` — clean
-- [ ] Run: `cd src/web-ui && pnpm lint` — clean
+- [x] Run the full web suite: `cd src/web-ui && pnpm test` — all PASS
+- [x] Run: `cd src/web-ui && pnpm typecheck` — clean
+- [x] Run: `cd src/web-ui && pnpm lint` — clean
 - [ ] Manual smoke (dev server + API up): filter dropdown shows Active/Closed/Archived, defaults to Active; normal chat shows no Close button in header (both page and dock); project chat shows Close; archive from dock header returns dock to draft; badges show in sidebar + dock history; closed chat with summary shows summary subtitle in sidebar.
 
 ---
