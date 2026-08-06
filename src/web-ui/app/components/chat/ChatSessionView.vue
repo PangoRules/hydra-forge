@@ -341,11 +341,6 @@ async function updateSessionSettings(overrides: {
   }
 }
 
-async function handleToggleScope(searchAllMyDocs: boolean) {
-  if (!session.value) return
-  await updateSessionSettings({ searchAllMyDocs })
-}
-
 async function handleEditPersonality(personalityId: string | null) {
   if (!session.value) return
   await updateSessionSettings({ personalityId })
@@ -558,16 +553,35 @@ onUnmounted(() => {
   chatStream.leave()
   chatStream.disconnect()
 })
+
+// In compact mode ChatSessionView renders no header of its own (see the
+// v-if="session && !compact" on <ChatSessionHeader> below) — ChatDock owns
+// the single dock header row and drives it through this exposed surface via
+// a ref to the mounted ChatSessionView instance, instead of duplicating a
+// second header/title-edit implementation in ChatDock.vue.
+defineExpose({
+  session,
+  isOwner,
+  handleEditPersonality,
+  handleEditMode,
+  handleDismiss,
+  handleCloseSession,
+  handleArchiveSession,
+  handleReopen,
+  handleFork,
+  startEditTitle,
+  exportChat,
+  toggleFind
+})
 </script>
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
     <ChatSessionHeader
-      v-if="session"
+      v-if="session && !compact"
       :session="session"
       :is-owner="isOwner"
       :compact="compact"
-      @toggle-scope="handleToggleScope"
       @edit-personality="handleEditPersonality"
       @edit-mode="handleEditMode"
       @close-session="handleCloseSession"

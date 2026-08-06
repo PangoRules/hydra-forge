@@ -168,12 +168,12 @@ describe('ChatSessionHeader — compact mode (ChatDock)', () => {
     })
   })
 
-  it('hides the title when compact', async () => {
+  it('still shows the real title when compact (ChatDock owns the single header row)', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ title: 'My Chat' }), isOwner: true, compact: true }
     })
     await flushPromises()
-    expect(wrapper.find('h2').exists()).toBe(false)
+    expect(wrapper.find('h2').text()).toBe('My Chat')
   })
 
   it('shows the title when not compact', async () => {
@@ -290,5 +290,48 @@ describe('ChatSessionHeader — personality fetch error path', () => {
     })
     await flushPromises()
     expect(wrapper.text()).toContain('My Chat')
+  })
+})
+
+describe('ChatSessionHeader — dock chrome (back/new-chat/full-height)', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({ data: [], error: undefined })
+  })
+
+  it('shows a back button only when showBackButton is true', async () => {
+    const withBack = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true, showBackButton: true }
+    })
+    await flushPromises()
+    expect(withBack.find('[title="Back to history"]').exists()).toBe(true)
+
+    const withoutBack = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    expect(withoutBack.find('[title="Back to history"]').exists()).toBe(false)
+  })
+
+  it('emits back and newChat from their respective buttons', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true, showBackButton: true, showNewChatButton: true }
+    })
+    await flushPromises()
+    await wrapper.find('[title="Back to history"]').trigger('click')
+    await wrapper.find('[title="New chat"]').trigger('click')
+    expect(wrapper.emitted('back')).toBeTruthy()
+    expect(wrapper.emitted('newChat')).toBeTruthy()
+  })
+
+  it('shows the full-height toggle only when showFullHeightToggle is true, and reflects isFullHeight', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession(), isOwner: true, compact: true, showFullHeightToggle: true, isFullHeight: true }
+    })
+    await flushPromises()
+    const toggle = wrapper.find('[title="Exit full height"]')
+    expect(toggle.exists()).toBe(true)
+    await toggle.trigger('click')
+    expect(wrapper.emitted('toggleFullHeight')).toBeTruthy()
   })
 })

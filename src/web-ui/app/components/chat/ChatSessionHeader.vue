@@ -10,9 +10,17 @@ const props = withDefaults(
     session: ChatSessionDetailDto
     isOwner: boolean
     compact?: boolean
+    showBackButton?: boolean
+    showNewChatButton?: boolean
+    showFullHeightToggle?: boolean
+    isFullHeight?: boolean
   }>(),
   {
-    compact: false
+    compact: false,
+    showBackButton: false,
+    showNewChatButton: false,
+    showFullHeightToggle: false,
+    isFullHeight: false
   }
 )
 
@@ -21,13 +29,15 @@ const emit = defineEmits<{
   closeSession: []
   archiveSession: []
   reopenSession: []
-  toggleScope: [searchAllMyDocs: boolean]
   editPersonality: [personalityId: string | null]
   editMode: [mode: AiEditMode]
   fork: []
   startEditTitle: []
   exportChat: []
   toggleFind: []
+  back: []
+  newChat: []
+  toggleFullHeight: []
 }>()
 
 const api = useApi()
@@ -180,17 +190,28 @@ defineExpose({ compactMenuItems })
 
 <template>
   <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
-    <!-- Title (editable by owner) -->
+    <!-- Back to history — dock context only -->
+    <UButton
+      v-if="compact && showBackButton"
+      icon="i-lucide-chevron-left"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Back to history"
+      @click="emit('back')"
+    />
+
+    <!-- Title — always visible. Clickable-to-rename shortcut in compact mode
+         (same rename flow as the kebab's "Rename chat" item); non-compact
+         keeps the dedicated pencil button below instead. -->
     <h2
-      v-if="!compact"
       class="font-semibold truncate flex-1 min-w-0 text-sm"
+      :class="compact && isOwner && isActive ? 'cursor-pointer hover:text-primary' : ''"
+      :title="compact && isOwner && isActive ? 'Click to rename' : undefined"
+      @click="compact && isOwner && isActive ? emit('startEditTitle') : undefined"
     >
       {{ session.title || 'Chat' }}
     </h2>
-    <div
-      v-else
-      class="flex-1 min-w-0"
-    />
 
     <!-- Title edit pencil (owner, active only) -->
     <UButton
@@ -303,6 +324,17 @@ defineExpose({ compactMenuItems })
       Fork
     </UButton>
 
+    <!-- New chat — dock context only -->
+    <UButton
+      v-if="compact && showNewChatButton"
+      icon="i-lucide-plus"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="New chat"
+      @click="emit('newChat')"
+    />
+
     <!-- Kebab menu — compact mode only -->
     <UDropdownMenu
       v-if="compact"
@@ -316,6 +348,17 @@ defineExpose({ compactMenuItems })
         title="More actions"
       />
     </UDropdownMenu>
+
+    <!-- Full-height toggle — dock context only -->
+    <UButton
+      v-if="compact && showFullHeightToggle"
+      :icon="isFullHeight ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      :title="isFullHeight ? 'Exit full height' : 'Full height'"
+      @click="emit('toggleFullHeight')"
+    />
 
     <!-- Dismiss button — always available, no API call, no ownership gate.
          Ending the conversation (Close) or hiding it from the list (Archive)

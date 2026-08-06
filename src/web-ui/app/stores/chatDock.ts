@@ -20,6 +20,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   const activeSessionId = ref<string | null>(null)
   const isCreating = ref(false)
   const position = ref({ x: 0, y: 0 })
+  const isFullHeight = ref(false)
   const pendingMessage = ref<{
     content: string
     presetId: string | null
@@ -64,6 +65,10 @@ export const useChatDockStore = defineStore('chatDock', () => {
   function closeDock() {
     isOpen.value = false
     // activeSessionId is persisted by the watcher below — nothing to do here.
+  }
+
+  function toggleFullHeight() {
+    isFullHeight.value = !isFullHeight.value
   }
 
   // Persist activeSessionId to localStorage on every change, not just on
@@ -143,7 +148,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   }
 
   return {
-    isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage,
-    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage
+    isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage, isFullHeight,
+    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage, toggleFullHeight
   }
 })

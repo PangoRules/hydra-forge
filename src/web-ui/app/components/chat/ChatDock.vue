@@ -2,19 +2,18 @@
 import { useDraggable } from '@vueuse/core'
 import { useChatDockStore } from '~/stores/chatDock'
 import ChatSessionView from '~/components/chat/ChatSessionView.vue'
+import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
 import ChatInput from '~/components/chat/ChatInput.vue'
-import type { ChatSessionDetailDto } from '~/types/chat'
-import { ApiRoutes } from '~/lib/routes'
 
 const dock = useChatDockStore()
 const route = useRoute()
-const api = useApi()
 
 const isHidden = computed(() => route.path.startsWith('/chats'))
 
 const dragHandle = ref<HTMLElement | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
+const sessionViewRef = ref<InstanceType<typeof ChatSessionView> | null>(null)
 
 const { x, y } = useDraggable(popupRef, {
   handle: dragHandle,
@@ -50,10 +49,6 @@ onUnmounted(() => {
   if (isClient) window.removeEventListener('keydown', onKeydown)
 })
 
-function onSessionRefreshed(_id: string, _title: string, _status: string) {
-  // Title/status updated server-side — store refreshes on next open
-}
-
 async function sendDraftMessage(
   content: string,
   presetId?: string | null,
@@ -62,40 +57,6 @@ async function sendDraftMessage(
 ) {
   if (!content.trim() || dock.isCreating) return
   await dock.startNewChat(content, presetId, modelId, reasoningEffort)
-}
-
-const isEditingTitle = ref(false)
-const editTitle = ref('')
-const titleInputRef = ref<HTMLInputElement | null>(null)
-
-async function startEditTitle() {
-  if (!dock.activeSessionId) return
-  try {
-    const { data } = await api.GET<ChatSessionDetailDto>(
-      ApiRoutes.Chat.sessions.detail(dock.activeSessionId)
-    )
-    editTitle.value = data?.title ?? ''
-    isEditingTitle.value = true
-    nextTick(() => titleInputRef.value?.focus())
-  } catch {
-    // silently fail — user can retry
-  }
-}
-
-async function submitTitleEdit() {
-  if (!dock.activeSessionId || !editTitle.value.trim()) {
-    isEditingTitle.value = false
-    return
-  }
-  const newTitle = editTitle.value.trim()
-  try {
-    await api.PATCH(ApiRoutes.Chat.sessions.update(dock.activeSessionId), {
-      body: { title: newTitle }
-    })
-    isEditingTitle.value = false
-  } catch {
-    isEditingTitle.value = false
-  }
 }
 </script>
 
@@ -117,57 +78,83 @@ async function submitTitleEdit() {
       <div
         v-if="dock.isOpen"
         ref="popupRef"
-        class="fixed z-50 w-[380px] h-[50vh] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
-        :style="{ left: `${x}px`, top: `${y}px` }"
+        class="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
+        :class="dock.isFullHeight ? 'w-[440px] h-[calc(100vh-2rem)]' : 'w-[440px] h-[50vh]'"
+        :style="dock.isFullHeight ? { left: `${x}px`, top: '1rem' } : { left: `${x}px`, top: `${y}px` }"
       >
-        <!-- Header -->
+        <!-- Header — single row, drag handle wraps whichever header is showing.
+             Session mode drives the real ChatSessionHeader through a ref to the
+             mounted ChatSessionView; draft/history modes (no session yet) get a
+             lightweight placeholder row with the same back/new-chat/full-height/
+             dismiss controls. -->
         <div
           ref="dragHandle"
-          class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 cursor-move select-none"
+          data-testid="dock-header-row"
+          class="shrink-0 cursor-move select-none"
         >
-          <div class="flex items-center gap-2">
-            <UButton
-              v-if="dock.mode !== 'history'"
-              icon="i-lucide-chevron-left"
-              variant="ghost"
-              size="xs"
-              title="History"
-              @click="dock.showHistory()"
-            />
-            <h2
-              v-if="!isEditingTitle"
-              class="font-semibold text-sm truncate cursor-pointer hover:text-primary"
-              title="Click to rename"
-              @click="startEditTitle"
-            >
-              {{ dock.activeSessionId ? 'Chat' : 'New Chat' }}
-            </h2>
-            <input
-              v-else
-              ref="titleInputRef"
-              v-model="editTitle"
-              class="text-sm font-semibold bg-transparent border-b border-primary outline-none w-full"
-              @blur="submitTitleEdit"
-              @keydown.enter="submitTitleEdit"
-              @keydown.escape="isEditingTitle = false"
-            >
-          </div>
-          <div class="flex items-center gap-1">
-            <UButton
-              icon="i-lucide-plus"
-              variant="ghost"
-              size="xs"
-              title="New chat"
-              :disabled="dock.isCreating"
-              @click="dock.newChat()"
-            />
-            <UButton
-              icon="i-lucide-x"
-              variant="ghost"
-              size="xs"
-              title="Close"
-              @click="dock.closeDock()"
-            />
+          <ChatSessionHeader
+            v-if="dock.mode === 'session' && sessionViewRef?.session"
+            :session="sessionViewRef.session"
+            :is-owner="sessionViewRef.isOwner"
+            compact
+            show-back-button
+            show-new-chat-button
+            show-full-height-toggle
+            :is-full-height="dock.isFullHeight"
+            @back="dock.showHistory()"
+            @new-chat="dock.newChat()"
+            @dismiss="dock.closeDock()"
+            @toggle-full-height="dock.toggleFullHeight()"
+            @close-session="sessionViewRef.handleCloseSession()"
+            @archive-session="sessionViewRef.handleArchiveSession()"
+            @reopen-session="sessionViewRef.handleReopen()"
+            @edit-personality="sessionViewRef.handleEditPersonality($event)"
+            @edit-mode="sessionViewRef.handleEditMode($event)"
+            @start-edit-title="sessionViewRef.startEditTitle()"
+            @export-chat="sessionViewRef.exportChat()"
+            @toggle-find="sessionViewRef.toggleFind()"
+          />
+          <div
+            v-else
+            class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <UButton
+                v-if="dock.mode !== 'history'"
+                icon="i-lucide-chevron-left"
+                variant="ghost"
+                size="xs"
+                title="History"
+                @click="dock.showHistory()"
+              />
+              <span class="font-semibold text-sm truncate">
+                {{ dock.mode === 'history' ? 'History' : 'New Chat' }}
+              </span>
+            </div>
+            <div class="flex items-center gap-1">
+              <UButton
+                icon="i-lucide-plus"
+                variant="ghost"
+                size="xs"
+                title="New chat"
+                :disabled="dock.isCreating"
+                @click="dock.newChat()"
+              />
+              <UButton
+                :icon="dock.isFullHeight ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+                variant="ghost"
+                size="xs"
+                :title="dock.isFullHeight ? 'Exit full height' : 'Full height'"
+                @click="dock.toggleFullHeight()"
+              />
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                size="xs"
+                title="Dismiss"
+                @click="dock.closeDock()"
+              />
+            </div>
           </div>
         </div>
 
@@ -203,6 +190,7 @@ async function submitTitleEdit() {
           <!-- Session mode -->
           <ChatSessionView
             v-if="dock.mode === 'session' && dock.activeSessionId"
+            ref="sessionViewRef"
             :key="dock.activeSessionId"
             :session-id="dock.activeSessionId"
             :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
@@ -212,7 +200,6 @@ async function submitTitleEdit() {
             :initial-model-id="dock.pendingMessage?.modelId ?? null"
             :initial-effort="dock.pendingMessage?.reasoningEffort ?? null"
             compact
-            @session-refreshed="onSessionRefreshed"
             @initial-message-sent="dock.clearPendingMessage()"
           />
         </div>
