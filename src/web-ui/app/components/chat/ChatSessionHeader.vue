@@ -32,15 +32,20 @@ const aiEditModeOptions = [
 const selectedPersonalityId = ref<string | null>(props.session.personalityId)
 const personalities = ref<AgentPersonalityDto[]>([])
 const loadingPersonalities = ref(false)
-const personalityError = ref<string | null>(null)
+const isPatchingPersonality = ref(false)
 
 watch(() => props.session.personalityId, (v) => {
   selectedPersonalityId.value = v
 })
 
-watch(selectedPersonalityId, (v) => {
+watch(selectedPersonalityId, (v, oldValue) => {
   if (!isActive.value) return
-  emit('editPersonality', v)
+  if (oldValue !== v) {
+    isPatchingPersonality.value = true
+    emit('editPersonality', v)
+  } else {
+    isPatchingPersonality.value = false
+  }
 })
 
 function handleScopeToggle(e: Event) {
@@ -56,14 +61,11 @@ async function handleEditModeChange(val: AiEditMode) {
 
 async function fetchPersonalities() {
   loadingPersonalities.value = true
-  personalityError.value = null
   try {
     const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
     personalities.value = (data ?? []).filter(p => !p.archivedAt)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to load personalities'
-    personalityError.value = msg
-    toast.error(msg)
+    toast.error(err instanceof Error ? err.message : 'Failed to load personalities')
   } finally {
     loadingPersonalities.value = false
   }
@@ -143,6 +145,7 @@ onMounted(fetchPersonalities)
       v-model="selectedPersonalityId"
       :items="personalityItems"
       :loading="loadingPersonalities"
+      :disabled="isPatchingPersonality"
       size="xs"
       class="w-36 shrink-0"
       placeholder="Personality"

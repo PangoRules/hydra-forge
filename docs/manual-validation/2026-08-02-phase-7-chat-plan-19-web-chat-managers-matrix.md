@@ -25,7 +25,7 @@
 | Title display | Personal chat | Session title shown | |
 | Title display | Project chat | Session title shown | |
 | Rename button | Owner + Active session | Pencil icon visible; click opens inline input | |
-| Rename button | Owner + Closed session | Pencil icon absent | |
+| Rename button | Owner + Closed session | Pencil icon present but disabled | |
 | Rename button | Non-owner | Pencil icon absent | |
 | Rename submit | Type new name + blur/Enter | `PATCH /api/chat/sessions/{id}` with new title; title updated | |
 | Rename cancel | Type + Esc | Input closes; title unchanged | |

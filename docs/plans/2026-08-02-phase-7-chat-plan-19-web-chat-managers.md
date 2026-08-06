@@ -22,4 +22,4 @@
 **Test scope:** e2e
 
 **Acceptance:**
-- `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
+- `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build && pnpm vitest run`
