@@ -3,6 +3,7 @@ import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import ChatSessionList from '~/components/shared/ChatSessionList.vue'
 import { type ChatSessionDto, ChatSessionStatus } from '~/types/chat'
+import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
 import { useChatSessionList } from '~/composables/useChatSessionList'
 import { useChatDockStore } from '~/stores/chatDock'
 
@@ -20,8 +21,9 @@ const { sessions, loading, hasMore, statusFilter, loadMore, refresh, patchSessio
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
+// Linear lifecycle only — 'ActiveAndClosed' stays in the backend enum for
+// internal use but is not offered as a UI filter (see spec).
 const statusFilterItems = [
-  { label: 'Active & Closed', value: 'ActiveAndClosed' },
   { label: 'Active', value: 'Active' },
   { label: 'Closed', value: 'Closed' },
   { label: 'Archived', value: 'Archived' }
@@ -214,13 +216,29 @@ async function reopenSession(id: string) {
                 :class="active ? 'bg-gray-100 dark:bg-gray-800' : ''"
                 @click="selectSession(session.id)"
               >
-                <p class="truncate text-sm font-medium">
-                  {{ session.title }}
-                </p>
-                <!-- "Active" is every session's default state pre-close — showing it for
-                     everything is just noise. Only surface the badge once it's meaningful. -->
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ session.title }}
+                  </p>
+                  <UBadge
+                    :color="CHAT_TYPE_BADGE[getChatType(session)].color"
+                    variant="subtle"
+                    size="xs"
+                    class="shrink-0"
+                  >
+                    {{ CHAT_TYPE_BADGE[getChatType(session)].label }}
+                  </UBadge>
+                </div>
+                <!-- Closed chats preview their AI summary; other states keep the
+                     old status line (meaningful only once not-Active). -->
                 <p
-                  v-if="session.status !== 'Active'"
+                  v-if="session.status === 'Closed' && session.summary"
+                  class="text-xs text-muted truncate"
+                >
+                  {{ session.summary }}
+                </p>
+                <p
+                  v-else-if="session.status !== 'Active'"
                   class="text-xs text-muted"
                 >
                   {{ session.status }}
@@ -293,9 +311,9 @@ async function reopenSession(id: string) {
     <ConfirmDialog
       :open="archiveTargetId !== null"
       title="Archive chat"
-      message="This chat will be archived and removed from your list. This can't be undone from here."
+      message="This chat will be archived and eventually deleted. You can unarchive it to restore it."
       confirm-text="Archive"
-      confirm-color="error"
+      confirm-color="warning"
       @update:open="(v: boolean) => { if (!v) archiveTargetId = null }"
       @confirm="confirmArchive"
     />
