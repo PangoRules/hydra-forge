@@ -266,7 +266,10 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                     .IsRequired();
                 b.Property(e => e.Title).HasColumnName("title").IsRequired();
                 b.Property(e => e.Description).HasColumnName("description").HasColumnType("text");
-                b.Property(e => e.Content).HasColumnName("content").HasColumnType("text").IsRequired();
+                b.Property(e => e.Content)
+                    .HasColumnName("content")
+                    .HasColumnType("text")
+                    .IsRequired();
                 b.Property(e => e.Version).HasColumnName("version").IsRequired();
                 b.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
                 b.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
@@ -288,7 +291,10 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                 b.HasIndex(e => new { e.ProjectDocumentId, e.Version }).IsUnique();
                 b.Property(e => e.Title).HasColumnName("title").IsRequired();
                 b.Property(e => e.Description).HasColumnName("description").HasColumnType("text");
-                b.Property(e => e.Content).HasColumnName("content").HasColumnType("text").IsRequired();
+                b.Property(e => e.Content)
+                    .HasColumnName("content")
+                    .HasColumnType("text")
+                    .IsRequired();
                 b.Property(e => e.Version).HasColumnName("version").IsRequired();
                 b.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
                 b.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();

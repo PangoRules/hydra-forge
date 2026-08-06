@@ -1,4 +1,3 @@
-using NSubstitute;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
@@ -9,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace HydraForge.Server.Tests.RateLimiting;
 
@@ -116,7 +116,9 @@ internal class RateLimitWebApplicationFactory : WebApplicationFactory<Program>
             // LoginUserHandler now audit-logs failed attempts — swap in the in-memory fake
             // so the handler doesn't try to reach a real Postgres instance.
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
 
             // Runs before every other pipeline middleware (including UseRateLimiter), so the

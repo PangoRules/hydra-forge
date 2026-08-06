@@ -101,15 +101,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CreatesPlanAndVersion1InSameTransaction()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -155,15 +148,8 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -224,15 +210,8 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -301,15 +280,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -354,15 +326,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CardNotFound_ReturnsCardNotFound()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -395,15 +360,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CardInDifferentProject_ReturnsProjectMismatch()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -445,15 +403,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_IdeaCard_ReturnsInvalidCardType()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -495,15 +446,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_GoalCard_ReturnsInvalidCardType()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -545,15 +489,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_SecurityCard_ReturnsInvalidCardType()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -595,15 +532,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_IssueWithoutSpecId_Succeeds()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -646,15 +576,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -702,15 +625,8 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -770,15 +686,8 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -848,15 +757,8 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -898,15 +800,8 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -958,15 +853,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_DoneToActive_TransitionsToActive()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1008,15 +896,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_DoneToPending_TransitionsToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1058,15 +939,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_ActiveToPending_TransitionsToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1108,15 +982,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_SameStatus_ReturnsSuccessWithNoChange()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1158,15 +1025,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_WhenUserHasNoMembership_ReturnsAccessDenied()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1200,15 +1060,8 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_AdminNonMember_Succeeds()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            _,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateAdminMocks();
+        var (planRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher) =
+            CreateAdminMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
@@ -1264,15 +1117,8 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_SetsStatusToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,

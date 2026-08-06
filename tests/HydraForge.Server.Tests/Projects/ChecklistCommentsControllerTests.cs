@@ -1,4 +1,5 @@
 using NSubstitute;
+
 namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
@@ -8,8 +9,8 @@ using HydraForge.Application.Cards;
 using HydraForge.Application.Checklist;
 using HydraForge.Application.Comments;
 using HydraForge.Application.Notifications;
-using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectDocuments;
+using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -898,7 +899,9 @@ internal class ChecklistCommentsTestWebApplicationFactory : WebApplicationFactor
                 _ => new FakeProjectBoardEventPublisher()
             );
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
             services.AddScoped<IChecklistItemRepository>(_ => new CCTestChecklistItemRepository(
                 _checklistItems

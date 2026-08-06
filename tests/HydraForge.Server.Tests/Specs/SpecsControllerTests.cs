@@ -1,4 +1,5 @@
 using NSubstitute;
+
 namespace HydraForge.Server.Tests.Specs;
 
 using System.Net;
@@ -8,8 +9,8 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
-using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectDocuments;
+using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -668,7 +669,9 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
         });
     }

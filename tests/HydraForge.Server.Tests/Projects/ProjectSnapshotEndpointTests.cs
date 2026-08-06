@@ -1,10 +1,11 @@
 using NSubstitute;
+
 namespace HydraForge.Server.Tests.Projects;
 
 using System.Net;
 using HydraForge.Application.Audit;
-using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectDocuments;
+using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Domain.Entities.ProjectSpace;
 using HydraForge.Domain.Enums;
@@ -146,7 +147,9 @@ internal class SnapshotTestWebApplicationFactory : WebApplicationFactory<Program
                 _snapshots
             ));
             services.AddScoped<IAuditLogWriter>(_ => new InMemoryAuditLogWriter());
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
         });
     }

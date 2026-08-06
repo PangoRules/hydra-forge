@@ -1050,7 +1050,9 @@ internal class LlmAdminTestWebApplicationFactory : WebApplicationFactory<Program
                 services.Remove(descriptor);
 
             services.AddScoped<ILlmAdminService>(_ => LlmAdmin);
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
         });
     }

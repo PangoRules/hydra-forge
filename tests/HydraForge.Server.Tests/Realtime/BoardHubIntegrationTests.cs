@@ -1,4 +1,5 @@
 using NSubstitute;
+
 namespace HydraForge.Server.Tests.Realtime;
 
 using System.Reflection;
@@ -132,7 +133,9 @@ public class BoardHubIntegrationTests
                     Infrastructure.Realtime.SignalRProjectBoardEventPublisher
                 >();
                 services.AddScoped<INotificationService>(_ => new FakeNotificationService());
-                services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+                services.AddScoped<IProjectDocumentRepository>(_ =>
+                    Substitute.For<IProjectDocumentRepository>()
+                );
                 services.AddScoped<ProjectDocumentService>();
                 services.AddScoped<Application.Projects.ProjectService>();
                 services.AddScoped<Application.Columns.ColumnService>();

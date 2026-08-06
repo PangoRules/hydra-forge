@@ -597,10 +597,26 @@ public class SpecServiceTests
         );
 
         var result1 = await service.CreateAsync(
-            new CreateSpecCommand(projectId, cardId, actorId, DocType.Specification, "Spec 1", null, "C1")
+            new CreateSpecCommand(
+                projectId,
+                cardId,
+                actorId,
+                DocType.Specification,
+                "Spec 1",
+                null,
+                "C1"
+            )
         );
         var result2 = await service.CreateAsync(
-            new CreateSpecCommand(projectId, cardId, actorId, DocType.ValidationMatrix, "Spec 2", null, "C2")
+            new CreateSpecCommand(
+                projectId,
+                cardId,
+                actorId,
+                DocType.ValidationMatrix,
+                "Spec 2",
+                null,
+                "C2"
+            )
         );
 
         Assert.True(result1.IsSuccess);
@@ -652,7 +668,7 @@ public class SpecServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_CardAlreadyHasSpec_ReturnsAlreadyExists()
+    public async Task CreateAsync_GoalCardAlreadyHasSpec_AllowsSecondSpec()
     {
         var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();

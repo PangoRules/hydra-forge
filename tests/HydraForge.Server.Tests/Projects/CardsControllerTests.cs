@@ -1,10 +1,9 @@
-using NSubstitute;
 using System.Net;
 using System.Text;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Notifications;
-using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectDocuments;
+using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -12,6 +11,7 @@ using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace HydraForge.Server.Tests.Projects;
 
@@ -667,7 +667,9 @@ internal class CardsTestWebApplicationFactory : WebApplicationFactory<Program>
                 _ => new FakeProjectBoardEventPublisher()
             );
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
-            services.AddScoped<IProjectDocumentRepository>(_ => Substitute.For<IProjectDocumentRepository>());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
             services.AddScoped<ProjectDocumentService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<Application.Columns.ColumnService>();

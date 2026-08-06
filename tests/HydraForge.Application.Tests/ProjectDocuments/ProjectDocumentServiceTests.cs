@@ -2,8 +2,8 @@ namespace HydraForge.Application.Tests.ProjectDocuments;
 
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
-using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectDocuments;
+using HydraForge.Application.Projects;
 using HydraForge.Application.ProjectSnapshots;
 using HydraForge.Application.Realtime;
 using HydraForge.Domain.Common;
@@ -23,12 +23,26 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
         var result = await service.CreateAsync(
-            new CreateProjectDocumentCommand(projectId, ProjectDocType.Scope, "Doc", null, "C", actorId));
+            new CreateProjectDocumentCommand(
+                projectId,
+                ProjectDocType.Scope,
+                "Doc",
+                null,
+                "C",
+                actorId
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
@@ -40,14 +54,35 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var result = await service.CreateAsync(
-            new CreateProjectDocumentCommand(projectId, ProjectDocType.Scope, "Doc Title", "Desc", "# Content", actorId));
+            new CreateProjectDocumentCommand(
+                projectId,
+                ProjectDocType.Scope,
+                "Doc Title",
+                "Desc",
+                "# Content",
+                actorId
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Version);
@@ -62,23 +97,46 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Existing",
-            Version = 1,
-        });
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Existing",
+                Version = 1,
+            }
+        );
 
         var result = await service.CreateAsync(
-            new CreateProjectDocumentCommand(projectId, ProjectDocType.Scope, "New", null, "C", actorId));
+            new CreateProjectDocumentCommand(
+                projectId,
+                ProjectDocType.Scope,
+                "New",
+                null,
+                "C",
+                actorId
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.ProjectDocuments.DuplicateDocType, result.Error.Code);
@@ -90,23 +148,46 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            DocType = ProjectDocType.Reference,
-            Title = "First Ref",
-            Version = 1,
-        });
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                DocType = ProjectDocType.Reference,
+                Title = "First Ref",
+                Version = 1,
+            }
+        );
 
         var result = await service.CreateAsync(
-            new CreateProjectDocumentCommand(projectId, ProjectDocType.Reference, "Second Ref", null, "C", actorId));
+            new CreateProjectDocumentCommand(
+                projectId,
+                ProjectDocType.Reference,
+                "Second Ref",
+                null,
+                "C",
+                actorId
+            )
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, docRepo.Docs.Count(d => d.ProjectId == projectId));
@@ -118,16 +199,37 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var largeContent = new string('x', 1_000_001);
 
         var result = await service.CreateAsync(
-            new CreateProjectDocumentCommand(projectId, ProjectDocType.Scope, "Big", null, largeContent, actorId));
+            new CreateProjectDocumentCommand(
+                projectId,
+                ProjectDocType.Scope,
+                "Big",
+                null,
+                largeContent,
+                actorId
+            )
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge, result.Error.Code);
@@ -141,11 +243,24 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
         var result = await service.GetByIdAsync(projectId, NewId(), actorId);
 
@@ -159,21 +274,36 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var wrongProjectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = wrongProjectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Doc",
-            Version = 1,
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = wrongProjectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Doc",
+                Version = 1,
+            }
+        );
 
         var result = await service.GetByIdAsync(projectId, docId, actorId);
 
@@ -187,20 +317,35 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Doc",
-            Version = 1,
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Doc",
+                Version = 1,
+            }
+        );
 
         var result = await service.GetByIdAsync(projectId, docId, actorId);
 
@@ -216,29 +361,46 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
 
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Active",
-            Version = 1,
-        });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            DocType = ProjectDocType.Glossary,
-            Title = "Archived",
-            Version = 1,
-            ArchivedAt = DateTime.UtcNow,
-        });
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Active",
+                Version = 1,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = NewId(),
+                ProjectId = projectId,
+                DocType = ProjectDocType.Glossary,
+                Title = "Archived",
+                Version = 1,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
 
         var result = await service.ListAsync(projectId, actorId);
 
@@ -255,32 +417,50 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Original",
-            Content = "V1",
-            Version = 1,
-        });
-        docRepo.Versions.Add(new ProjectDocumentVersion
-        {
-            Id = NewId(),
-            ProjectDocumentId = docId,
-            Version = 1,
-            Title = "Original",
-            Content = "V1",
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Original",
+                Content = "V1",
+                Version = 1,
+            }
+        );
+        docRepo.Versions.Add(
+            new ProjectDocumentVersion
+            {
+                Id = NewId(),
+                ProjectDocumentId = docId,
+                Version = 1,
+                Title = "Original",
+                Content = "V1",
+            }
+        );
 
         var result = await service.UpdateAsync(
-            new UpdateProjectDocumentCommand(projectId, docId, "Updated", null, "V2", actorId));
+            new UpdateProjectDocumentCommand(projectId, docId, "Updated", null, "V2", actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.Version);
@@ -293,25 +473,41 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Doc",
-            Version = 1,
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Doc",
+                Version = 1,
+            }
+        );
 
         var largeContent = new string('x', 1_000_001);
 
         var result = await service.UpdateAsync(
-            new UpdateProjectDocumentCommand(projectId, docId, "Big", null, largeContent, actorId));
+            new UpdateProjectDocumentCommand(projectId, docId, "Big", null, largeContent, actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge, result.Error.Code);
@@ -325,40 +521,60 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Doc",
-            Content = "V2",
-            Version = 2,
-        });
-        docRepo.Versions.Add(new ProjectDocumentVersion
-        {
-            Id = NewId(),
-            ProjectDocumentId = docId,
-            Version = 1,
-            Title = "Doc",
-            Content = "V1",
-        });
-        docRepo.Versions.Add(new ProjectDocumentVersion
-        {
-            Id = NewId(),
-            ProjectDocumentId = docId,
-            Version = 2,
-            Title = "Doc",
-            Content = "V2",
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Doc",
+                Content = "V2",
+                Version = 2,
+            }
+        );
+        docRepo.Versions.Add(
+            new ProjectDocumentVersion
+            {
+                Id = NewId(),
+                ProjectDocumentId = docId,
+                Version = 1,
+                Title = "Doc",
+                Content = "V1",
+            }
+        );
+        docRepo.Versions.Add(
+            new ProjectDocumentVersion
+            {
+                Id = NewId(),
+                ProjectDocumentId = docId,
+                Version = 2,
+                Title = "Doc",
+                Content = "V2",
+            }
+        );
 
         var result = await service.RestoreVersionAsync(
-            new RestoreProjectDocumentVersionCommand(projectId, docId, 1, actorId));
+            new RestoreProjectDocumentVersionCommand(projectId, docId, 1, actorId)
+        );
 
         Assert.True(result.IsSuccess);
         Assert.Equal(3, result.Value.Version);
@@ -372,23 +588,39 @@ public class ProjectDocumentServiceTests
         var (docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
         var service = new ProjectDocumentService(
-            docRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher);
+            docRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
         var projectId = NewId();
         var actorId = NewId();
         var docId = NewId();
 
-        memberRepo.Add(new ProjectMember { ProjectId = projectId, UserId = actorId, Role = MemberRole.Member });
-        docRepo.Docs.Add(new ProjectDocument
-        {
-            Id = docId,
-            ProjectId = projectId,
-            DocType = ProjectDocType.Scope,
-            Title = "Doc",
-            Version = 1,
-        });
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        docRepo.Docs.Add(
+            new ProjectDocument
+            {
+                Id = docId,
+                ProjectId = projectId,
+                DocType = ProjectDocType.Scope,
+                Title = "Doc",
+                Version = 1,
+            }
+        );
 
         var result = await service.RestoreVersionAsync(
-            new RestoreProjectDocumentVersionCommand(projectId, docId, 99, actorId));
+            new RestoreProjectDocumentVersionCommand(projectId, docId, 99, actorId)
+        );
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.ProjectDocuments.DocumentVersionNotFound, result.Error.Code);
@@ -466,17 +698,37 @@ internal class InMemoryProjectDocumentRepository : IProjectDocumentRepository
     public Task<ProjectDocument?> GetByIdAsync(Guid documentId, CancellationToken ct = default) =>
         Task.FromResult(Docs.FirstOrDefault(d => d.Id == documentId));
 
-    public Task<IReadOnlyList<ProjectDocument>> ListByProjectAsync(Guid projectId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<ProjectDocument>>([.. Docs.Where(d => d.ProjectId == projectId && d.ArchivedAt == null)]);
+    public Task<IReadOnlyList<ProjectDocument>> ListByProjectAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectDocument>>([
+            .. Docs.Where(d => d.ProjectId == projectId && d.ArchivedAt == null),
+        ]);
 
-    public Task<ProjectDocument?> GetByDocTypeAsync(Guid projectId, ProjectDocType docType, CancellationToken ct = default) =>
+    public Task<ProjectDocument?> GetByDocTypeAsync(
+        Guid projectId,
+        ProjectDocType docType,
+        CancellationToken ct = default
+    ) =>
         Task.FromResult(Docs.FirstOrDefault(d => d.ProjectId == projectId && d.DocType == docType));
 
-    public Task<ProjectDocumentVersion?> GetVersionAsync(Guid documentId, int version, CancellationToken ct = default) =>
-        Task.FromResult(Versions.FirstOrDefault(v => v.ProjectDocumentId == documentId && v.Version == version));
+    public Task<ProjectDocumentVersion?> GetVersionAsync(
+        Guid documentId,
+        int version,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Versions.FirstOrDefault(v => v.ProjectDocumentId == documentId && v.Version == version)
+        );
 
-    public Task<IReadOnlyList<ProjectDocumentVersion>> ListVersionsAsync(Guid documentId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<ProjectDocumentVersion>>([.. Versions.Where(v => v.ProjectDocumentId == documentId).OrderBy(v => v.Version)]);
+    public Task<IReadOnlyList<ProjectDocumentVersion>> ListVersionsAsync(
+        Guid documentId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectDocumentVersion>>([
+            .. Versions.Where(v => v.ProjectDocumentId == documentId).OrderBy(v => v.Version),
+        ]);
 
     public Task AddAsync(ProjectDocument document, CancellationToken ct = default)
     {
@@ -508,31 +760,70 @@ internal class InMemoryProjectMemberRepository : IProjectMemberRepository
     public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(Members.FirstOrDefault(m => m.Id == id));
 
-    public Task<ProjectMember?> GetByProjectAndUserAsync(Guid projectId, Guid userId, CancellationToken ct = default) =>
-        Task.FromResult(Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId));
+    public Task<ProjectMember?> GetByProjectAndUserAsync(
+        Guid projectId,
+        Guid userId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult(
+            Members.FirstOrDefault(m => m.ProjectId == projectId && m.UserId == userId)
+        );
 
-    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<ProjectMember>>([.. Members.Where(m => m.ProjectId == projectId)]);
+    public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
+        Guid projectId,
+        CancellationToken ct = default
+    ) =>
+        Task.FromResult<IReadOnlyList<ProjectMember>>([
+            .. Members.Where(m => m.ProjectId == projectId),
+        ]);
 
-    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(IEnumerable<Guid> projectIds, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<Guid, int>> GetMemberCountsAsync(
+        IEnumerable<Guid> projectIds,
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var counts = Members.Where(m => idList.Contains(m.ProjectId)).GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+        var counts = Members
+            .Where(m => idList.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Count());
         return Task.FromResult<IReadOnlyDictionary<Guid, int>>(counts);
     }
 
-    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(IEnumerable<Guid> projectIds, Guid userId, CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<Guid, MemberRole>> GetRolesByProjectAndUserAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         var idList = projectIds.ToList();
-        var roles = Members.Where(m => idList.Contains(m.ProjectId) && m.UserId == userId).ToDictionary(m => m.ProjectId, m => m.Role);
+        var roles = Members
+            .Where(m => idList.Contains(m.ProjectId) && m.UserId == userId)
+            .ToDictionary(m => m.ProjectId, m => m.Role);
         return Task.FromResult<IReadOnlyDictionary<Guid, MemberRole>>(roles);
     }
 
-    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default) { Members.Add(member); return Task.CompletedTask; }
+    public Task AddMemberAsync(ProjectMember member, CancellationToken ct = default)
+    {
+        Members.Add(member);
+        return Task.CompletedTask;
+    }
+
     public void Add(ProjectMember member) => AddMemberAsync(member).GetAwaiter().GetResult();
+
     public Task UpdateMemberAsync(ProjectMember member, CancellationToken ct = default)
-    { var idx = Members.FindIndex(m => m.Id == member.Id); if (idx >= 0) Members[idx] = member; return Task.CompletedTask; }
-    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default) { Members.RemoveAll(m => m.Id == id); return Task.CompletedTask; }
+    {
+        var idx = Members.FindIndex(m => m.Id == member.Id);
+        if (idx >= 0)
+            Members[idx] = member;
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveMemberAsync(Guid id, CancellationToken ct = default)
+    {
+        Members.RemoveAll(m => m.Id == id);
+        return Task.CompletedTask;
+    }
 }
 
 internal class InMemoryAuditLogWriter : IAuditLogWriter
@@ -540,7 +831,10 @@ internal class InMemoryAuditLogWriter : IAuditLogWriter
     public List<AuditLogRequest> Writes { get; } = [];
 
     public Task<Result> WriteAsync(AuditLogRequest request, CancellationToken ct = default)
-    { Writes.Add(request); return Task.FromResult(Result.Success()); }
+    {
+        Writes.Add(request);
+        return Task.FromResult(Result.Success());
+    }
 
     public void Clear() => Writes.Clear();
 }

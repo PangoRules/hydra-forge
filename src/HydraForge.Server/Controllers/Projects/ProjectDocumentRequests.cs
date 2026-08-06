@@ -9,11 +9,7 @@ public record CreateProjectDocumentRequest(
     string Content
 );
 
-public record UpdateProjectDocumentRequest(
-    string Title,
-    string? Description,
-    string Content
-);
+public record UpdateProjectDocumentRequest(string Title, string? Description, string Content);
 
 public record RestoreProjectDocumentVersionRequest(int Version);
 
@@ -44,4 +40,6 @@ public record ProjectDocumentVersionResponse(
     Guid CreatedByUserId
 );
 
-public record ProjectDocumentVersionListResponse(IReadOnlyList<ProjectDocumentVersionResponse> Versions);
+public record ProjectDocumentVersionListResponse(
+    IReadOnlyList<ProjectDocumentVersionResponse> Versions
+);

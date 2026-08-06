@@ -93,7 +93,12 @@ public class Card
 
     // Spec is allowed on Goal/Idea/Issue/Security/Task cards (see D-44, D-XX2, D-XX3).
     public static Error? ValidateAllowsSpec(CardType type) =>
-        type is CardType.Goal or CardType.Idea or CardType.Issue or CardType.Security or CardType.Task
+        type
+            is CardType.Goal
+                or CardType.Idea
+                or CardType.Issue
+                or CardType.Security
+                or CardType.Task
             ? null
             : new Error(
                 DomainErrorCodes.Specs.InvalidCardType,

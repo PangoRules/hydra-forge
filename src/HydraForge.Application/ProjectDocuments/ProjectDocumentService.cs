@@ -46,22 +46,37 @@ public class ProjectDocumentService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge,
-                    "Markdown payload exceeds limit."));
+                new Error(
+                    DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
+            );
 
         if (UniqueDocTypes.Contains(cmd.DocType))
         {
             var existing = await _docRepo.GetByDocTypeAsync(cmd.ProjectId, cmd.DocType, ct);
             if (existing != null && existing.ArchivedAt == null)
                 return Result<ProjectDocumentDto>.Failure(
-                    new Error(DomainErrorCodes.ProjectDocuments.DuplicateDocType,
-                        $"A {cmd.DocType} document already exists for this project."));
+                    new Error(
+                        DomainErrorCodes.ProjectDocuments.DuplicateDocType,
+                        $"A {cmd.DocType} document already exists for this project."
+                    )
+                );
         }
 
         var doc = new ProjectDocument
@@ -95,9 +110,19 @@ public class ProjectDocumentService(
         await _docRepo.SaveChangesAsync(ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId, AuditLogScope.Project, "ProjectDocument", doc.Id, "Created",
-            cmd.ProjectId, null, AuditSnapshot.Serialize(BuildSnapshot(doc))), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "ProjectDocument",
+                doc.Id,
+                "Created",
+                cmd.ProjectId,
+                null,
+                AuditSnapshot.Serialize(BuildSnapshot(doc))
+            ),
+            ct
+        );
 
         await PublishAsync(cmd.ProjectId, doc.Id, BoardAction.Created, ct);
 
@@ -113,12 +138,14 @@ public class ProjectDocumentService(
     {
         if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var doc = await _docRepo.GetByIdAsync(documentId, ct);
         if (doc == null || doc.ProjectId != projectId)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found."));
+                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found.")
+            );
 
         return Result<ProjectDocumentDto>.Success(MapToDto(doc));
     }
@@ -131,7 +158,8 @@ public class ProjectDocumentService(
     {
         if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<ProjectDocumentDto>>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var docs = await _docRepo.ListByProjectAsync(projectId, ct);
         var dtos = docs.Select(MapToDto).ToList();
@@ -143,19 +171,32 @@ public class ProjectDocumentService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var doc = await _docRepo.GetByIdAsync(cmd.DocumentId, ct);
         if (doc == null || doc.ProjectId != cmd.ProjectId)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found."));
+                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found.")
+            );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge,
-                    "Markdown payload exceeds limit."));
+                new Error(
+                    DomainErrorCodes.ProjectDocuments.MarkdownPayloadTooLarge,
+                    "Markdown payload exceeds limit."
+                )
+            );
 
         var oldSnapshot = BuildSnapshot(doc);
         doc.Title = cmd.Title;
@@ -181,10 +222,19 @@ public class ProjectDocumentService(
         await _docRepo.SaveChangesAsync(ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId, AuditLogScope.Project, "ProjectDocument", doc.Id, "Updated",
-            cmd.ProjectId, AuditSnapshot.Serialize(oldSnapshot),
-            AuditSnapshot.Serialize(BuildSnapshot(doc))), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "ProjectDocument",
+                doc.Id,
+                "Updated",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(doc))
+            ),
+            ct
+        );
 
         await PublishAsync(cmd.ProjectId, doc.Id, BoardAction.Updated, ct);
 
@@ -200,12 +250,14 @@ public class ProjectDocumentService(
     {
         if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, projectId, actorId, ct))
             return Result<IReadOnlyList<ProjectDocumentVersionDto>>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var doc = await _docRepo.GetByIdAsync(documentId, ct);
         if (doc == null || doc.ProjectId != projectId)
             return Result<IReadOnlyList<ProjectDocumentVersionDto>>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found."));
+                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found.")
+            );
 
         var versions = await _docRepo.ListVersionsAsync(documentId, ct);
         return Result<IReadOnlyList<ProjectDocumentVersionDto>>.Success([
@@ -227,20 +279,33 @@ public class ProjectDocumentService(
         CancellationToken ct = default
     )
     {
-        if (!await MembershipGuard.HasAccessAsync(_userRepo, _memberRepo, cmd.ProjectId, cmd.ActorId, ct))
+        if (
+            !await MembershipGuard.HasAccessAsync(
+                _userRepo,
+                _memberRepo,
+                cmd.ProjectId,
+                cmd.ActorId,
+                ct
+            )
+        )
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied."));
+                new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+            );
 
         var doc = await _docRepo.GetByIdAsync(cmd.DocumentId, ct);
         if (doc == null || doc.ProjectId != cmd.ProjectId)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found."));
+                new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found.")
+            );
 
         var oldVersion = await _docRepo.GetVersionAsync(cmd.DocumentId, cmd.Version, ct);
         if (oldVersion == null)
             return Result<ProjectDocumentDto>.Failure(
-                new Error(DomainErrorCodes.ProjectDocuments.DocumentVersionNotFound,
-                    "Document version not found."));
+                new Error(
+                    DomainErrorCodes.ProjectDocuments.DocumentVersionNotFound,
+                    "Document version not found."
+                )
+            );
 
         var oldSnapshot = BuildSnapshot(doc);
         doc.Title = oldVersion.Title;
@@ -266,25 +331,58 @@ public class ProjectDocumentService(
         await _docRepo.SaveChangesAsync(ct);
         await _snapshotRefresher.RefreshAsync(cmd.ProjectId, ct);
 
-        await _auditLogWriter.WriteAsync(new AuditLogRequest(
-            cmd.ActorId, AuditLogScope.Project, "ProjectDocument", doc.Id, "Restored",
-            cmd.ProjectId, AuditSnapshot.Serialize(oldSnapshot),
-            AuditSnapshot.Serialize(BuildSnapshot(doc))), ct);
+        await _auditLogWriter.WriteAsync(
+            new AuditLogRequest(
+                cmd.ActorId,
+                AuditLogScope.Project,
+                "ProjectDocument",
+                doc.Id,
+                "Restored",
+                cmd.ProjectId,
+                AuditSnapshot.Serialize(oldSnapshot),
+                AuditSnapshot.Serialize(BuildSnapshot(doc))
+            ),
+            ct
+        );
 
         await PublishAsync(cmd.ProjectId, doc.Id, BoardAction.Restored, ct);
 
         return Result<ProjectDocumentDto>.Success(MapToDto(doc));
     }
 
-    private async Task PublishAsync(Guid projectId, Guid docId, BoardAction action, CancellationToken ct)
+    private async Task PublishAsync(
+        Guid projectId,
+        Guid docId,
+        BoardAction action,
+        CancellationToken ct
+    )
     {
         var envelope = new ProjectBoardEventEnvelope(
-            Guid.NewGuid(), projectId, BoardEntityType.ProjectDocument, docId,
-            action, 1, DateTime.UtcNow, null!, null);
+            Guid.NewGuid(),
+            projectId,
+            BoardEntityType.ProjectDocument,
+            docId,
+            action,
+            1,
+            DateTime.UtcNow,
+            null!,
+            null
+        );
         await _publisher.PublishAsync(envelope, ct);
     }
 
     private static ProjectDocumentDto MapToDto(ProjectDocument doc) =>
-        new(doc.Id, doc.ProjectId, doc.DocType, doc.Title, doc.Description, doc.Content,
-            doc.Version, doc.CreatedByUserId, doc.CreatedAt, doc.UpdatedAt, doc.ArchivedAt);
+        new(
+            doc.Id,
+            doc.ProjectId,
+            doc.DocType,
+            doc.Title,
+            doc.Description,
+            doc.Content,
+            doc.Version,
+            doc.CreatedByUserId,
+            doc.CreatedAt,
+            doc.UpdatedAt,
+            doc.ArchivedAt
+        );
 }

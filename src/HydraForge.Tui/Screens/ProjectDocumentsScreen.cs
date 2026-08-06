@@ -82,9 +82,7 @@ public class ProjectDocumentsScreen(
 
             var typeBadge = $" [{GetTypeColor(doc.DocType)}]{doc.DocType}[/]";
 
-            rows.Add(
-                new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}")
-            );
+            rows.Add(new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}"));
             rows.Add(
                 new Markup(
                     $"   [grey]v{doc.Version} — {DateFormatting.FormatTimestamp(doc.UpdatedAt)}[/]"
@@ -341,7 +339,11 @@ public class ProjectDocumentsScreen(
     private async Task CreateDocumentAsync()
     {
         var docTypes = Enum.GetValues<ProjectDocType>().Select(d => d.ToString()).ToList();
-        var typeIdx = await ListPrompt.Show("Document type:", docTypes, renderBackdrop: RenderAsync);
+        var typeIdx = await ListPrompt.Show(
+            "Document type:",
+            docTypes,
+            renderBackdrop: RenderAsync
+        );
         if (!typeIdx.HasValue)
             return;
 
