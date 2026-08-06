@@ -8,13 +8,17 @@ How the opencode multi-agent flow (`docs/specs/`, `docs/plans/`) maps onto Hydra
 
 | opencode concept | Hydra card | Notes |
 |---|---|---|
-| Milestone / spec (`@brainstorm`'s output, `docs/specs/*.md`) | **Goal card**, `CardType.Goal` | Its `Spec` (`DocType.Specification`) holds the spec content. One Spec per Card. |
-| Individual task plan (`@architect`'s output, `docs/plans/*.md`) | **Task card**, `CardType.Task`, `ParentCardId` → the Goal card | Its `Plan` (`SpecId` = the Goal's Spec) holds the plan content, grouped under the milestone. |
-| tarnished's SCOPE CREEP items (currently `docs/backlog.md`) | **Idea card**, `CardType.Idea`, column `Backlog` | Optional — `backlog.md` still works fine; move to Idea cards when you want them board-visible instead of a flat file. |
-| Carter's audit findings | **Issue card**, `CardType.Issue` (+ `DocType.Report` Spec) | One per finding, or one per Critical/High cluster. Optional, same as above. |
+| Milestone / spec (`@brainstorm`'s output, `docs/specs/*.md`) | **Goal card**, `CardType.Goal` | Its Specs (Specification + ValidationMatrix) hold the spec content. Multiple Specs per Goal. No Plans — child Task cards carry the plans. |
+| Individual task plan (`@architect`'s output, `docs/plans/*.md`) | **Task card**, `CardType.Task`, `ParentCardId` → the Goal card | Its `Plan` holds the plan content. Can also have a ValidationMatrix Spec. |
+| tarnished's SCOPE CREEP items (currently `docs/backlog.md`) | **Idea card**, `CardType.Idea`, column `Backlog` | Its Specs (Concept) hold the exploration content. Multiple Concepts per Idea allowed. No Plans — move to a Goal/Task when ready. |
+| Carter's audit findings | **Security card**, `CardType.Security` (+ `DocType.Report` Spec) | One per finding, or one per Critical/High cluster. Optional, same as above. |
 | Architect's "Step N depends on shared X from task M" plan notes | **CardRelationship** (`Precedes`/`BlockedBy`) between Task cards | Turns a prose note into an actual dependency edge, visible on the board. Optional — do this once the plan-dependency notes actually start mattering, not retroactively. |
 
 **Only Goal and Task cards are load-bearing for the core loop.** Idea/Issue/CardRelationship are nice-to-haves — adopt them when the flat-file version starts to hurt, not as a prerequisite.
+
+## 1b. Project Documents
+
+Project-level docs (Scope, Glossary, Data Model, Architecture, Functional Spec, Decisions, Reference) live as `ProjectDocument` entities, not cards. Accessible from the project board's **Docs tab** (Web UI) or the **`P` key** (TUI). Versioned via `ProjectDocumentVersion`.
 
 ---
 

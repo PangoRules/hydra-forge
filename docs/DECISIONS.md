@@ -257,6 +257,20 @@ Each entry has:
 | D-56 | Dependency-resolved notification fires on Archive | Moved from `MoveAsync` to `ArchiveAsync` — only place `ArchivedAt` is set | ✅ |
 | D-57 | Nightly job scheduler | Hangfire + `Hangfire.PostgreSql`, not `BackgroundService` or Quartz.NET | ✅ |
 | D-58 | AiNarrative display surface | Web UI: "View Narrative" button next to project title → modal. TUI: same viewer pattern as spec/plan, bound to board screen's help overlay if bar has no room | ✅ |
+| D-59 | IKeyVault + AesGcmKeyVault | AES-256-GCM encryption for API keys at rest; startup validation; migration | ✅ |
+| D-60 | Test mocking library | NSubstitute, not Moq | ✅ |
+| D-61 | UserTokenBudget concurrent accrual | Unique index on UserId; lost-update gap accepted | ✅ |
+| D-62 | Image adapter types | DallE + StabilityAi; ComfyUi serves both ComfyUi and Diffusers | ✅ |
+| D-63 | Token estimation | chars / 4 heuristic, no tokenizer dependency | ✅ |
+| D-64 | Streaming chat contract | IAsyncEnumerable<ChatChunk>, transport deferred to Phase 7 | ✅ |
+| D-65 | Goal cards do not own Plans | Child Task cards carry the plans; ValidateAllowsPlan rejects Goal | ✅ |
+| D-66 | Security card type | CardType.Security = 6; same doc shape as Issue but distinct type | ✅ |
+| D-67 | ValidationMatrix DocType | DocType.ValidationMatrix = 4; allowed on Goal and Task | ✅ |
+| D-68 | Multiple Specs per card | 1-Spec-per-card limit removed; all card types that allow Specs get N | ✅ |
+| D-69 | ProjectDocument entity | Project-level versioned docs; ProjectDocType enum; versioned via ProjectDocumentVersion | ✅ |
+| D-70 | Decisions-as-ProjectDocument | DECISIONS.md lives as ProjectDocument with DocType.Decisions | ✅ |
+| D-71 | Project page = Board tab + Docs tab | Two-tab layout; Docs tab for project documents; not a separate page | ✅ |
+| D-72 | Chat context-awareness (future) | Docs tab + editable ProjectDocuments are the foundation for future chat "hands" | 🔜 |
 
 ---
 
@@ -1016,3 +1030,115 @@ Chats
 | **Decision** | **`StreamChatAsync` returns `IAsyncEnumerable<ChatChunk>`.** Phase 6 only builds the server-side producer side (adapters yielding chunks) and consumers that fully drain the stream server-side (`ContextCompressor`, the `GenerateAiNarrativeForAllActiveProjectsAsync` job). The SignalR/SSE transport that would forward chunks to a live Web UI/TUI chat client is Phase 7 scope — no chat feature UI exists yet in Phase 6. |
 | **Rationale** | `IAsyncEnumerable` is the natural .NET shape for a token-by-token stream and composes directly with `await foreach`, without forcing every caller through a callback or channel. Deferring the transport keeps Phase 6 scoped to LLM *infrastructure* (adapters, routing, budgets, admin, encryption) rather than pulling forward a full chat feature that has its own UI/UX surface to design. |
 | **Impact** | `ChatChunk(string? Delta, ChatChunkFinishReason? FinishReason, UsageSnapshot? Usage)` — see `LlmDtos.cs`. Non-2xx responses yield a single `ChatChunk` with `FinishReason: Error` rather than throwing (see CLAUDE.md LLM adapter conventions). `ChatChunkFinishReason.Error` added specifically to make transport-level failures representable inside the stream instead of an exception that would break `IAsyncEnumerable` consumers mid-iteration. |
+
+---
+
+## D-65: Goal Cards Do Not Own Plans
+
+| Field | Value |
+|---|---|
+| **Topic** | Goal cards no longer own Plans |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **Goal cards cannot have Plans.** A Goal's implementation plan is the set of child Task cards, each with their own Plans. Existing Goal-owned Plans are deleted or migrated. |
+| **Rationale** | Goals are milestones, not implementation units. Plans describe step-by-step implementation — that belongs on the Task cards that actually do the work. This removes the awkward "Goal has Plans grouped under its Spec" indirection and keeps Plans as a Task-level artifact. |
+| **Alternatives considered** | Keep Plans on Goal via `Plan.SpecId` (rejected — the indirection adds complexity without benefit; the child Task cards already represent the decomposition). |
+| **Impact** | `Card.ValidateAllowsPlan` rejects Goal. `Plan.SpecId` remains for backward compat but new Plans won't set it on a Goal. `CardModal.vue` PLAN_CARD_TYPES drops Goal. Existing Goal-owned Plans deleted. |
+
+---
+
+## D-66: Security Card Type
+
+| Field | Value |
+|---|---|
+| **Topic** | New CardType for security audit findings |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **`CardType.Security = 6`.** Same doc shape as Issue (one Report Spec, no Plans) but distinct type for filtering and reporting. General projects have security concerns too (physical security, compliance, access control) — Security is not limited to software projects. |
+| **Rationale** | Security findings (XSS, authz gaps, secret leaks) are not bugs — they have different severity, triage, and reporting workflows. A separate card type makes them filterable and reportable without conflating them with general issues. |
+| **Alternatives considered** | Use Issue for everything (rejected — no way to filter/report on security findings specifically without a tag or custom field). |
+| **Impact** | New enum value `Security = 6`. `Card.ValidateAllowsSpec` accepts Security. `Card.ExpectedSpecDocType` returns Report. Web UI card-type selector gains Security option. |
+
+---
+
+## D-67: ValidationMatrix DocType
+
+| Field | Value |
+|---|---|
+| **Topic** | New DocType for structured validation checklists |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **`DocType.ValidationMatrix = 4`.** A structured checklist of validation steps (unit tests, e2e, manual checks). Allowed on Goal and Task cards. Replaces loose `docs/archive/manual-validation/*.md` files. |
+| **Rationale** | A ValidationMatrix is a Spec (versioned, editable, restorable) but semantically distinct from a Specification/Concept/Report. It describes what must be verified, not what must be built. The checklist format maps naturally to a structured doc type. |
+| **Alternatives considered** | Store validation checklists as card description markdown (rejected — no versioning, no restore, can't be shared across cards). |
+| **Impact** | New enum value `ValidationMatrix = 4`. `Card.IsValidSpecDocType` allows ValidationMatrix on Goal and Task. Web UI CardSpec labels it "Validation Matrix". |
+
+---
+
+## D-68: Multiple Specs Per Card — 1-Spec Limit Removed
+
+| Field | Value |
+|---|---|
+| **Topic** | Remove the 1-Spec-per-card limit entirely |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **The 1-Spec-per-card limit is removed entirely.** Every card type that allows Specs can have N Specs within its allowed DocTypes. Goal=N Specs (Specification+ValidationMatrix), Issue=N Reports, Idea=N Concepts, Task=N ValidationMatrix Specs. The common case is 1, but unlimited is now allowed. |
+| **Rationale** | Real documents accumulate. A Goal's spec may spawn a second spec for an alternative approach. An Issue may need multiple reports. The 1-per-card limit was an artificial constraint from the original simplified model, not a domain requirement. |
+| **Alternatives considered** | Keep the 1-per-card limit (rejected — blocks valid use cases without adding value). |
+| **Impact** | `SpecService.cs` 1-per-card check deleted. `Card.ValidateAllowsSpec` unchanged. All card types that allow Specs can have N. |
+
+---
+
+## D-69: ProjectDocument Entity
+
+| Field | Value |
+|---|---|
+| **Topic** | Project-level versioned documents |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **New `ProjectDocument` entity with `ProjectDocType` enum** (Scope=1, Glossary=2, DataModel=3, Architecture=4, FunctionalSpec=5, Decisions=6, Reference=7). Versioned via `ProjectDocumentVersion` (mirrors `SpecVersion`/`PlanVersion`). Scope/Glossary/DataModel/Architecture/FunctionalSpec/Decisions are unique per project (one doc per type); Reference allows N per project. Uniqueness enforced at the service layer, not the database. |
+| **Rationale** | Project-level documents (scope, glossary, data model, architecture, decisions, reference) need a home in HydraForge — versioned, editable, linked to the project. The Spec/Plan versioning pattern is proven and directly applicable. |
+| **Alternatives considered** | Store these as card-attached Specs (rejected — cards are per-work-item; project-level docs are per-project and have different uniqueness constraints). |
+| **Impact** | New `ProjectDocument` and `ProjectDocumentVersion` entities, new controller, new Web UI tab, new TUI screen. `docs/*.md` files remain as seed content but DB is the source of truth. |
+
+---
+
+## D-70: Decisions Live as ProjectDocument
+
+| Field | Value |
+|---|---|
+| **Topic** | DECISIONS.md lives as a ProjectDocument |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **`docs/DECISIONS.md` is stored as a `ProjectDocument` with `ProjectDocType.Decisions`.** LLM or user appends to it. Each append creates a new `ProjectDocumentVersion`. Not a card on the board — it's a project-level document. |
+| **Rationale** | Decisions are project-scoped, not card-scoped. They are an append-log updated over time. A `ProjectDocument` with version snapshots is the natural fit. |
+| **Alternatives considered** | Keep DECISIONS.md as a flat file (rejected — no versioning, no in-app editing, no LLM programmatic append). |
+| **Impact** | The Decisions doc appears in the project Documents tab. LLM can append new D-XX entries programmatically. |
+
+---
+
+## D-71: Project Page = Board Tab + Docs Tab
+
+| Field | Value |
+|---|---|
+| **Topic** | Project page layout: board vs. documents |
+| **Date** | 2026-08-05 |
+| **Status** | ✅ Settled |
+| **Decision** | **The project board page becomes a two-tab layout: "Board" (existing board view) and "Docs" (project-level documents).** Clicking a project document opens a full-bleed Tiptap editor. Not a separate `/documents` page — it's a tab on the existing project page. |
+| **Rationale** | Users expect to find project docs alongside the board, not in a separate area. The board is already the primary project view — docs should live in the same surface, not compete with it. |
+| **Alternatives considered** | Separate `/documents` page (rejected — fragments the project experience; two tabs on one page keeps everything in context). |
+| **Impact** | Project page gains a tab switcher. Docs tab lists `ProjectDocument` rows. Clicking a doc opens the Tiptap editor in full-bleed mode. |
+
+---
+
+## D-72: Chat Context-Awareness (Future)
+
+| Field | Value |
+|---|---|
+| **Topic** | Chat eventually knows what the user is viewing/editing |
+| **Date** | 2026-08-05 |
+| **Status** | 🔜 Future |
+| **Decision** | **The Docs tab and in-app editable `ProjectDocument`s are the foundation for future chat "hands"** — the chat eventually knowing what the user is viewing/editing and being able to drive mutations. Not built in this plan. |
+| **Rationale** | Once project docs are in the DB and the UI can edit them, chat can reference them. The next step (driving mutations from chat) is a larger UX and permission question, deferred to a future phase. |
+| **Alternatives considered** | Build full chat-driven mutations now (rejected — too large for this scope; the Docs tab is a prerequisite, not the whole feature). |
+| **Impact** | Direction only. No code changes in this plan. Future work: chat detects open doc, offers to edit, calls mutation API.
