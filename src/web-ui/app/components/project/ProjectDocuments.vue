@@ -101,8 +101,13 @@ function closeDoc() {
   versions.value = []
 }
 
+const isDirty = computed(() => {
+  if (!selectedDoc.value) return false
+  return editorTitle.value !== selectedDoc.value.title || editorContent.value !== selectedDoc.value.content
+})
+
 async function save() {
-  if (!selectedDoc.value) return
+  if (!selectedDoc.value || !isDirty.value) return
   saving.value = true
   try {
     const { data } = await api.PUT<ProjectDocumentResponse>(
@@ -203,7 +208,7 @@ onMounted(() => fetchDocuments())
 </script>
 
 <template>
-  <div class="flex-1 flex min-h-0">
+  <div class="flex-1 flex min-h-0 min-w-0">
     <!-- Document list sidebar -->
     <div class="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       <div class="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -264,7 +269,7 @@ onMounted(() => fetchDocuments())
     <!-- Editor area -->
     <div
       v-if="selectedDoc"
-      class="flex-1 flex flex-col min-h-0"
+      class="flex-1 flex flex-col min-h-0 min-w-0"
     >
       <!-- Editor toolbar -->
       <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -298,6 +303,7 @@ onMounted(() => fetchDocuments())
           <UButton
             size="xs"
             :loading="saving"
+            :disabled="!isDirty"
             @click="save"
           >
             Save
@@ -306,13 +312,14 @@ onMounted(() => fetchDocuments())
       </div>
 
       <!-- Main content area -->
-      <div class="flex-1 flex min-h-0">
+      <div class="flex-1 flex min-h-0 min-w-0">
         <!-- Editor -->
-        <div class="flex-1 flex flex-col min-h-0">
+        <div class="flex-1 flex flex-col min-h-0 min-w-0">
           <MarkdownEditor
             v-model="editorContent"
             placeholder="Write your document..."
-            class="flex-1 min-h-0"
+            fill-height
+            class="flex-1 min-h-0 min-w-0"
           />
         </div>
 

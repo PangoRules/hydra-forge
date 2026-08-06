@@ -80,7 +80,7 @@ watch(activeTab, (tab) => {
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col min-h-0">
+  <div class="flex-1 flex flex-col min-h-0 min-w-0">
     <!-- Project header: always visible so it survives tab switches -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center gap-2 min-w-0">
