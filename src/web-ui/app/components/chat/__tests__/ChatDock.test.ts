@@ -175,7 +175,7 @@ describe('ChatDock', () => {
     expect(textarea.exists()).toBe(true)
     await textarea.setValue('summarize this board')
     await textarea.trigger('keydown', { key: 'Enter' })
-    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board', null, null, null)
+    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board', null, null, null, null)
   })
 
   it('draft mode: does not create a session on empty/whitespace-only Enter', async () => {

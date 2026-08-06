@@ -53,10 +53,11 @@ async function sendDraftMessage(
   content: string,
   presetId?: string | null,
   modelId?: string | null,
-  reasoningEffort?: string | null
+  reasoningEffort?: string | null,
+  personalityId?: string | null
 ) {
   if (!content.trim() || dock.isCreating) return
-  await dock.startNewChat(content, presetId, modelId, reasoningEffort)
+  await dock.startNewChat(content, presetId, modelId, reasoningEffort, personalityId)
 }
 </script>
 
@@ -176,6 +177,7 @@ async function sendDraftMessage(
             <ChatInput
               :disabled="dock.isCreating"
               :feature="dock.currentProjectId ? 'ProjectChat' : 'PersonalChat'"
+              show-personality-picker
               @send="sendDraftMessage"
             />
           </div>

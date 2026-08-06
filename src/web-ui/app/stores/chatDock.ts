@@ -113,7 +113,8 @@ export const useChatDockStore = defineStore('chatDock', () => {
     content?: string,
     presetId?: string | null,
     modelId?: string | null,
-    reasoningEffort?: string | null
+    reasoningEffort?: string | null,
+    personalityId?: string | null
   ) {
     if (isCreating.value) return
     isCreating.value = true
@@ -127,6 +128,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
       if (openCardId) body.openCardId = openCardId
       if (modelId) body.preferredModelConfigId = modelId
       if (reasoningEffort) body.preferredEffort = reasoningEffort
+      if (personalityId) body.personalityId = personalityId
       const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), { body })
       if (data) {
         activeSessionId.value = data.id

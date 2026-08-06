@@ -88,11 +88,11 @@ function deriveTitle(content: string): string {
     : firstLine
 }
 
-async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null) {
+async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null, personalityId?: string | null) {
   starting.value = true
   try {
     const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), {
-      body: { title: deriveTitle(content) }
+      body: { title: deriveTitle(content), personalityId: personalityId ?? null }
     })
     if (data) {
       pendingMessage.value = {
@@ -267,6 +267,7 @@ async function reopenSession(id: string) {
       </div>
       <ChatInput
         :disabled="starting"
+        show-personality-picker
         @send="startNewChat"
       />
     </div>

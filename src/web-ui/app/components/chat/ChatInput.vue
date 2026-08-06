@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
-import type { PromptPresetDto } from '~/types/chat'
+import type { AgentPersonalityDto, PromptPresetDto } from '~/types/chat'
+import PersonalityManageModal from '~/components/chat/PersonalityManageModal.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -9,13 +10,19 @@ const props = withDefaults(
     feature?: string
     initialModelId?: string | null
     initialEffort?: string | null
+    /** Show the personality picker + manage button. Only true for composers
+     * with no session yet (chats/index.vue empty state, ChatDock draft mode) —
+     * once a session exists, ChatSessionHeader is the personality control;
+     * showing a second one here would be a duplicate/competing control. */
+    showPersonalityPicker?: boolean
   }>(),
   {
     disabled: false,
     personalityId: null,
     feature: 'PersonalChat',
     initialModelId: null,
-    initialEffort: null
+    initialEffort: null,
+    showPersonalityPicker: false
   }
 )
 
@@ -24,7 +31,8 @@ const emit = defineEmits<{
     content: string,
     presetId?: string | null,
     preferredModelId?: string | null,
-    reasoningEffort?: string | null
+    reasoningEffort?: string | null,
+    personalityId?: string | null
   ]
   cancel: []
 }>()
@@ -37,9 +45,16 @@ const presets = ref<PromptPresetDto[]>([])
 const selectedPresetId = ref<string | null>(null)
 const selectedModelId = ref<string | null>(null)
 const selectedEffort = ref<string | null>(null)
+const personalities = ref<AgentPersonalityDto[]>([])
+const selectedPersonalityId = ref<string | null>(null)
+const showManageModal = ref(false)
 
 const selectedPresetName = computed(
   () => presets.value.find(p => p.id === selectedPresetId.value)?.name ?? null
+)
+
+const selectedPersonalityName = computed(
+  () => personalities.value.find(p => p.id === selectedPersonalityId.value)?.name ?? null
 )
 
 const presetMenuItems = computed(() => [[
@@ -56,12 +71,35 @@ const presetMenuItems = computed(() => [[
   }))
 ]])
 
+const personalityMenuItems = computed(() => [[
+  {
+    label: 'No personality',
+    icon: selectedPersonalityId.value === null ? 'i-lucide-check' : undefined,
+    onSelect: () => { selectedPersonalityId.value = null }
+  },
+  ...personalities.value.map(p => ({
+    label: p.name,
+    icon: selectedPersonalityId.value === p.id ? 'i-lucide-check' : undefined,
+    onSelect: () => { selectedPersonalityId.value = p.id }
+  })),
+  { label: 'Manage personalities…', icon: 'i-lucide-users', onSelect: () => { showManageModal.value = true } }
+]])
+
 async function fetchPresets() {
   try {
     const { data } = await api.GET<PromptPresetDto[]>(ApiRoutes.Chat.presets.list())
     presets.value = data ?? []
   } catch {
     // Preset picker degrades to "No preset" — not worth a toast for a background list fetch
+  }
+}
+
+async function fetchPersonalities() {
+  try {
+    const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
+    personalities.value = (data ?? []).filter(p => !p.archivedAt)
+  } catch {
+    // Degrades to "No personality" — background list fetch, not worth a toast
   }
 }
 
@@ -75,14 +113,17 @@ function handleKeydown(e: KeyboardEvent) {
 function submit() {
   const trimmed = content.value.trim()
   if (!trimmed || props.disabled) return
-  emit('send', trimmed, selectedPresetId.value, selectedModelId.value, selectedEffort.value)
+  emit('send', trimmed, selectedPresetId.value, selectedModelId.value, selectedEffort.value, selectedPersonalityId.value)
   content.value = ''
   if (textareaRef.value) {
     textareaRef.value.style.height = 'auto'
   }
 }
 
-onMounted(fetchPresets)
+onMounted(() => {
+  void fetchPresets()
+  if (props.showPersonalityPicker) void fetchPersonalities()
+})
 
 function setContent(text: string) {
   content.value = text
@@ -95,14 +136,14 @@ function setContent(text: string) {
   })
 }
 
-defineExpose({ setContent })
+defineExpose({ setContent, selectedPersonalityId })
 </script>
 
 <template>
   <div class="border-t border-gray-200 dark:border-gray-700 p-4">
     <!-- Active preset/personality chip -->
     <div
-      v-if="selectedPresetName || personalityId"
+      v-if="selectedPresetName || selectedPersonalityName || personalityId"
       class="mb-2"
     >
       <span class="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
@@ -110,7 +151,7 @@ defineExpose({ setContent })
           name="i-lucide-sparkles"
           class="size-3"
         />
-        <span>{{ selectedPresetName ? `Preset: ${selectedPresetName}` : 'Personality active' }}</span>
+        <span>{{ selectedPresetName ? `Preset: ${selectedPresetName}` : (selectedPersonalityName ? `Personality: ${selectedPersonalityName}` : 'Personality active') }}</span>
       </span>
     </div>
 
@@ -161,6 +202,29 @@ defineExpose({ setContent })
         </div>
 
         <div class="flex items-center gap-1.5">
+          <template v-if="showPersonalityPicker">
+            <UDropdownMenu :items="personalityMenuItems">
+              <UButton
+                icon="i-lucide-user-round"
+                :variant="selectedPersonalityId ? 'soft' : 'ghost'"
+                :color="selectedPersonalityId ? 'primary' : 'neutral'"
+                size="sm"
+                :disabled="disabled"
+                title="Personality"
+              />
+            </UDropdownMenu>
+
+            <UButton
+              icon="i-lucide-users"
+              variant="ghost"
+              color="neutral"
+              size="sm"
+              :disabled="disabled"
+              title="Manage personalities"
+              @click="showManageModal = true"
+            />
+          </template>
+
           <UDropdownMenu :items="presetMenuItems">
             <UButton
               icon="i-lucide-sparkles"
@@ -182,5 +246,11 @@ defineExpose({ setContent })
         </div>
       </div>
     </div>
+
+    <PersonalityManageModal
+      v-if="showPersonalityPicker"
+      v-model:open="showManageModal"
+      @changed="fetchPersonalities"
+    />
   </div>
 </template>
