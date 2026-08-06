@@ -150,6 +150,14 @@ async function confirmArchive() {
   }
 }
 
+// Called when archive is triggered from inside the open ChatSessionView — the
+// API call already fired inside ChatSessionView.handleArchiveSession(); this
+// only handles the UI cleanup (close the view + remove from list).
+function archiveFromSession(sessionId: string) {
+  if (activeSessionId.value === sessionId) activeSessionId.value = null
+  removeSession(sessionId)
+}
+
 async function reopenSession(id: string) {
   try {
     await api.POST(ApiRoutes.Chat.sessions.reopen(id))
@@ -267,6 +275,7 @@ async function reopenSession(id: string) {
       @initial-message-sent="pendingMessage = null"
       @session-refreshed="syncSession"
       @dismiss="activeSessionId = null"
+      @archive-session="archiveFromSession($event)"
     />
     <div
       v-else

@@ -39,6 +39,9 @@ const emit = defineEmits<{
    * exchange) without polling or a shared store. */
   sessionRefreshed: [id: string, title: string, status: string]
   dismiss: []
+  /** Fires when the user archives this session from the header — lets the parent
+   * close the view and remove the session from its list without a full reload. */
+  archiveSession: [sessionId: string]
 }>()
 
 const toast = useAppToast()
@@ -373,7 +376,7 @@ async function handleArchiveSession() {
     // Active/Closed exist; "Archived" on the frontend enum is a display-only
     // convenience, never a real Status the server sends).
     session.value.archivedAt = new Date().toISOString()
-    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    emit('archiveSession', session.value.id)
     toast.success('Chat archived')
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to archive chat')
