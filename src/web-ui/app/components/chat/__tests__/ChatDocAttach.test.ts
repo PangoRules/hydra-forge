@@ -31,6 +31,7 @@ describe('ChatDocAttach — attach success/error', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
     expect(wrapper.text()).toContain('Design Doc')
     expect(wrapper.text()).toContain('Spec Doc')
   })
@@ -42,6 +43,7 @@ describe('ChatDocAttach — attach success/error', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
     expect(wrapper.text()).toContain('No documents attached')
   })
 
@@ -51,6 +53,7 @@ describe('ChatDocAttach — attach success/error', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
     // The emit fires when ChatDocAttachPicker signals a pick.
     // We verify the panel mounts correctly and the + button is present.
     expect(wrapper.find('[title="Attach a document"]').exists()).toBe(true)
@@ -71,6 +74,7 @@ describe('ChatDocAttach — remove success/error', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
 
     await wrapper.find('[title="Remove attachment"]').trigger('click')
     await flushPromises()
@@ -89,6 +93,7 @@ describe('ChatDocAttach — remove success/error', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
 
     await wrapper.find('[title="Remove attachment"]').trigger('click')
     await flushPromises()
@@ -97,6 +102,42 @@ describe('ChatDocAttach — remove success/error', () => {
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ color: 'error', title: 'Remove failed' })
     )
+  })
+})
+
+describe('ChatDocAttach — collapse behavior', () => {
+  beforeEach(() => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({ data: attachedDocs, error: undefined })
+  })
+
+  it('is collapsed by default, showing only the summary row', async () => {
+    const wrapper = await mountSuspended(ChatDocAttach, {
+      props: { sessionId: 's1' }
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Attached docs (2)')
+    expect(wrapper.text()).not.toContain('Design Doc')
+  })
+
+  it('expands to show the doc list when the summary row is clicked', async () => {
+    const wrapper = await mountSuspended(ChatDocAttach, {
+      props: { sessionId: 's1' }
+    })
+    await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
+    expect(wrapper.text()).toContain('Design Doc')
+    expect(wrapper.text()).toContain('Spec Doc')
+  })
+
+  it('shows a zero count in the summary row when nothing is attached', async () => {
+    mockGET.mockReset()
+    mockGET.mockResolvedValue({ data: [], error: undefined })
+    const wrapper = await mountSuspended(ChatDocAttach, {
+      props: { sessionId: 's1' }
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Attached docs (0)')
   })
 })
 
@@ -112,6 +153,7 @@ describe('ChatDocAttach — error banner independent of list', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
     // Error banner should be visible
     expect(wrapper.find('.bg-error\\/10').exists()).toBe(true)
     expect(wrapper.text()).toContain('Fetch failed')
@@ -125,6 +167,7 @@ describe('ChatDocAttach — error banner independent of list', () => {
       props: { sessionId: 's1' }
     })
     await flushPromises()
+    await wrapper.find('[data-testid="doc-attach-toggle"]').trigger('click')
 
     expect(wrapper.find('.bg-error\\/10').exists()).toBe(true)
     await wrapper.find('[title="Dismiss"]').trigger('click')

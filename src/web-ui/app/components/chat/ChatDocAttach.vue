@@ -21,6 +21,7 @@ const attachedDocs = ref<AttachedDoc[]>([])
 const loading = ref(true)
 const fetchError = ref<string | null>(null)
 const showPicker = ref(false)
+const expanded = ref(false)
 
 async function fetchAttached() {
   loading.value = true
@@ -65,85 +66,99 @@ onMounted(fetchAttached)
 
 <template>
   <div class="space-y-2">
-    <!-- Header row -->
-    <div class="flex items-center justify-between">
-      <span class="text-xs font-medium text-muted uppercase">Attached Docs</span>
-      <UButton
-        icon="i-lucide-plus"
-        variant="ghost"
-        size="xs"
-        title="Attach a document"
-        @click="showPicker = true"
-      />
-    </div>
-
-    <!-- Loading -->
-    <div
-      v-if="loading"
-      class="flex items-center justify-center py-4"
+    <!-- Header row — click to expand/collapse -->
+    <button
+      type="button"
+      data-testid="doc-attach-toggle"
+      class="flex items-center justify-between w-full text-left"
+      @click="expanded = !expanded"
     >
-      <UIcon
-        name="i-lucide-loader-circle"
-        class="animate-spin size-4 text-muted"
-      />
-    </div>
-
-    <!-- Error banner (dismissible, shown above list) -->
-    <div
-      v-if="fetchError"
-      class="flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 rounded px-3 py-2"
-    >
-      <UIcon
-        name="i-lucide-alert-circle"
-        class="size-3.5 shrink-0"
-      />
-      <span class="flex-1 min-w-0 truncate">{{ fetchError }}</span>
-      <button
-        class="shrink-0 hover:text-error/70 transition-colors"
-        title="Dismiss"
-        @click="dismissError"
-      >
+      <span class="flex items-center gap-1 text-xs font-medium text-muted uppercase">
         <UIcon
-          name="i-lucide-x"
+          :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
           class="size-3.5"
         />
-      </button>
-    </div>
+        Attached docs ({{ attachedDocs.length }})
+      </span>
+    </button>
+    <UButton
+      v-if="expanded"
+      icon="i-lucide-plus"
+      variant="ghost"
+      size="xs"
+      title="Attach a document"
+      @click="showPicker = true"
+    />
 
-    <!-- Empty state -->
-    <p
-      v-if="!loading && !fetchError && attachedDocs.length === 0"
-      class="text-xs text-muted text-center py-2"
-    >
-      No documents attached
-    </p>
-
-    <!-- Doc list -->
-    <ul
-      v-if="!loading && attachedDocs.length > 0"
-      class="space-y-1"
-    >
-      <li
-        v-for="doc in attachedDocs"
-        :key="doc.documentId"
-        class="flex items-center gap-2 text-xs group focus-within:relative"
+    <template v-if="expanded">
+      <!-- Loading -->
+      <div
+        v-if="loading"
+        class="flex items-center justify-center py-4"
       >
         <UIcon
-          name="i-lucide-file-text"
-          class="size-3.5 shrink-0 text-muted"
+          name="i-lucide-loader-circle"
+          class="animate-spin size-4 text-muted"
         />
-        <span class="truncate flex-1 min-w-0">{{ doc.title }}</span>
-        <UButton
-          icon="i-lucide-x"
-          variant="ghost"
-          size="xs"
-          color="error"
-          class="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
-          title="Remove attachment"
-          @click="removeDoc(doc.documentId)"
+      </div>
+
+      <!-- Error banner (dismissible, shown above list) -->
+      <div
+        v-if="fetchError"
+        class="flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 rounded px-3 py-2"
+      >
+        <UIcon
+          name="i-lucide-alert-circle"
+          class="size-3.5 shrink-0"
         />
-      </li>
-    </ul>
+        <span class="flex-1 min-w-0 truncate">{{ fetchError }}</span>
+        <button
+          class="shrink-0 hover:text-error/70 transition-colors"
+          title="Dismiss"
+          @click="dismissError"
+        >
+          <UIcon
+            name="i-lucide-x"
+            class="size-3.5"
+          />
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <p
+        v-if="!loading && !fetchError && attachedDocs.length === 0"
+        class="text-xs text-muted text-center py-2"
+      >
+        No documents attached
+      </p>
+
+      <!-- Doc list -->
+      <ul
+        v-if="!loading && attachedDocs.length > 0"
+        class="space-y-1"
+      >
+        <li
+          v-for="doc in attachedDocs"
+          :key="doc.documentId"
+          class="flex items-center gap-2 text-xs group focus-within:relative"
+        >
+          <UIcon
+            name="i-lucide-file-text"
+            class="size-3.5 shrink-0 text-muted"
+          />
+          <span class="truncate flex-1 min-w-0">{{ doc.title }}</span>
+          <UButton
+            icon="i-lucide-x"
+            variant="ghost"
+            size="xs"
+            color="error"
+            class="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+            title="Remove attachment"
+            @click="removeDoc(doc.documentId)"
+          />
+        </li>
+      </ul>
+    </template>
 
     <!-- Picker modal -->
     <ChatDocAttachPicker
