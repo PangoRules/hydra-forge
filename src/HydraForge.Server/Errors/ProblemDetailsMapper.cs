@@ -80,6 +80,11 @@ public static class ProblemDetailsMapper
                 "Plan cannot be linked to a Spec for this card type"
             ),
             DomainErrorCodes.Plans.SpecCardMismatch => (400, "SpecId must belong to the same card"),
+            DomainErrorCodes.ProjectDocuments.NotFound => (404, "Document not found"),
+            DomainErrorCodes.ProjectDocuments.DuplicateDocType => (
+                409,
+                "Document type already exists for this project"
+            ),
             DomainErrorCodes.Relationships.NotFound => (404, "Relationship not found"),
             DomainErrorCodes.Relationships.Duplicate => (409, "Relationship already exists"),
             DomainErrorCodes.Relationships.CrossProjectDenied => (

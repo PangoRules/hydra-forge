@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using HydraForge.Application.Auth;
 using HydraForge.Application.ProjectDocuments;
 using HydraForge.Application.Shared;
@@ -9,6 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HydraForge.Server.Controllers.Projects;
 
+// Controller is a thin pass-through to ProjectDocumentService (already covered by
+// ProjectDocumentServiceTests) — no business logic here to unit test. Covered instead
+// by the HttpTests/ProjectDocuments.http smoke suite.
+[ExcludeFromCodeCoverage]
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]

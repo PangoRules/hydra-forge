@@ -653,6 +653,43 @@ public class ProblemDetailsMapperTests
         );
     }
 
+    // Card Doc Rules + Project Documents plan: ProjectDocuments
+    [Fact]
+    public void FromError_ProjectDocumentNotFound_MapsTo404()
+    {
+        var error = new Error(DomainErrorCodes.ProjectDocuments.NotFound, "Document not found.");
+
+        var details = ProblemDetailsMapper.FromError(error, "corr-pd1");
+
+        Assert.Equal(404, details.Status);
+        Assert.Equal("Document not found", details.Title);
+        Assert.Equal("https://hydraforge.local/errors/project-document-not-found", details.Type);
+    }
+
+    // Note: ProjectDocuments.DocumentVersionNotFound and .MarkdownPayloadTooLarge share the
+    // exact same string constant as Specs/Plans' equivalents (see DomainErrorCodes.cs), so
+    // they're already exercised by FromError_SpecDocumentVersionNotFound_MapsTo404 and
+    // FromError_SpecMarkdownPayloadTooLarge_MapsTo413 above — a dedicated ProjectDocuments
+    // arm for them would be an unreachable switch case (confirmed via CS8510 at compile time).
+
+    [Fact]
+    public void FromError_ProjectDocumentDuplicateDocType_MapsTo409()
+    {
+        var error = new Error(
+            DomainErrorCodes.ProjectDocuments.DuplicateDocType,
+            "Duplicate doc type."
+        );
+
+        var details = ProblemDetailsMapper.FromError(error, "corr-pd4");
+
+        Assert.Equal(409, details.Status);
+        Assert.Equal("Document type already exists for this project", details.Title);
+        Assert.Equal(
+            "https://hydraforge.local/errors/project-document-duplicate-doc-type",
+            details.Type
+        );
+    }
+
     // Phase 2: Relationships
     [Fact]
     public void FromError_RelationshipNotFound_MapsTo404()
