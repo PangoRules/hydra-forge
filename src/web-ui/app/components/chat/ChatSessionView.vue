@@ -3,8 +3,8 @@ import { ApiError } from '~/lib/api-error'
 import { randomId } from '~/lib/id'
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import type { ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
-import { MessageRole } from '~/types/chat'
+import type { AiEditMode, ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
+import { ChatSessionStatus, MessageRole } from '~/types/chat'
 
 const props = withDefaults(
   defineProps<{
@@ -62,58 +62,6 @@ const showRollbackConfirm = ref(false)
 const rollbackTarget = ref<ChatMessageDto | null>(null)
 const rollbackDiscardCount = ref(0)
 const lastUsedEffort = ref<string | null>(null)
-
-const isEditingTitle = ref(false)
-const editedTitle = ref('')
-const titleInputRef = ref<HTMLInputElement | null>(null)
-
-const findOpen = ref(false)
-const findQuery = ref('')
-const findIndex = ref(0)
-const findInputRef = ref<HTMLInputElement | null>(null)
-
-const findMatches = computed(() => {
-  const q = findQuery.value.trim().toLowerCase()
-  if (!q || !session.value) return []
-  return session.value.messages.filter(m => m.content.toLowerCase().includes(q))
-})
-
-const highlightMessageId = computed(() => findMatches.value[findIndex.value]?.id ?? null)
-
-watch(findQuery, () => {
-  findIndex.value = 0
-})
-
-// Scrolling to the current match is ChatMessageList's job, not this
-// component's — it owns the message-window (only the last 50 messages are
-// rendered) and expands that window before scrolling when the match falls
-// outside it. This component only tracks which message id is "current".
-
-function toggleFind() {
-  findOpen.value = !findOpen.value
-  if (findOpen.value) {
-    nextTick(() => findInputRef.value?.focus())
-  } else {
-    findQuery.value = ''
-    findIndex.value = 0
-  }
-}
-
-function closeFind() {
-  findOpen.value = false
-  findQuery.value = ''
-  findIndex.value = 0
-}
-
-function nextMatch() {
-  if (!findMatches.value.length) return
-  findIndex.value = (findIndex.value + 1) % findMatches.value.length
-}
-
-function prevMatch() {
-  if (!findMatches.value.length) return
-  findIndex.value = (findIndex.value - 1 + findMatches.value.length) % findMatches.value.length
-}
 
 // True from the moment a reply is successfully triggered (a REST call, see
 // useChatStream.send's doc comment) until it's known to be done — via a live
@@ -294,70 +242,95 @@ async function handleCancel() {
   awaitingReply.value = false
 }
 
-function startEditTitle() {
+async function handleToggleScope(searchAllMyDocs: boolean) {
   if (!session.value) return
-  editedTitle.value = session.value.title
-  isEditingTitle.value = true
-  nextTick(() => titleInputRef.value?.focus())
-}
-
-function cancelTitleEdit() {
-  isEditingTitle.value = false
-}
-
-async function submitTitleEdit() {
-  if (!isEditingTitle.value || !session.value) return
-  isEditingTitle.value = false
-
-  const newTitle = editedTitle.value.trim()
-  if (!newTitle || newTitle === session.value.title) return
-
-  const previousTitle = session.value.title
-  session.value.title = newTitle
   try {
-    const { data } = await api.PATCH<ChatSessionDto>(
-      ApiRoutes.Chat.sessions.update(props.sessionId),
-      {
-        body: {
-          title: newTitle,
-          folderId: session.value.folderId,
-          personalityId: session.value.personalityId,
-          aiEditMode: session.value.aiEditMode,
-          searchAllMyDocs: session.value.searchAllMyDocs
-        }
+    await api.PATCH(ApiRoutes.Chat.sessions.update(props.sessionId), {
+      body: {
+        title: session.value.title,
+        folderId: session.value.folderId,
+        personalityId: session.value.personalityId,
+        aiEditMode: session.value.aiEditMode,
+        searchAllMyDocs
       }
-    )
-    if (data && session.value) {
-      session.value.title = data.title
-      emit('sessionRefreshed', session.value.id, data.title, session.value.status)
-    }
+    })
+    session.value.searchAllMyDocs = searchAllMyDocs
   } catch (err) {
-    if (session.value) session.value.title = previousTitle
-    toast.error(err instanceof Error ? err.message : 'Failed to rename chat')
+    toast.error(err instanceof Error ? err.message : 'Failed to update scope')
   }
 }
 
-function exportChat() {
+async function handleEditPersonality(personalityId: string | null) {
   if (!session.value) return
-  const markdown = session.value.messages
-    .map((m) => {
-      const heading = m.role === MessageRole.User
-        ? '## User'
-        : m.role === MessageRole.Assistant
-          ? '## Assistant'
-          : `## ${m.role}`
-      return `${heading}\n\n${m.content}`
+  try {
+    await api.PATCH(ApiRoutes.Chat.sessions.update(props.sessionId), {
+      body: {
+        title: session.value.title,
+        folderId: session.value.folderId,
+        personalityId,
+        aiEditMode: session.value.aiEditMode,
+        searchAllMyDocs: session.value.searchAllMyDocs
+      }
     })
-    .join('\n\n')
+    session.value.personalityId = personalityId
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to update personality')
+  }
+}
 
-  const safeTitle = session.value.title.replace(/[/\\?%*:|"<>]/g, '-') || 'chat'
-  const blob = new Blob([markdown], { type: 'text/markdown' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${safeTitle}.md`
-  a.click()
-  URL.revokeObjectURL(url)
+async function handleEditMode(mode: AiEditMode) {
+  if (!session.value) return
+  try {
+    await api.PATCH(ApiRoutes.Chat.sessions.update(props.sessionId), {
+      body: {
+        title: session.value.title,
+        folderId: session.value.folderId,
+        personalityId: session.value.personalityId,
+        aiEditMode: mode,
+        searchAllMyDocs: session.value.searchAllMyDocs
+      }
+    })
+    session.value.aiEditMode = mode
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to update edit mode')
+  }
+}
+
+async function handleClose() {
+  if (!session.value) return
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.close(props.sessionId))
+    session.value.status = ChatSessionStatus.Closed
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    toast.success('Chat closed')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to close chat')
+  }
+}
+
+const router = useRouter()
+
+async function handleFork() {
+  if (!session.value) return
+  try {
+    const { data } = await api.POST<ChatSessionDto>(
+      ApiRoutes.Chat.sessions.create(),
+      {
+        body: {
+          title: `${session.value.title} (fork)`,
+          folderId: session.value.folderId,
+          projectId: session.value.projectId,
+          forkedFromSessionId: session.value.id
+        }
+      }
+    )
+    if (data) {
+      toast.success('Chat forked — navigating...')
+      await router.push(`/chats/${data.id}`)
+    }
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to fork chat')
+  }
 }
 
 function handleRollbackRequest(message: ChatMessageDto) {
@@ -449,92 +422,14 @@ onUnmounted(() => {
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
-      <input
-        v-if="isEditingTitle"
-        ref="titleInputRef"
-        v-model="editedTitle"
-        data-testid="title-input"
-        class="flex-1 min-w-0 font-semibold bg-transparent border-b border-primary focus-visible:outline-none"
-        @keydown.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
-        @keydown.esc="cancelTitleEdit"
-        @blur="submitTitleEdit"
-      >
-      <template v-else>
-        <h2 class="font-semibold truncate flex-1 min-w-0">
-          {{ session?.title ?? 'Chat' }}
-        </h2>
-        <UButton
-          icon="i-lucide-pencil"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Rename chat"
-          :disabled="session?.status !== 'Active'"
-          @click="startEditTitle"
-        />
-        <UButton
-          icon="i-lucide-download"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Export chat"
-          @click="exportChat"
-        />
-        <UButton
-          icon="i-lucide-search"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Find in conversation"
-          @click="toggleFind"
-        />
-      </template>
-    </div>
-
-    <div
-      v-if="findOpen"
-      class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2"
-    >
-      <input
-        ref="findInputRef"
-        v-model="findQuery"
-        data-testid="find-input"
-        placeholder="Find in conversation"
-        class="flex-1 min-w-0 text-sm bg-transparent focus-visible:outline-none"
-        @keydown.esc="closeFind"
-      >
-      <span
-        v-if="findQuery"
-        data-testid="find-count"
-        class="text-xs text-muted shrink-0"
-      >
-        {{ findMatches.length ? `${findIndex + 1}/${findMatches.length}` : '0/0' }}
-      </span>
-      <UButton
-        icon="i-lucide-chevron-up"
-        variant="ghost"
-        size="xs"
-        title="Previous match"
-        :disabled="!findMatches.length"
-        @click="prevMatch"
-      />
-      <UButton
-        icon="i-lucide-chevron-down"
-        variant="ghost"
-        size="xs"
-        title="Next match"
-        :disabled="!findMatches.length"
-        @click="nextMatch"
-      />
-      <UButton
-        icon="i-lucide-x"
-        variant="ghost"
-        size="xs"
-        title="Close find"
-        @click="closeFind"
-      />
-    </div>
+    <ChatSessionHeader
+      :session="session!"
+      @toggle-scope="handleToggleScope"
+      @edit-personality="handleEditPersonality"
+      @edit-mode="handleEditMode"
+      @close="handleClose"
+      @fork="handleFork"
+    />
 
     <div
       v-if="loading"
@@ -555,7 +450,6 @@ onUnmounted(() => {
         :stream-error="streamError"
         :awaiting-reply="awaitingReply"
         :rollback-disabled="isRollingBack || awaitingReply"
-        :highlight-message-id="highlightMessageId"
         @rollback="handleRollbackRequest"
       />
 
