@@ -32,8 +32,6 @@ const aiEditModeOptions = [
 const selectedPersonalityId = ref<string | null>(props.session.personalityId)
 const personalities = ref<AgentPersonalityDto[]>([])
 const loadingPersonalities = ref(false)
-const isPatchingPersonality = ref(false)
-
 watch(() => props.session.personalityId, (v) => {
   selectedPersonalityId.value = v
 })
@@ -41,10 +39,7 @@ watch(() => props.session.personalityId, (v) => {
 watch(selectedPersonalityId, (v, oldValue) => {
   if (!isActive.value) return
   if (oldValue !== v) {
-    isPatchingPersonality.value = true
     emit('editPersonality', v)
-  } else {
-    isPatchingPersonality.value = false
   }
 })
 
@@ -145,7 +140,6 @@ onMounted(fetchPersonalities)
       v-model="selectedPersonalityId"
       :items="personalityItems"
       :loading="loadingPersonalities"
-      :disabled="isPatchingPersonality"
       size="xs"
       class="w-36 shrink-0"
       placeholder="Personality"

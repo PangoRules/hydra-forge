@@ -36,7 +36,7 @@
 |---------|------|----------|------|
 | Toggle visible | Owner + personal chat + Active | "All docs" checkbox visible | |
 | Toggle hidden | Project chat | "All docs" checkbox absent | |
-| Toggle disabled | Owner + Closed session | Checkbox disabled | |
+| Toggle disabled | Owner + Closed session | Checkbox absent | |
 | Toggle effect | Toggle on, send message | Next send uses full-doc retrieval | |
 | API call | Toggle | `PATCH /api/chat/sessions/{id}` with `searchAllMyDocs: true|false` | |
 
@@ -45,7 +45,7 @@
 |---------|------|----------|------|
 | Picker visible | Owner + personal chat + Active | Dropdown shows personalities | |
 | Picker hidden | Project chat | Dropdown absent | |
-| Picker disabled | Owner + Closed session | Dropdown disabled | |
+| Picker disabled | Owner + Closed session | Dropdown absent | |
 | Default option | Server has default personality | "Default" option present; selecting it sends default ID | |
 | Loading | While fetching | Spinner shown | |
 | Fetch error | Server returns 500 | Error toast; picker degrades gracefully | |
@@ -56,7 +56,7 @@
 |---------|------|----------|------|
 | Picker visible | Owner + project chat + Active | Dropdown with PerMutation/Blanket | |
 | Picker hidden | Personal chat | Dropdown absent | |
-| Picker disabled | Owner + Closed session | Dropdown disabled | |
+| Picker disabled | Owner + Closed session | Dropdown absent | |
 | Change persists | Select mode, send message | `PATCH /api/chat/sessions/{id}` with `aiEditMode` | |
 
 ### Fork button (shared project chats)
@@ -124,9 +124,10 @@
 ## Acceptance Criteria
 
 ```bash
-cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build
+cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build && pnpm vitest run
 ```
 
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm lint` passes
 - [ ] `pnpm build` succeeds
+- [ ] `pnpm vitest run` passes
