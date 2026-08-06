@@ -621,6 +621,7 @@ onUnmounted(() => {
         :awaiting-reply="awaitingReply"
         :rollback-disabled="isRollingBack || awaitingReply"
         :highlight-message-id="highlightMessageId"
+        :find-query="findQuery"
         @rollback="handleRollbackRequest"
       />
 
