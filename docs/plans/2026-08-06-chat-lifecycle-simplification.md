@@ -10,7 +10,7 @@
 
 **Spec:** `docs/specs/2026-08-06-chat-lifecycle-simplification-design.md` (read first — authoritative).
 
-**Branch:** execute on a fresh `feat/chat-lifecycle-simplification` branch off `main` (or the user's chosen task branch).
+**Branch:** execute on current `task/web-chat-amangers` branch
 
 **Already done (committed on `task/web-chat-managers`, commit `3022253`):** `ChatSessionView` now emits `archiveSession(sessionId)` on archive (instead of `sessionRefreshed`), and `pages/chats/index.vue` consumes it via `archiveFromSession` (closes view + soft-removes from sidebar). Do not redo this — Tasks 5-6 build on it for the dock side.
 
