@@ -281,6 +281,81 @@ public class OllamaAdapterTests
     }
 
     [Fact]
+    public async Task StreamChatAsync_MergesMultipleSystemMessagesIntoOneLeadingMessage()
+    {
+        // Confirmed live (gemma4:26b via Ollama, personality = Captain Levi): with two
+        // separate system-role messages, the model's reply picked up the second (base
+        // identity) and ignored the first (personality) entirely — Gemma's chat template
+        // has no native multi-system-turn concept. Merging into one message fixed it.
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [
+                new ChatMessage(ChatRole.System, "You are Captain Levi."),
+                new ChatMessage(ChatRole.System, "You are HydraForge's built-in assistant."),
+                new ChatMessage(ChatRole.User, "Hey who are you?"),
+            ],
+            [],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        Assert.NotNull(bodyHandler.LastBody);
+        var doc = JsonDocument.Parse(bodyHandler.LastBody);
+        var messages = doc.RootElement.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Equal(2, messages.Count);
+        Assert.Equal("system", messages[0].GetProperty("role").GetString());
+        var systemContent = messages[0].GetProperty("content").GetString();
+        Assert.Contains("Captain Levi", systemContent);
+        Assert.Contains("HydraForge's built-in assistant", systemContent);
+        Assert.Equal("user", messages[1].GetProperty("role").GetString());
+        Assert.Equal("Hey who are you?", messages[1].GetProperty("content").GetString());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_MergesCacheBlockAndSystemMessageTogether()
+    {
+        var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
+        using var http = new HttpClient(bodyHandler);
+        var provider = CreateProvider();
+        var logger = new FakeLogger();
+        var adapter = new OllamaAdapter(http, provider, logger);
+
+        var request = new ChatRequest(
+            Guid.NewGuid(),
+            "gemma4:26b",
+            [
+                new ChatMessage(ChatRole.System, "You are Captain Levi."),
+                new ChatMessage(ChatRole.User, "Hey who are you?"),
+            ],
+            [new CacheBlock("project snapshot content", CacheBlockType.ProjectSnapshot)],
+            [],
+            null,
+            null
+        );
+
+        await foreach (var _ in adapter.StreamChatAsync(request)) { }
+
+        var doc = JsonDocument.Parse(bodyHandler.LastBody!);
+        var messages = doc.RootElement.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Equal(2, messages.Count);
+        Assert.Equal("system", messages[0].GetProperty("role").GetString());
+        var systemContent = messages[0].GetProperty("content").GetString();
+        Assert.Contains("project snapshot content", systemContent);
+        Assert.Contains("Captain Levi", systemContent);
+        Assert.Equal("user", messages[1].GetProperty("role").GetString());
+    }
+
+    [Fact]
     public async Task StreamChatAsync_SendsCacheBlocksAsSystemMessages()
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
