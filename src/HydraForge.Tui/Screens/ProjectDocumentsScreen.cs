@@ -7,24 +7,14 @@ using Spectre.Console.Rendering;
 
 namespace HydraForge.Tui.Screens;
 
-public class SpecViewerScreen(
+public class ProjectDocumentsScreen(
     ApiClientFactory apiClientFactory,
     AppState appState,
     ErrorCollector errorCollector,
-    SignalRConnectionManager signalRConnectionManager,
-    Guid projectId,
-    Guid cardId,
-    CardType cardType,
-    string mode = "spec"
+    Guid projectId
 ) : IScreen
 {
     private readonly EditorLauncher _editorLauncher = new();
-    private bool _signalRSubscribed;
-
-    // A key-triggered render (create/edit/etc.) and the SignalR echo of that same action
-    // (the server broadcasts back to the actor's own connection too) can land concurrently
-    // — without this, overlapping Clear()+Write() calls interleave into duplicate/garbled
-    // frames. Same pattern BoardScreen already uses for the identical reason.
     private readonly SemaphoreSlim _renderLock = new(1, 1);
 
     private List<DocumentItem> _documents = [];
@@ -35,41 +25,9 @@ public class SpecViewerScreen(
     {
         await LoadDocumentsAsync();
         await LoadVersionsForSelectedAsync();
-
-        if (!_signalRSubscribed)
-        {
-            signalRConnectionManager.OnBoardEvent += HandleBoardEvent;
-            _signalRSubscribed = true;
-        }
     }
 
-    public Task OnExitAsync()
-    {
-        if (_signalRSubscribed)
-        {
-            signalRConnectionManager.OnBoardEvent -= HandleBoardEvent;
-            _signalRSubscribed = false;
-        }
-        return Task.CompletedTask;
-    }
-
-    // Entered from CardDetailScreen by direct _appState.CurrentScreen assignment (an
-    // overlay-style push, see OpenSpecsPlansAsync), so the connection it rode in on is
-    // already alive — no need to Connect/Disconnect here, only (un)subscribe the handler.
-    private async void HandleBoardEvent(SignalRConnectionManager.BoardEvent evt)
-    {
-        if (evt.ProjectId != projectId || evt.CardId != cardId)
-            return;
-
-        var expectedEntityType = mode == "spec" ? "Spec" : "Plan";
-        if (evt.EntityType != expectedEntityType)
-            return;
-
-        await LoadDocumentsAsync();
-        await LoadVersionsForSelectedAsync();
-        if (appState.CurrentScreen == this)
-            await RenderAsync();
-    }
+    public Task OnExitAsync() => Task.CompletedTask;
 
     public async Task RenderAsync()
     {
@@ -79,12 +37,11 @@ public class SpecViewerScreen(
             AnsiConsole.Clear();
             ConsoleSize.Sync();
 
-            var title = mode == "spec" ? "Specifications" : "Plans";
-            AnsiConsole.Write(new Rule($"[blue]{title}[/]"));
+            AnsiConsole.Write(new Rule("[blue]Project Documents[/]"));
 
             if (_documents.Count == 0)
             {
-                var empty = new Panel(new Markup($"[grey]No {mode}s for this card.[/]"))
+                var empty = new Panel(new Markup("[grey]No project documents yet.[/]"))
                 {
                     Header = new PanelHeader(" Documents "),
                     Border = BoxBorder.Rounded,
@@ -107,9 +64,6 @@ public class SpecViewerScreen(
 
     private Panel BuildListPanel()
     {
-        // Grow with content, but cap at a quarter of the terminal — the
-        // preview/history row below already claims half, so past the cap
-        // j/k windows/scrolls through the list instead of growing further.
         var capHeight = Math.Max(8, AnsiConsole.Profile.Height / 4);
         var naturalHeight = 2 + _documents.Count * 2;
         var maxHeight = Math.Min(capHeight, naturalHeight);
@@ -126,23 +80,10 @@ public class SpecViewerScreen(
             var isSelected = i == _selectedIndex;
             var prefix = isSelected ? "[blue]>[/]" : " ";
 
-            var statusBadge = "";
-            if (mode == "plan" && doc.Status != null)
-            {
-                statusBadge = doc.Status switch
-                {
-                    "Pending" => " [grey](pending)[/]",
-                    "Active" => " [green](active)[/]",
-                    "Done" => " [green](done)[/]",
-                    _ => "",
-                };
-            }
-
-            var typeBadge =
-                doc.DocType != null ? $" [{GetTypeColor(doc.DocType)}]{doc.DocType}[/]" : "";
+            var typeBadge = $" [{GetTypeColor(doc.DocType)}]{doc.DocType}[/]";
 
             rows.Add(
-                new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}{statusBadge}")
+                new Markup($"{prefix} [bold]{Markup.Escape(doc.Title)}[/]{typeBadge}")
             );
             rows.Add(
                 new Markup(
@@ -171,13 +112,8 @@ public class SpecViewerScreen(
         var historyWidth = Math.Clamp(width / 3, 24, 44);
         var previewWidth = width - historyWidth;
 
-        // Cap growth at half the terminal height — a long doc with many
-        // versions would otherwise push these panels past the visible screen.
         var maxHeight = Math.Max(10, AnsiConsole.Profile.Height / 2);
 
-        // Table/Grid auto-sizing (Expand + a fixed-width column) doesn't add up
-        // to the exact console width — setting Panel.Width directly on both
-        // panels and concatenating with zero column padding does.
         var previewPanel = new Panel(new Markup(Markup.Escape(doc.Content)))
         {
             Header = new PanelHeader($" Preview: {Markup.Escape(doc.Title)} v{doc.Version} "),
@@ -201,9 +137,6 @@ public class SpecViewerScreen(
         return grid;
     }
 
-    // Each entry renders as 2 lines — slice to whole entries that fit rather
-    // than letting the panel hard-crop mid-entry. [r] Restore still lists the
-    // full history regardless of what's visible here.
     private IRenderable BuildHistoryContent(int maxHeight)
     {
         if (_versions.Count == 0)
@@ -230,38 +163,28 @@ public class SpecViewerScreen(
         return new Rows(rows);
     }
 
-    // Hints reflect what's actually reachable right now — e.g. [c] Create only
-    // shows once (Spec.CardId is max 1 per Card, see D-44), [s] Status only for Plans.
     private IEnumerable<string> BuildHints()
     {
         if (_documents.Count > 0)
         {
-            if (mode == "plan")
-                yield return "[j/k] Move";
+            yield return "[j/k] Move";
             yield return "[Enter] View";
             yield return "[e] Edit";
-            if (mode == "plan")
-                yield return "[s] Status";
             if (_versions.Count > 1)
                 yield return "[r] Restore version";
             yield return "[x] Export";
         }
-        if (CanCreateMore)
-            yield return "[c] Create";
+        yield return "[c] Create";
         yield return "[Esc] Back";
         yield return "[q] Quit";
     }
-
-    // Spec.CardId owns max 1 Spec per Card (see D-44) — Plans are legitimately
-    // multi, so this only restricts creation once a card already has its Spec.
-    private bool CanCreateMore => mode != "spec" || _documents.Count == 0;
 
     public async Task HandleKeyAsync(ConsoleKeyInfo key)
     {
         switch (key.Key)
         {
             case ConsoleKey.J or ConsoleKey.DownArrow:
-                if (mode == "plan" && _selectedIndex < _documents.Count - 1)
+                if (_selectedIndex < _documents.Count - 1)
                 {
                     _selectedIndex++;
                     await LoadVersionsForSelectedAsync();
@@ -271,7 +194,7 @@ public class SpecViewerScreen(
 
             case ConsoleKey.K
             or ConsoleKey.UpArrow:
-                if (mode == "plan" && _selectedIndex > 0)
+                if (_selectedIndex > 0)
                 {
                     _selectedIndex--;
                     await LoadVersionsForSelectedAsync();
@@ -288,13 +211,7 @@ public class SpecViewerScreen(
                 break;
 
             case ConsoleKey.C:
-                if (CanCreateMore)
-                    await CreateDocumentAsync();
-                break;
-
-            case ConsoleKey.S:
-                if (mode == "plan")
-                    await ChangeStatusAsync();
+                await CreateDocumentAsync();
                 break;
 
             case ConsoleKey.R:
@@ -323,7 +240,6 @@ public class SpecViewerScreen(
         var doc = _documents[_selectedIndex];
         var lines = doc.Content.Replace("\r\n", "\n").Split('\n');
 
-        // Rule + panel header/border + hint line eat 4 rows; the rest is content.
         var pageSize = Math.Max(5, AnsiConsole.Profile.Height - 4);
         var scroll = 0;
 
@@ -337,16 +253,8 @@ public class SpecViewerScreen(
             var panel = new Panel(new Markup(Markup.Escape(visible)))
             {
                 Border = BoxBorder.Rounded,
-                Header = new PanelHeader($" {mode} v{doc.Version} "),
+                Header = new PanelHeader($" Document v{doc.Version} "),
                 Expand = true,
-                // Without an explicit Height, a long-enough logical line word-wraps
-                // into more rendered rows than `pageSize` budgeted for, growing the
-                // panel past the terminal and pushing the title Rule above off-screen
-                // (Content is real Markdown now — headings/lists/tables wrap far more
-                // than the old single-line HTML blobs did). +2 accounts for the
-                // panel's own top/bottom border+header rows, matching the "Rule +
-                // panel + hint line eat 4 rows" budget below. Same technique as
-                // BuildListPanel/BuildDetailSplit in this file.
                 Height = pageSize + 2,
             };
             AnsiConsole.Write(panel);
@@ -376,12 +284,6 @@ public class SpecViewerScreen(
             return;
         var doc = _documents[_selectedIndex];
 
-        if (mode == "plan" && doc.Status == "Done")
-        {
-            AnsiConsole.MarkupLine("[yellow]Cannot edit a completed plan.[/]");
-            return;
-        }
-
         var newTitle = AnsiConsole.Prompt(
             new TextPrompt<string>("Title:")
                 .DefaultValue(doc.Title)
@@ -410,33 +312,16 @@ public class SpecViewerScreen(
         try
         {
             var client = apiClientFactory.GetClient();
-
-            if (mode == "spec")
-            {
-                await client.SpecsPUTAsync(
-                    projectId,
-                    doc.Id,
-                    new UpdateSpecRequest
-                    {
-                        Title = newTitle,
-                        Description = doc.Description,
-                        Content = newContent,
-                    }
-                );
-            }
-            else
-            {
-                await client.PlansPUTAsync(
-                    projectId,
-                    doc.Id,
-                    new UpdatePlanRequest
-                    {
-                        Title = newTitle,
-                        Description = doc.Description,
-                        Content = newContent,
-                    }
-                );
-            }
+            await client.ProjectDocumentsPUTAsync(
+                projectId,
+                doc.Id,
+                new UpdateProjectDocumentRequest
+                {
+                    Title = newTitle,
+                    Description = doc.Description,
+                    Content = newContent,
+                }
+            );
 
             AnsiConsole.MarkupLine("[green]Document updated.[/]");
             await LoadDocumentsAsync();
@@ -455,6 +340,13 @@ public class SpecViewerScreen(
 
     private async Task CreateDocumentAsync()
     {
+        var docTypes = Enum.GetValues<ProjectDocType>().Select(d => d.ToString()).ToList();
+        var typeIdx = await ListPrompt.Show("Document type:", docTypes, renderBackdrop: RenderAsync);
+        if (!typeIdx.HasValue)
+            return;
+
+        var docType = Enum.Parse<ProjectDocType>(docTypes[typeIdx.Value]);
+
         var title = AnsiConsole.Prompt(
             new TextPrompt<string>("Title:").Validate(t =>
                 string.IsNullOrWhiteSpace(t)
@@ -475,38 +367,18 @@ public class SpecViewerScreen(
         try
         {
             var client = apiClientFactory.GetClient();
+            await client.ProjectDocumentsPOSTAsync(
+                projectId,
+                new CreateProjectDocumentRequest
+                {
+                    DocType = docType,
+                    Title = title,
+                    Description = null,
+                    Content = content,
+                }
+            );
 
-            if (mode == "spec")
-            {
-                await client.CardsPOST2Async(
-                    projectId,
-                    cardId,
-                    new CreateSpecRequest
-                    {
-                        DocType = CardTypeMapper.ToDocType(cardType),
-                        Title = title,
-                        Description = null,
-                        Content = content,
-                    }
-                );
-            }
-            else
-            {
-                await client.CardsPOSTAsync(
-                    projectId,
-                    cardId,
-                    new CreatePlanRequest
-                    {
-                        Title = title,
-                        Description = null,
-                        Content = content,
-                        SpecId = null,
-                        Position = _documents.Count,
-                    }
-                );
-            }
-
-            AnsiConsole.MarkupLine($"[green]{mode} created![/]");
+            AnsiConsole.MarkupLine("[green]Document created![/]");
             await LoadDocumentsAsync();
             await LoadVersionsForSelectedAsync();
             await RenderAsync();
@@ -521,59 +393,11 @@ public class SpecViewerScreen(
         }
     }
 
-    private async Task ChangeStatusAsync()
-    {
-        if (_selectedIndex >= _documents.Count)
-            return;
-        var doc = _documents[_selectedIndex];
-        if (doc.Status == null)
-            return;
-
-        var current = Enum.Parse<PlanStatus>(doc.Status);
-        var choices = Enum.GetValues<PlanStatus>()
-            .Where(s => s != current)
-            .Select(s => s.ToString())
-            .ToList();
-
-        var idx = await ListPrompt.Show("New status:", choices, renderBackdrop: RenderAsync);
-        if (!idx.HasValue)
-            return;
-
-        var newStatus = choices[idx.Value];
-        try
-        {
-            var client = apiClientFactory.GetClient();
-            await client.StatusAsync(
-                projectId,
-                doc.Id,
-                new SetPlanStatusRequest { Status = Enum.Parse<PlanStatus>(newStatus) }
-            );
-
-            AnsiConsole.MarkupLine($"[green]Status set to {newStatus}.[/]");
-            await LoadDocumentsAsync();
-            await RenderAsync();
-        }
-        catch (ApiException ex)
-        {
-            errorCollector.Add("N/A", $"Status change failed: {ex.Message}");
-        }
-        catch (HttpRequestException ex)
-        {
-            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
-        }
-    }
-
     private async Task RestoreVersionAsync()
     {
         if (_selectedIndex >= _documents.Count || _versions.Count <= 1)
             return;
         var doc = _documents[_selectedIndex];
-
-        if (mode == "plan" && doc.Status == "Done")
-        {
-            AnsiConsole.MarkupLine("[yellow]Cannot restore a completed plan.[/]");
-            return;
-        }
 
         var choices = _versions
             .Select(v => $"v{v.Version} — {DateFormatting.FormatTimestamp(v.CreatedAt)}")
@@ -587,19 +411,11 @@ public class SpecViewerScreen(
         try
         {
             var client = apiClientFactory.GetClient();
-
-            if (mode == "spec")
-                await client.Restore4Async(
-                    projectId,
-                    doc.Id,
-                    new RestoreSpecVersionRequest { Version = version }
-                );
-            else
-                await client.Restore2Async(
-                    projectId,
-                    doc.Id,
-                    new RestorePlanVersionRequest { Version = version }
-                );
+            await client.Restore3Async(
+                projectId,
+                doc.Id,
+                new RestoreProjectDocumentVersionRequest { Version = version }
+            );
 
             AnsiConsole.MarkupLine($"[green]Restored v{version}.[/]");
             await LoadDocumentsAsync();
@@ -616,9 +432,6 @@ public class SpecViewerScreen(
         }
     }
 
-    // Content returned to the TUI is already Markdown (no X-Content-Format
-    // header sent — see docs on the Web UI's read-path conversion), so this
-    // writes doc.Content verbatim, no conversion needed.
     private async Task ExportDocumentAsync()
     {
         if (_selectedIndex >= _documents.Count)
@@ -627,36 +440,8 @@ public class SpecViewerScreen(
 
         try
         {
-            var client = apiClientFactory.GetClient();
-            var project = await client.ProjectsGET2Async(projectId);
-
             var cwd = Environment.CurrentDirectory;
-            var repoRoot = GitRepoDetector.FindRepoRoot(cwd);
-            var localRemote =
-                repoRoot != null ? GitRepoDetector.GetOriginRemoteUrl(repoRoot) : null;
-            var matches = GitRepoDetector.Matches(localRemote, project.GitRemoteUrl);
-
-            string baseDir;
-            if (repoRoot != null && matches)
-            {
-                baseDir = repoRoot;
-            }
-            else
-            {
-                var reason =
-                    repoRoot == null
-                        ? "No git repository found from the current directory."
-                        : $"This directory's git remote doesn't match the project's configured remote ({project.GitRemoteUrl ?? "none set"}).";
-                AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(reason)}[/]");
-                if (!AnsiConsole.Confirm("Export here anyway?", false))
-                {
-                    await RenderAsync();
-                    return;
-                }
-                baseDir = cwd;
-            }
-
-            var targetDir = Path.Combine(baseDir, "docs", mode == "spec" ? "specs" : "plans");
+            var targetDir = Path.Combine(cwd, "docs", "exports");
             Directory.CreateDirectory(targetDir);
             var path = Path.Combine(targetDir, $"{Slugify(doc.Title)}.md");
             await File.WriteAllTextAsync(path, doc.Content);
@@ -665,14 +450,6 @@ public class SpecViewerScreen(
             AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
             Console.ReadKey(true);
             await RenderAsync();
-        }
-        catch (ApiException ex)
-        {
-            errorCollector.Add("N/A", $"Export failed: {ex.Message}");
-        }
-        catch (HttpRequestException ex)
-        {
-            errorCollector.Add("N/A", $"Connection error: {ex.Message}");
         }
         catch (IOException ex)
         {
@@ -692,41 +469,19 @@ public class SpecViewerScreen(
         try
         {
             var client = apiClientFactory.GetClient();
-
-            if (mode == "spec")
-            {
-                var list = await client.CardsGET2Async(projectId, cardId);
-                _documents =
-                [
-                    .. list.Specs.Select(s => new DocumentItem(
-                        s.Id,
-                        s.Title,
-                        s.Content,
-                        s.Version,
-                        s.UpdatedAt.DateTime,
-                        s.DocType.ToString(),
-                        null,
-                        s.Description
-                    )),
-                ];
-            }
-            else
-            {
-                var list = await client.CardsGETAsync(projectId, cardId);
-                _documents =
-                [
-                    .. list.Plans.Select(p => new DocumentItem(
-                        p.Id,
-                        p.Title,
-                        p.Content,
-                        p.Version,
-                        p.UpdatedAt.DateTime,
-                        null,
-                        p.Status.ToString(),
-                        p.Description
-                    )),
-                ];
-            }
+            var list = await client.ProjectDocumentsGETAsync(projectId);
+            _documents =
+            [
+                .. list.Documents.Select(d => new DocumentItem(
+                    d.Id,
+                    d.Title,
+                    d.Content,
+                    d.Version,
+                    d.UpdatedAt.DateTime,
+                    d.DocType.ToString(),
+                    d.Description
+                )),
+            ];
 
             if (_selectedIndex >= _documents.Count)
                 _selectedIndex = Math.Max(0, _documents.Count - 1);
@@ -751,35 +506,17 @@ public class SpecViewerScreen(
         try
         {
             var client = apiClientFactory.GetClient();
-
-            if (mode == "spec")
-            {
-                var list = await client.Versions2Async(projectId, doc.Id);
-                _versions =
-                [
-                    .. list
-                        .Versions.Select(v => new VersionItem(
-                            v.Version,
-                            v.CreatedAt.DateTime,
-                            v.CreatedByUserId
-                        ))
-                        .OrderByDescending(v => v.Version),
-                ];
-            }
-            else
-            {
-                var list = await client.VersionsAsync(projectId, doc.Id);
-                _versions =
-                [
-                    .. list
-                        .Versions.Select(v => new VersionItem(
-                            v.Version,
-                            v.CreatedAt.DateTime,
-                            v.CreatedByUserId
-                        ))
-                        .OrderByDescending(v => v.Version),
-                ];
-            }
+            var list = await client.Versions2Async(projectId, doc.Id);
+            _versions =
+            [
+                .. list
+                    .Versions.Select(v => new VersionItem(
+                        v.Version,
+                        v.CreatedAt.DateTime,
+                        v.CreatedByUserId
+                    ))
+                    .OrderByDescending(v => v.Version),
+            ];
         }
         catch (ApiException ex)
         {
@@ -794,10 +531,13 @@ public class SpecViewerScreen(
     private static string GetTypeColor(string type) =>
         type switch
         {
-            "Specification" => "blue",
-            "Concept" => "yellow",
-            "Report" => "green",
-            "ValidationMatrix" => "magenta",
+            "Scope" => "blue",
+            "Glossary" => "cyan",
+            "DataModel" => "yellow",
+            "Architecture" => "green",
+            "FunctionalSpec" => "blue",
+            "Decisions" => "magenta",
+            "Reference" => "grey",
             _ => "grey",
         };
 
@@ -807,8 +547,7 @@ public class SpecViewerScreen(
         string Content,
         int Version,
         DateTime UpdatedAt,
-        string? DocType,
-        string? Status,
+        string DocType,
         string? Description
     );
 
