@@ -203,23 +203,34 @@ async function setDefault(p: AgentPersonalityDto) {
       </template>
 
       <template v-else>
-        <div class="space-y-3">
-          <UInput
-            v-model="formName"
-            data-testid="personality-name-input"
-            placeholder="Name"
-          />
-          <UInput
-            v-model="formDescription"
-            data-testid="personality-description-input"
-            placeholder="Description (shown in the picker)"
-          />
-          <UTextarea
-            v-model="formSystemPrompt"
-            data-testid="personality-prompt-input"
-            placeholder="System prompt"
-            :rows="6"
-          />
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-muted">Name</label>
+              <UInput
+                v-model="formName"
+                data-testid="personality-name-input"
+                placeholder="e.g. Senior Developer"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-muted">Description</label>
+              <UInput
+                v-model="formDescription"
+                data-testid="personality-description-input"
+                placeholder="Shown in the personality picker"
+              />
+            </div>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-muted">System prompt</label>
+            <UTextarea
+              v-model="formSystemPrompt"
+              data-testid="personality-prompt-input"
+              placeholder="Instructions that define the personality's behavior..."
+              :rows="6"
+            />
+          </div>
           <div class="flex justify-end gap-2">
             <UButton
               variant="ghost"
