@@ -138,12 +138,12 @@ export const ApiRoutes = {
   },
 
   Documents: {
-    list: (projectId: string) => `/api/projects/${projectId}/Documents`,
-    create: (projectId: string) => `/api/projects/${projectId}/Documents`,
-    detail: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}`,
-    update: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}`,
-    versions: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}/versions`,
-    restore: (projectId: string, docId: string) => `/api/projects/${projectId}/Documents/${docId}/restore`
+    list: (projectId: string) => `/api/projects/${projectId}/ProjectDocuments`,
+    create: (projectId: string) => `/api/projects/${projectId}/ProjectDocuments`,
+    detail: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}`,
+    update: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}`,
+    versions: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}/versions`,
+    restore: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}/restore`
   },
 
   Notifications: {
