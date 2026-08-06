@@ -2,6 +2,7 @@
 import type { ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
 
 const props = withDefaults(
   defineProps<{
@@ -93,19 +94,22 @@ const compactMenuItems = computed(() => {
     ])
   }
 
-  // Close/Archive/Reopen are independent, not mutually exclusive — Archive is
-  // reachable regardless of Active/Closed (same as the /chats list page's
-  // always-present archive button), and Reopen covers both Closed-only and
-  // Archived-only (including an Active-but-Archived session).
-  if (props.isOwner) {
-    const lifecycle: Array<{ label: string, icon: string, onSelect: () => void }> = []
-    if (isActive.value) {
-      lifecycle.push({
-        label: 'Close chat',
-        icon: 'i-lucide-check-circle',
-        onSelect: () => { showCloseConfirm.value = true }
-      })
-    }
+    // Close/Archive/Reopen are independent, not mutually exclusive — Archive is
+    // reachable regardless of Active/Closed (same as the /chats list page's
+    // always-present archive button), and Reopen covers both Closed-only and
+    // Archived-only (including an Active-but-Archived session).
+    // Close is only meaningful for project/card chats — closing a normal
+    // chat produces no summary and no card link, so archiving is the only
+    // "finished" path there (see spec: Actions by chat type).
+    if (props.isOwner) {
+      const lifecycle: Array<{ label: string, icon: string, onSelect: () => void }> = []
+      if (isActive.value && props.session.projectId) {
+        lifecycle.push({
+          label: 'Close chat',
+          icon: 'i-lucide-check-circle',
+          onSelect: () => { showCloseConfirm.value = true }
+        })
+      }
     if (!isActive.value || props.session.archivedAt) {
       lifecycle.push({
         label: 'Reopen chat',
@@ -143,14 +147,25 @@ defineExpose({ compactMenuItems })
     <!-- Title — always visible. Clickable-to-rename shortcut in compact mode
          (same rename flow as the kebab's "Rename chat" item); non-compact
          keeps the dedicated pencil button below instead. -->
-    <h2
-      class="font-semibold truncate flex-1 min-w-0 text-sm"
-      :class="compact && isOwner && isActive ? 'cursor-pointer hover:text-primary' : ''"
-      :title="compact && isOwner && isActive ? 'Click to rename' : undefined"
-      @click="compact && isOwner && isActive ? emit('startEditTitle') : undefined"
-    >
-      {{ session.title || 'Chat' }}
-    </h2>
+    <div class="flex items-center gap-1.5 flex-1 min-w-0">
+      <h2
+        class="font-semibold truncate min-w-0 text-sm"
+        :class="compact && isOwner && isActive ? 'cursor-pointer hover:text-primary' : ''"
+        :title="compact && isOwner && isActive ? 'Click to rename' : undefined"
+        @click="compact && isOwner && isActive ? emit('startEditTitle') : undefined"
+      >
+        {{ session.title || 'Chat' }}
+      </h2>
+      <UBadge
+        v-if="!compact"
+        :color="CHAT_TYPE_BADGE[getChatType(session)].color"
+        variant="subtle"
+        size="xs"
+        class="shrink-0"
+      >
+        {{ CHAT_TYPE_BADGE[getChatType(session)].label }}
+      </UBadge>
+    </div>
 
     <!-- Title edit pencil (owner, active only) -->
     <UButton
@@ -201,7 +216,7 @@ defineExpose({ compactMenuItems })
          reachable for the owner regardless of Active/Closed, matching the
          /chats list page's own archive button. -->
     <UButton
-      v-if="!compact && isOwner && isActive"
+      v-if="!compact && isOwner && isActive && session.projectId"
       icon="i-lucide-check-circle"
       variant="ghost"
       color="neutral"
@@ -301,9 +316,9 @@ defineExpose({ compactMenuItems })
     <ConfirmDialog
       v-model:open="showArchiveConfirm"
       title="Archive chat"
-      message="This chat will be archived. You can reopen it later from the chat list."
+      message="This chat will be archived and eventually deleted. You can unarchive it to restore it."
       confirm-text="Archive"
-      confirm-color="error"
+      confirm-color="warning"
       @confirm="confirmArchive"
     />
   </div>

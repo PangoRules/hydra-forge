@@ -107,7 +107,7 @@ describe('ChatSessionHeader — disabled-when-closed state', () => {
 
   it('archive button is shown for an Active session (not gated behind Closed)', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession({ status: ChatSessionStatus.Active }), isOwner: true }
+      props: { session: makeSession({ status: ChatSessionStatus.Active, projectId: 'p1' }), isOwner: true }
     })
     await flushPromises()
     expect(wrapper.find('[title="Archive chat"]').exists()).toBe(true)
@@ -152,7 +152,7 @@ describe('ChatSessionHeader — compact mode (ChatDock)', () => {
 
   it('close/archive/reopen collapse into the kebab menu when compact — no standalone buttons', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession(), isOwner: true, compact: true }
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true, compact: true }
     })
     await flushPromises()
     expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
@@ -185,7 +185,7 @@ describe('ChatSessionHeader — dismiss vs close/archive', () => {
 
   it('selecting Close chat from the kebab does not emit closeSession directly — it is gated behind confirmation', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
-      props: { session: makeSession(), isOwner: true, compact: true }
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true, compact: true }
     })
     await flushPromises()
     const closeItem = wrapper.vm.compactMenuItems.flat().find((i: { label: string }) => i.label === 'Close chat') as { onSelect: () => void }
@@ -207,6 +207,54 @@ describe('ChatSessionHeader — dismiss vs close/archive', () => {
     expect(items.every((i: { icon?: string }) => !!i.icon)).toBe(true)
   })
 
+})
+
+describe('ChatSessionHeader — close button gating by chat type', () => {
+  it('hides the inline Close button for normal chats (no projectId)', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: null }), isOwner: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
+  })
+
+  it('shows the inline Close button for project chats', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
+  })
+
+  it('shows the inline Close button for card chats', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1', openCardId: 'c1' }), isOwner: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
+  })
+
+  it('excludes Close from the compact kebab menu for normal chats', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: null }), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const items = (wrapper.vm as unknown as {
+      compactMenuItems: Array<Array<{ label: string }>>
+    }).compactMenuItems
+    expect(items.flat().map(i => i.label)).not.toContain('Close chat')
+  })
+
+  it('includes Close in the compact kebab menu for project chats', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const items = (wrapper.vm as unknown as {
+      compactMenuItems: Array<Array<{ label: string }>>
+    }).compactMenuItems
+    expect(items.flat().map(i => i.label)).toContain('Close chat')
+  })
 })
 
 describe('ChatSessionHeader — dock chrome (back/new-chat/full-height)', () => {
