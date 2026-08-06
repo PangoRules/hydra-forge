@@ -96,6 +96,7 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             3,
+            ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken.None
         );
         Assert.Equal(3, page1.Count);
@@ -109,6 +110,7 @@ public class EfChatSessionRepositoryTests
             sameTime,
             secondItemId,
             2,
+            ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken.None
         );
         // Should get exactly 1 remaining item (session1 — the oldest by UpdatedAt==sameTime, Id smallest)
@@ -163,6 +165,7 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             10,
+            ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken.None
         );
 
@@ -226,6 +229,7 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             10,
+            ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken.None
         );
 

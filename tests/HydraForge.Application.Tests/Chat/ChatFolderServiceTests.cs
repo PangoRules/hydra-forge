@@ -66,10 +66,22 @@ public class ChatFolderServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            query = statusFilter switch
+            {
+                ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
+                ChatSessionStatusFilter.Active => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Active
+                ),
+                ChatSessionStatusFilter.Closed => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
+                ),
+                _ => query.Where(s => s.ArchivedAt == null)
+            };
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
@@ -83,10 +95,22 @@ public class ChatFolderServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            query = statusFilter switch
+            {
+                ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
+                ChatSessionStatusFilter.Active => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Active
+                ),
+                ChatSessionStatusFilter.Closed => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
+                ),
+                _ => query.Where(s => s.ArchivedAt == null)
+            };
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)

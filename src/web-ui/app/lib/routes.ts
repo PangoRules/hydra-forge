@@ -205,12 +205,13 @@ export const ApiRoutes = {
 
   Chat: {
     sessions: {
-      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20) =>
-        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
+      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20, status?: string) =>
+        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}${status ? `status=${status}&` : ''}limit=${limit}`,
       create: () => '/api/chat/sessions',
       detail: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       update: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       close: (sessionId: string) => `/api/chat/sessions/${sessionId}/close`,
+      reopen: (sessionId: string) => `/api/chat/sessions/${sessionId}/reopen`,
       archive: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       attachDocument: (sessionId: string) => `/api/chat/sessions/${sessionId}/documents`,
       listDocuments: (sessionId: string) => `/api/chat/sessions/${sessionId}/documents`,

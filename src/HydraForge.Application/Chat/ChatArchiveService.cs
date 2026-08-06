@@ -23,6 +23,7 @@ public class ChatArchiveService(
             before: null,
             beforeId: null,
             limit: int.MaxValue,
+            statusFilter: ChatSessionStatusFilter.ActiveAndClosed,
             ct
         );
         foreach (var session in sessions)

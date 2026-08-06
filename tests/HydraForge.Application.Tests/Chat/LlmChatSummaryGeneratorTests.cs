@@ -37,6 +37,7 @@ public class LlmChatSummaryGeneratorTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
@@ -44,6 +45,7 @@ public class LlmChatSummaryGeneratorTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         ) => Task.FromResult(0);
 

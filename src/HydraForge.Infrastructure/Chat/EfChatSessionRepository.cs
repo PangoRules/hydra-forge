@@ -37,10 +37,14 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         DateTime? before,
         Guid? beforeId,
         int limit,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
         CancellationToken ct = default
     )
     {
-        var query = context.ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+        var query = ApplyStatusFilter(
+            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            statusFilter
+        );
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -62,10 +66,14 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         Guid ownerId,
         Guid? folderId,
         Guid? projectId,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
         CancellationToken ct = default
     )
     {
-        var query = context.ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+        var query = ApplyStatusFilter(
+            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            statusFilter
+        );
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -74,6 +82,22 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
 
         return await query.CountAsync(ct);
     }
+
+    private static IQueryable<ChatSession> ApplyStatusFilter(
+        IQueryable<ChatSession> query,
+        ChatSessionStatusFilter statusFilter
+    ) =>
+        statusFilter switch
+        {
+            ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
+            ChatSessionStatusFilter.Active => query.Where(s =>
+                s.ArchivedAt == null && s.Status == ChatSessionStatus.Active
+            ),
+            ChatSessionStatusFilter.Closed => query.Where(s =>
+                s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
+            ),
+            _ => query.Where(s => s.ArchivedAt == null),
+        };
 
     public async Task AddAsync(ChatSession session, CancellationToken ct = default)
     {

@@ -31,6 +31,16 @@ public record UpdateChatSessionRequest(
 
 public record MoveChatSessionRequest(Guid? FolderId);
 
+// ── Enums ───────────────────────────────────────────────────────
+
+public enum ChatSessionStatusFilter
+{
+    ActiveAndClosed,
+    Active,
+    Closed,
+    Archived,
+}
+
 // ── Folder Requests / Responses ─────────────────────────────────
 
 public record CreateChatFolderRequest(string Name, Guid? ParentFolderId, Guid? ProjectId);

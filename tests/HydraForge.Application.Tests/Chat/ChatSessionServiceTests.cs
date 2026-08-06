@@ -53,10 +53,11 @@ public class ChatSessionServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            var query = ApplyStatusFilter(Sessions.AsQueryable().Where(s => s.OwnerId == ownerId), statusFilter);
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
@@ -73,16 +74,32 @@ public class ChatSessionServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null);
+            var query = ApplyStatusFilter(Sessions.AsQueryable().Where(s => s.OwnerId == ownerId), statusFilter);
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
             return Task.FromResult(query.Count());
         }
+
+        private static IQueryable<ChatSession> ApplyStatusFilter(
+            IQueryable<ChatSession> query,
+            ChatSessionStatusFilter statusFilter
+        ) =>
+            statusFilter switch
+            {
+                ChatSessionStatusFilter.Active =>
+                    query.Where(s => s.ArchivedAt == null && s.Status == ChatSessionStatus.Active),
+                ChatSessionStatusFilter.Closed =>
+                    query.Where(s => s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed),
+                ChatSessionStatusFilter.Archived =>
+                    query.Where(s => s.ArchivedAt != null),
+                _ => query.Where(s => s.ArchivedAt == null),
+            };
 
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {
@@ -1407,5 +1424,174 @@ public class ChatSessionServiceTests
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);
         Assert.Equal(attachedId, result.Value[0].DocumentId);
+    }
+
+    [Fact]
+    public async Task ListAsync_StatusFilterArchived_ReturnsOnlyArchivedRegardlessOfStatus()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Closed,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+                ArchivedAt = null,
+            }
+        );
+
+        var result = await service.ListAsync(
+            ownerId,
+            folderId: null,
+            projectId: null,
+            before: null,
+            beforeId: null,
+            limit: 50,
+            statusFilter: ChatSessionStatusFilter.Archived
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task ListAsync_StatusFilterClosed_ExcludesActiveAndArchived()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Closed,
+                ArchivedAt = null,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Active,
+                ArchivedAt = null,
+            }
+        );
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                Status = ChatSessionStatus.Closed,
+                ArchivedAt = DateTime.UtcNow,
+            }
+        );
+
+        var result = await service.ListAsync(
+            ownerId,
+            folderId: null,
+            projectId: null,
+            before: null,
+            beforeId: null,
+            limit: 50,
+            statusFilter: ChatSessionStatusFilter.Closed
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task ReopenAsync_ClosedSession_SetsStatusActiveAndResetsAiEditMode()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Closed,
+            AiEditMode = AiEditMode.Blanket,
+            ClosedAt = DateTime.UtcNow,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.ReopenAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ChatSessionStatus.Active, result.Value.Status);
+        Assert.Equal(AiEditMode.PerMutation, result.Value.AiEditMode);
+    }
+
+    [Fact]
+    public async Task ReopenAsync_ArchivedAndClosedSession_ClearsArchivedAtInOneCall()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Closed,
+            ArchivedAt = DateTime.UtcNow,
+            ClosedAt = DateTime.UtcNow,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.ReopenAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value.ArchivedAt);
+        Assert.Equal(ChatSessionStatus.Active, result.Value.Status);
+    }
+
+    [Fact]
+    public async Task ReopenAsync_NotOwner_ReturnsFailure()
+    {
+        var (service, sessionRepo, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var callerId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Closed,
+        };
+        sessionRepo.Sessions.Add(session);
+
+        var result = await service.ReopenAsync(session.Id, callerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotOwner, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task ReopenAsync_SessionNotFound_ReturnsFailure()
+    {
+        var (service, _, _, _, _, _, _, _, _, _, _, _) = CreateSut();
+
+        var result = await service.ReopenAsync(NewId(), NewId());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionNotFound, result.Error.Code);
     }
 }

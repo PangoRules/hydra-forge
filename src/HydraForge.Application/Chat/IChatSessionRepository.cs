@@ -18,6 +18,7 @@ public interface IChatSessionRepository
         DateTime? before,
         Guid? beforeId,
         int limit,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
         CancellationToken ct = default
     );
 
@@ -31,6 +32,7 @@ public interface IChatSessionRepository
         Guid ownerId,
         Guid? folderId,
         Guid? projectId,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
         CancellationToken ct = default
     );
     Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
