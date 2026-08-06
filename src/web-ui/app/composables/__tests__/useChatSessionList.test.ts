@@ -122,4 +122,17 @@ describe('useChatSessionList', () => {
     expect(sessions.value.length).toBe(1)
     expect(sessions.value[0]?.title).toBe('A')
   })
+
+  it('defaults to the Active filter and sends it as a query param', async () => {
+    mockGET.mockResolvedValue({
+      data: { items: [], totalCount: 0 },
+      error: undefined
+    })
+    const { useChatSessionList } = await import('~/composables/useChatSessionList')
+    const { statusFilter } = useChatSessionList()
+    await flushMicrotasks()
+    expect(statusFilter.value).toBe('Active')
+    const calledUrl = mockGET.mock.calls[0]?.[0] as string
+    expect(calledUrl).toContain('status=Active')
+  })
 })

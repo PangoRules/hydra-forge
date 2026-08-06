@@ -10,7 +10,10 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
   const sessions = ref<ChatSessionDto[]>([])
   const loading = ref(false)
   const hasMore = ref(true)
-  const statusFilter = ref<'ActiveAndClosed' | 'Active' | 'Closed' | 'Archived'>('ActiveAndClosed')
+  // 'ActiveAndClosed' is deliberately NOT offered here — it stays in the
+  // backend enum for internal use (folder cascade-archive), but the UI only
+  // presents the linear lifecycle: Active (default) → Closed → Archived.
+  const statusFilter = ref<'Active' | 'Closed' | 'Archived'>('Active')
   const api = useApi()
 
   async function loadMore() {
@@ -25,10 +28,7 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
         last?.id,
         20
       )
-      const statusParam = statusFilter.value !== 'ActiveAndClosed'
-        ? `&status=${statusFilter.value}`
-        : ''
-      const url = `${base}${statusParam}`
+      const url = `${base}&status=${statusFilter.value}`
       const { data } = await api.GET<ChatSessionPageDto>(url)
       if (data) {
         sessions.value.push(...data.items)
