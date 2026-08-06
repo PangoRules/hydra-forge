@@ -39,21 +39,6 @@ public class ChatSessionService(
     private readonly ISettingsProvider _settingsProvider = settingsProvider;
     private readonly ILogger<ChatSessionService> _logger = logger;
 
-    private const string DefaultIdentityPrompt =
-        "You are HydraForge's built-in assistant. HydraForge is a project management tool: "
-        + "users organize work into Projects, Boards (columns + cards), Specs, Plans, and Chat sessions.\n\n"
-        + "Your capabilities:\n"
-        + "- Answer questions about the user's projects using context from the current board, cards, specs, and plans.\n"
-        + "- Generate and refine text content (descriptions, specs, plans, notes).\n"
-        + "- Analyze and discuss images if your model supports vision.\n"
-        + "- Generate images if your model supports image generation (e.g., DALL-E, Stable Diffusion).\n\n"
-        + "Your limitations:\n"
-        + "- You CANNOT create, modify, or delete projects, cards, boards, or any data. Those require future tool capabilities not yet available.\n"
-        + "- You CANNOT access the internet or external services unless specifically configured.\n"
-        + "- Be honest about your capabilities — only claim abilities you actually have. If you cannot view images, do not claim you can. If you cannot generate images, do not claim you can.\n\n"
-        + "Future planned capabilities include: project creation, card management, deep research, and agent-driven workflows. These are not available yet.\n\n"
-        + "Be concise and direct.";
-
     public async Task<Result<ChatSessionDto>> CreateAsync(
         CreateChatSessionRequest request,
         Guid actorId,
@@ -151,7 +136,7 @@ public class ChatSessionService(
     {
         var settings = await _settingsProvider.GetAsync(ct);
         var prompt = string.IsNullOrWhiteSpace(settings.AiIdentityPrompt)
-            ? DefaultIdentityPrompt
+            ? ChatPrompts.DefaultIdentityPrompt
             : settings.AiIdentityPrompt;
 
         var identityMessage = new ChatMessage

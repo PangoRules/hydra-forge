@@ -35,7 +35,7 @@ public sealed class LlmChatTitleGenerator : IChatTitleGenerator
         CancellationToken ct = default
     )
     {
-        var prompt = BuildPrompt(userMessage, assistantMessage);
+        var prompt = ChatPrompts.BuildChatTitlePrompt(userMessage, assistantMessage);
         var estimatedTokens = TokenEstimator.EstimateTokens(prompt);
 
         // Routing failure is a config problem (no model configured/enabled for the
@@ -127,7 +127,7 @@ public sealed class LlmChatTitleGenerator : IChatTitleGenerator
                 [],
                 MaxOutputTokens: 500,
                 Temperature: 0.5m,
-                OllamaThinkMode: route.Primary.OllamaThinkMode
+                ThinkMode: route.Primary.ThinkMode
             );
 
             var llmClient = _clientFactory.For(route.Provider!);
@@ -225,11 +225,4 @@ public sealed class LlmChatTitleGenerator : IChatTitleGenerator
         }
     }
 
-    private static string BuildPrompt(string userMessage, string assistantMessage) =>
-        "Summarize the topic of the conversation below in a short title of 3-6 words. "
-        + "Do NOT repeat or quote the user's message — write a new, condensed label for what "
-        + "it's about. No quotes, no trailing punctuation. Reply with ONLY the title, nothing else.\n\n"
-        + "Example:\n[User]: Can you help me refactor the authentication middleware to use JWT instead of sessions?\n"
-        + "Title: JWT Authentication Refactor\n\n"
-        + $"[User]: {userMessage}\n[Assistant]: {assistantMessage}\n\nTitle:";
 }
