@@ -3,6 +3,7 @@ import { ApiRoutes } from '~/lib/routes'
 import type { AgentPersonalityDto, ChatSessionDetailDto } from '~/types/chat'
 import { AiEditMode } from '~/types/chat'
 import PersonalityManageModal from '~/components/chat/PersonalityManageModal.vue'
+import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -84,6 +85,15 @@ async function fetchPersonalities() {
   }
 }
 
+const personalityItems = computed(() => {
+  const items = personalities.value.map(p => ({ label: p.name, value: p.id }))
+  const defaultPersonality = personalities.value.find(p => p.isDefault)
+  if (defaultPersonality) {
+    return [{ label: 'Default', value: defaultPersonality.id as string | null }, ...items]
+  }
+  return items
+})
+
 const compactMenuItems = computed(() => {
   const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, children?: Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>, onSelect?: () => void }>> = []
 
@@ -132,30 +142,32 @@ const compactMenuItems = computed(() => {
     ])
   }
 
-  if (props.isOwner && isActive.value) {
-    groups.push([
-      {
+  // Close/Archive/Reopen are independent, not mutually exclusive — Archive is
+  // reachable regardless of Active/Closed (same as the /chats list page's
+  // always-present archive button), and Reopen covers both Closed-only and
+  // Archived-only (including an Active-but-Archived session).
+  if (props.isOwner) {
+    const lifecycle: Array<{ label: string, icon: string, onSelect: () => void }> = []
+    if (isActive.value) {
+      lifecycle.push({
         label: 'Close chat',
         icon: 'i-lucide-check-circle',
         onSelect: () => { showCloseConfirm.value = true }
-      }
-    ])
-  } else if (props.isOwner && props.session.status === 'Closed' && !props.session.archivedAt) {
-    groups.push([
-      {
-        label: 'Archive chat',
-        icon: 'i-lucide-archive',
-        onSelect: () => { showArchiveConfirm.value = true }
-      }
-    ])
-  } else if (props.isOwner && props.session.archivedAt) {
-    groups.push([
-      {
+      })
+    }
+    if (!isActive.value || props.session.archivedAt) {
+      lifecycle.push({
         label: 'Reopen chat',
         icon: 'i-lucide-folder-open',
         onSelect: () => emit('reopenSession')
-      }
-    ])
+      })
+    }
+    lifecycle.push({
+      label: 'Archive chat',
+      icon: 'i-lucide-archive',
+      onSelect: () => { showArchiveConfirm.value = true }
+    })
+    groups.push(lifecycle)
   }
 
   return groups
@@ -214,47 +226,69 @@ defineExpose({ compactMenuItems })
       @click="emit('toggleFind')"
     />
 
-    <!-- Lifecycle actions — owner, non-compact only -->
-    <template v-if="!compact && isOwner && isActive">
-      <!-- AI edit mode picker — owner, active, project chats -->
-      <USelect
-        v-if="session.projectId"
-        :model-value="session.aiEditMode"
-        :items="aiEditModeOptions"
-        size="xs"
-        class="w-32 shrink-0"
-        @update:model-value="handleEditModeChange"
-      />
+    <!-- Personality picker — owner, active, non-project, non-compact -->
+    <USelect
+      v-if="!compact && isOwner && isActive && !session.projectId"
+      v-model="selectedPersonalityId"
+      :items="personalityItems"
+      :loading="loadingPersonalities"
+      size="xs"
+      class="w-36 shrink-0"
+      placeholder="Personality"
+    />
 
-      <!-- Inline lifecycle buttons (mirror kebab items in compact) -->
-      <UButton
-        v-if="session.status === 'Active'"
-        icon="i-lucide-check-circle"
-        variant="ghost"
-        color="neutral"
-        size="xs"
-        title="Close chat"
-        @click="showCloseConfirm = true"
-      />
-      <UButton
-        v-if="session.status === 'Closed'"
-        icon="i-lucide-archive"
-        variant="ghost"
-        color="neutral"
-        size="xs"
-        title="Archive chat"
-        @click="showArchiveConfirm = true"
-      />
-      <UButton
-        v-if="session.archivedAt"
-        icon="i-lucide-folder-open"
-        variant="ghost"
-        color="neutral"
-        size="xs"
-        title="Reopen chat"
-        @click="emit('reopenSession')"
-      />
-    </template>
+    <!-- Manage personalities button — owner, active, non-project, non-compact -->
+    <UButton
+      v-if="!compact && isOwner && isActive && !session.projectId"
+      icon="i-lucide-users"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Manage personalities"
+      @click="showManageModal = true"
+    />
+
+    <!-- AI edit mode picker — owner, active, project chats -->
+    <USelect
+      v-if="!compact && isOwner && isActive && session.projectId"
+      :model-value="session.aiEditMode"
+      :items="aiEditModeOptions"
+      size="xs"
+      class="w-32 shrink-0"
+      @update:model-value="handleEditModeChange"
+    />
+
+    <!-- Inline lifecycle buttons (mirror kebab items in compact) — each
+         condition is independent, not mutually exclusive: Archive is always
+         reachable for the owner regardless of Active/Closed, matching the
+         /chats list page's own archive button. -->
+    <UButton
+      v-if="!compact && isOwner && isActive"
+      icon="i-lucide-check-circle"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Close chat"
+      @click="showCloseConfirm = true"
+    />
+    <UButton
+      v-if="!compact && isOwner && (!isActive || session.archivedAt)"
+      icon="i-lucide-folder-open"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Reopen chat"
+      @click="emit('reopenSession')"
+    />
+    <UButton
+      v-if="!compact && isOwner"
+      icon="i-lucide-archive"
+      variant="ghost"
+      color="neutral"
+      size="xs"
+      title="Archive chat"
+      @click="showArchiveConfirm = true"
+    />
 
     <!-- Fork button: visible on shared project chats the caller doesn't own -->
     <UButton
@@ -283,9 +317,10 @@ defineExpose({ compactMenuItems })
       />
     </UDropdownMenu>
 
-    <!-- Dismiss button — owner, active -->
+    <!-- Dismiss button — always available, no API call, no ownership gate.
+         Ending the conversation (Close) or hiding it from the list (Archive)
+         are the deliberate, confirmed actions above; this just stops showing it. -->
     <UButton
-      v-if="isOwner && isActive"
       icon="i-lucide-x"
       variant="ghost"
       color="neutral"

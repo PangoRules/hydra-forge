@@ -372,7 +372,12 @@ async function handleArchiveSession() {
   if (!session.value) return
   try {
     await api.DELETE(ApiRoutes.Chat.sessions.archive(props.sessionId))
-    session.value.status = ChatSessionStatus.Archived
+    // ArchivedAt is a separate axis from Status (Active/Closed) — archiving
+    // never changes Status. Setting status here would fake a third status
+    // value the backend enum doesn't have (see ChatSessionStatus.cs: only
+    // Active/Closed exist; "Archived" on the frontend enum is a display-only
+    // convenience, never a real Status the server sends).
+    session.value.archivedAt = new Date().toISOString()
     emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
     toast.success('Chat archived')
   } catch (err) {

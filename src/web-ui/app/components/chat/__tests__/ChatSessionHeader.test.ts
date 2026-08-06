@@ -65,15 +65,15 @@ describe('ChatSessionHeader — ownership visibility', () => {
     expect(wrapper.find('[title="Dismiss"]').exists()).toBe(true)
   })
 
-  it('non-owner does not see rename pencil, export, or dismiss buttons', async () => {
+  it('non-owner does not see rename pencil or export buttons, but still sees dismiss', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ ownerId: 'u2' }), isOwner: false }
     })
     await flushPromises()
     expect(wrapper.find('[title="Rename chat"]').exists()).toBe(false)
     expect(wrapper.find('[title="Export chat"]').exists()).toBe(false)
-    // Dismiss (old "Close chat" inline button) is owner-only
-    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(false)
+    // Dismiss has no ownership/API-call gate — it just stops showing the chat
+    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(true)
   })
 
   it('shows fork button on shared project chat the caller does not own', async () => {
@@ -119,16 +119,32 @@ describe('ChatSessionHeader — disabled-when-closed state', () => {
     expect(wrapper.find('[title="Rename chat"]').attributes('disabled')).toBeDefined()
   })
 
-  it('dismiss button is absent when session is Closed (replaces old Close chat inline button)', async () => {
+  it('dismiss button is present regardless of session status', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession({ status: ChatSessionStatus.Closed }), isOwner: true }
     })
     await flushPromises()
-    // Dism button (v-if="isOwner && isActive") should not show for Closed sessions
-    // Active sessions should show Dism; Closed sessions should not
     const vm = wrapper.vm as any
     expect(vm.isActive).toBe(false)
-    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(false)
+    expect(wrapper.find('[title="Dismiss"]').exists()).toBe(true)
+  })
+
+  it('reopen button is shown (not archive) for a Closed, non-archived session', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ status: ChatSessionStatus.Closed }), isOwner: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Reopen chat"]').exists()).toBe(true)
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
+  })
+
+  it('archive button is shown for an Active session (not gated behind Closed)', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ status: ChatSessionStatus.Active }), isOwner: true }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Archive chat"]').exists()).toBe(true)
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
   })
 
   it('scope toggle is absent when session is Closed', async () => {
@@ -178,12 +194,16 @@ describe('ChatSessionHeader — compact mode (ChatDock)', () => {
     expect(wrapper.find('[title="Export chat"]').exists()).toBe(false)
   })
 
-  it('close button stays visible outside the kebab menu when compact', async () => {
+  it('close/archive/reopen collapse into the kebab menu when compact — no standalone buttons', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession(), isOwner: true, compact: true }
     })
     await flushPromises()
-    expect(wrapper.find('[title="Close chat"]').exists()).toBe(true)
+    expect(wrapper.find('[title="Close chat"]').exists()).toBe(false)
+    expect(wrapper.find('[title="Archive chat"]').exists()).toBe(false)
+    const items = (wrapper.vm as any).compactMenuItems.flat()
+    expect(items.some((i: { label: string }) => i.label === 'Close chat')).toBe(true)
+    expect(items.some((i: { label: string }) => i.label === 'Archive chat')).toBe(true)
   })
 
   it('shows all individual icon buttons when not compact (unchanged behavior)', async () => {
@@ -207,7 +227,7 @@ describe('ChatSessionHeader — dismiss vs close/archive', () => {
     expect(wrapper.emitted('close')).toBeFalsy()
   })
 
-  it('shows a confirm dialog before emitting closeSession from the kebab', async () => {
+  it('selecting Close chat from the kebab does not emit closeSession directly — it is gated behind confirmation', async () => {
     const wrapper = await mountSuspended(ChatSessionHeader, {
       props: { session: makeSession(), isOwner: true, compact: true }
     })
@@ -215,7 +235,10 @@ describe('ChatSessionHeader — dismiss vs close/archive', () => {
     const closeItem = wrapper.vm.compactMenuItems.flat().find((i: { label: string }) => i.label === 'Close chat') as { onSelect: () => void }
     closeItem.onSelect()
     await flushPromises()
-    expect(wrapper.find('[data-testid="close-session-confirm"]').exists()).toBe(true)
+    // The menu item only opens the confirm dialog (showCloseConfirm = true) —
+    // the real session-close emit only fires once the dialog's own Confirm
+    // button is clicked (ConfirmDialog.onConfirm → @confirm="confirmClose").
+    expect(wrapper.emitted('closeSession')).toBeFalsy()
   })
 
   it('every compact menu item has an icon', async () => {
