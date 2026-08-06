@@ -20,11 +20,16 @@ const props = withDefaults(defineProps<{
   editable?: boolean
   showToolbar?: boolean
   showSourceToggle?: boolean
+  // Stretch to fill the parent's available height (e.g. a full-bleed page editor)
+  // instead of the default small inline max-height (e.g. a Card modal's Spec/Plan
+  // panel, which sits in a scrollable modal and shouldn't grow unbounded).
+  fillHeight?: boolean
 }>(), {
   placeholder: 'Write something...',
   editable: true,
   showToolbar: true,
-  showSourceToggle: true
+  showSourceToggle: true,
+  fillHeight: false
 })
 
 const emit = defineEmits<{
@@ -244,7 +249,7 @@ defineExpose({
 </script>
 
 <template>
-  <div :class="isFullscreen ? 'fixed inset-0 z-[100] bg-default flex flex-col' : 'border rounded-md'">
+  <div :class="isFullscreen ? 'fixed inset-0 z-[100] bg-default flex flex-col' : (fillHeight ? 'border rounded-md flex-1 flex flex-col min-h-0' : 'border rounded-md')">
     <!-- Toolbar -->
     <div
       v-if="editable && showToolbar && !sourceMode"
@@ -500,11 +505,11 @@ defineExpose({
     </div>
 
     <!-- WYSIWYG editor -->
-    <div :class="isFullscreen ? 'flex-1 flex flex-col overflow-y-auto' : 'max-h-[280px] overflow-y-auto'">
+    <div :class="isFullscreen || fillHeight ? 'flex-1 flex flex-col overflow-y-auto min-h-0' : 'max-h-[280px] overflow-y-auto'">
       <EditorContent
         v-show="!sourceMode"
         :editor="editor"
-        :class="isFullscreen ? 'markdown-editor-content markdown-editor-fullscreen' : 'markdown-editor-content'"
+        :class="isFullscreen || fillHeight ? 'markdown-editor-content markdown-editor-fullscreen' : 'markdown-editor-content'"
         role="textbox"
         aria-multiline="true"
         aria-label="Markdown editor"
@@ -516,7 +521,7 @@ defineExpose({
         v-model="sourceText"
         class="w-full p-3 font-mono text-sm leading-loose resize-none focus-visible:outline-2 focus-visible:outline-primary bg-transparent min-h-[180px]"
         :placeholder="props.placeholder"
-        :class="isFullscreen ? 'h-full' : ''"
+        :class="isFullscreen || fillHeight ? 'h-full' : ''"
       />
     </div>
   </div>
@@ -632,10 +637,17 @@ defineExpose({
 .markdown-editor-content ul[data-type='taskList'] li > div {
   flex: 1;
 }
+/* display:block turns the table into its own horizontal-scroll container —
+   table-layout:auto still lets wide cell content (long code/URLs, many
+   columns) size the table past its parent's width; without this, that
+   width leaks into the flex ancestors and scrolls the whole page instead
+   of just the table. */
 .markdown-editor-content table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 0.5rem 0;
-  width: 100%;
 }
 .markdown-editor-content th,
 .markdown-editor-content td {
