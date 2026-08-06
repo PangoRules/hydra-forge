@@ -66,29 +66,28 @@ onMounted(fetchAttached)
 
 <template>
   <div class="space-y-2">
-    <!-- Header row — click to expand/collapse -->
-    <button
-      type="button"
-      data-testid="doc-attach-toggle"
-      class="flex items-center justify-between w-full text-left"
-      @click="expanded = !expanded"
-    >
-      <span class="flex items-center gap-1 text-xs font-medium text-muted uppercase">
+    <!-- Header row — summary toggles expand/collapse, + always reachable -->
+    <div class="flex items-center justify-between gap-2 w-full">
+      <button
+        type="button"
+        data-testid="doc-attach-toggle"
+        class="flex items-center gap-1 text-xs font-medium text-muted uppercase text-left min-w-0 flex-1"
+        @click="expanded = !expanded"
+      >
         <UIcon
           :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-          class="size-3.5"
+          class="size-3.5 shrink-0"
         />
-        Attached docs ({{ attachedDocs.length }})
-      </span>
-    </button>
-    <UButton
-      v-if="expanded"
-      icon="i-lucide-plus"
-      variant="ghost"
-      size="xs"
-      title="Attach a document"
-      @click="showPicker = true"
-    />
+        <span class="truncate">Attached docs ({{ attachedDocs.length }})</span>
+      </button>
+      <UButton
+        icon="i-lucide-plus"
+        variant="ghost"
+        size="xs"
+        title="Attach a document"
+        @click="showPicker = true"
+      />
+    </div>
 
     <template v-if="expanded">
       <!-- Loading -->

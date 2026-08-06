@@ -542,6 +542,20 @@ public class AgentPersonalityServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_ConcurrentFirstFetches_SeedsOnlyOnce()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+        var userId = NewId();
+
+        var results = await Task.WhenAll(service.ListAsync(userId), service.ListAsync(userId));
+
+        Assert.True(results[0].IsSuccess);
+        Assert.True(results[1].IsSuccess);
+        Assert.Equal(6, repo.Personalities.Count(p => p.UserId == userId));
+    }
+
+    [Fact]
     public async Task ListAsync_ZeroPersonalitiesEver_SeedsSixDefaults()
     {
         var repo = new FakePersonalityRepo();

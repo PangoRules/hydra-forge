@@ -111,6 +111,15 @@ describe('ChatDocAttach — collapse behavior', () => {
     mockGET.mockResolvedValue({ data: attachedDocs, error: undefined })
   })
 
+  it('shows the attach (+) button even while collapsed', async () => {
+    const wrapper = await mountSuspended(ChatDocAttach, {
+      props: { sessionId: 's1' }
+    })
+    await flushPromises()
+    expect(wrapper.find('[title="Attach a document"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Design Doc')
+  })
+
   it('is collapsed by default, showing only the summary row', async () => {
     const wrapper = await mountSuspended(ChatDocAttach, {
       props: { sessionId: 's1' }

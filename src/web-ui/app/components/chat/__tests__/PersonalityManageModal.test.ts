@@ -102,6 +102,43 @@ describe('PersonalityManageModal', () => {
     expect(wrapper.emitted('changed')).toBeTruthy()
   })
 
+  it('edits an existing personality and emits changed', async () => {
+    mockPATCH.mockResolvedValue({
+      data: { id: 'p1', name: 'well (edited)', description: 'Sage guide', systemPrompt: 'You are the well.', isDefault: false, createdAt: '', updatedAt: '', archivedAt: null },
+      error: undefined
+    })
+    const wrapper = await mountSuspended(PersonalityManageModal, {
+      props: { open: true },
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.find('[title="Edit"]').trigger('click')
+    expect((wrapper.find('[data-testid="personality-name-input"]').element as HTMLInputElement).value).toBe('well')
+    await wrapper.find('[data-testid="personality-name-input"]').setValue('well (edited)')
+    await wrapper.find('[data-testid="save-personality"]').trigger('click')
+    await flushPromises()
+    expect(mockPATCH).toHaveBeenCalledWith(
+      '/api/chat/personalities/p1',
+      expect.objectContaining({ body: expect.objectContaining({ name: 'well (edited)' }) })
+    )
+    expect(wrapper.emitted('changed')).toBeTruthy()
+  })
+
+  it('shows an error toast when edit fails', async () => {
+    mockPATCH.mockRejectedValue(new Error('Update failed'))
+    const wrapper = await mountSuspended(PersonalityManageModal, {
+      props: { open: true },
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.find('[title="Edit"]').trigger('click')
+    await wrapper.find('[data-testid="save-personality"]').trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'error', title: 'Update failed' })
+    )
+  })
+
   it('sets a personality as default and emits changed', async () => {
     mockPOST.mockResolvedValue({ data: undefined, error: undefined })
     const wrapper = await mountSuspended(PersonalityManageModal, {

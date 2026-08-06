@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.PersonalSpace;
 
@@ -6,6 +7,11 @@ namespace HydraForge.Application.Chat;
 public class AgentPersonalityService(IAgentPersonalityRepository repo) : IAgentPersonalityService
 {
     private readonly IAgentPersonalityRepository _repo = repo;
+
+    // Guards the first-ever-seed check-then-insert below against two concurrent
+    // requests for the same user (e.g. two browser tabs) both seeing zero rows
+    // and both seeding — without this, that race double-seeds to 12 rows.
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> _seedLocks = new();
 
     public async Task<Result<AgentPersonalityDto>> CreateAsync(
         CreateAgentPersonalityRequest request,
@@ -47,24 +53,39 @@ public class AgentPersonalityService(IAgentPersonalityRepository repo) : IAgentP
 
         if (all.Count == 0)
         {
-            foreach (var seed in DefaultAgentPersonalities.All)
+            var seedLock = _seedLocks.GetOrAdd(actorId, _ => new SemaphoreSlim(1, 1));
+            await seedLock.WaitAsync(ct);
+            try
             {
-                await _repo.AddAsync(
-                    new AgentPersonality
+                // Re-check after acquiring the lock — another request may have
+                // already seeded while this one was waiting.
+                all = await _repo.ListByUserAsync(actorId, ct);
+                if (all.Count == 0)
+                {
+                    foreach (var seed in DefaultAgentPersonalities.All)
                     {
-                        Id = Guid.NewGuid(),
-                        UserId = actorId,
-                        Name = seed.Name,
-                        Description = seed.Description,
-                        SystemPrompt = seed.SystemPrompt,
-                        IsDefault = false,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                    },
-                    ct
-                );
+                        await _repo.AddAsync(
+                            new AgentPersonality
+                            {
+                                Id = Guid.NewGuid(),
+                                UserId = actorId,
+                                Name = seed.Name,
+                                Description = seed.Description,
+                                SystemPrompt = seed.SystemPrompt,
+                                IsDefault = false,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                            },
+                            ct
+                        );
+                    }
+                    all = await _repo.ListByUserAsync(actorId, ct);
+                }
             }
-            all = await _repo.ListByUserAsync(actorId, ct);
+            finally
+            {
+                seedLock.Release();
+            }
         }
 
         var active = all.Where(p => !p.ArchivedAt.HasValue).Select(MapToDto).ToList();
