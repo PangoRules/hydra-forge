@@ -289,7 +289,7 @@ public sealed class ChatReplyGenerator(
                 4096,
                 0.7m,
                 reasoningEffort,
-                route.Primary.OllamaThinkMode
+                route.Primary.ThinkMode
             );
 
             await group.StreamStart(assistantMessageId, route.Primary.ModelId, route.Primary.Name);

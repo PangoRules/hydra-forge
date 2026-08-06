@@ -124,7 +124,7 @@ public sealed class ContextCompressor : IContextCompressor
             [],
             MaxOutputTokens: null,
             Temperature: 0.3m,
-            OllamaThinkMode: route.Primary.OllamaThinkMode
+            ThinkMode: route.Primary.ThinkMode
         );
 
         string summary;

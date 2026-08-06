@@ -402,10 +402,10 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             {
                 b.HasIndex(e => e.ProviderId);
                 b.HasIndex(e => new { e.ProviderId, e.ModelId }).IsUnique();
-                b.Property(e => e.OllamaThinkMode)
-                    .HasColumnName("ollama_think_mode")
+                b.Property(e => e.ThinkMode)
+                    .HasColumnName("think_mode")
                     .HasConversion<int>()
-                    .HasDefaultValue(OllamaThinkMode.Auto)
+                    .HasDefaultValue(ThinkMode.Auto)
                     .HasSentinel(default)
                     .IsRequired();
             }

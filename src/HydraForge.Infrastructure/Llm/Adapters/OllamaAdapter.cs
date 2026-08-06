@@ -56,11 +56,11 @@ public sealed class OllamaAdapter(
             // put reasoning in a separate `message.thinking` field, not `message.content`
             // — this adapter only ever reads `content` (below), so a model that spends
             // its whole token budget thinking returns a 200 with empty content and no
-            // error signal at all. Admin can override per model (OllamaThinkMode, set on
+            // error signal at all. Admin can override per model (ThinkMode, set on
             // the Provider Models page) for a model that's known to need — or break
             // under — thinking; "Auto" falls back to the same default as before: only
             // think if the caller actually asked for reasoning (ChatRequest.ReasoningEffort).
-            Think = request.OllamaThinkMode switch
+            Think = request.ThinkMode switch
             {
                 "On" => true,
                 "Off" => false,

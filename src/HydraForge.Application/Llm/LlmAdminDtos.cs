@@ -59,9 +59,9 @@ public sealed record ProviderModelConfigDto(
     int? MaxTokens,
     bool IsEnabled,
     bool SupportsReasoning = false,
-    // "Auto" | "On" | "Off" — see HydraForge.Domain.Enums.OllamaThinkMode. Only meaningful
+    // "Auto" | "On" | "Off" — see HydraForge.Domain.Enums.ThinkMode. Only meaningful
     // for Ollama-adapter providers; other adapter types ignore it.
-    string OllamaThinkMode = "Auto"
+    string ThinkMode = "Auto"
 );
 
 public sealed record CreateModelInput(
@@ -72,7 +72,7 @@ public sealed record CreateModelInput(
     int? MaxTokens,
     bool IsEnabled,
     bool SupportsReasoning = false,
-    string OllamaThinkMode = "Auto"
+    string ThinkMode = "Auto"
 );
 
 public sealed record UpdateModelInput(
@@ -82,7 +82,7 @@ public sealed record UpdateModelInput(
     int? MaxTokens,
     bool? IsEnabled,
     bool? SupportsReasoning = null,
-    string? OllamaThinkMode = null
+    string? ThinkMode = null
 );
 
 // Routing DTOs

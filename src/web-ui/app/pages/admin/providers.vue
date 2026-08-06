@@ -296,7 +296,7 @@ const formPricePerToken = ref<number | null>(null)
 const formMaxTokens = ref<number | null>(null)
 const formEnabled = ref(true)
 const formSupportsReasoning = ref(false)
-const formOllamaThinkMode = ref('Auto')
+const formThinkMode = ref('Auto')
 
 const isOllamaProvider = computed(() => selectedProvider.value?.adapterType === 'Ollama')
 
@@ -325,7 +325,7 @@ const modelColumns = computed(() => [
   { accessorKey: 'name', header: 'Display Name' },
   { accessorKey: 'tier', header: 'Tier' },
   { accessorKey: 'isEnabled', header: 'Status' },
-  ...(isOllamaProvider.value ? [{ accessorKey: 'ollamaThinkMode', header: 'Thinking' }] : []),
+  ...(isOllamaProvider.value ? [{ accessorKey: 'thinkMode', header: 'Thinking' }] : []),
   { accessorKey: 'actions', header: 'Actions', enableSorting: false }
 ])
 
@@ -364,7 +364,7 @@ function openEditModal(model: ProviderModelConfigDto) {
   formMaxTokens.value = model.maxTokens
   formEnabled.value = model.isEnabled
   formSupportsReasoning.value = model.supportsReasoning
-  formOllamaThinkMode.value = model.ollamaThinkMode
+  formThinkMode.value = model.ollamaThinkMode
   modalError.value = null
   showModal.value = true
 }
@@ -377,7 +377,7 @@ function resetForm() {
   formMaxTokens.value = null
   formEnabled.value = true
   formSupportsReasoning.value = false
-  formOllamaThinkMode.value = 'Auto'
+  formThinkMode.value = 'Auto'
 }
 
 async function handleModalSubmit() {
@@ -393,7 +393,7 @@ async function handleModalSubmit() {
         maxTokens: formMaxTokens.value,
         isEnabled: formEnabled.value,
         supportsReasoning: formSupportsReasoning.value,
-        ollamaThinkMode: formOllamaThinkMode.value
+        ollamaThinkMode: formThinkMode.value
       }
       await api.PUT(
         ApiRoutes.Admin.providers.updateModel(selectedProviderId.value, editingModel.value.id),
@@ -409,7 +409,7 @@ async function handleModalSubmit() {
         maxTokens: formMaxTokens.value,
         isEnabled: formEnabled.value,
         supportsReasoning: formSupportsReasoning.value,
-        ollamaThinkMode: formOllamaThinkMode.value
+        ollamaThinkMode: formThinkMode.value
       }
       await api.POST(
         ApiRoutes.Admin.providers.createModel(selectedProviderId.value),
@@ -919,7 +919,7 @@ onMounted(() => loadProviders())
             help="Some local thinking-capable models burn their whole token budget on hidden reasoning and return empty replies for short tasks like chat titles unless forced off. Set this once you've seen it happen for a specific model."
           >
             <USelect
-              v-model="formOllamaThinkMode"
+              v-model="formThinkMode"
               :items="OLLAMA_THINK_MODES"
               value-key="value"
               class="w-full"

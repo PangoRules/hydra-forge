@@ -216,11 +216,11 @@ namespace HydraForge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("OllamaThinkMode")
+                    b.Property<int>("ThinkMode")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
-                        .HasColumnName("ollama_think_mode");
+                        .HasColumnName("think_mode");
 
                     b.Property<decimal?>("PricePerToken")
                         .HasColumnType("numeric");

@@ -365,12 +365,12 @@ public sealed class LlmAdminService : ILlmAdminService
             );
         }
 
-        if (!Enum.TryParse<OllamaThinkMode>(input.OllamaThinkMode, true, out var thinkMode))
+        if (!Enum.TryParse<ThinkMode>(input.ThinkMode, true, out var thinkMode))
         {
             return Result<ProviderModelConfigDto>.Failure(
                 new Error(
                     DomainErrorCodes.Validation.InvalidValue,
-                    $"Unknown Ollama think mode: {input.OllamaThinkMode}"
+                    $"Unknown Ollama think mode: {input.ThinkMode}"
                 )
             );
         }
@@ -386,7 +386,7 @@ public sealed class LlmAdminService : ILlmAdminService
             IsEnabled = input.IsEnabled,
         };
         config.UpdateSupportsReasoning(input.SupportsReasoning);
-        config.UpdateOllamaThinkMode(thinkMode);
+        config.UpdateThinkMode(thinkMode);
 
         _repo.AddModelConfig(config);
         await _repo.SaveChangesAsync(ct);
@@ -463,18 +463,18 @@ public sealed class LlmAdminService : ILlmAdminService
             config.UpdateSupportsReasoning(input.SupportsReasoning.Value);
         }
 
-        if (input.OllamaThinkMode is { } thinkModeStr)
+        if (input.ThinkMode is { } thinkModeStr)
         {
-            if (!Enum.TryParse<OllamaThinkMode>(thinkModeStr, true, out var thinkMode))
+            if (!Enum.TryParse<ThinkMode>(thinkModeStr, true, out var thinkMode))
             {
                 return Result<ProviderModelConfigDto>.Failure(
                     new Error(
                         DomainErrorCodes.Validation.InvalidValue,
-                        $"Unknown Ollama think mode: {thinkModeStr}"
+                        $"Unknown think mode: {thinkModeStr}"
                     )
                 );
             }
-            config.UpdateOllamaThinkMode(thinkMode);
+            config.UpdateThinkMode(thinkMode);
         }
 
         config.UpdatedAt = DateTime.UtcNow;
@@ -1011,7 +1011,7 @@ public sealed class LlmAdminService : ILlmAdminService
             c.MaxTokens,
             c.IsEnabled,
             c.SupportsReasoning,
-            c.OllamaThinkMode.ToString()
+            c.ThinkMode.ToString()
         );
 
     private static FeatureRoutingDto ToRoutingDto(

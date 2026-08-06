@@ -196,7 +196,7 @@ public class OllamaAdapterTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_OllamaThinkModeOn_SendsThinkTrueRegardlessOfReasoningEffort()
+    public async Task StreamChatAsync_ThinkModeOn_SendsThinkTrueRegardlessOfReasoningEffort()
     {
         // Admin-configured per-model override (Provider Models page) — a model known to
         // need thinking always sends think:true, even with no reasoning effort requested.
@@ -214,7 +214,7 @@ public class OllamaAdapterTests
             [],
             2048,
             0.7m,
-            OllamaThinkMode: "On"
+            ThinkMode: "On"
         );
 
         await foreach (var _ in adapter.StreamChatAsync(request)) { }
@@ -224,7 +224,7 @@ public class OllamaAdapterTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_OllamaThinkModeOff_SendsThinkFalseEvenWithReasoningEffort()
+    public async Task StreamChatAsync_ThinkModeOff_SendsThinkFalseEvenWithReasoningEffort()
     {
         // The override that actually closes the reported bug: a model that empties its
         // content burning its budget on hidden reasoning (confirmed live with a local
@@ -244,7 +244,7 @@ public class OllamaAdapterTests
             2048,
             0.7m,
             ReasoningEffort: "high",
-            OllamaThinkMode: "Off"
+            ThinkMode: "Off"
         );
 
         await foreach (var _ in adapter.StreamChatAsync(request)) { }
@@ -254,7 +254,7 @@ public class OllamaAdapterTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_OllamaThinkModeAutoOrUnset_FallsBackToReasoningEffortHeuristic()
+    public async Task StreamChatAsync_ThinkModeAutoOrUnset_FallsBackToReasoningEffortHeuristic()
     {
         var bodyHandler = new JsonBodyHandler(HttpStatusCode.OK, "");
         using var http = new HttpClient(bodyHandler);
@@ -271,7 +271,7 @@ public class OllamaAdapterTests
             2048,
             0.7m,
             ReasoningEffort: "high",
-            OllamaThinkMode: "Auto"
+            ThinkMode: "Auto"
         );
 
         await foreach (var _ in adapter.StreamChatAsync(request)) { }
