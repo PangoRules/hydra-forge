@@ -540,4 +540,100 @@ public class AgentPersonalityServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(DomainErrorCodes.Chat.PersonalityNotFound, result.Error.Code);
     }
+
+    [Fact]
+    public async Task ListAsync_ZeroPersonalitiesEver_SeedsSixDefaults()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+        var userId = NewId();
+
+        var result = await service.ListAsync(userId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(6, result.Value.Count);
+        Assert.Equal(6, repo.Personalities.Count(p => p.UserId == userId));
+        Assert.Contains(result.Value, p => p.Name == "well");
+        Assert.Contains(result.Value, p => p.Name == "Carter");
+        Assert.Contains(result.Value, p => p.Name == "Commander Erwin");
+        Assert.Contains(result.Value, p => p.Name == "Captain Levi");
+        Assert.Contains(result.Value, p => p.Name == "Fire_Keeper");
+        Assert.Contains(result.Value, p => p.Name == "Tarnished");
+    }
+
+    [Fact]
+    public async Task ListAsync_SeededPersonalities_AreNotMarkedDefault()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+
+        var result = await service.ListAsync(NewId());
+
+        Assert.All(result.Value, p => Assert.False(p.IsDefault));
+    }
+
+    [Fact]
+    public async Task ListAsync_UserAlreadyHasAPersonality_DoesNotReseed()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+        var userId = NewId();
+        repo.Personalities.Add(
+            new AgentPersonality
+            {
+                Id = NewId(),
+                UserId = userId,
+                Name = "My Own Bot",
+                SystemPrompt = "p",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            }
+        );
+
+        var result = await service.ListAsync(userId);
+
+        Assert.Single(result.Value);
+        Assert.Equal("My Own Bot", result.Value[0].Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_UserHasOnlyArchivedPersonality_DoesNotReseed()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+        var userId = NewId();
+        repo.Personalities.Add(
+            new AgentPersonality
+            {
+                Id = NewId(),
+                UserId = userId,
+                Name = "Archived Bot",
+                SystemPrompt = "p",
+                ArchivedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            }
+        );
+
+        var result = await service.ListAsync(userId);
+
+        Assert.Empty(result.Value);
+        Assert.Single(repo.Personalities);
+    }
+
+    [Fact]
+    public async Task ListAsync_TwoDifferentUsers_EachGetsTheirOwnSeededSix()
+    {
+        var repo = new FakePersonalityRepo();
+        var service = new AgentPersonalityService(repo);
+        var userA = NewId();
+        var userB = NewId();
+
+        var resultA = await service.ListAsync(userA);
+        var resultB = await service.ListAsync(userB);
+
+        Assert.Equal(6, resultA.Value.Count);
+        Assert.Equal(6, resultB.Value.Count);
+        Assert.Equal(12, repo.Personalities.Count);
+    }
 }

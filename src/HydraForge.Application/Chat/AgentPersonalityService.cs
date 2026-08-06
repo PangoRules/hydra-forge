@@ -44,6 +44,29 @@ public class AgentPersonalityService(IAgentPersonalityRepository repo) : IAgentP
     )
     {
         var all = await _repo.ListByUserAsync(actorId, ct);
+
+        if (all.Count == 0)
+        {
+            foreach (var seed in DefaultAgentPersonalities.All)
+            {
+                await _repo.AddAsync(
+                    new AgentPersonality
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = actorId,
+                        Name = seed.Name,
+                        Description = seed.Description,
+                        SystemPrompt = seed.SystemPrompt,
+                        IsDefault = false,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    },
+                    ct
+                );
+            }
+            all = await _repo.ListByUserAsync(actorId, ct);
+        }
+
         var active = all.Where(p => !p.ArchivedAt.HasValue).Select(MapToDto).ToList();
         return Result<IReadOnlyList<AgentPersonalityDto>>.Success(active);
     }
