@@ -218,7 +218,7 @@ Content-Type: application/json
 X-Correlation-Id: smoke-pd-014
 
 {
-  "password": "NonMember123!",
+  "password": "NonMember123!", // seeded test user — not a real secret
   "username": "nonmember"
 }
 
