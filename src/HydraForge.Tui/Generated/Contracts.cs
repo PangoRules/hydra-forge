@@ -283,6 +283,36 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentResponse> ProjectDocumentsPOSTAsync(System.Guid projectId, CreateProjectDocumentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentListResponse> ProjectDocumentsGETAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentResponse> ProjectDocumentsGET2Async(System.Guid projectId, System.Guid documentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentResponse> ProjectDocumentsPUTAsync(System.Guid projectId, System.Guid documentId, UpdateProjectDocumentRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentVersionListResponse> Versions2Async(System.Guid projectId, System.Guid documentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ProjectDocumentResponse> Restore3Async(System.Guid projectId, System.Guid documentId, RestoreProjectDocumentVersionRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Created</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ProjectResponse> ProjectsPOSTAsync(CreateProjectRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -353,12 +383,12 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SpecVersionListResponse> Versions2Async(System.Guid projectId, System.Guid specId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<SpecVersionListResponse> Versions3Async(System.Guid projectId, System.Guid specId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SpecResponse> Restore3Async(System.Guid projectId, System.Guid specId, RestoreSpecVersionRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<SpecResponse> Restore4Async(System.Guid projectId, System.Guid specId, RestoreSpecVersionRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -468,7 +498,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -1427,6 +1457,9 @@ namespace HydraForge.Tui.Generated
         [System.Runtime.Serialization.EnumMember(Value = @"Goal")]
         Goal = 3,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"Security")]
+        Security = 4,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1662,6 +1695,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.Always)]
         public System.Collections.Generic.ICollection<ChatMessageDto> Messages { get; set; } = new System.Collections.ObjectModel.Collection<ChatMessageDto>();
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -1768,6 +1807,12 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("archivedAt", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.DateTimeOffset? ArchivedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2092,6 +2137,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("forkedFromSessionId", Required = Newtonsoft.Json.Required.AllowNull)]
         public System.Guid? ForkedFromSessionId { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2194,6 +2245,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = "Auto";
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -2223,6 +2277,34 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("position", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public int? Position { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateProjectDocumentRequest
+    {
+
+        [Newtonsoft.Json.JsonProperty("docType", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ProjectDocType DocType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Description { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        public string Content { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2470,6 +2552,9 @@ namespace HydraForge.Tui.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"Report")]
         Report = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ValidationMatrix")]
+        ValidationMatrix = 3,
 
     }
 
@@ -3049,6 +3134,157 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ProjectDocType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Scope")]
+        Scope = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Glossary")]
+        Glossary = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DataModel")]
+        DataModel = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Architecture")]
+        Architecture = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FunctionalSpec")]
+        FunctionalSpec = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Decisions")]
+        Decisions = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Reference")]
+        Reference = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProjectDocumentListResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("documents", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<ProjectDocumentResponse> Documents { get; set; } = new System.Collections.ObjectModel.Collection<ProjectDocumentResponse>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProjectDocumentResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid ProjectId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("docType", Required = Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ProjectDocType DocType { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Description { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        public string Content { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Always)]
+        public int Version { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdByUserId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CreatedByUserId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("updatedAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset UpdatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("archivedAt", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.DateTimeOffset? ArchivedAt { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProjectDocumentVersionListResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("versions", Required = Newtonsoft.Json.Required.Always)]
+        public System.Collections.Generic.ICollection<ProjectDocumentVersionResponse> Versions { get; set; } = new System.Collections.ObjectModel.Collection<ProjectDocumentVersionResponse>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProjectDocumentVersionResponse
+    {
+
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid Id { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("projectDocumentId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid ProjectDocumentId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Always)]
+        public int Version { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Description { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        public string Content { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdAt", Required = Newtonsoft.Json.Required.Always)]
+        public System.DateTimeOffset CreatedAt { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("createdByUserId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CreatedByUserId { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProjectListPageResponse
     {
 
@@ -3344,6 +3580,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = "Auto";
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -3549,6 +3788,24 @@ namespace HydraForge.Tui.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class RestorePlanVersionRequest
+    {
+
+        [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Always)]
+        public int Version { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RestoreProjectDocumentVersionRequest
     {
 
         [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Always)]
@@ -3982,6 +4239,12 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("searchAllMyDocs", Required = Newtonsoft.Json.Required.Always)]
         public bool SearchAllMyDocs { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("preferredModelConfigId", Required = Newtonsoft.Json.Required.AllowNull)]
+        public System.Guid? PreferredModelConfigId { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("preferredEffort", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? PreferredEffort { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -4097,6 +4360,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? OllamaThinkMode { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -4110,6 +4376,30 @@ namespace HydraForge.Tui.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdatePlanRequest
+    {
+
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]
+        public string Title { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string? Description { get; set; } = default!;
+
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        public string Content { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateProjectDocumentRequest
     {
 
         [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Always)]

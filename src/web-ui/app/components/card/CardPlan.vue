@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { htmlToMarkdown } from '~/lib/document-markdown'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
 const STATUS_LABELS: Record<string, string> = { Pending: 'Pending', Active: 'Active', Done: 'Done' }
@@ -89,6 +90,19 @@ function toggleExpand(planId: string) {
     expanded.add(planId)
   }
   expandedPlans.value = new Set(expanded) // Trigger reactivity
+}
+
+function expandFirst() {
+  if (plans.value.length > 0 && expandedPlans.value.size === 0) {
+    expandedPlans.value = new Set([plans.value[0]!.id])
+  }
+}
+
+async function loadAndExpandFirst() {
+  if (plans.value.length === 0) {
+    await fetchPlans()
+  }
+  expandFirst()
 }
 
 function isExpanded(planId: string): boolean {
@@ -221,6 +235,16 @@ async function toggleHistory(planId: string) {
   }
 }
 
+const { exportDocument } = useDocumentExport()
+
+function exportPlanAsMarkdown(plan: PlanResponse) {
+  // Read from editState (mirrors plan.content, kept in sync even when the plan
+  // is collapsed/unmounted) rather than the MarkdownEditor instance directly —
+  // it isn't mounted at all unless the plan is currently expanded.
+  const html = editState.value[plan.id]?.content ?? plan.content
+  exportDocument(plan.title, htmlToMarkdown(html), 'md')
+}
+
 async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
   restoringId.value = ver.id
   try {
@@ -239,6 +263,8 @@ async function restore(plan: PlanResponse, ver: PlanVersionResponse) {
 }
 
 onMounted(() => fetchPlans())
+
+defineExpose({ expandFirst, loadAndExpandFirst })
 </script>
 
 <template>
@@ -323,6 +349,13 @@ onMounted(() => fetchPlans())
                 variant="ghost"
                 :label="showHistoryId === plan.id ? 'Hide history' : 'History'"
                 @click.stop="toggleHistory(plan.id)"
+              />
+              <UButton
+                size="xs"
+                variant="ghost"
+                icon="i-lucide-download"
+                title="Export as Markdown"
+                @click.stop="exportPlanAsMarkdown(plan)"
               />
               <UButton
                 v-if="!props.readonly && plan.status !== 'Done'"

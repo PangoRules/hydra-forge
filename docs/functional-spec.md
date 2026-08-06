@@ -621,9 +621,9 @@ All 24 task plans shipped. Design spec archived at `docs/archive/specs/2026-07-3
 
 **Project chats:**
 - [ ] Project creation auto-creates matching chat folder
-- [ ] Project chat panel: collapsible in board view, does not obstruct board
-- [ ] Fresh session on panel open + smart context injection (`ProjectContextSnapshot.TemplateContent` + open card)
-- [ ] "Card #42 [title] opened — what are we doing?" auto-prompt when card is open
+- [x] Project chat panel: collapsible in board view, does not obstruct board
+- [x] Fresh session on panel open + smart context injection (`ProjectContextSnapshot.TemplateContent` + open card)
+- [x] "Card #42 [title] opened — what are we doing?" auto-prompt when card is open
 - [ ] AI edit permission: session-scoped, confirmation dialog per mutation OR grant session-level blanket permission
 - [ ] AI edit permission revoked on session end or new chat
 - [ ] CardChatLink: auto-link + summary generation on session close

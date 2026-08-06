@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ApiRoutes } from '~/lib/routes'
 import { formatDateTime } from '~/lib/date'
+import { htmlToMarkdown } from '~/lib/document-markdown'
 import MarkdownEditor from '~/components/shared/MarkdownEditor.vue'
 
-const DOC_TYPE_LABELS: Record<string, string> = { Specification: 'Specification', Concept: 'Concept', Report: 'Report' }
+const DOC_TYPE_LABELS: Record<string, string> = {
+  Specification: 'Specification',
+  Concept: 'Concept',
+  Report: 'Report',
+  ValidationMatrix: 'Validation Matrix'
+}
 
 interface SpecResponse {
   id: string
@@ -63,6 +69,8 @@ const isDirty = computed(() => {
   return title.value !== spec.value.title || content.value !== spec.value.content
 })
 
+const docLabel = computed(() => DOC_TYPE_LABELS[props.docType] ?? 'Spec')
+
 const versions = ref<SpecVersionResponse[]>([])
 const loadingVersions = ref(false)
 const restoring = ref<string | null>(null)
@@ -109,10 +117,10 @@ async function save() {
     }
     emit('update:specId', spec.value?.id ?? null)
     versions.value = [] // invalidate cache so next history toggle re-fetches
-    toast.success('Spec saved')
+    toast.success(`${docLabel.value} saved`)
     if (showHistory.value) await fetchVersions()
   } catch {
-    toast.error('Failed to save spec')
+    toast.error(`Failed to save ${docLabel.value.toLowerCase()}`)
   } finally {
     saving.value = false
   }
@@ -158,6 +166,12 @@ async function toggleHistory() {
 
 const { shortUser } = useMemberDisplay()
 
+const { exportDocument } = useDocumentExport()
+
+function exportAsMarkdown() {
+  exportDocument(title.value || 'untitled', htmlToMarkdown(content.value), 'md')
+}
+
 onMounted(() => fetchSpec())
 </script>
 
@@ -165,7 +179,7 @@ onMounted(() => fetchSpec())
   <div class="space-y-3">
     <div class="flex items-center justify-between">
       <p class="text-xs font-medium text-muted uppercase tracking-wide">
-        {{ DOC_TYPE_LABELS[props.docType] ?? 'Spec' }}
+        {{ docLabel }}
       </p>
       <div class="flex items-center gap-1">
         <UButton
@@ -174,6 +188,14 @@ onMounted(() => fetchSpec())
           variant="ghost"
           :label="showHistory ? 'Hide history' : 'History'"
           @click="toggleHistory"
+        />
+        <UButton
+          v-if="spec"
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-download"
+          title="Export as Markdown"
+          @click="exportAsMarkdown"
         />
         <UButton
           v-if="!props.readonly"
@@ -201,14 +223,14 @@ onMounted(() => fetchSpec())
       <div class="flex-1 space-y-3 min-w-0">
         <UInput
           v-model="title"
-          placeholder="Spec title"
+          :placeholder="`${docLabel} title`"
           :disabled="props.readonly"
           size="sm"
         />
         <MarkdownEditor
           v-model="content"
           :editable="!props.readonly"
-          placeholder="Write your spec..."
+          :placeholder="`Write your ${docLabel.toLowerCase()}...`"
         />
       </div>
 

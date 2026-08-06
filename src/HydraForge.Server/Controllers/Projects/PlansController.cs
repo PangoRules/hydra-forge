@@ -1,7 +1,9 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Plans;
+using HydraForge.Application.Shared;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Server.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +12,22 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]
-public class PlansController(PlanService planService) : ControllerBase
+public class PlansController(
+    PlanService planService,
+    IHtmlToMarkdownConverter htmlToMarkdown,
+    IMarkdownToHtmlConverter markdownToHtml
+) : ControllerBase
 {
+    // Content is stored as Markdown. A client that authors in HTML (the Web UI's
+    // TipTap editor) sends/expects HTML on both write and read — the same
+    // X-Content-Format header drives conversion in both directions so Content
+    // never leaves this boundary in the wrong shape for whichever client asked.
+    private string InContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? htmlToMarkdown.Convert(content) : content;
+
+    private string OutContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? markdownToHtml.Convert(content) : content;
+
     [HttpPost("cards/{cardId:guid}")]
     [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
@@ -29,7 +45,7 @@ public class PlansController(PlanService planService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content,
+            InContent(request.Content),
             request.Position
         );
 
@@ -46,7 +62,7 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -88,7 +104,7 @@ public class PlansController(PlanService planService) : ControllerBase
                 p.CardId,
                 p.Title,
                 p.Description,
-                p.Content,
+                OutContent(p.Content),
                 p.Version,
                 p.CreatedByUserId,
                 p.CreatedAt,
@@ -121,7 +137,7 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -150,7 +166,7 @@ public class PlansController(PlanService planService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content
+            InContent(request.Content)
         );
 
         var result = await planService.UpdateAsync(cmd);
@@ -166,7 +182,7 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -199,7 +215,7 @@ public class PlansController(PlanService planService) : ControllerBase
                 v.Version,
                 v.Title,
                 v.Description,
-                v.Content,
+                OutContent(v.Content),
                 v.CreatedAt,
                 v.CreatedByUserId
             )),
@@ -233,7 +249,7 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -268,7 +284,7 @@ public class PlansController(PlanService planService) : ControllerBase
             result.Value.CardId,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,

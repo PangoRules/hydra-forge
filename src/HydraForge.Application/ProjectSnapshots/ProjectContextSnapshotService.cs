@@ -106,7 +106,8 @@ public class ProjectContextSnapshotService(
                         ],
                         Tools: [],
                         MaxOutputTokens: 500,
-                        Temperature: 0.3m
+                        Temperature: 0.3m,
+                        ThinkMode: route.Primary.ThinkMode
                     );
 
                     var fullResponse = new List<string>();

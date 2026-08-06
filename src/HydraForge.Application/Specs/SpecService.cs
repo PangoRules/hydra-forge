@@ -69,18 +69,12 @@ public class SpecService(
         if (cardTypeError != null)
             return Result<SpecDto>.Failure(cardTypeError);
 
-        if (cmd.DocType != Card.ExpectedSpecDocType(card.Type))
+        if (!Card.IsValidSpecDocType(card.Type, cmd.DocType))
             return Result<SpecDto>.Failure(
                 new Error(
-                    DomainErrorCodes.Specs.DocTypeMismatch,
-                    $"{card.Type} cards must use DocType {Card.ExpectedSpecDocType(card.Type)}."
+                    DomainErrorCodes.Specs.InvalidDocTypeForCard,
+                    $"{card.Type} cards cannot use DocType {cmd.DocType}."
                 )
-            );
-
-        var existingSpecs = await _specRepo.ListByCardAsync(cmd.CardId, new SpecListFilter(), ct);
-        if (existingSpecs.Count > 0)
-            return Result<SpecDto>.Failure(
-                new Error(DomainErrorCodes.Specs.AlreadyExists, "Card already has a Spec.")
             );
 
         if (cmd.Content.Length > DocumentMarkdownLimits.MaxMarkdownPayloadBytes)

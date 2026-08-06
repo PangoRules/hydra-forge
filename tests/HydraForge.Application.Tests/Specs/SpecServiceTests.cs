@@ -464,13 +464,16 @@ public class SpecServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.InvalidCardType, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Specs.InvalidDocTypeForCard, result.Error.Code);
     }
 
     [Theory]
     [InlineData(CardType.Goal, DocType.Specification)]
+    [InlineData(CardType.Goal, DocType.ValidationMatrix)]
     [InlineData(CardType.Idea, DocType.Concept)]
     [InlineData(CardType.Issue, DocType.Report)]
+    [InlineData(CardType.Security, DocType.Report)]
+    [InlineData(CardType.Task, DocType.ValidationMatrix)]
     public async Task CreateAsync_MatchingDocTypeForCardType_Succeeds(
         CardType cardType,
         DocType docType
@@ -555,11 +558,117 @@ public class SpecServiceTests
         );
 
         Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.DocTypeMismatch, result.Error.Code);
+        Assert.Equal(DomainErrorCodes.Specs.InvalidDocTypeForCard, result.Error.Code);
     }
 
     [Fact]
-    public async Task CreateAsync_CardAlreadyHasSpec_ReturnsAlreadyExists()
+    public async Task CreateAsync_GoalCard_CanCreateTwoSpecsOfDifferentDocTypes()
+    {
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
+        var service = new SpecService(
+            specRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Type = CardType.Goal,
+            }
+        );
+
+        var result1 = await service.CreateAsync(
+            new CreateSpecCommand(
+                projectId,
+                cardId,
+                actorId,
+                DocType.Specification,
+                "Spec 1",
+                null,
+                "C1"
+            )
+        );
+        var result2 = await service.CreateAsync(
+            new CreateSpecCommand(
+                projectId,
+                cardId,
+                actorId,
+                DocType.ValidationMatrix,
+                "Spec 2",
+                null,
+                "C2"
+            )
+        );
+
+        Assert.True(result1.IsSuccess);
+        Assert.True(result2.IsSuccess);
+        Assert.Equal(2, specRepo.Specs.Count(s => s.CardId == cardId));
+    }
+
+    [Fact]
+    public async Task CreateAsync_SecurityCard_CannotCreateConceptSpec()
+    {
+        var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
+        var service = new SpecService(
+            specRepo,
+            cardRepo,
+            memberRepo,
+            userRepo,
+            auditWriter,
+            snapshotRefresher,
+            publisher
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Type = CardType.Security,
+            }
+        );
+
+        var result = await service.CreateAsync(
+            new CreateSpecCommand(projectId, cardId, actorId, DocType.Concept, "T", null, "C")
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Specs.InvalidDocTypeForCard, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_GoalCardAlreadyHasSpec_AllowsSecondSpec()
     {
         var (specRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
             CreateMocks();
@@ -614,8 +723,7 @@ public class SpecServiceTests
             )
         );
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Specs.AlreadyExists, result.Error.Code);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]

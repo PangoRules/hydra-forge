@@ -35,9 +35,17 @@ public class LlmChatSummaryGeneratorTests
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
+            Guid? beforeId,
             int limit,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+
+        public Task<int> CountAsync(
+            Guid ownerId,
+            Guid? folderId,
+            Guid? projectId,
+            CancellationToken ct = default
+        ) => Task.FromResult(0);
 
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {

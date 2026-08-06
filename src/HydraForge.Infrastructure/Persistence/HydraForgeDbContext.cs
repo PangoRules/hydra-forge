@@ -24,6 +24,8 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
     public DbSet<SpecVersion> SpecVersions => Set<SpecVersion>();
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<PlanVersion> PlanVersions => Set<PlanVersion>();
+    public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
+    public DbSet<ProjectDocumentVersion> ProjectDocumentVersions => Set<ProjectDocumentVersion>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<ProjectContextSnapshot> ProjectContextSnapshots => Set<ProjectContextSnapshot>();
@@ -248,6 +250,61 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             }
         );
 
+        ConfigureEntity<ProjectDocument>(
+            modelBuilder,
+            "project_documents",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectId);
+                b.HasIndex(e => new { e.ProjectId, e.DocType })
+                    .HasDatabaseName("ix_project_documents_project_id_doc_type");
+                b.Property(e => e.DocType)
+                    .HasColumnName("doc_type")
+                    .HasConversion<int>()
+                    .HasDefaultValue(ProjectDocType.Reference)
+                    .HasSentinel(default)
+                    .IsRequired();
+                b.Property(e => e.Title).HasColumnName("title").IsRequired();
+                b.Property(e => e.Description).HasColumnName("description").HasColumnType("text");
+                b.Property(e => e.Content)
+                    .HasColumnName("content")
+                    .HasColumnType("text")
+                    .IsRequired();
+                b.Property(e => e.Version).HasColumnName("version").IsRequired();
+                b.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
+                b.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+                b.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+                b.Property(e => e.ArchivedAt).HasColumnName("archived_at");
+                b.HasOne<Project>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
+        ConfigureEntity<ProjectDocumentVersion>(
+            modelBuilder,
+            "project_document_versions",
+            b =>
+            {
+                b.HasIndex(e => e.ProjectDocumentId);
+                b.HasIndex(e => new { e.ProjectDocumentId, e.Version }).IsUnique();
+                b.Property(e => e.Title).HasColumnName("title").IsRequired();
+                b.Property(e => e.Description).HasColumnName("description").HasColumnType("text");
+                b.Property(e => e.Content)
+                    .HasColumnName("content")
+                    .HasColumnType("text")
+                    .IsRequired();
+                b.Property(e => e.Version).HasColumnName("version").IsRequired();
+                b.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+                b.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
+                b.HasOne<ProjectDocument>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ProjectDocumentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            }
+        );
+
         ConfigureEntity<AuditLogEntry>(
             modelBuilder,
             "audit_log_entries",
@@ -312,6 +369,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
                     .WithMany()
                     .HasForeignKey(e => e.PersonalityId)
                     .OnDelete(DeleteBehavior.SetNull);
+                b.Property(e => e.PreferredEffort).HasColumnType("text");
             }
         );
 
@@ -344,6 +402,12 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             {
                 b.HasIndex(e => e.ProviderId);
                 b.HasIndex(e => new { e.ProviderId, e.ModelId }).IsUnique();
+                b.Property(e => e.ThinkMode)
+                    .HasColumnName("think_mode")
+                    .HasConversion<int>()
+                    .HasDefaultValue(ThinkMode.Auto)
+                    .HasSentinel(default)
+                    .IsRequired();
             }
         );
 
@@ -505,6 +569,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             "system_settings",
             b =>
             {
+                b.Property(s => s.AiIdentityPrompt).HasColumnType("text");
                 b.HasData(
                     new SystemSettings
                     {

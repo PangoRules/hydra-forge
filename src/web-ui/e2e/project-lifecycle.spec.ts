@@ -40,7 +40,7 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   // row with role="button", not role="row" — scope to that to avoid
   // matching the mobile copy's <h3> too.
   await page.getByRole('button', { name: new RegExp(projectName) }).click()
-  await expect(page).toHaveURL(/\/board$/)
+  await expect(page).toHaveURL(/\/projects\/[a-f0-9-]+$/)
   await expect(page.getByTestId('add-card-btn')).toBeVisible({ timeout: 15000 })
 
   async function createCard(opts: { title: string, type: string, column?: string, parent?: string, dueDate?: string }) {

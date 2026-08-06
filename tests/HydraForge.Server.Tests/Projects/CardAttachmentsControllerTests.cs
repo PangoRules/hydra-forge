@@ -4,6 +4,7 @@ using HydraForge.Application.Attachments;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Application.Projects;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
@@ -12,6 +13,7 @@ using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Result = HydraForge.Domain.Common.Result;
 
 namespace HydraForge.Server.Tests.Projects;
@@ -464,6 +466,8 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                             == typeof(Application.ProjectSnapshots.IProjectSnapshotRefresher)
                         || d.ServiceType == typeof(IAttachmentRepository)
                         || d.ServiceType == typeof(IFileStore)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -506,6 +510,10 @@ internal class AttachmentsTestWebApplicationFactory : WebApplicationFactory<Prog
                 _attachments
             ));
             services.AddScoped<INotificationService>(_ => new FakeNotificationService());
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
+            services.AddScoped<ProjectDocumentService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<Application.Columns.ColumnService>();
             services.AddScoped<CardService>();

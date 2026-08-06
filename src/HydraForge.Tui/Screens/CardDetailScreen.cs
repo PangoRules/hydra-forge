@@ -518,8 +518,9 @@ public class CardDetailScreen(
             ]
         );
 
-    // Which modes are offered mirrors CardModal.vue's hasSpec/hasPlan (D-44): Idea
-    // is Specs-only, Task is Plans-only, Goal/Issue get both and pick via the prompt.
+    // Which modes are offered mirrors CardModal.vue's hasSpec/hasPlan (D-44, updated
+    // by D-65/D-68): Goal/Idea/Security are Specs-only, Issue/Task get both and pick
+    // via the prompt (Task's Spec option is a ValidationMatrix, not a Specification).
     private async Task OpenSpecsPlansAsync()
     {
         if (_card == null)

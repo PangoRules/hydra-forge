@@ -11,6 +11,7 @@ public enum BoardEntityType
     Spec,
     Plan,
     CardRelationship,
+    ProjectDocument,
 }
 
 public enum BoardAction

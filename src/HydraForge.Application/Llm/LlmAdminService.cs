@@ -365,6 +365,16 @@ public sealed class LlmAdminService : ILlmAdminService
             );
         }
 
+        if (!Enum.TryParse<ThinkMode>(input.ThinkMode, true, out var thinkMode))
+        {
+            return Result<ProviderModelConfigDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Validation.InvalidValue,
+                    $"Unknown Ollama think mode: {input.ThinkMode}"
+                )
+            );
+        }
+
         var config = new ProviderModelConfig
         {
             ProviderId = providerId,
@@ -376,6 +386,7 @@ public sealed class LlmAdminService : ILlmAdminService
             IsEnabled = input.IsEnabled,
         };
         config.UpdateSupportsReasoning(input.SupportsReasoning);
+        config.UpdateThinkMode(thinkMode);
 
         _repo.AddModelConfig(config);
         await _repo.SaveChangesAsync(ct);
@@ -450,6 +461,20 @@ public sealed class LlmAdminService : ILlmAdminService
         if (input.SupportsReasoning.HasValue)
         {
             config.UpdateSupportsReasoning(input.SupportsReasoning.Value);
+        }
+
+        if (input.ThinkMode is { } thinkModeStr)
+        {
+            if (!Enum.TryParse<ThinkMode>(thinkModeStr, true, out var thinkMode))
+            {
+                return Result<ProviderModelConfigDto>.Failure(
+                    new Error(
+                        DomainErrorCodes.Validation.InvalidValue,
+                        $"Unknown think mode: {thinkModeStr}"
+                    )
+                );
+            }
+            config.UpdateThinkMode(thinkMode);
         }
 
         config.UpdatedAt = DateTime.UtcNow;
@@ -985,7 +1010,8 @@ public sealed class LlmAdminService : ILlmAdminService
             c.PricePerToken,
             c.MaxTokens,
             c.IsEnabled,
-            c.SupportsReasoning
+            c.SupportsReasoning,
+            c.ThinkMode.ToString()
         );
 
     private static FeatureRoutingDto ToRoutingDto(

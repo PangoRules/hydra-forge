@@ -91,32 +91,39 @@ public class Card
         return null;
     }
 
-    // Spec.CardId owns max 1 Spec per Card; Spec is Goal/Idea/Issue only (see D-44).
+    // Spec is allowed on Goal/Idea/Issue/Security/Task cards (see D-44, D-XX2, D-XX3).
     public static Error? ValidateAllowsSpec(CardType type) =>
-        type is CardType.Goal or CardType.Idea or CardType.Issue
+        type
+            is CardType.Goal
+                or CardType.Idea
+                or CardType.Issue
+                or CardType.Security
+                or CardType.Task
             ? null
             : new Error(
                 DomainErrorCodes.Specs.InvalidCardType,
                 $"{type} cards cannot have a Spec."
             );
 
-    // Plan.CardId is direct on Goal/Issue/Task; Idea has no Plans (see D-44).
+    // Plan is direct on Issue/Task only (see D-XX1).
     public static Error? ValidateAllowsPlan(CardType type) =>
-        type is CardType.Goal or CardType.Issue or CardType.Task
+        type is CardType.Issue or CardType.Task
             ? null
             : new Error(
                 DomainErrorCodes.Plans.InvalidCardType,
                 $"{type} cards cannot have a Plan."
             );
 
-    // Spec is typed by card: Goal->Specification, Idea->Concept, Issue->Report (see D-44).
-    public static DocType ExpectedSpecDocType(CardType type) =>
-        type switch
+    // Which DocTypes are valid for a given CardType (N Specs per card allowed — see D-XX6).
+    public static bool IsValidSpecDocType(CardType cardType, DocType docType) =>
+        cardType switch
         {
-            CardType.Goal => DocType.Specification,
-            CardType.Idea => DocType.Concept,
-            CardType.Issue => DocType.Report,
-            _ => throw new InvalidOperationException($"{type} cards have no Spec."),
+            CardType.Goal => docType is DocType.Specification or DocType.ValidationMatrix,
+            CardType.Task => docType is DocType.ValidationMatrix,
+            CardType.Idea => docType is DocType.Concept,
+            CardType.Issue => docType is DocType.Report,
+            CardType.Security => docType is DocType.Report,
+            _ => false,
         };
 
     public static Error? ValidateNoCycle(

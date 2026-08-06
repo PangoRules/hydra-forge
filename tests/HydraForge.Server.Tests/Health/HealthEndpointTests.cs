@@ -1,8 +1,10 @@
 using System.Net;
 using HydraForge.Application.Health;
+using HydraForge.Application.ProjectDocuments;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace HydraForge.Server.Tests.Health;
 
@@ -50,7 +52,11 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             // Remove existing IHealthProbe registrations (singleton GetHealthHandler already constructed with them)
             var removeDescriptors = services
-                .Where(d => d.ServiceType == typeof(IHealthProbe))
+                .Where(d =>
+                    d.ServiceType == typeof(IHealthProbe)
+                    || d.ServiceType == typeof(IProjectDocumentRepository)
+                    || d.ServiceType == typeof(ProjectDocumentService)
+                )
                 .ToList();
             foreach (var d in removeDescriptors)
                 services.Remove(d);
@@ -59,6 +65,10 @@ class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IHealthProbe, FakeServerHealthProbe>();
             services.AddScoped<IHealthProbe, FakeDbHealthProbe>();
             services.AddScoped<IHealthProbe, FakeLlmHealthProbe>();
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
+            services.AddScoped<ProjectDocumentService>();
         });
     }
 }

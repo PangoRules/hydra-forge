@@ -14,6 +14,8 @@ public class SystemSettings
     public string? BrandLogoUrl { get; set; }
     public TimeSpan? AiNarrativeGenerationTimeUtc { get; set; } = TimeSpan.Zero;
     public TimeSpan? HousekeepingRunTimeUtc { get; set; } = new TimeSpan(3, 0, 0);
+    public string? AiIdentityPrompt { get; set; }
+    public DateTime? SpecPlanHtmlBackfillCompletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -56,6 +58,18 @@ public class SystemSettings
     public void SetHousekeepingRunTime(TimeSpan? value)
     {
         HousekeepingRunTimeUtc = value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetAiIdentityPrompt(string? value)
+    {
+        AiIdentityPrompt = string.IsNullOrWhiteSpace(value) ? null : value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkSpecPlanHtmlBackfillCompleted()
+    {
+        SpecPlanHtmlBackfillCompletedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 }

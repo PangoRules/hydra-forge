@@ -1,7 +1,9 @@
 using HydraForge.Application.Auth;
+using HydraForge.Application.Shared;
 using HydraForge.Application.Specs;
 using HydraForge.Server.Auth;
 using HydraForge.Server.Errors;
+using HydraForge.Server.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +12,22 @@ namespace HydraForge.Server.Controllers.Projects;
 [Authorize(Policy = AuthPolicies.UserIdRequired)]
 [ApiController]
 [Route("api/projects/{projectId:guid}/[controller]")]
-public class SpecsController(SpecService specService) : ControllerBase
+public class SpecsController(
+    SpecService specService,
+    IHtmlToMarkdownConverter htmlToMarkdown,
+    IMarkdownToHtmlConverter markdownToHtml
+) : ControllerBase
 {
+    // Content is stored as Markdown. A client that authors in HTML (the Web UI's
+    // TipTap editor) sends/expects HTML on both write and read — the same
+    // X-Content-Format header drives conversion in both directions so Content
+    // never leaves this boundary in the wrong shape for whichever client asked.
+    private string InContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? htmlToMarkdown.Convert(content) : content;
+
+    private string OutContent(string content) =>
+        ContentFormatHeader.IsHtml(Request) ? markdownToHtml.Convert(content) : content;
+
     [HttpPost("cards/{cardId:guid}")]
     [ProducesResponseType(typeof(SpecResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
@@ -29,7 +45,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             request.DocType,
             request.Title,
             request.Description,
-            request.Content
+            InContent(request.Content)
         );
 
         var result = await specService.CreateAsync(cmd);
@@ -46,7 +62,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -86,7 +102,7 @@ public class SpecsController(SpecService specService) : ControllerBase
                 s.DocType,
                 s.Title,
                 s.Description,
-                s.Content,
+                OutContent(s.Content),
                 s.Version,
                 s.CreatedByUserId,
                 s.CreatedAt,
@@ -117,7 +133,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -143,7 +159,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             userId,
             request.Title,
             request.Description,
-            request.Content
+            InContent(request.Content)
         );
 
         var result = await specService.UpdateAsync(cmd);
@@ -160,7 +176,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,
@@ -190,7 +206,7 @@ public class SpecsController(SpecService specService) : ControllerBase
                 v.Version,
                 v.Title,
                 v.Description,
-                v.Content,
+                OutContent(v.Content),
                 v.CreatedAt,
                 v.CreatedByUserId
             )),
@@ -225,7 +241,7 @@ public class SpecsController(SpecService specService) : ControllerBase
             result.Value.DocType,
             result.Value.Title,
             result.Value.Description,
-            result.Value.Content,
+            OutContent(result.Value.Content),
             result.Value.Version,
             result.Value.CreatedByUserId,
             result.Value.CreatedAt,

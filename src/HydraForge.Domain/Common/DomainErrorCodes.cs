@@ -111,6 +111,15 @@ public static class DomainErrorCodes
         public const string InvalidCardType = "SPEC_INVALID_CARD_TYPE";
         public const string DocTypeMismatch = "SPEC_DOC_TYPE_MISMATCH";
         public const string AlreadyExists = "SPEC_ALREADY_EXISTS";
+        public const string InvalidDocTypeForCard = "SPEC_INVALID_DOC_TYPE_FOR_CARD";
+    }
+
+    public static class ProjectDocuments
+    {
+        public const string NotFound = "PROJECT_DOCUMENT_NOT_FOUND";
+        public const string DocumentVersionNotFound = "DOCUMENT_VERSION_NOT_FOUND";
+        public const string MarkdownPayloadTooLarge = "MARKDOWN_PAYLOAD_TOO_LARGE";
+        public const string DuplicateDocType = "PROJECT_DOCUMENT_DUPLICATE_DOC_TYPE";
     }
 
     public static class Plans

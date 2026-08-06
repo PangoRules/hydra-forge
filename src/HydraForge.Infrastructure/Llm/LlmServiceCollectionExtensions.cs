@@ -25,7 +25,9 @@ public static class LlmServiceCollectionExtensions
             "openai-compatible",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(60);
+                // Local models (Ollama/LM Studio via OpenAI-compat endpoint) routinely exceed
+                // 60s for cold-model-load + generation. 600s matches the dedicated ollama client.
+                client.Timeout = TimeSpan.FromSeconds(600);
             }
         );
 
@@ -41,7 +43,15 @@ public static class LlmServiceCollectionExtensions
             "ollama",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(60);
+                // Local models: cold model load into RAM/VRAM plus CPU-bound token
+                // generation routinely exceeds the 60s used for cloud adapters below —
+                // that mismatch silently dropped narrative-job output (HttpClient.Timeout
+                // cancels the whole request including the streamed read, not just the
+                // header wait, so a slow local reply looked like "cancelled unexpectedly"
+                // instead of an explicit timeout error). Bounded, not infinite — no
+                // internal retry loop rides on top of this, so a stuck request still
+                // fails after 10 minutes rather than hanging forever.
+                client.Timeout = TimeSpan.FromSeconds(600);
             }
         );
 
@@ -65,7 +75,10 @@ public static class LlmServiceCollectionExtensions
             "comfyui",
             client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(300);
+                // Local diffusion (ComfyUI + Diffusers, D-62) on CPU or a modest GPU can
+                // take several minutes per image. Same bounded-not-infinite reasoning as
+                // the ollama client above.
+                client.Timeout = TimeSpan.FromSeconds(600);
             }
         );
 

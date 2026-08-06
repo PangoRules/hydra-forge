@@ -5,7 +5,6 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Plans;
 using HydraForge.Application.Projects;
-using HydraForge.Application.Specs;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Auth;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -102,20 +101,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CreatesPlanAndVersion1InSameTransaction()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -158,20 +148,11 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_IncrementsVersionAndWritesImmutableSnapshot()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -229,20 +210,11 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_CopiesOldVersionContentIntoCurrentAndWritesNewVersion()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -308,20 +280,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_MarkdownPayloadTooLarge_ReturnsError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -363,20 +326,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CardNotFound_ReturnsCardNotFound()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -406,20 +360,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_CardInDifferentProject_ReturnsProjectMismatch()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -458,20 +403,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_IdeaCard_ReturnsInvalidCardType()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -507,26 +443,14 @@ public class PlanServiceTests
         Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Error.Code);
     }
 
-    [Theory]
-    [InlineData(CardType.Goal)]
-    [InlineData(CardType.Issue)]
-    [InlineData(CardType.Task)]
-    public async Task CreateAsync_AllowedCardTypeWithoutSpecId_Succeeds(CardType cardType)
+    [Fact]
+    public async Task CreateAsync_GoalCard_ReturnsInvalidCardType()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -550,7 +474,7 @@ public class PlanServiceTests
             {
                 Id = cardId,
                 ProjectId = projectId,
-                Type = cardType,
+                Type = CardType.Goal,
             }
         );
 
@@ -558,26 +482,61 @@ public class PlanServiceTests
             new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
         );
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Error.Code);
     }
 
     [Fact]
-    public async Task CreateAsync_SpecIdOnIssueCard_ReturnsSpecLinkNotAllowed()
+    public async Task CreateAsync_SecurityCard_ReturnsInvalidCardType()
     {
-        var (
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
+        var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
             snapshotRefresher,
             publisher
-        ) = CreateMocks();
+        );
+        var projectId = NewId();
+        var cardId = NewId();
+        var actorId = NewId();
+
+        memberRepo.Add(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = actorId,
+                Role = MemberRole.Member,
+            }
+        );
+        cardRepo.Cards.Add(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                Type = CardType.Security,
+            }
+        );
+
+        var result = await service.CreateAsync(
+            new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
+        );
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Plans.InvalidCardType, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task CreateAsync_IssueWithoutSpecId_Succeeds()
+    {
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -604,141 +563,12 @@ public class PlanServiceTests
                 Type = CardType.Issue,
             }
         );
-        var spec = new Spec
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            CardId = cardId,
-            DocType = DocType.Report,
-        };
-        specRepo.Add(spec);
 
         var result = await service.CreateAsync(
-            new CreatePlanCommand(projectId, cardId, spec.Id, actorId, "T", null, "C")
-        );
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Plans.SpecLinkNotAllowed, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task CreateAsync_SpecIdBelongsToDifferentCard_ReturnsSpecCardMismatch()
-    {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
-        var service = new PlanService(
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        );
-        var projectId = NewId();
-        var cardId = NewId();
-        var actorId = NewId();
-
-        memberRepo.Add(
-            new ProjectMember
-            {
-                ProjectId = projectId,
-                UserId = actorId,
-                Role = MemberRole.Member,
-            }
-        );
-        cardRepo.Cards.Add(
-            new Card
-            {
-                Id = cardId,
-                ProjectId = projectId,
-                Type = CardType.Goal,
-            }
-        );
-        var otherSpec = new Spec
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            CardId = NewId(),
-            DocType = DocType.Specification,
-        };
-        specRepo.Add(otherSpec);
-
-        var result = await service.CreateAsync(
-            new CreatePlanCommand(projectId, cardId, otherSpec.Id, actorId, "T", null, "C")
-        );
-
-        Assert.True(result.IsFailure);
-        Assert.Equal(DomainErrorCodes.Plans.SpecCardMismatch, result.Error.Code);
-    }
-
-    [Fact]
-    public async Task CreateAsync_GoalWithOwnSpecId_Succeeds()
-    {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
-        var service = new PlanService(
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        );
-        var projectId = NewId();
-        var cardId = NewId();
-        var actorId = NewId();
-
-        memberRepo.Add(
-            new ProjectMember
-            {
-                ProjectId = projectId,
-                UserId = actorId,
-                Role = MemberRole.Member,
-            }
-        );
-        cardRepo.Cards.Add(
-            new Card
-            {
-                Id = cardId,
-                ProjectId = projectId,
-                Type = CardType.Goal,
-            }
-        );
-        var spec = new Spec
-        {
-            Id = NewId(),
-            ProjectId = projectId,
-            CardId = cardId,
-            DocType = DocType.Specification,
-        };
-        specRepo.Add(spec);
-
-        var result = await service.CreateAsync(
-            new CreatePlanCommand(projectId, cardId, spec.Id, actorId, "T", null, "C")
+            new CreatePlanCommand(projectId, cardId, null, actorId, "T", null, "C")
         );
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(spec.Id, result.Value.SpecId);
     }
 
     // ─── Audit tests ───────────────────────────────────────────────────────────
@@ -746,20 +576,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -804,20 +625,11 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -874,20 +686,11 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_WritesAuditLog()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -954,20 +757,11 @@ public class PlanServiceTests
     [Fact]
     public async Task UpdateAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1006,20 +800,11 @@ public class PlanServiceTests
     [Fact]
     public async Task RestoreVersionAsync_WhenPlanIsDone_ReturnsEditForbiddenError()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1068,20 +853,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_DoneToActive_TransitionsToActive()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1120,20 +896,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_DoneToPending_TransitionsToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1172,20 +939,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_ActiveToPending_TransitionsToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1224,20 +982,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_SameStatus_ReturnsSuccessWithNoChange()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1276,20 +1025,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_WhenUserHasNoMembership_ReturnsAccessDenied()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1320,20 +1060,11 @@ public class PlanServiceTests
     [Fact]
     public async Task SetStatusAsync_AdminNonMember_Succeeds()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            _,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateAdminMocks();
+        var (planRepo, cardRepo, memberRepo, _, auditWriter, snapshotRefresher, publisher) =
+            CreateAdminMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             CreateAdminUserRepo(),
             auditWriter,
@@ -1363,7 +1094,6 @@ public class PlanServiceTests
     private static (
         InMemoryPlanRepository planRepo,
         InMemoryCardRepository cardRepo,
-        InMemorySpecRepository specRepo,
         InMemoryProjectMemberRepository memberRepo,
         FakeUserRepositoryAdmin userRepo,
         InMemoryAuditLogWriter auditWriter,
@@ -1374,7 +1104,6 @@ public class PlanServiceTests
         return (
             new InMemoryPlanRepository(),
             new InMemoryCardRepository(),
-            new InMemorySpecRepository(),
             new InMemoryProjectMemberRepository(),
             new FakeUserRepositoryAdmin(),
             new InMemoryAuditLogWriter(),
@@ -1388,20 +1117,11 @@ public class PlanServiceTests
     [Fact]
     public async Task CreateAsync_SetsStatusToPending()
     {
-        var (
-            planRepo,
-            cardRepo,
-            specRepo,
-            memberRepo,
-            userRepo,
-            auditWriter,
-            snapshotRefresher,
-            publisher
-        ) = CreateMocks();
+        var (planRepo, cardRepo, memberRepo, userRepo, auditWriter, snapshotRefresher, publisher) =
+            CreateMocks();
         var service = new PlanService(
             planRepo,
             cardRepo,
-            specRepo,
             memberRepo,
             userRepo,
             auditWriter,
@@ -1440,7 +1160,6 @@ public class PlanServiceTests
     private static (
         InMemoryPlanRepository planRepo,
         InMemoryCardRepository cardRepo,
-        InMemorySpecRepository specRepo,
         InMemoryProjectMemberRepository memberRepo,
         FakeUserRepositoryForAdmin userRepo,
         InMemoryAuditLogWriter auditWriter,
@@ -1451,7 +1170,6 @@ public class PlanServiceTests
         return (
             new InMemoryPlanRepository(),
             new InMemoryCardRepository(),
-            new InMemorySpecRepository(),
             new InMemoryProjectMemberRepository(),
             new FakeUserRepositoryForAdmin(),
             new InMemoryAuditLogWriter(),
@@ -1604,68 +1322,6 @@ internal class InMemoryCardRepository : ICardRepository
 
     public Task<int> CountActiveChildrenAsync(Guid parentCardId, CancellationToken ct = default) =>
         Task.FromResult(Cards.Count(c => c.ParentCardId == parentCardId && c.ArchivedAt == null));
-}
-
-internal class InMemorySpecRepository : ISpecRepository
-{
-    public List<Spec> Specs { get; } = [];
-    public List<SpecVersion> Versions { get; } = [];
-
-    public Task<Spec?> GetByIdAsync(Guid specId, CancellationToken ct = default) =>
-        Task.FromResult(Specs.FirstOrDefault(s => s.Id == specId));
-
-    public Task<IReadOnlyList<Spec>> ListByProjectAsync(
-        Guid projectId,
-        SpecListFilter filter,
-        CancellationToken ct = default
-    ) => Task.FromResult<IReadOnlyList<Spec>>([.. Specs.Where(s => s.ProjectId == projectId)]);
-
-    public Task<SpecVersion?> GetVersionAsync(
-        Guid specId,
-        int version,
-        CancellationToken ct = default
-    ) => Task.FromResult(Versions.FirstOrDefault(v => v.SpecId == specId && v.Version == version));
-
-    public Task<IReadOnlyList<SpecVersion>> ListVersionsAsync(
-        Guid specId,
-        CancellationToken ct = default
-    ) =>
-        Task.FromResult<IReadOnlyList<SpecVersion>>([
-            .. Versions.Where(v => v.SpecId == specId).OrderBy(v => v.Version),
-        ]);
-
-    public Task<IReadOnlyList<Spec>> ListByCardAsync(
-        Guid cardId,
-        SpecListFilter filter,
-        CancellationToken ct = default
-    ) => Task.FromResult<IReadOnlyList<Spec>>([.. Specs.Where(s => s.CardId == cardId)]);
-
-    public Task AddAsync(Spec spec, CancellationToken ct = default)
-    {
-        Specs.Add(spec);
-        return Task.CompletedTask;
-    }
-
-    public void Add(Spec spec) => AddAsync(spec).GetAwaiter().GetResult();
-
-    public Task AddVersionAsync(SpecVersion version, CancellationToken ct = default)
-    {
-        Versions.Add(version);
-        return Task.CompletedTask;
-    }
-
-    public void AddVersion(SpecVersion version) =>
-        AddVersionAsync(version).GetAwaiter().GetResult();
-
-    public Task UpdateAsync(Spec spec, CancellationToken ct = default)
-    {
-        var idx = Specs.FindIndex(s => s.Id == spec.Id);
-        if (idx >= 0)
-            Specs[idx] = spec;
-        return Task.CompletedTask;
-    }
-
-    public Task<int> SaveChangesAsync(CancellationToken ct = default) => Task.FromResult(1);
 }
 
 internal class InMemoryProjectMemberRepository : IProjectMemberRepository

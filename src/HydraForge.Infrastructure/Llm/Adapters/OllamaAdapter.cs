@@ -52,6 +52,20 @@ public sealed class OllamaAdapter(
                 }),
             ],
             Stream = true,
+            // Thinking-capable Ollama models (confirmed live with a local "gemma4:26b")
+            // put reasoning in a separate `message.thinking` field, not `message.content`
+            // — this adapter only ever reads `content` (below), so a model that spends
+            // its whole token budget thinking returns a 200 with empty content and no
+            // error signal at all. Admin can override per model (ThinkMode, set on
+            // the Provider Models page) for a model that's known to need — or break
+            // under — thinking; "Auto" falls back to the same default as before: only
+            // think if the caller actually asked for reasoning (ChatRequest.ReasoningEffort).
+            Think = request.ThinkMode switch
+            {
+                "On" => true,
+                "Off" => false,
+                _ => !string.IsNullOrWhiteSpace(request.ReasoningEffort),
+            },
             Options =
                 request.Temperature is null && request.MaxOutputTokens is null
                     ? null
@@ -201,6 +215,9 @@ public sealed class OllamaAdapter(
 
         [JsonPropertyName("stream")]
         public bool Stream { get; set; }
+
+        [JsonPropertyName("think")]
+        public bool Think { get; set; }
 
         [JsonPropertyName("options")]
         public OllamaOptions? Options { get; set; }

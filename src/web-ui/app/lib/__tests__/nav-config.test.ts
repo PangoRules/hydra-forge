@@ -33,7 +33,7 @@ describe('nav-config', () => {
     expect(deepResearch.to).toBeUndefined()
   })
 
-  it('Admin group exposes Dashboard, Users, System Settings, Audit Log, Providers, Provider Models, Routing and Usage with real routes', () => {
+  it('Admin group exposes Dashboard, Users, System Settings, Audit Log, Providers, Routing and Usage with real routes', () => {
     const groups = getNavGroups(true)
     const admin = groups.find(g => g[0]!.label === 'Admin')!
     const dashboard = admin.find(i => i.label === 'Dashboard')!
@@ -41,7 +41,6 @@ describe('nav-config', () => {
     const settings = admin.find(i => i.label === 'System Settings')!
     const auditLog = admin.find(i => i.label === 'Audit Log')!
     const providers = admin.find(i => i.label === 'Providers')!
-    const providerModels = admin.find(i => i.label === 'Provider Models')!
     const routing = admin.find(i => i.label === 'Routing')!
     const usage = admin.find(i => i.label === 'Usage')!
     expect(dashboard.to).toBe('/admin')
@@ -55,8 +54,8 @@ describe('nav-config', () => {
     expect(auditLog.disabled).toBeUndefined()
     expect(providers.to).toBe('/admin/providers')
     expect(providers.disabled).toBeUndefined()
-    expect(providerModels.to).toBe('/admin/provider-models')
-    expect(providerModels.disabled).toBeUndefined()
+    // Providers and Provider Models were merged onto one page/nav item.
+    expect(admin.find(i => i.label === 'Provider Models')).toBeUndefined()
     expect(routing.to).toBe('/admin/routing')
     expect(routing.disabled).toBeUndefined()
     expect(usage.to).toBe('/admin/usage')

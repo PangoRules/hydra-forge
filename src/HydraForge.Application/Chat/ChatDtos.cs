@@ -14,7 +14,9 @@ public record CreateChatSessionRequest(
     Guid? PersonalityId,
     AiEditMode? AiEditMode,
     bool SearchAllMyDocs,
-    Guid? ForkedFromSessionId
+    Guid? ForkedFromSessionId,
+    Guid? PreferredModelConfigId,
+    string? PreferredEffort
 );
 
 public record UpdateChatSessionRequest(
@@ -22,7 +24,9 @@ public record UpdateChatSessionRequest(
     Guid? FolderId,
     Guid? PersonalityId,
     AiEditMode? AiEditMode,
-    bool SearchAllMyDocs
+    bool SearchAllMyDocs,
+    Guid? PreferredModelConfigId,
+    string? PreferredEffort
 );
 
 public record MoveChatSessionRequest(Guid? FolderId);
@@ -49,7 +53,9 @@ public record ChatSessionDto(
     string? Summary,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DateTime? ArchivedAt
+    DateTime? ArchivedAt,
+    Guid? PreferredModelConfigId,
+    string? PreferredEffort
 );
 
 public record ChatSessionDetailDto(
@@ -70,7 +76,9 @@ public record ChatSessionDetailDto(
     DateTime UpdatedAt,
     DateTime? ArchivedAt,
     DateTime? ClosedAt,
-    IReadOnlyList<ChatMessageDto> Messages
+    IReadOnlyList<ChatMessageDto> Messages,
+    Guid? PreferredModelConfigId,
+    string? PreferredEffort
 );
 
 public record ChatSessionPageDto(IReadOnlyList<ChatSessionDto> Items, int TotalCount);

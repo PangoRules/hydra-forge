@@ -72,7 +72,11 @@ docs/                       Architecture & decision documents
 
 ## Docs
 
-- [`docs/requirements-and-architecture.md`](docs/requirements-and-architecture.md) — Index for the split scope, architecture, data model, glossary, and roadmap docs
+- [`docs/scope.md`](docs/scope.md) — vision, personas, scope boundaries
+- [`docs/functional-spec.md`](docs/functional-spec.md) — FRs, NFRs, phase checklists (live)
+- [`docs/architecture.md`](docs/architecture.md) — Clean Architecture, real-time, LLM, error handling, tech stack
+- [`docs/data-model.md`](docs/data-model.md) — entity tables and enums
+- [`docs/glossary.md`](docs/glossary.md) — terminology
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — Every architectural decision with rationale (D-1–D-64)
 - [`docs/agent-platform-vision.md`](docs/agent-platform-vision.md) — Vision, agent pipeline, feature parity
 

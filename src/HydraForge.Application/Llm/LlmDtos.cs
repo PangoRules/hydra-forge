@@ -13,7 +13,11 @@ public sealed record ChatRequest(
     IReadOnlyList<ToolDefinition> Tools,
     int? MaxOutputTokens,
     decimal? Temperature,
-    string? ReasoningEffort = null
+    string? ReasoningEffort = null,
+    // "Auto" | "On" | "Off" — the model's admin-configured reasoning/think-mode
+    // override, only read by OllamaAdapter. Callers populate this from
+    // route.Primary.ThinkMode; other adapters ignore it.
+    string? ThinkMode = null
 );
 
 public sealed record ImageBlock(string StorageKey, string MediaType);

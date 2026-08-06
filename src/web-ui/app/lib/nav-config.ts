@@ -57,7 +57,6 @@ export function getNavGroups(isAdmin: boolean, currentPath: string = ''): Naviga
       { label: 'System Settings', icon: 'i-lucide-settings', to: UiRoutes.Admin.Settings },
       { label: 'Audit Log', icon: 'i-lucide-scroll-text', to: UiRoutes.Admin.AuditLog },
       { label: 'Providers', icon: 'i-lucide-server', to: UiRoutes.Admin.Providers },
-      { label: 'Provider Models', icon: 'i-lucide-cpu', to: UiRoutes.Admin.ProviderModels },
       { label: 'Routing', icon: 'i-lucide-route', to: UiRoutes.Admin.Routing },
       { label: 'Usage', icon: 'i-lucide-bar-chart-3', to: UiRoutes.Admin.Usage }
     ])

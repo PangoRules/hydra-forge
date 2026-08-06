@@ -1,6 +1,7 @@
 using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Projects;
+using HydraForge.Application.Settings;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Entities.Chat;
 using HydraForge.Domain.Entities.PersonalSpace;
@@ -21,6 +22,7 @@ public class ChatSessionService(
     IDocumentRepository documentRepo,
     IChatSummaryGenerator summaryGenerator,
     IBackgroundTaskQueue backgroundTaskQueue,
+    ISettingsProvider settingsProvider,
     ILogger<ChatSessionService> logger
 ) : IChatSessionService
 {
@@ -34,6 +36,7 @@ public class ChatSessionService(
     private readonly IDocumentRepository _documentRepo = documentRepo;
     private readonly IChatSummaryGenerator _summaryGenerator = summaryGenerator;
     private readonly IBackgroundTaskQueue _backgroundTaskQueue = backgroundTaskQueue;
+    private readonly ISettingsProvider _settingsProvider = settingsProvider;
     private readonly ILogger<ChatSessionService> _logger = logger;
 
     public async Task<Result<ChatSessionDto>> CreateAsync(
@@ -119,11 +122,32 @@ public class ChatSessionService(
             Status = ChatSessionStatus.Active,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            PreferredModelConfigId = request.PreferredModelConfigId,
+            PreferredEffort = request.PreferredEffort,
         };
 
         await _sessionRepo.AddAsync(session, ct);
+        await PersistIdentityMessageAsync(session, ct);
 
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+    }
+
+    private async Task PersistIdentityMessageAsync(ChatSession session, CancellationToken ct)
+    {
+        var settings = await _settingsProvider.GetAsync(ct);
+        var prompt = string.IsNullOrWhiteSpace(settings.AiIdentityPrompt)
+            ? ChatPrompts.DefaultIdentityPrompt
+            : settings.AiIdentityPrompt;
+
+        var identityMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            Role = MessageRole.System,
+            Content = prompt,
+            CreatedAt = DateTime.UtcNow,
+        };
+        await _messageRepo.AddAsync(identityMessage, ct);
     }
 
     private async Task<Result<ChatSessionDto>> CreateForkedAsync(
@@ -190,6 +214,7 @@ public class ChatSessionService(
         };
 
         await _sessionRepo.AddAsync(forked, ct);
+        await PersistIdentityMessageAsync(forked, ct);
 
         // Pre-populate first message with summary
         if (!string.IsNullOrWhiteSpace(summaryText))
@@ -252,7 +277,9 @@ public class ChatSessionService(
                 session.UpdatedAt,
                 session.ArchivedAt,
                 session.ClosedAt,
-                messages.Select(MapMessageToDto).ToList()
+                messages.Select(MapMessageToDto).ToList(),
+                session.PreferredModelConfigId,
+                session.PreferredEffort
             )
         );
     }
@@ -262,6 +289,7 @@ public class ChatSessionService(
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
+        Guid? beforeId,
         int limit,
         CancellationToken ct = default
     )
@@ -271,6 +299,7 @@ public class ChatSessionService(
             folderId,
             projectId,
             before,
+            beforeId,
             limit,
             ct
         );
@@ -278,7 +307,14 @@ public class ChatSessionService(
         foreach (var session in sessions)
             dtos.Add(await MapToDtoAsync(session, ct));
 
-        return Result<ChatSessionPageDto>.Success(new ChatSessionPageDto(dtos, dtos.Count));
+        // Real total count (not the current page size) — the client uses
+        // sessions.length < totalCount to decide whether to fetch the next
+        // page. Using dtos.Count here made TotalCount == page size, which
+        // capped hasMore at false after the first page and made every
+        // session beyond page 1 permanently unreachable.
+        var totalCount = await _sessionRepo.CountAsync(actorId, folderId, projectId, ct);
+
+        return Result<ChatSessionPageDto>.Success(new ChatSessionPageDto(dtos, totalCount));
     }
 
     public async Task<Result<ChatSessionDto>> UpdateAsync(
@@ -312,7 +348,9 @@ public class ChatSessionService(
             request.FolderId,
             request.PersonalityId,
             request.AiEditMode,
-            request.SearchAllMyDocs
+            request.SearchAllMyDocs,
+            request.PreferredModelConfigId,
+            request.PreferredEffort
         );
 
         await _sessionRepo.UpdateAsync(session, ct);
@@ -601,7 +639,9 @@ public class ChatSessionService(
             session.Summary,
             session.CreatedAt,
             session.UpdatedAt,
-            session.ArchivedAt
+            session.ArchivedAt,
+            session.PreferredModelConfigId,
+            session.PreferredEffort
         );
     }
 

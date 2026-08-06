@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HydraForge.Application.Llm;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Domain.Common;
 using HydraForge.Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
@@ -1049,6 +1050,10 @@ internal class LlmAdminTestWebApplicationFactory : WebApplicationFactory<Program
                 services.Remove(descriptor);
 
             services.AddScoped<ILlmAdminService>(_ => LlmAdmin);
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
+            services.AddScoped<ProjectDocumentService>();
         });
     }
 

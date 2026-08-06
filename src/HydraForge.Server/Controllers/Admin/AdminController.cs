@@ -173,6 +173,7 @@ public class AdminController(
                 settings.BrandLogoUrl,
                 settings.AiNarrativeGenerationTimeUtc,
                 settings.HousekeepingRunTimeUtc,
+                settings.AiIdentityPrompt,
             }
         );
     }
@@ -211,6 +212,7 @@ public class AdminController(
 
         bool hasAiNarrativeTime;
         bool hasHousekeepingTime;
+        bool hasAiIdentityPrompt;
         try
         {
             using var jsonDoc = JsonDocument.Parse(body);
@@ -222,6 +224,7 @@ public class AdminController(
                 "housekeepingRunTimeUtc",
                 out _
             );
+            hasAiIdentityPrompt = jsonDoc.RootElement.TryGetProperty("aiIdentityPrompt", out _);
         }
         catch (JsonException)
         {
@@ -242,6 +245,8 @@ public class AdminController(
             settings.SetAiNarrativeGenerationTime(request.AiNarrativeGenerationTimeUtc);
         if (hasHousekeepingTime)
             settings.SetHousekeepingRunTime(request.HousekeepingRunTimeUtc);
+        if (hasAiIdentityPrompt)
+            settings.SetAiIdentityPrompt(request.AiIdentityPrompt);
         await settingsRepo.UpdateAsync(settings, ct);
         settingsProvider.Invalidate();
         return Ok(new { message = "Settings updated. Changes apply within 5 minutes." });
@@ -285,7 +290,8 @@ public record UpdateSystemSettingsRequest(
     string? BrandName,
     string? BrandLogoUrl,
     TimeSpan? AiNarrativeGenerationTimeUtc,
-    TimeSpan? HousekeepingRunTimeUtc
+    TimeSpan? HousekeepingRunTimeUtc,
+    string? AiIdentityPrompt
 );
 
 public record ResetPasswordRequest(string NewPassword);

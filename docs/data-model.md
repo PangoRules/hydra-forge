@@ -44,7 +44,8 @@ Project (1) ──┬── (N) Column
               ├── (N) AuditLogEntry
               ├── (N) ProjectMember
               ├── (1) ChatFolder          ← auto-created on project creation
-              └── (1) ProjectContextSnapshot
+              ├── (1) ProjectContextSnapshot
+              └── (N) ProjectDocument ──── (N) ProjectDocumentVersion
 
 Column (1) ── (N) Card
 
@@ -60,11 +61,12 @@ Card (1) ──┬── (N) Comment
            ├── (0..1) Spec (ownership via Spec.CardId — Goal/Idea/Issue only; Task has none)
            └── (N) Plan (ownership via Plan.CardId — Task/Issue direct; Goal plans owned via Spec)
 
-Card-type doc rules:
-- Goal  → Spec (DocType=Specification) + Plans via Spec.Id
-- Idea  → Spec (DocType=Concept) only — no Plans; Tiptap description handles freeform exploration
-- Issue → Spec (DocType=Report) + Plans via Card.Id (no Spec needed for plans)
-- Task  → Plans via Card.Id only — no Spec
+Card-type doc rules (N Specs per card, no count limit):
+- Goal  → Specs (Specification + ValidationMatrix) — no Plans; child Task cards carry the plans
+- Idea  → Specs (Concept) — no Plans
+- Issue → Specs (Report) — no Plans
+- Task  → Plans + ValidationMatrix Specs — no other Spec types
+- Security → Specs (Report) — no Plans
 
 ChatFolder (1) ──┬── (N) ChatFolder (self-referencing, max depth 2)
                  └── (N) ChatSession
@@ -258,6 +260,37 @@ A Card may own 0..N Plans. For Goal cards, Plans are grouped under the Card's Sp
 | Description | string? | Description at time of snapshot |
 | Content | string | Full markdown snapshot at this version |
 | Version | int | Matches Plan.Version at time of snapshot |
+| CreatedAt | DateTime | |
+| CreatedByUserId | Guid | Who saved this version |
+
+### ProjectDocument
+
+Project-level versioned documents (Scope, Glossary, DataModel, Architecture, FunctionalSpec, Decisions, Reference). Not owned by a card — lives at the project level. Scope/Glossary/DataModel/Architecture/FunctionalSpec/Decisions are unique per project (one doc per type); Reference allows N per project.
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | |
+| ProjectId | Guid | FK to Project |
+| DocType | ProjectDocType | Category of this document |
+| Title | string | Display name |
+| Description | string? | Optional description |
+| Content | string | Current markdown content |
+| Version | int | Increments on each edit |
+| CreatedByUserId | Guid | |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+| ArchivedAt | DateTime? | Soft-delete marker |
+
+### ProjectDocumentVersion
+
+| Field | Type | Description |
+|---|---|---|
+| Id | Guid | |
+| ProjectDocumentId | Guid | FK to ProjectDocument |
+| Title | string | Title at time of snapshot |
+| Description | string? | Description at time of snapshot |
+| Content | string | Full markdown snapshot at this version |
+| Version | int | Matches ProjectDocument.Version at time of snapshot |
 | CreatedAt | DateTime | |
 | CreatedByUserId | Guid | Who saved this version |
 
@@ -803,17 +836,32 @@ Singleton row (Id = `00000000-0000-0000-0000-000000000001`) holding admin-config
 | 2     | Issue | Problem, concern, or question             |
 | 4     | Idea  | Suggestion; may become a Goal or Task     |
 | 5     | Goal  | Significant objective; groups child cards |
+| 6     | Security | Security audit finding or concern     |
 
 > Value 3 (Spec) was retired in migration `MigrateSpecCardsToGoal`; existing rows moved to Goal (5).
 
 ### DocType
-Discriminator on the `Spec` entity. Controls the UI label shown to users — the underlying entity structure is identical.
+Discriminator on the `Spec` entity. Controls the UI label shown to users — the underlying entity structure is identical across card types.
 
 | Value | Name | Used on card type | UI label |
 |---|---|---|---|
 | 1 | Specification | Goal | Specification |
 | 2 | Concept | Idea | Concept |
-| 3 | Report | Issue | Report |
+| 3 | Report | Issue, Security | Report |
+| 4 | ValidationMatrix | Goal, Task | Validation Matrix |
+
+### ProjectDocType
+Discriminator on the `ProjectDocument` entity. Controls the document category.
+
+| Value | Name | UI label |
+|---|---|---|
+| 1 | Scope | Scope |
+| 2 | Glossary | Glossary |
+| 3 | DataModel | Data Model |
+| 4 | Architecture | Architecture |
+| 5 | FunctionalSpec | Functional Spec |
+| 6 | Decisions | Decisions |
+| 7 | Reference | Reference |
 
 ### PlanStatus
 Lifecycle state for `Plan`. Done plans are read-only; a `Reactivate` action transitions Done → Active.

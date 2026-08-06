@@ -18,7 +18,7 @@ export const UiRoutes = {
   Chats: '/chats',
   Projects: {
     List: '/projects',
-    Board: (projectId: string) => `/projects/${projectId}/board`
+    Board: (projectId: string) => `/projects/${projectId}`
   },
   Admin: {
     Home: '/admin',
@@ -137,6 +137,15 @@ export const ApiRoutes = {
     get: (projectId: string) => `/api/projects/${projectId}/ProjectSnapshot`
   },
 
+  Documents: {
+    list: (projectId: string) => `/api/projects/${projectId}/ProjectDocuments`,
+    create: (projectId: string) => `/api/projects/${projectId}/ProjectDocuments`,
+    detail: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}`,
+    update: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}`,
+    versions: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}/versions`,
+    restore: (projectId: string, docId: string) => `/api/projects/${projectId}/ProjectDocuments/${docId}/restore`
+  },
+
   Notifications: {
     list: (skip = 0, take = 20) => `/api/Notifications?skip=${skip}&take=${take}`,
     unreadCount: () => '/api/Notifications/unread-count',
@@ -193,8 +202,8 @@ export const ApiRoutes = {
 
   Chat: {
     sessions: {
-      list: (folderId?: string, projectId?: string, before?: string, limit = 20) =>
-        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}limit=${limit}`,
+      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20) =>
+        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
       create: () => '/api/chat/sessions',
       detail: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       update: (sessionId: string) => `/api/chat/sessions/${sessionId}`,

@@ -19,6 +19,7 @@ public interface IChatSessionService
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
+        Guid? beforeId,
         int limit,
         CancellationToken ct = default
     );

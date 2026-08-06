@@ -6,15 +6,27 @@ import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import type { ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
 import { MessageRole } from '~/types/chat'
 
-const props = defineProps<{
-  sessionId: string
-  /** A message to send automatically once connected — used when this session was just
-   * created from a compose-first "new chat" box so the first message isn't lost. */
-  initialMessage?: string | null
-  initialPresetId?: string | null
-  initialModelId?: string | null
-  initialEffort?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    sessionId: string
+    /** A message to pre-fill into the input on mount — user edits then sends manually. */
+    initialMessage?: string | null
+    /** When true, the initial message is sent automatically (compose-first flow). */
+    autoSendInitial?: boolean
+    initialPresetId?: string | null
+    initialModelId?: string | null
+    initialEffort?: string | null
+    feature?: string
+  }>(),
+  {
+    initialMessage: null,
+    autoSendInitial: false,
+    initialPresetId: null,
+    initialModelId: null,
+    initialEffort: null,
+    feature: 'PersonalChat'
+  }
+)
 
 const emit = defineEmits<{
   initialMessageSent: []
@@ -26,6 +38,9 @@ const emit = defineEmits<{
 
 const toast = useAppToast()
 const api = useApi()
+
+const resolvedInitialModelId = computed(() => props.initialModelId ?? session.value?.preferredModelConfigId ?? null)
+const resolvedInitialEffort = computed(() => props.initialEffort ?? session.value?.preferredEffort ?? null)
 
 const session = ref<ChatSessionDetailDto | null>(null)
 const loading = ref(true)
@@ -133,6 +148,18 @@ chatStream.onStreamError((_messageId, _code, message) => {
   streamError.value = message
 })
 
+// Title generation runs as its own decoupled background job (see
+// ChatTitleGenerationJob) so it doesn't block the reply's own StreamDone —
+// without this, a connected client had no way to learn the title changed
+// short of a manual refresh. Patch in place; no refetch needed, the payload
+// already has everything.
+chatStream.onSessionUpdated((updatedSessionId, title, status) => {
+  if (updatedSessionId !== props.sessionId || !session.value) return
+  session.value.title = title
+  session.value.status = status as ChatSessionDetailDto['status']
+  emit('sessionRefreshed', session.value.id, title, status)
+})
+
 async function fetchSession(silent = false) {
   if (!silent) loading.value = true
   error.value = null
@@ -141,6 +168,9 @@ async function fetchSession(silent = false) {
       ApiRoutes.Chat.sessions.detail(props.sessionId)
     )
     session.value = data as ChatSessionDetailDto
+    // Hide System-role messages (e.g. the Hydra identity prompt) from the UI —
+    // they flow to the LLM via history but aren't for the user to read.
+    session.value.messages = session.value.messages.filter(m => m.role !== 'System')
     // API returns newest-first; sort chronologically for display
     session.value.messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
@@ -379,17 +409,21 @@ onMounted(async () => {
   await fetchSession()
 
   if (props.initialMessage) {
-    // Tell the parent to forget this pending message before sending — the
-    // parent owns the one-shot bookkeeping (this component gets recreated
-    // on every re-entry to the session via :key, so a local flag here
-    // wouldn't survive across visits and the message would resend forever).
-    const message = props.initialMessage
-    const presetId = props.initialPresetId
-    const modelId = props.initialModelId
-    const effort = props.initialEffort
-    emit('initialMessageSent')
-    lastUsedEffort.value = effort ?? null
-    await handleSend(message, presetId, modelId, effort)
+    if (props.autoSendInitial) {
+      // Compose-first flow from chats/index.vue: user already typed the message,
+      // expect it to be sent automatically.
+      await handleSend(
+        props.initialMessage,
+        props.initialPresetId,
+        props.initialModelId,
+        props.initialEffort
+      )
+      emit('initialMessageSent')
+    } else {
+      // ChatPanel flow: pre-fill input so the user reviews, edits, then sends.
+      chatInputRef.value?.setContent(props.initialMessage)
+      if (props.initialEffort) lastUsedEffort.value = props.initialEffort
+    }
   }
 
   // Connect *after* the message above, not before/alongside it. A SignalR
@@ -528,6 +562,9 @@ onUnmounted(() => {
       <ChatInput
         ref="chatInputRef"
         :disabled="awaitingReply || session?.status !== 'Active'"
+        :feature="feature"
+        :initial-model-id="resolvedInitialModelId"
+        :initial-effort="resolvedInitialEffort"
         @send="handleSend"
         @cancel="handleCancel"
       >

@@ -327,6 +327,19 @@ public class BoardScreen(
                 await narrativeScreen.RenderAsync();
                 break;
 
+            case ConsoleKey.P when key.Modifiers == 0:
+                _appState.PreviousScreen = this;
+                var docsScreen = new ProjectDocumentsScreen(
+                    _apiClientFactory,
+                    _appState,
+                    _errorCollector,
+                    _projectId
+                );
+                _appState.CurrentScreen = docsScreen;
+                await docsScreen.OnEnterAsync();
+                await docsScreen.RenderAsync();
+                break;
+
             case ConsoleKey.Q:
                 var confirm = QuitConfirm.Show();
                 if (confirm)

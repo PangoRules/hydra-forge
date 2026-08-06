@@ -6,6 +6,7 @@ using Hangfire.PostgreSql;
 using HydraForge.Application.Admin;
 using HydraForge.Application.Audit;
 using HydraForge.Application.Auth;
+using HydraForge.Application.Documents;
 using HydraForge.Application.Health;
 using HydraForge.Application.Housekeeping;
 using HydraForge.Application.ProjectSnapshots;
@@ -19,11 +20,13 @@ using HydraForge.Infrastructure.Chat;
 using HydraForge.Infrastructure.Checklist;
 using HydraForge.Infrastructure.Columns;
 using HydraForge.Infrastructure.Comments;
+using HydraForge.Infrastructure.Documents;
 using HydraForge.Infrastructure.Housekeeping;
 using HydraForge.Infrastructure.Llm;
 using HydraForge.Infrastructure.Notifications;
 using HydraForge.Infrastructure.Persistence;
 using HydraForge.Infrastructure.Plans;
+using HydraForge.Infrastructure.ProjectDocuments;
 using HydraForge.Infrastructure.Projects;
 using HydraForge.Infrastructure.Realtime;
 using HydraForge.Infrastructure.Settings;
@@ -153,9 +156,11 @@ builder.Services.AddCommentServices();
 builder.Services.AddAttachmentServices(builder.Configuration);
 builder.Services.AddSpecServices();
 builder.Services.AddPlanServices();
+builder.Services.AddProjectDocumentServices();
 builder.Services.AddNotificationServices();
 builder.Services.AddSettingsServices();
 builder.Services.AddHousekeepingServices();
+builder.Services.AddDocumentServices();
 
 // AddHangfire's storage configuration is lazy (only opens a Postgres connection when
 // JobStorage is actually resolved, e.g. by UseHangfireDashboard or AddHangfireServer's
@@ -476,6 +481,12 @@ if (!app.Environment.IsEnvironment("Test") && hangfireEnabled)
                 job => job.RunAsync(default),
                 () => Cron.Daily(housekeepingTime.Hours, housekeepingTime.Minutes)
             );
+
+            // One-time backfill for Spec/Plan rows saved as raw HTML before the
+            // server started normalizing content to Markdown on write. Safe to
+            // enqueue on every startup — the job itself no-ops once
+            // SystemSettings.SpecPlanHtmlBackfillCompletedAt is set.
+            BackgroundJob.Enqueue<SpecPlanHtmlBackfillJob>(job => job.RunAsync(default));
         }
         catch (Exception ex)
         {

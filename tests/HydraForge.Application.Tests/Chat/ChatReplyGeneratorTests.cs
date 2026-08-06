@@ -36,7 +36,7 @@ public class ChatReplyGeneratorTests
     private readonly LlmCallGuard _llmCallGuard;
     private readonly IUserTokenBudgetRepository _budgetRepo;
     private readonly IContextCompressor _contextCompressor;
-    private readonly IChatTitleGenerator _titleGenerator;
+    private readonly IBackgroundTaskQueue _backgroundTaskQueue;
     private readonly IChatStreamRegistry _streamRegistry;
     private readonly ILogger<ChatReplyGenerator> _logger;
     private readonly IOptions<LlmOptions> _llmOptions;
@@ -71,15 +71,7 @@ public class ChatReplyGeneratorTests
             .GetByUserIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((UserTokenBudget?)null);
         _llmCallGuard = new LlmCallGuard(_budgetRepo, _usageRecorder);
-        _titleGenerator = Substitute.For<IChatTitleGenerator>();
-        _titleGenerator
-            .GenerateTitleAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<CancellationToken>()
-            )
-            .Returns(Result<string>.Failure(new Error("TEST_NO_TITLE", "not configured in test")));
+        _backgroundTaskQueue = Substitute.For<IBackgroundTaskQueue>();
         _streamRegistry = new FakeChatStreamRegistry();
         _logger = Substitute.For<ILogger<ChatReplyGenerator>>();
         _llmOptions = Substitute.For<IOptions<LlmOptions>>();
@@ -101,7 +93,7 @@ public class ChatReplyGeneratorTests
             _usageRecorder,
             _llmCallGuard,
             _contextCompressor,
-            _titleGenerator,
+            _backgroundTaskQueue,
             _streamRegistry,
             _broadcaster,
             _logger,
@@ -513,6 +505,224 @@ public class ChatReplyGeneratorTests
             .Where(c => c.GetMethodInfo().Name == "StreamDone")
             .ToList();
         Assert.Single(doneCalls);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FirstRealMessageAfterIdentitySystemMessage_StillGeneratesTitle()
+    {
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var identityMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = SessionId,
+            Role = MessageRole.System,
+            Content = "You are HydraForge's assistant.",
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(new List<ChatMessage> { identityMessage, userMessage });
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        // Title generation is enqueued as its own job (ChatTitleGenerationJob), not run
+        // inline — see the comment on the enqueue call in ChatReplyGenerator.cs. It must
+        // never delay this job's own StreamDone, so all we assert here is that the right
+        // job was enqueued with the right args; the fallback/success logic itself is
+        // covered in ChatTitleGenerationJobTests.
+        await _backgroundTaskQueue
+            .Received(1)
+            .EnqueueJobAsync<ChatTitleGenerationJob>(
+                Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>()
+            );
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FirstMessage_EnqueuesTitleJobBeforeStreamDone()
+    {
+        // The whole point of splitting this into its own job: enqueueing must happen,
+        // but the reply job's own completion signal must not wait on it. We can't
+        // directly observe "didn't wait" on a fire-and-forget enqueue, but we can at
+        // least verify StreamDone still fires — a regression that awaited the job
+        // inline again would still pass this, so the enqueue-not-inline-call shape is
+        // what actually matters and is enforced by ChatReplyGenerator no longer
+        // depending on IChatTitleGenerator at all (compile-time guarantee).
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(new List<ChatMessage> { userMessage });
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                null,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeImmediateEnumerable());
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        await _backgroundTaskQueue
+            .Received(1)
+            .EnqueueJobAsync<ChatTitleGenerationJob>(
+                Arg.Any<System.Linq.Expressions.Expression<Func<ChatTitleGenerationJob, Task>>>()
+            );
+        await _mockCaller
+            .Received(1)
+            .StreamDone(
+                Arg.Any<Guid>(),
+                Arg.Any<int?>(),
+                Arg.Any<int?>(),
+                Arg.Any<int?>(),
+                Arg.Any<string>()
+            );
     }
 
     [Fact]

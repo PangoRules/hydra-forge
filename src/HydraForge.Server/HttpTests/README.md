@@ -23,6 +23,7 @@ Self-contained REST smoke tests for HydraForge Phase 2 APIs. Each file authentic
 | `Plans.http` | `POST/GET /api/projects/{id}/plans/cards/{cardId}`, `GET/PUT /api/projects/{id}/plans/{planId}`, `GET /api/projects/{id}/plans/{planId}/versions`, `POST /api/projects/{id}/plans/{planId}/restore` |
 | `CardRelationships.http` | `GET/POST /api/projects/{id}/cards/{cardId}/cardrelationships`, `DELETE /api/projects/{id}/cards/{cardId}/cardrelationships/{relId}`, `GET /api/projects/{id}/cards/{cardId}/cardrelationships/archive-impact`, `POST /api/projects/{id}/cards/{cardId}/cardrelationships/archive-with-relationships` |
 | `ProjectSnapshot.http` | `GET /api/projects/{id}/ProjectSnapshot` |
+| `ProjectDocuments.http` | `POST/GET /api/projects/{id}/ProjectDocuments`, `GET/PUT /api/projects/{id}/ProjectDocuments/{documentId}`, `GET /api/projects/{id}/ProjectDocuments/{documentId}/versions`, `POST /api/projects/{id}/ProjectDocuments/{documentId}/restore` |
 | `Realtime.http` | `POST /hubs/board/negotiate`, `POST /hubs/presence/negotiate` |
 | `Health.http` | `GET /health` |
 

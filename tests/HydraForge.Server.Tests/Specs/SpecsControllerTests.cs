@@ -1,3 +1,5 @@
+using NSubstitute;
+
 namespace HydraForge.Server.Tests.Specs;
 
 using System.Net;
@@ -7,6 +9,7 @@ using HydraForge.Application.Auth;
 using HydraForge.Application.Cards;
 using HydraForge.Application.Notifications;
 using HydraForge.Application.Plans;
+using HydraForge.Application.ProjectDocuments;
 using HydraForge.Application.Projects;
 using HydraForge.Application.Specs;
 using HydraForge.Domain.Entities.ProjectSpace;
@@ -68,6 +71,75 @@ public class SpecsControllerTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("My Spec", body);
         Assert.Contains("\"version\":1", body);
+    }
+
+    [Fact]
+    public async Task Create_WithHtmlContentFormatHeader_ConvertsContentToMarkdown()
+    {
+        var factory = new SpecsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+
+        var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Test Card",
+                CardNumber = 1,
+                Type = CardType.Goal,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/projects/{projectId}/specs/cards/{cardId}"
+        )
+        {
+            Content = new StringContent(
+                "{\"docType\":\"Specification\",\"title\":\"My Spec\",\"description\":\"desc\",\"content\":\"<p>Hello <strong>world</strong></p>\"}",
+                Encoding.UTF8,
+                "application/json"
+            ),
+        };
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("X-Content-Format", "Html");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        // Response echoes back in the same format the request asked for (Html) —
+        // the real assertion is what's actually stored: fetch it back without the
+        // header (the TUI's request shape) and confirm it's Markdown, not HTML.
+        var createdBody = await response.Content.ReadAsStringAsync();
+        var specId = System
+            .Text.Json.JsonDocument.Parse(createdBody)
+            .RootElement.GetProperty("id")
+            .GetString();
+
+        var getRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/{specId}"
+        );
+        getRequest.Headers.Add("Authorization", $"Bearer {token}");
+
+        var getResponse = await client.SendAsync(getRequest);
+        var storedBody = await getResponse.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("<p>", storedBody);
+        Assert.Contains("Hello **world**", storedBody);
     }
 
     [Fact]
@@ -213,6 +285,64 @@ public class SpecsControllerTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Spec", body);
         Assert.Contains("# Content", body);
+    }
+
+    [Fact]
+    public async Task GetById_WithHtmlContentFormatHeader_ConvertsStoredMarkdownToHtml()
+    {
+        var factory = new SpecsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var token = SpecsTestWebApplicationFactory.IssueToken(userId, "member", isAdmin: false);
+
+        var projectId = Guid.NewGuid();
+        var specId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        factory.AddProject(new Project { Id = projectId, Name = "Test Project" });
+        factory.AddCard(
+            new Card
+            {
+                Id = cardId,
+                ProjectId = projectId,
+                ColumnId = Guid.NewGuid(),
+                Title = "Card",
+                CardNumber = 1,
+            }
+        );
+        factory.AddMember(
+            new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = MemberRole.Member,
+            }
+        );
+        factory.AddSpec(
+            new Spec
+            {
+                Id = specId,
+                CardId = cardId,
+                ProjectId = projectId,
+                Title = "Test Spec",
+                Content = "Hello **world**",
+                Version = 1,
+                CreatedByUserId = userId,
+            }
+        );
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/projects/{projectId}/specs/{specId}"
+        );
+        request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("X-Content-Format", "Html");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("<strong>world</strong>", body);
+        Assert.DoesNotContain("**world**", body);
     }
 
     [Fact]
@@ -506,6 +636,8 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
                         || d.ServiceType == typeof(ICardAssigneeRepository)
                         || d.ServiceType == typeof(ICardWatcherRepository)
                         || d.ServiceType == typeof(ICardRelationshipRepository)
+                        || d.ServiceType == typeof(IProjectDocumentRepository)
+                        || d.ServiceType == typeof(ProjectDocumentService)
                     )
                     .ToList()
             )
@@ -537,6 +669,10 @@ internal class SpecsTestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<IUserRepository>(_ => new FakeUserRepository());
             services.AddScoped<ProjectService>();
             services.AddScoped<SpecService>();
+            services.AddScoped<IProjectDocumentRepository>(_ =>
+                Substitute.For<IProjectDocumentRepository>()
+            );
+            services.AddScoped<ProjectDocumentService>();
         });
     }
 

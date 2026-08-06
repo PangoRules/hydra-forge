@@ -216,6 +216,12 @@ namespace HydraForge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("ThinkMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("think_mode");
+
                     b.Property<decimal?>("PricePerToken")
                         .HasColumnType("numeric");
 
@@ -550,6 +556,12 @@ namespace HydraForge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PersonalityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PreferredEffort")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("PreferredModelConfigId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ProjectId")
@@ -1329,6 +1341,9 @@ namespace HydraForge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AiIdentityPrompt")
+                        .HasColumnType("text");
+
                     b.Property<TimeSpan?>("AiNarrativeGenerationTimeUtc")
                         .HasColumnType("interval");
 
@@ -1358,6 +1373,9 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.Property<string>("SearXngUrl")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("SpecPlanHtmlBackfillCompletedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1877,6 +1895,110 @@ namespace HydraForge.Infrastructure.Migrations
                     b.ToTable("project_context_snapshots", (string)null);
                 });
 
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DocType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(7)
+                        .HasColumnName("doc_type");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("ProjectId", "DocType")
+                        .HasDatabaseName("ix_project_documents_project_id_doc_type");
+
+                    b.ToTable("project_documents", (string)null);
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectDocumentVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("ProjectDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectDocumentId");
+
+                    b.HasIndex("ProjectDocumentId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("project_document_versions", (string)null);
+                });
+
             modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectMember", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2100,6 +2222,24 @@ namespace HydraForge.Infrastructure.Migrations
                     b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Plan", null)
                         .WithMany()
                         .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectDocument", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HydraForge.Domain.Entities.ProjectSpace.ProjectDocumentVersion", b =>
+                {
+                    b.HasOne("HydraForge.Domain.Entities.ProjectSpace.ProjectDocument", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectDocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

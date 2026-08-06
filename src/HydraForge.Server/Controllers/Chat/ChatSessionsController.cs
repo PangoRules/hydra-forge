@@ -32,11 +32,19 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
         [FromQuery] Guid? folderId,
         [FromQuery] Guid? projectId,
         [FromQuery] DateTime? before = null,
+        [FromQuery] Guid? beforeId = null,
         [FromQuery] int limit = 20
     )
     {
         var userId = User.GetRequiredUserId();
-        var result = await sessionService.ListAsync(userId, folderId, projectId, before, limit);
+        var result = await sessionService.ListAsync(
+            userId,
+            folderId,
+            projectId,
+            before,
+            beforeId,
+            limit
+        );
 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);

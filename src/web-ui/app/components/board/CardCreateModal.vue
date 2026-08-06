@@ -40,6 +40,14 @@ const saving = ref(false)
 const selectedParentId = ref<string | undefined>()
 const parentCandidates = ref<CardResponse[]>([])
 const canSave = computed(() => title.value.trim().length > 0 && columnId.value.length > 0)
+const availableMembers = computed(() =>
+  (props.members ?? []).filter(m => !selectedAssignees.value.includes(m.userId))
+)
+const selectedParent = computed(() =>
+  selectedParentId.value
+    ? parentCandidates.value.find(c => c.id === selectedParentId.value) ?? null
+    : null
+)
 
 async function fetchParentCandidates() {
   try {
@@ -135,22 +143,16 @@ function closeWithAnimation() {
               class="text-xs text-gray-400"
             >None</span>
           </div>
-          <select
+          <USelectMenu
             v-if="props.members && props.members.length > 0"
-            class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-            @change="(e: Event) => { const s = e.target as HTMLSelectElement; if (s.value && !selectedAssignees.includes(s.value)) selectedAssignees.push(s.value); s.value = '' }"
-          >
-            <option value="">
-              + Add assignee
-            </option>
-            <option
-              v-for="m in props.members.filter(m => !selectedAssignees.includes(m.userId))"
-              :key="m.userId"
-              :value="m.userId"
-            >
-              {{ m.username }}
-            </option>
-          </select>
+            :model-value="''"
+            :items="availableMembers.map(m => ({ label: m.username, value: m.userId }))"
+            value-key="value"
+            size="xs"
+            class="w-full"
+            placeholder="+ Add assignee"
+            @update:model-value="(v: string) => v && !selectedAssignees.includes(v) && selectedAssignees.push(v)"
+          />
         </div>
         <div class="flex gap-4 items-end">
           <div class="flex-1">
@@ -202,21 +204,30 @@ function closeWithAnimation() {
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Parent</label>
-          <select
-            v-model="selectedParentId"
-            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+          <div
+            v-if="selectedParent"
+            class="inline-flex items-center gap-1 px-2 py-0.5 mb-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
           >
-            <option :value="undefined">
-              None
-            </option>
-            <option
-              v-for="card in parentCandidates"
-              :key="card.id"
-              :value="card.id"
+            #{{ selectedParent.cardNumber }} — {{ selectedParent.title }}
+            <button
+              class="ml-0.5 text-gray-400 hover:text-red-500"
+              @click="selectedParentId = undefined"
             >
-              {{ card.title }}
-            </option>
-          </select>
+              <UIcon
+                name="i-lucide-x"
+                class="size-3"
+              />
+            </button>
+          </div>
+          <USelectMenu
+            :model-value="''"
+            :items="parentCandidates.map(c => ({ label: `#${c.cardNumber} — ${c.title}`, value: c.id }))"
+            value-key="value"
+            size="xs"
+            class="w-full"
+            :placeholder="selectedParent ? 'Change parent...' : 'Search cards...'"
+            @update:model-value="(v: string) => v && (selectedParentId = v)"
+          />
         </div>
       </div>
     </template>

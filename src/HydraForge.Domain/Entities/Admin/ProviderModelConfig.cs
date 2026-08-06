@@ -13,12 +13,19 @@ public class ProviderModelConfig
     public int? MaxTokens { get; set; }
     public bool IsEnabled { get; set; } = true;
     public bool SupportsReasoning { get; set; } = false;
+    public ThinkMode ThinkMode { get; set; } = ThinkMode.Auto;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public void UpdateSupportsReasoning(bool supportsReasoning)
     {
         SupportsReasoning = supportsReasoning;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateThinkMode(ThinkMode mode)
+    {
+        ThinkMode = mode;
         UpdatedAt = DateTime.UtcNow;
     }
 }
