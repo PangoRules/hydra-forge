@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import type { components } from '~/types/api'
-import { ApiRoutes, UiRoutes } from '~/lib/routes'
+import { ApiRoutes } from '~/lib/routes'
 import CardCreateModal from '~/components/board/CardCreateModal.vue'
 import BoardFilterBar from '~/components/board/BoardFilterBar.vue'
 import BulkActionBar from '~/components/shared/BulkActionBar.vue'
-import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
-import ProjectNarrativeModal from '~/components/project/ProjectNarrativeModal.vue'
 import KeyboardShortcutOverlay from '~/components/shared/KeyboardShortcutOverlay.vue'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import { useCardMove } from '~/composables/useCardMove'
@@ -15,6 +13,9 @@ import { useBoardStore } from '~/stores/board'
 
 const props = defineProps<{
   projectId: string
+  projectArchived: boolean
+  presence: ReturnType<typeof usePresence>
+  externalModalOpen: boolean
 }>()
 
 type CardResponse = components['schemas']['CardResponse']
@@ -23,8 +24,10 @@ const boardStore = useBoardStore()
 const api = useApi()
 const toast = useAppToast()
 
-const projectName = ref('')
-const projectArchived = ref(false)
+// Header (back button, title, members, narrative, presence) lives in the parent
+// page (projects/[id]/index.vue) so it survives switching to the Docs tab —
+// projectArchived/presence are owned there and passed down as props.
+const projectArchived = computed(() => props.projectArchived)
 
 const showCardModal = ref(false)
 const selectedCard = ref<CardResponse | null>(null)
@@ -35,9 +38,7 @@ const selectedCardId = computed({
 const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
-const showMembersPanel = ref(false)
 const showShortcutOverlay = ref(false)
-const showNarrativeModal = ref(false)
 
 const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
@@ -47,8 +48,7 @@ const anyModalOpen = computed(() =>
   || showCreateModal.value
   || showArchiveConfirm.value
   || showShortcutOverlay.value
-  || showMembersPanel.value
-  || showNarrativeModal.value
+  || props.externalModalOpen
 )
 
 async function confirmArchive() {
@@ -75,7 +75,6 @@ function handleAddCard(columnId?: string) {
 
 const { moveCardToColumn } = useCardMove(props.projectId)
 const realtime = useRealtime()
-const presence = usePresence()
 
 function findCard(cardId: string): CardResponse | undefined {
   for (const [, cards] of boardStore.cardsByColumn) {
@@ -163,34 +162,12 @@ async function handleBulkArchive() {
   toast.success(`Archived ${ids.length} card(s)`)
 }
 
-onMounted(async () => {
+onMounted(() => {
   boardStore.fetchBoard(props.projectId)
   boardStore.fetchMembers(props.projectId)
   realtime.connect(props.projectId)
-  presence.connect(props.projectId)
-  try {
-    const { data } = await api.GET(ApiRoutes.Projects.detail(props.projectId))
-    if (data) {
-      const project = data as components['schemas']['ProjectResponse']
-      projectName.value = project.name
-      projectArchived.value = !!project.archivedAt
-    }
-  } catch {
-    toast.error('Failed to load project details')
-  }
   nav.activate()
 })
-
-async function handleRestore() {
-  try {
-    await api.POST(ApiRoutes.Projects.toggleArchive(props.projectId))
-    projectArchived.value = false
-    toast.success('Project restored')
-    boardStore.fetchBoard(props.projectId)
-  } catch {
-    toast.error('Failed to restore project')
-  }
-}
 
 watch(
   () => boardStore.boardFilters.includeArchived,
@@ -220,142 +197,20 @@ watch(
 
 watch(selectedCardId, (cardId) => {
   if (cardId) {
-    presence.focusCard(props.projectId, cardId)
+    props.presence.focusCard(props.projectId, cardId)
   } else {
-    presence.unfocusCard(props.projectId)
+    props.presence.unfocusCard(props.projectId)
   }
 })
 
 onBeforeUnmount(() => {
   realtime.disconnect(props.projectId)
-  presence.disconnect(props.projectId)
   nav.deactivate()
 })
-
-const presenceStore = usePresenceStore()
-const onlineUsers = computed(() => {
-  const users = presenceStore.onlineUsers.get(props.projectId)
-  return users ? users : []
-})
-
-function viewingCardNumber(userId: string): number | string | null {
-  const cardId = presenceStore.focusedCards.get(userId)
-  if (!cardId) return null
-  for (const cards of boardStore.cardsByColumn.values()) {
-    const found = cards.find(c => c.id === cardId)
-    if (found) return found.cardNumber
-  }
-  return null
-}
-
-const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6']
-function hashColor(id: string): string {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash += id.charCodeAt(i)
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]!
-}
 </script>
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <div class="flex items-center gap-2 min-w-0">
-        <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          size="sm"
-          :to="UiRoutes.Projects.List"
-          aria-label="Back to projects"
-        />
-        <h1 class="text-xl font-bold truncate">
-          {{ projectName || 'Board' }}
-        </h1>
-        <UButton
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-sparkles"
-          title="View AI narrative"
-          @click="showNarrativeModal = true"
-        />
-        <UBadge
-          v-if="projectArchived"
-          variant="subtle"
-          size="xs"
-          color="neutral"
-        >
-          Archived
-        </UBadge>
-      </div>
-      <div class="flex items-center gap-1">
-        <UPopover v-if="onlineUsers.length > 0">
-          <button
-            type="button"
-            class="flex items-center -space-x-1.5 ml-2 cursor-pointer"
-            :aria-label="`${onlineUsers.length} online`"
-          >
-            <span
-              v-for="u in onlineUsers"
-              :key="u.userId"
-              class="inline-flex items-center justify-center size-6 rounded-full text-xs font-medium text-white ring-2 ring-white dark:ring-gray-900"
-              :style="{ backgroundColor: hashColor(u.userId) }"
-            >
-              {{ (u.username[0] ?? '').toUpperCase() }}
-            </span>
-          </button>
-
-          <template #content>
-            <div class="w-56 py-1">
-              <div class="px-3 py-1.5 text-xs font-medium text-muted uppercase">
-                Online — {{ onlineUsers.length }}
-              </div>
-              <div
-                v-for="u in onlineUsers"
-                :key="u.userId"
-                class="px-3 py-1.5 flex items-center gap-2 text-sm"
-              >
-                <span
-                  class="inline-flex items-center justify-center size-5 rounded-full text-xs font-medium text-white shrink-0"
-                  :style="{ backgroundColor: hashColor(u.userId) }"
-                >
-                  {{ (u.username[0] ?? '').toUpperCase() }}
-                </span>
-                <span class="truncate">{{ u.username }}</span>
-                <span
-                  v-if="viewingCardNumber(u.userId)"
-                  class="text-xs text-muted shrink-0 ml-auto"
-                >viewing #{{ viewingCardNumber(u.userId) }}</span>
-              </div>
-            </div>
-          </template>
-        </UPopover>
-        <UButton
-          v-if="projectArchived"
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-archive-restore"
-          title="Restore project"
-          @click="handleRestore"
-        />
-        <UButton
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-users"
-          title="Members"
-          @click="showMembersPanel = !showMembersPanel"
-        />
-        <UButton
-          variant="ghost"
-          size="sm"
-          @click="boardStore.fetchBoard(props.projectId)"
-        >
-          <UIcon
-            name="i-lucide-refresh-cw"
-            class="size-4"
-          />
-        </UButton>
-      </div>
-    </div>
-
     <BoardFilterBar
       :members="boardStore.members"
       :columns="boardStore.columns"
@@ -363,16 +218,6 @@ function hashColor(id: string): string {
       class="hidden md:flex"
       @add-card="handleAddCard()"
     />
-
-    <div
-      v-if="showMembersPanel"
-      class="px-4 pt-3"
-    >
-      <MemberManagementPanel
-        :project-id="projectId"
-        @update="boardStore.fetchMembers(props.projectId)"
-      />
-    </div>
 
     <div class="flex-1 flex flex-col min-h-0">
       <div
@@ -475,12 +320,6 @@ function hashColor(id: string): string {
       v-if="showShortcutOverlay"
       :open="showShortcutOverlay"
       @close="showShortcutOverlay = false"
-    />
-
-    <ProjectNarrativeModal
-      v-if="showNarrativeModal"
-      :project-id="props.projectId"
-      @close="showNarrativeModal = false"
     />
 
     <ConfirmDialog
