@@ -18,13 +18,15 @@ const props = withDefaults(
     awaitingReply?: boolean
     rollbackDisabled?: boolean
     highlightMessageId?: string | null
+    findQuery?: string
   }>(),
   {
     streamingMessage: null,
     streamError: null,
     awaitingReply: false,
     rollbackDisabled: false,
-    highlightMessageId: null
+    highlightMessageId: null,
+    findQuery: ''
   }
 )
 
@@ -201,6 +203,7 @@ onMounted(() => {
           :is-streaming="streamingMessage?.messageId === message.id"
           :rollback-disabled="rollbackDisabled"
           :highlighted="message.id === highlightMessageId"
+          :find-query="findQuery"
           @rollback="emit('rollback', $event)"
         />
 

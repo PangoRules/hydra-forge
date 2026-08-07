@@ -216,12 +216,6 @@ namespace HydraForge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("ThinkMode")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("think_mode");
-
                     b.Property<decimal?>("PricePerToken")
                         .HasColumnType("numeric");
 
@@ -230,6 +224,12 @@ namespace HydraForge.Infrastructure.Migrations
 
                     b.Property<bool>("SupportsReasoning")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("ThinkMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("think_mode");
 
                     b.Property<int>("Tier")
                         .HasColumnType("integer");

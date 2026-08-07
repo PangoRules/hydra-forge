@@ -2,7 +2,8 @@
 import { ApiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
 import ChatSessionList from '~/components/shared/ChatSessionList.vue'
-import type { ChatSessionDto } from '~/types/chat'
+import { type ChatSessionDto, ChatSessionStatus } from '~/types/chat'
+import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
 import { useChatSessionList } from '~/composables/useChatSessionList'
 import { useChatDockStore } from '~/stores/chatDock'
 
@@ -16,11 +17,45 @@ const toast = useAppToast()
 const route = useRoute()
 
 const dock = useChatDockStore()
-const { sessions, loading, hasMore, loadMore, patchSession, prependSession, removeSession } = useChatSessionList()
+const { sessions, loading, hasMore, statusFilter, loadMore, refresh, patchSession, prependSession, removeSession } = useChatSessionList()
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
+// Linear lifecycle only — 'NonArchived' stays in the backend enum for
+// internal use but is not offered as a UI filter (see spec).
+const statusFilterItems = [
+  { label: 'Active', value: 'Active' },
+  { label: 'Closed', value: 'Closed' },
+  { label: 'Archived', value: 'Archived' }
+]
+
+watch(statusFilter, () => {
+  refresh()
+})
+
+// ChatSessionView defaults to 'PersonalChat' when no feature prop is given — this page
+// never passed one, so a project/card chat opened from here routed (and priced/allowlisted)
+// as ProjectChat server-side while showing the PersonalChat model picker. ChatDock.vue
+// already derives this correctly from its own known project scope; mirror that here from
+// the loaded sidebar list. Falls back to 'PersonalChat' if the active session isn't in the
+// currently-loaded list (e.g. resumed via localStorage under a different filter) — same
+// default as before, not a regression.
+const activeSessionFeature = computed(() => {
+  const active = sessions.value.find(s => s.id === activeSessionId.value)
+  return active?.projectId ? 'ProjectChat' : 'PersonalChat'
+})
+
 onMounted(() => {
+  // A fresh navigation straight to /chats?compose=1 (e.g. the top-nav "New Chat"
+  // link, clicked from the mini dock or anywhere else) must land on a blank
+  // compose view — resuming the last session here was the bug: this resume
+  // logic ran unconditionally, and the compose-query watcher below only fires
+  // on a query CHANGE (no `immediate: true`), so it never got a chance to
+  // override this on the very first load of the page.
+  if (route.query.compose === '1') {
+    startCompose()
+    return
+  }
   if (dock.activeSessionId) {
     activeSessionId.value = dock.activeSessionId
   } else {
@@ -77,11 +112,11 @@ function deriveTitle(content: string): string {
     : firstLine
 }
 
-async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null) {
+async function startNewChat(content: string, presetId?: string | null, modelId?: string | null, reasoningEffort?: string | null, personalityId?: string | null) {
   starting.value = true
   try {
     const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), {
-      body: { title: deriveTitle(content) }
+      body: { title: deriveTitle(content), personalityId: personalityId ?? null }
     })
     if (data) {
       pendingMessage.value = {
@@ -128,6 +163,23 @@ async function confirmArchive() {
     archiveTargetId.value = null
   }
 }
+
+// Called when archive is triggered from inside the open ChatSessionView — the
+// API call already fired inside ChatSessionView.handleArchiveSession(); this
+// only handles the UI cleanup (close the view + remove from list).
+function archiveFromSession(sessionId: string) {
+  if (activeSessionId.value === sessionId) activeSessionId.value = null
+  removeSession(sessionId)
+}
+
+async function reopenSession(id: string) {
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.reopen(id))
+    patchSession(id, { status: ChatSessionStatus.Active, archivedAt: null })
+  } catch {
+    toast.error('Failed to reopen chat')
+  }
+}
 </script>
 
 <template>
@@ -150,6 +202,14 @@ async function confirmArchive() {
           />
         </div>
 
+        <div class="shrink-0 px-4 pb-3">
+          <USelect
+            v-model="statusFilter"
+            :items="statusFilterItems"
+            size="xs"
+          />
+        </div>
+
         <ChatSessionList
           :sessions="sessions"
           :loading="loading"
@@ -168,13 +228,29 @@ async function confirmArchive() {
                 :class="active ? 'bg-gray-100 dark:bg-gray-800' : ''"
                 @click="selectSession(session.id)"
               >
-                <p class="truncate text-sm font-medium">
-                  {{ session.title }}
-                </p>
-                <!-- "Active" is every session's default state pre-close — showing it for
-                     everything is just noise. Only surface the badge once it's meaningful. -->
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ session.title }}
+                  </p>
+                  <UBadge
+                    :color="CHAT_TYPE_BADGE[getChatType(session)].color"
+                    variant="subtle"
+                    size="xs"
+                    class="shrink-0"
+                  >
+                    {{ CHAT_TYPE_BADGE[getChatType(session)].label }}
+                  </UBadge>
+                </div>
+                <!-- Closed chats preview their AI summary; other states keep the
+                     old status line (meaningful only once not-Active). -->
                 <p
-                  v-if="session.status !== 'Active'"
+                  v-if="session.status === 'Closed' && session.summary"
+                  class="text-xs text-muted truncate"
+                >
+                  {{ session.summary }}
+                </p>
+                <p
+                  v-else-if="session.status !== 'Active'"
                   class="text-xs text-muted"
                 >
                   {{ session.status }}
@@ -188,6 +264,16 @@ async function confirmArchive() {
                 title="Archive chat"
                 class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                 @click.stop="requestArchive(session.id)"
+              />
+              <UButton
+                v-if="session.status !== 'Active' || session.archivedAt"
+                icon="i-lucide-folder-open"
+                variant="ghost"
+                color="neutral"
+                size="xs"
+                title="Reopen chat"
+                class="absolute right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click.stop="reopenSession(session.id)"
               />
             </li>
           </template>
@@ -211,6 +297,7 @@ async function confirmArchive() {
       v-if="activeSessionId"
       :key="activeSessionId"
       :session-id="activeSessionId"
+      :feature="activeSessionFeature"
       :initial-message="pendingMessage?.content ?? null"
       :auto-send-initial="!!pendingMessage"
       :initial-preset-id="pendingMessage?.presetId ?? null"
@@ -218,6 +305,8 @@ async function confirmArchive() {
       :initial-effort="pendingMessage?.reasoningEffort ?? null"
       @initial-message-sent="pendingMessage = null"
       @session-refreshed="syncSession"
+      @dismiss="activeSessionId = null"
+      @archive-session="archiveFromSession($event)"
     />
     <div
       v-else
@@ -235,9 +324,9 @@ async function confirmArchive() {
     <ConfirmDialog
       :open="archiveTargetId !== null"
       title="Archive chat"
-      message="This chat will be archived and removed from your list. This can't be undone from here."
+      message="This chat will be archived and eventually deleted. You can unarchive it to restore it."
       confirm-text="Archive"
-      confirm-color="error"
+      confirm-color="warning"
       @update:open="(v: boolean) => { if (!v) archiveTargetId = null }"
       @confirm="confirmArchive"
     />

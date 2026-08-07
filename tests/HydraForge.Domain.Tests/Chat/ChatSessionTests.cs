@@ -6,39 +6,50 @@ namespace HydraForge.Domain.Tests.Chat;
 public class ChatSessionTests
 {
     [Fact]
-    public void Open_SetsStatusToActive()
-    {
-        var session = new ChatSession();
-
-        session.Open(Guid.NewGuid(), Guid.NewGuid(), AiEditMode.PerMutation);
-
-        Assert.Equal(ChatSessionStatus.Active, session.Status);
-    }
-
-    [Fact]
-    public void Open_SetsPersonalityIdAndOpenCardIdAndAiEditMode()
-    {
-        var session = new ChatSession();
-        var personalityId = Guid.NewGuid();
-        var openCardId = Guid.NewGuid();
-
-        session.Open(personalityId, openCardId, AiEditMode.Blanket);
-
-        Assert.Equal(personalityId, session.PersonalityId);
-        Assert.Equal(openCardId, session.OpenCardId);
-        Assert.Equal(AiEditMode.Blanket, session.AiEditMode);
-    }
-
-    [Fact]
-    public void Open_ClearsClosedAtAndSummary()
+    public void Reopen_SetsStatusToActiveAndClearsClosedAt()
     {
         var session = new ChatSession();
         session.Close("some summary");
 
-        session.Open(null, null, AiEditMode.PerMutation);
+        session.Reopen();
+
+        Assert.Equal(ChatSessionStatus.Active, session.Status);
+        Assert.Null(session.ClosedAt);
+    }
+
+    [Fact]
+    public void Reopen_ClearsArchivedAtAndResetsAiEditMode()
+    {
+        var session = new ChatSession { AiEditMode = AiEditMode.Blanket };
+        session.Archive();
+
+        session.Reopen();
+
+        Assert.Null(session.ArchivedAt);
+        Assert.Equal(AiEditMode.PerMutation, session.AiEditMode);
+    }
+
+    [Fact]
+    public void Reopen_ClearsClosedAtInOneCall()
+    {
+        var session = new ChatSession();
+        session.Close("summary");
+
+        session.Reopen();
 
         Assert.Null(session.ClosedAt);
         Assert.Null(session.Summary);
+    }
+
+    [Fact]
+    public void Unarchive_ClearsArchivedAt()
+    {
+        var session = new ChatSession();
+        session.Archive();
+
+        session.Unarchive();
+
+        Assert.Null(session.ArchivedAt);
     }
 
     [Fact]

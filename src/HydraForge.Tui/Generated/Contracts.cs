@@ -498,7 +498,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, ChatSessionStatusFilter? status = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -519,6 +519,11 @@ namespace HydraForge.Tui.Generated
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ChatSessionDto> CloseAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ChatSessionDto> ReopenAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
@@ -1859,6 +1864,24 @@ namespace HydraForge.Tui.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ChatSessionStatusFilter
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NonArchived")]
+        NonArchived = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
+        Active = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Closed")]
+        Closed = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Archived")]
+        Archived = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ChecklistItemListResponse
     {
 
@@ -2245,8 +2268,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = "Auto";
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = "Auto";
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3580,8 +3603,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = false;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = "Auto";
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = "Auto";
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -4360,8 +4383,8 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("supportsReasoning", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? SupportsReasoning { get; set; } = default!;
 
-        [Newtonsoft.Json.JsonProperty("ollamaThinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string? OllamaThinkMode { get; set; } = default!;
+        [Newtonsoft.Json.JsonProperty("thinkMode", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string? ThinkMode { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

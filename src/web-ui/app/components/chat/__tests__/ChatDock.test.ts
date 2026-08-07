@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
 
 const mockToggleDock = vi.fn()
 const mockCloseDock = vi.fn()
@@ -10,7 +11,7 @@ const mockStartNewChat = vi.fn()
 const storeState = reactive({
   isOpen: true,
   mode: 'session' as 'draft' | 'session' | 'history',
-  activeSessionId: 'abc',
+  activeSessionId: 'abc' as string | null,
   isCreating: false,
   currentProjectId: 'proj1',
   position: { x: 0, y: 0 },
@@ -19,7 +20,10 @@ const storeState = reactive({
   closeDock: mockCloseDock,
   startNewChat: mockStartNewChat,
   openDock: vi.fn(),
-  newChat: vi.fn(),
+  newChat: vi.fn(() => {
+    storeState.mode = 'draft'
+    storeState.activeSessionId = null
+  }),
   showHistory: vi.fn(),
   hideHistory: vi.fn(),
   loadSession: vi.fn(),
@@ -28,11 +32,55 @@ const storeState = reactive({
 
 const routeState = reactive({ path: '/projects/proj1/board', params: { id: 'proj1' } })
 
+const baseSession = {
+  id: 'abc',
+  title: 'Real Session Title',
+  folderId: null,
+  projectId: null,
+  openCardId: null,
+  personalityId: null,
+  personalityArchived: false,
+  status: 'Active',
+  aiEditMode: 1,
+  searchAllMyDocs: false,
+  summary: null,
+  createdAt: '2026-08-01T00:00:00Z',
+  updatedAt: '2026-08-01T00:00:00Z',
+  archivedAt: null,
+  ownerId: 'u1',
+  isShared: false,
+  closedAt: null,
+  messages: []
+}
+
+const mockGET = vi.fn()
+
 mockNuxtImport('useChatDockStore', () => () => storeState)
 mockNuxtImport('useRoute', () => () => routeState)
 mockNuxtImport('useAppToast', () => () => ({ error: vi.fn(), success: vi.fn() }))
+mockNuxtImport('useAuthStore', () => () => ({ user: { userId: 'u1' } }))
+mockNuxtImport('useChatStream', () => () => ({
+  connect: vi.fn().mockResolvedValue(undefined),
+  disconnect: vi.fn().mockResolvedValue(undefined),
+  join: vi.fn().mockResolvedValue(undefined),
+  leave: vi.fn().mockResolvedValue(undefined),
+  send: vi.fn(),
+  resend: vi.fn(),
+  cancel: vi.fn().mockResolvedValue(undefined),
+  streamingMessage: { value: null },
+  isStreaming: { value: false },
+  isConnected: { value: false },
+  isReconnecting: { value: false },
+  onStreamStart: vi.fn(),
+  onStreamDelta: vi.fn(),
+  onStreamDone: vi.fn(),
+  onStreamError: vi.fn(),
+  onSessionUpdated: vi.fn(),
+  onReconnected: vi.fn(),
+  clearStreaming: vi.fn()
+}))
 mockNuxtImport('useApi', () => () => ({
-  GET: vi.fn(),
+  GET: mockGET,
   POST: vi.fn(),
   PUT: vi.fn(),
   DELETE: vi.fn(),
@@ -44,6 +92,17 @@ import { default as ChatDock } from '~/components/chat/ChatDock.vue'
 describe('ChatDock', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // ChatDock's session mode mounts the real ChatSessionView -> ChatSessionHeader
+    // -> ChatInput -> ChatDocAttach tree, each firing its own GET (session detail,
+    // personalities, presets, attached docs) against this same shared mock —
+    // route by URL so each gets a response shaped like what it actually expects.
+    mockGET.mockImplementation((url: string) => {
+      if (url.includes('/personalities')) return Promise.resolve({ data: [], error: undefined })
+      if (url.includes('/presets')) return Promise.resolve({ data: [], error: undefined })
+      if (url.includes('/documents')) return Promise.resolve({ data: [], error: undefined })
+      if (url.includes('/chat/sessions/')) return Promise.resolve({ data: baseSession, error: undefined })
+      return Promise.resolve({ data: [], error: undefined })
+    })
     // Reset to defaults
     storeState.isOpen = true
     storeState.mode = 'session'
@@ -54,6 +113,11 @@ describe('ChatDock', () => {
     storeState.pendingMessage = null
     routeState.path = '/projects/proj1/board'
     routeState.params = { id: 'proj1' }
+    // Re-configure newChat impl each run so state doesn't bleed between tests
+    storeState.newChat.mockImplementation(() => {
+      storeState.mode = 'draft'
+      storeState.activeSessionId = null
+    })
   })
 
   it('renders the FAB button when dock is closed', async () => {
@@ -69,22 +133,32 @@ describe('ChatDock', () => {
     expect(wrapper.find('button[aria-label="Open chat"]').exists()).toBe(false)
   })
 
-  it('shows popup with Chat header when on board route with session', async () => {
+  it('shows the real session title (not a hardcoded placeholder) when on board route with session', async () => {
     storeState.mode = 'session'
     const wrapper = await mountSuspended(ChatDock)
-    expect(wrapper.html()).toContain('>Chat<')
+    await flushPromises()
+    expect(wrapper.html()).toContain('Real Session Title')
   })
 
-  it('shows Chat header when not on a project board', async () => {
+  it('shows the real session title when not on a project board', async () => {
     storeState.currentProjectId = undefined as unknown as string
     const wrapper = await mountSuspended(ChatDock)
-    expect(wrapper.html()).toContain('>Chat<')
+    await flushPromises()
+    expect(wrapper.html()).toContain('Real Session Title')
   })
 
   it('renders ChatSessionView via session-id prop when session is active', async () => {
     storeState.mode = 'session'
     const wrapper = await mountSuspended(ChatDock)
-    expect(wrapper.html()).toContain('>Chat<')
+    await flushPromises()
+    expect(wrapper.html()).toContain('Real Session Title')
+  })
+
+  it('renders exactly one header row in session mode (no duplicate title bar)', async () => {
+    storeState.mode = 'session'
+    const wrapper = await mountSuspended(ChatDock)
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="dock-header-row"]').length).toBe(1)
   })
 
   it('is hidden on /chats route', async () => {
@@ -109,7 +183,7 @@ describe('ChatDock', () => {
     expect(textarea.exists()).toBe(true)
     await textarea.setValue('summarize this board')
     await textarea.trigger('keydown', { key: 'Enter' })
-    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board', null, null, null)
+    expect(mockStartNewChat).toHaveBeenCalledWith('summarize this board', null, null, null, null)
   })
 
   it('draft mode: does not create a session on empty/whitespace-only Enter', async () => {
@@ -133,5 +207,39 @@ describe('ChatDock', () => {
     storeState.mode = 'history'
     const wrapper = await mountSuspended(ChatDock)
     expect(wrapper.find('button[title="History"]').exists()).toBe(false)
+  })
+
+  it('returns to draft mode when the active session is archived from inside the view', async () => {
+    storeState.mode = 'session'
+    storeState.activeSessionId = 'abc'
+    const wrapper = await mountSuspended(ChatDock, {
+      global: {
+        stubs: {
+          ChatSessionView: {
+            name: 'ChatSessionView',
+            template: '<div data-testid="stub-session-view" />',
+            setup() {
+              return {
+                session: computed(() => ({
+                  id: 'abc',
+                  title: 'Test',
+                  status: 'Active',
+                  projectId: 'p1',
+                  openCardId: null
+                })),
+                isOwner: true
+              }
+            }
+          }
+        }
+      }
+    })
+    await flushPromises()
+
+    await wrapper.findComponent({ name: 'ChatSessionView' }).vm.$emit('archiveSession', 'abc')
+    await flushPromises()
+
+    expect(storeState.activeSessionId).toBeNull()
+    expect(storeState.mode).toBe('draft')
   })
 })

@@ -10,6 +10,10 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
   const sessions = ref<ChatSessionDto[]>([])
   const loading = ref(false)
   const hasMore = ref(true)
+  // 'NonArchived' is deliberately NOT offered here — it stays in the
+  // backend enum for internal use (folder cascade-archive), but the UI only
+  // presents the linear lifecycle: Active (default) → Closed → Archived.
+  const statusFilter = ref<'Active' | 'Closed' | 'Archived'>('Active')
   const api = useApi()
 
   async function loadMore() {
@@ -17,13 +21,14 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     loading.value = true
     try {
       const last = sessions.value[sessions.value.length - 1]
-      const url = ApiRoutes.Chat.sessions.list(
+      const base = ApiRoutes.Chat.sessions.list(
         options?.folderId,
         options?.projectId,
         last?.updatedAt,
         last?.id,
         20
       )
+      const url = `${base}&status=${statusFilter.value}`
       const { data } = await api.GET<ChatSessionPageDto>(url)
       if (data) {
         sessions.value.push(...data.items)
@@ -72,6 +77,7 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     sessions: readonly(sessions),
     loading: readonly(loading),
     hasMore: readonly(hasMore),
+    statusFilter,
     loadMore,
     refresh,
     patchSession,

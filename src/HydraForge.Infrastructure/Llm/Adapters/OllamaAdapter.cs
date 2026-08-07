@@ -33,12 +33,32 @@ public sealed class OllamaAdapter(
 
         // Ollama has no prompt-caching API — cache blocks are flattened into plain
         // system messages ahead of the conversation instead of being dropped.
-        var messages = new List<ChatMessage>(request.Messages);
-        int insertIndex = 0;
+        var rawMessages = new List<ChatMessage>(request.Messages);
         foreach (var block in request.CacheBlocks)
         {
-            messages.Insert(insertIndex++, new ChatMessage(ChatRole.System, block.Content));
+            rawMessages.Insert(0, new ChatMessage(ChatRole.System, block.Content));
         }
+
+        // Merge every System-role message (personality prompt, base identity prompt,
+        // RAG cache blocks above) into a single leading system turn instead of sending
+        // several separate system messages. Confirmed live (gemma4:26b via Ollama,
+        // personality = Captain Levi): with two separate system messages, the model's
+        // reply picked up the second (base identity) and completely ignored the first
+        // (personality) — Gemma's chat template has no native multi-system-turn concept,
+        // unlike Claude/GPT-class cloud models, which respected the same two-message
+        // payload fine. Collapsing to one message fixes it regardless of which specific
+        // template quirk causes it, and costs nothing for models that handle multiple
+        // system turns correctly anyway.
+        var systemContent = string.Join(
+            "\n\n",
+            rawMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Content)
+        );
+        var messages = new List<ChatMessage>();
+        if (!string.IsNullOrEmpty(systemContent))
+        {
+            messages.Add(new ChatMessage(ChatRole.System, systemContent));
+        }
+        messages.AddRange(rawMessages.Where(m => m.Role != ChatRole.System));
 
         var body = new OllamaChatRequest
         {

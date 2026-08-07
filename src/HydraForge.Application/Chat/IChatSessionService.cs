@@ -21,6 +21,7 @@ public interface IChatSessionService
         DateTime? before,
         Guid? beforeId,
         int limit,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     );
     Task<Result<ChatSessionDto>> UpdateAsync(
@@ -30,6 +31,11 @@ public interface IChatSessionService
         CancellationToken ct = default
     );
     Task<Result<ChatSessionDto>> CloseAsync(
+        Guid sessionId,
+        Guid actorId,
+        CancellationToken ct = default
+    );
+    Task<Result<ChatSessionDto>> ReopenAsync(
         Guid sessionId,
         Guid actorId,
         CancellationToken ct = default

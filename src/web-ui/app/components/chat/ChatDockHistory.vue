@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useChatSessionList } from '~/composables/useChatSessionList'
 import ChatSessionList from '~/components/shared/ChatSessionList.vue'
+import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
 
 const emit = defineEmits<{
   select: [sessionId: string]
@@ -36,8 +37,18 @@ const { sessions, loading, hasMore, loadMore } = useChatSessionList()
           class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
           @click="emit('select', session.id)"
         >
-          <div class="text-sm font-medium truncate">
-            {{ session.title || 'New Chat' }}
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="text-sm font-medium truncate">
+              {{ session.title || 'New Chat' }}
+            </span>
+            <UBadge
+              :color="CHAT_TYPE_BADGE[getChatType(session)].color"
+              variant="subtle"
+              size="xs"
+              class="shrink-0"
+            >
+              {{ CHAT_TYPE_BADGE[getChatType(session)].label }}
+            </UBadge>
           </div>
           <div class="text-xs text-muted truncate mt-0.5">
             {{ session.summary || 'No messages' }}

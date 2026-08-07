@@ -250,13 +250,16 @@ public sealed class ChatReplyGenerator(
                 return;
             }
 
+            // Fall back to the session's saved preference when this request didn't send an
+            // explicit override — e.g. the first message after a prior pick, or any caller
+            // (TUI, direct API) that doesn't resend it on every message.
             var routeResult = await modelRouter.ResolveAsync(
                 feature,
                 userId,
                 session.ProjectId,
                 estimatedTokens,
                 cts.Token,
-                preferredProviderModelConfigId
+                preferredProviderModelConfigId ?? session.PreferredModelConfigId
             );
             if (!routeResult.IsSuccess)
             {

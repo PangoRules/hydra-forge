@@ -76,3 +76,24 @@ describe('ChatMessageBubble — highlight', () => {
     expect(wrapper.find(`#chat-message-${baseMessage.id}`).classes()).not.toContain('ring-2')
   })
 })
+
+describe('ChatMessageBubble — findQuery highlight', () => {
+  it('wraps matched text in <mark> when findQuery is set', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: {
+        message: { ...baseMessage, content: 'The quick brown fox' },
+        findQuery: 'quick'
+      }
+    })
+    expect(wrapper.html()).toContain('<mark')
+  })
+
+  it('does not add <mark> when findQuery is empty', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: {
+        message: { ...baseMessage, content: 'The quick brown fox' }
+      }
+    })
+    expect(wrapper.html()).not.toContain('<mark')
+  })
+})

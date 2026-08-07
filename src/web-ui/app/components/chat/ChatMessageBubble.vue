@@ -2,6 +2,7 @@
 import type { ChatMessageDto } from '~/types/chat'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
 import { renderMarkdown } from '~/lib/markdown'
+import { highlightHtml } from '~/lib/highlight-html'
 
 const props = withDefaults(
   defineProps<{
@@ -9,11 +10,13 @@ const props = withDefaults(
     isStreaming?: boolean
     rollbackDisabled?: boolean
     highlighted?: boolean
+    findQuery?: string
   }>(),
   {
     isStreaming: false,
     rollbackDisabled: false,
-    highlighted: false
+    highlighted: false,
+    findQuery: ''
   }
 )
 
@@ -42,6 +45,10 @@ const images = computed<ParsedImage[]>(() => {
 })
 
 const renderedContent = computed(() => renderMarkdown(props.message.content))
+
+const displayedContent = computed(() =>
+  props.findQuery ? highlightHtml(renderedContent.value, props.findQuery) : renderedContent.value
+)
 
 const isUser = computed(() => props.message.role === 'User')
 
@@ -128,7 +135,7 @@ async function copyMessage() {
             : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-sm',
           isStreaming ? 'animate-pulse' : ''
         ]"
-        v-html="renderedContent"
+        v-html="displayedContent"
       />
       <!-- eslint-enable vue/no-v-html -->
 

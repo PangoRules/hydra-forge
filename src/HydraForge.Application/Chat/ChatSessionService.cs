@@ -291,6 +291,7 @@ public class ChatSessionService(
         DateTime? before,
         Guid? beforeId,
         int limit,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     )
     {
@@ -301,6 +302,7 @@ public class ChatSessionService(
             before,
             beforeId,
             limit,
+            statusFilter,
             ct
         );
         var dtos = new List<ChatSessionDto>();
@@ -312,7 +314,13 @@ public class ChatSessionService(
         // page. Using dtos.Count here made TotalCount == page size, which
         // capped hasMore at false after the first page and made every
         // session beyond page 1 permanently unreachable.
-        var totalCount = await _sessionRepo.CountAsync(actorId, folderId, projectId, ct);
+        var totalCount = await _sessionRepo.CountAsync(
+            actorId,
+            folderId,
+            projectId,
+            statusFilter,
+            ct
+        );
 
         return Result<ChatSessionPageDto>.Success(new ChatSessionPageDto(dtos, totalCount));
     }
@@ -424,6 +432,32 @@ public class ChatSessionService(
                 await _sessionRepo.AddCardChatLinkAsync(link, ct);
             }
         }
+
+        return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+    }
+
+    public async Task<Result<ChatSessionDto>> ReopenAsync(
+        Guid sessionId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
+    {
+        var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
+        if (session == null)
+            return Result<ChatSessionDto>.Failure(
+                new Error(DomainErrorCodes.Chat.SessionNotFound, "Session not found.")
+            );
+
+        if (session.OwnerId != actorId)
+            return Result<ChatSessionDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Chat.SessionNotOwner,
+                    "Only the owner can reopen the session."
+                )
+            );
+
+        session.Reopen();
+        await _sessionRepo.UpdateAsync(session, ct);
 
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
     }

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ApiError } from '~/lib/api-error'
 import { randomId } from '~/lib/id'
-import { ApiRoutes } from '~/lib/routes'
+import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
-import type { ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
-import { MessageRole } from '~/types/chat'
+import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
+import ChatDocAttach from '~/components/chat/ChatDocAttach.vue'
+import type { AiEditMode, ChatMessageDto, ChatSessionDetailDto, ChatSessionDto } from '~/types/chat'
+import { ChatSessionStatus, MessageRole } from '~/types/chat'
 
 const props = withDefaults(
   defineProps<{
@@ -17,6 +19,7 @@ const props = withDefaults(
     initialModelId?: string | null
     initialEffort?: string | null
     feature?: string
+    compact?: boolean
   }>(),
   {
     initialMessage: null,
@@ -24,7 +27,8 @@ const props = withDefaults(
     initialPresetId: null,
     initialModelId: null,
     initialEffort: null,
-    feature: 'PersonalChat'
+    feature: 'PersonalChat',
+    compact: false
   }
 )
 
@@ -34,10 +38,15 @@ const emit = defineEmits<{
    * this session's title (e.g. the AI-generated title landing after the first
    * exchange) without polling or a shared store. */
   sessionRefreshed: [id: string, title: string, status: string]
+  dismiss: []
+  /** Fires when the user archives this session from the header — lets the parent
+   * close the view and remove the session from its list without a full reload. */
+  archiveSession: [sessionId: string]
 }>()
 
 const toast = useAppToast()
 const api = useApi()
+const authStore = useAuthStore()
 
 const resolvedInitialModelId = computed(() => props.initialModelId ?? session.value?.preferredModelConfigId ?? null)
 const resolvedInitialEffort = computed(() => props.initialEffort ?? session.value?.preferredEffort ?? null)
@@ -45,6 +54,13 @@ const resolvedInitialEffort = computed(() => props.initialEffort ?? session.valu
 const session = ref<ChatSessionDetailDto | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const isOwner = computed(() =>
+  session.value?.ownerId != null && authStore.user?.userId != null
+    ? session.value.ownerId === authStore.user!.userId
+    : false
+)
+const isActive = computed(() => session.value?.status === 'Active')
 
 // Chat stream composable
 const chatStream = useChatStream()
@@ -63,10 +79,12 @@ const rollbackTarget = ref<ChatMessageDto | null>(null)
 const rollbackDiscardCount = ref(0)
 const lastUsedEffort = ref<string | null>(null)
 
+// Title editing
 const isEditingTitle = ref(false)
 const editedTitle = ref('')
 const titleInputRef = ref<HTMLInputElement | null>(null)
 
+// Find bar
 const findOpen = ref(false)
 const findQuery = ref('')
 const findIndex = ref(0)
@@ -83,11 +101,6 @@ const highlightMessageId = computed(() => findMatches.value[findIndex.value]?.id
 watch(findQuery, () => {
   findIndex.value = 0
 })
-
-// Scrolling to the current match is ChatMessageList's job, not this
-// component's — it owns the message-window (only the last 50 messages are
-// rendered) and expands that window before scrolling when the match falls
-// outside it. This component only tracks which message id is "current".
 
 function toggleFind() {
   findOpen.value = !findOpen.value
@@ -294,70 +307,121 @@ async function handleCancel() {
   awaitingReply.value = false
 }
 
-function startEditTitle() {
+// Shared PATCH helper — keeps title, folderId, personalityId, aiEditMode, searchAllMyDocs
+// in sync with whatever the caller wants to change.
+async function updateSessionSettings(overrides: {
+  title?: string
+  folderId?: string | null
+  personalityId?: string | null
+  aiEditMode?: AiEditMode
+  searchAllMyDocs?: boolean
+}) {
   if (!session.value) return
-  editedTitle.value = session.value.title
-  isEditingTitle.value = true
-  nextTick(() => titleInputRef.value?.focus())
-}
-
-function cancelTitleEdit() {
-  isEditingTitle.value = false
-}
-
-async function submitTitleEdit() {
-  if (!isEditingTitle.value || !session.value) return
-  isEditingTitle.value = false
-
-  const newTitle = editedTitle.value.trim()
-  if (!newTitle || newTitle === session.value.title) return
-
-  const previousTitle = session.value.title
-  session.value.title = newTitle
   try {
     const { data } = await api.PATCH<ChatSessionDto>(
       ApiRoutes.Chat.sessions.update(props.sessionId),
       {
         body: {
-          title: newTitle,
+          title: session.value.title,
           folderId: session.value.folderId,
           personalityId: session.value.personalityId,
           aiEditMode: session.value.aiEditMode,
-          searchAllMyDocs: session.value.searchAllMyDocs
+          searchAllMyDocs: session.value.searchAllMyDocs,
+          ...overrides
         }
       }
     )
     if (data && session.value) {
+      // Sync back any server-authored fields
       session.value.title = data.title
+      session.value.personalityId = data.personalityId
+      session.value.aiEditMode = data.aiEditMode
+      session.value.searchAllMyDocs = data.searchAllMyDocs
       emit('sessionRefreshed', session.value.id, data.title, session.value.status)
     }
   } catch (err) {
-    if (session.value) session.value.title = previousTitle
-    toast.error(err instanceof Error ? err.message : 'Failed to rename chat')
+    toast.error(err instanceof Error ? err.message : 'Failed to update session')
   }
 }
 
-function exportChat() {
+async function handleEditPersonality(personalityId: string | null) {
   if (!session.value) return
-  const markdown = session.value.messages
-    .map((m) => {
-      const heading = m.role === MessageRole.User
-        ? '## User'
-        : m.role === MessageRole.Assistant
-          ? '## Assistant'
-          : `## ${m.role}`
-      return `${heading}\n\n${m.content}`
-    })
-    .join('\n\n')
+  await updateSessionSettings({ personalityId })
+}
 
-  const safeTitle = session.value.title.replace(/[/\\?%*:|"<>]/g, '-') || 'chat'
-  const blob = new Blob([markdown], { type: 'text/markdown' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${safeTitle}.md`
-  a.click()
-  URL.revokeObjectURL(url)
+async function handleEditMode(mode: AiEditMode) {
+  if (!session.value) return
+  await updateSessionSettings({ aiEditMode: mode })
+}
+
+async function handleCloseSession() {
+  if (!session.value) return
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.close(props.sessionId))
+    session.value.status = ChatSessionStatus.Closed
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    toast.success('Chat closed')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to close chat')
+  }
+}
+
+async function handleArchiveSession() {
+  if (!session.value) return
+  try {
+    await api.DELETE(ApiRoutes.Chat.sessions.archive(props.sessionId))
+    // ArchivedAt is a separate axis from Status (Active/Closed) — archiving
+    // never changes Status. Setting status here would fake a third status
+    // value the backend enum doesn't have (see ChatSessionStatus.cs: only
+    // Active/Closed exist; "Archived" on the frontend enum is a display-only
+    // convenience, never a real Status the server sends).
+    session.value.archivedAt = new Date().toISOString()
+    emit('archiveSession', session.value.id)
+    toast.success('Chat archived')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to archive chat')
+  }
+}
+
+function handleDismiss() {
+  emit('dismiss')
+}
+
+async function handleReopen() {
+  if (!session.value) return
+  try {
+    await api.POST(ApiRoutes.Chat.sessions.reopen(props.sessionId))
+    session.value.status = ChatSessionStatus.Active
+    session.value.archivedAt = null
+    emit('sessionRefreshed', session.value.id, session.value.title, session.value.status)
+    toast.success('Chat reopened')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to reopen chat')
+  }
+}
+
+const router = useRouter()
+
+async function handleFork() {
+  if (!session.value) return
+  try {
+    const { data } = await api.POST<ChatSessionDto>(
+      ApiRoutes.Chat.sessions.create(),
+      {
+        body: {
+          title: `${session.value.title} (fork)`,
+          projectId: session.value.projectId,
+          forkedFromSessionId: session.value.id
+        }
+      }
+    )
+    if (data) {
+      toast.success('Chat forked — navigating...')
+      await router.push(UiRoutes.ChatSessions.Detail(data.id))
+    }
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Failed to fork chat')
+  }
 }
 
 function handleRollbackRequest(message: ChatMessageDto) {
@@ -405,6 +469,53 @@ async function confirmRollback() {
   }
 }
 
+// Title editing
+function startEditTitle() {
+  if (!session.value || !isActive.value) return
+  editedTitle.value = session.value.title
+  isEditingTitle.value = true
+  nextTick(() => titleInputRef.value?.focus())
+}
+
+function cancelTitleEdit() {
+  isEditingTitle.value = false
+  editedTitle.value = ''
+}
+
+async function submitTitleEdit() {
+  if (!session.value || !isActive.value) return
+  const trimmed = editedTitle.value.trim()
+  if (!trimmed || trimmed === session.value.title) {
+    cancelTitleEdit()
+    return
+  }
+  await updateSessionSettings({ title: trimmed })
+  cancelTitleEdit()
+}
+
+function exportChat() {
+  if (!session.value) return
+  const markdown = session.value.messages
+    .map((m) => {
+      const heading = m.role === MessageRole.User
+        ? '## User'
+        : m.role === MessageRole.Assistant
+          ? '## Assistant'
+          : `## ${m.role}`
+      return `${heading}\n\n${m.content}`
+    })
+    .join('\n\n')
+
+  const safeTitle = session.value.title.replace(/[/\\?%*:|"<>]/g, '-') || 'chat'
+  const blob = new Blob([markdown], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${safeTitle}.md`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 onMounted(async () => {
   await fetchSession()
 
@@ -445,55 +556,67 @@ onUnmounted(() => {
   chatStream.leave()
   chatStream.disconnect()
 })
+
+// In compact mode ChatSessionView renders no header of its own (see the
+// v-if="session && !compact" on <ChatSessionHeader> below) — ChatDock owns
+// the single dock header row and drives it through this exposed surface via
+// a ref to the mounted ChatSessionView instance, instead of duplicating a
+// second header/title-edit implementation in ChatDock.vue.
+defineExpose({
+  session,
+  isOwner,
+  handleEditPersonality,
+  handleEditMode,
+  handleDismiss,
+  handleCloseSession,
+  handleArchiveSession,
+  handleReopen,
+  handleFork,
+  startEditTitle,
+  exportChat,
+  toggleFind
+})
 </script>
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
+    <ChatSessionHeader
+      v-if="session && !compact"
+      :session="session"
+      :is-owner="isOwner"
+      :compact="compact"
+      @edit-personality="handleEditPersonality"
+      @edit-mode="handleEditMode"
+      @close-session="handleCloseSession"
+      @archive-session="handleArchiveSession"
+      @reopen-session="handleReopen"
+      @dismiss="handleDismiss"
+      @fork="handleFork"
+      @start-edit-title="startEditTitle"
+      @export-chat="exportChat"
+      @toggle-find="toggleFind"
+    />
+
+    <!-- Inline title edit input (rendered alongside/after the header) -->
+    <div
+      v-if="isEditingTitle && session"
+      class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2"
+    >
       <input
-        v-if="isEditingTitle"
         ref="titleInputRef"
         v-model="editedTitle"
+        type="text"
         data-testid="title-input"
-        class="flex-1 min-w-0 font-semibold bg-transparent border-b border-primary focus-visible:outline-none"
-        @keydown.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
-        @keydown.esc="cancelTitleEdit"
+        class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        @keydown.enter.prevent="submitTitleEdit"
+        @keydown.escape.prevent="cancelTitleEdit"
         @blur="submitTitleEdit"
       >
-      <template v-else>
-        <h2 class="font-semibold truncate flex-1 min-w-0">
-          {{ session?.title ?? 'Chat' }}
-        </h2>
-        <UButton
-          icon="i-lucide-pencil"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Rename chat"
-          :disabled="session?.status !== 'Active'"
-          @click="startEditTitle"
-        />
-        <UButton
-          icon="i-lucide-download"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Export chat"
-          @click="exportChat"
-        />
-        <UButton
-          icon="i-lucide-search"
-          variant="ghost"
-          color="neutral"
-          size="xs"
-          title="Find in conversation"
-          @click="toggleFind"
-        />
-      </template>
     </div>
 
+    <!-- Find bar -->
     <div
-      v-if="findOpen"
+      v-if="findOpen && session"
       class="shrink-0 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2"
     >
       <input
@@ -548,25 +671,35 @@ onUnmounted(() => {
     >
       {{ error }}
     </div>
-    <template v-else>
+    <template v-else-if="session">
       <ChatMessageList
-        :messages="session?.messages ?? []"
+        :messages="session.messages"
         :streaming-message="chatStream.streamingMessage.value"
         :stream-error="streamError"
         :awaiting-reply="awaitingReply"
         :rollback-disabled="isRollingBack || awaitingReply"
         :highlight-message-id="highlightMessageId"
+        :find-query="findQuery"
         @rollback="handleRollbackRequest"
+      />
+
+      <ChatDocAttach
+        v-if="isOwner && isActive"
+        :session-id="sessionId"
+        class="shrink-0 border-t border-gray-200 dark:border-gray-700 px-4 py-2"
+        @attached="fetchSession(true)"
       />
 
       <ChatInput
         ref="chatInputRef"
-        :disabled="awaitingReply || session?.status !== 'Active'"
+        :disabled="awaitingReply || !isActive"
         :feature="feature"
+        :personality-id="session.personalityId"
         :initial-model-id="resolvedInitialModelId"
         :initial-effort="resolvedInitialEffort"
         @send="handleSend"
         @cancel="handleCancel"
+        @personality-changed="handleEditPersonality"
       >
         <template
           v-if="awaitingReply"

@@ -78,6 +78,17 @@ export interface PromptPresetDto {
   archivedAt: string | null
 }
 
+export interface AgentPersonalityDto {
+  id: string
+  name: string
+  description: string | null
+  systemPrompt: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+}
+
 export interface CreateChatSessionRequest {
   title: string
   folderId?: string | null

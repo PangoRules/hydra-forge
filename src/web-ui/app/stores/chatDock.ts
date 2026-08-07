@@ -20,6 +20,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   const activeSessionId = ref<string | null>(null)
   const isCreating = ref(false)
   const position = ref({ x: 0, y: 0 })
+  const isFullHeight = ref(false)
   const pendingMessage = ref<{
     content: string
     presetId: string | null
@@ -66,6 +67,10 @@ export const useChatDockStore = defineStore('chatDock', () => {
     // activeSessionId is persisted by the watcher below — nothing to do here.
   }
 
+  function toggleFullHeight() {
+    isFullHeight.value = !isFullHeight.value
+  }
+
   // Persist activeSessionId to localStorage on every change, not just on
   // closeDock(). The dock is a fixed overlay in the layout that survives
   // client-side navigation, but a hard reload / typed URL resets Pinia and
@@ -108,7 +113,8 @@ export const useChatDockStore = defineStore('chatDock', () => {
     content?: string,
     presetId?: string | null,
     modelId?: string | null,
-    reasoningEffort?: string | null
+    reasoningEffort?: string | null,
+    personalityId?: string | null
   ) {
     if (isCreating.value) return
     isCreating.value = true
@@ -122,6 +128,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
       if (openCardId) body.openCardId = openCardId
       if (modelId) body.preferredModelConfigId = modelId
       if (reasoningEffort) body.preferredEffort = reasoningEffort
+      if (personalityId) body.personalityId = personalityId
       const { data } = await api.POST<ChatSessionDto>(ApiRoutes.Chat.sessions.create(), { body })
       if (data) {
         activeSessionId.value = data.id
@@ -143,7 +150,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
   }
 
   return {
-    isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage,
-    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage
+    isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage, isFullHeight,
+    toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage, toggleFullHeight
   }
 })

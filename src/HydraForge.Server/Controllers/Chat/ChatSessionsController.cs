@@ -33,7 +33,8 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
         [FromQuery] Guid? projectId,
         [FromQuery] DateTime? before = null,
         [FromQuery] Guid? beforeId = null,
-        [FromQuery] int limit = 20
+        [FromQuery] int limit = 20,
+        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.NonArchived
     )
     {
         var userId = User.GetRequiredUserId();
@@ -43,7 +44,8 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
             projectId,
             before,
             beforeId,
-            limit
+            limit,
+            statusFilter: status
         );
 
         if (result.IsFailure)
@@ -91,6 +93,20 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
     {
         var userId = User.GetRequiredUserId();
         var result = await sessionService.CloseAsync(sessionId, userId);
+
+        if (result.IsFailure)
+            return this.ToProblemResult(result.Error);
+
+        return Ok(result.Value);
+    }
+
+    [HttpPost("{sessionId:guid}/reopen")]
+    [ProducesResponseType(typeof(ChatSessionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reopen(Guid sessionId)
+    {
+        var userId = User.GetRequiredUserId();
+        var result = await sessionService.ReopenAsync(sessionId, userId);
 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
