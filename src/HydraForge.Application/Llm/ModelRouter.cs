@@ -92,7 +92,15 @@ public sealed class ModelRouter : IModelRouter
                 tier = routingConfig.MaxUserTier.Value;
             }
 
-            candidate = await FindModelAtTierAsync(tier, ct);
+            candidate = preferredProviderModelConfigId.HasValue
+                ? await FindPreferredModelAtTierAsync(
+                    tier,
+                    preferredProviderModelConfigId.Value,
+                    estimatedTokens,
+                    ct
+                )
+                : null;
+            candidate ??= await FindModelAtTierAsync(tier, ct);
             var hadModelAtInitialTier = candidate is not null;
 
             if (candidate is null || estimatedTokens > candidate.Model.MaxTokens)
@@ -193,6 +201,28 @@ public sealed class ModelRouter : IModelRouter
         var candidates = await _provider.GetEnabledModelsAtTierAsync(tier, ct);
         return candidates
             .OrderBy(x => x.Provider.Name)
+            .ThenBy(x => x.Model.Name)
+            .Select(x => new Candidate(x.Model, x.Provider))
+            .FirstOrDefault();
+    }
+
+    // Tier-automatic routing has no admin allowlist to match a preference against, but the
+    // user's pick is still meaningful — it must be honored the same way the allowlist branch
+    // honors it (subject to the same context-window fit check), or the model picker becomes
+    // silently non-functional for any feature without a curated allowlist.
+    private async Task<Candidate?> FindPreferredModelAtTierAsync(
+        ModelTier tier,
+        Guid preferredProviderModelConfigId,
+        int estimatedTokens,
+        CancellationToken ct
+    )
+    {
+        var candidates = await _provider.GetEnabledModelsAtTierAsync(tier, ct);
+        return candidates
+            .Where(x =>
+                x.Model.Id == preferredProviderModelConfigId
+                && (x.Model.MaxTokens is null || x.Model.MaxTokens >= estimatedTokens)
+            )
             .Select(x => new Candidate(x.Model, x.Provider))
             .FirstOrDefault();
     }

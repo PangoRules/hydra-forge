@@ -40,10 +40,13 @@ const emit = defineEmits<{
 
 const isActive = computed(() => props.session.status === 'Active')
 
+// Plain-language labels, not the raw enum member names — "Per mutation"/"Blanket"
+// read as jargon to a normal user with no context for what they gate.
 const aiEditModeOptions = [
-  { label: 'Per mutation', value: AiEditMode.PerMutation },
-  { label: 'Blanket', value: AiEditMode.Blanket }
+  { label: 'Confirm each edit', value: AiEditMode.PerMutation },
+  { label: 'Auto-approve edits', value: AiEditMode.Blanket }
 ]
+const AI_EDIT_MODE_TOOLTIP = 'AI board-edit permission for this chat: confirm each edit, or auto-approve for the session'
 
 const showCloseConfirm = ref(false)
 const showArchiveConfirm = ref(false)
@@ -64,7 +67,7 @@ async function handleEditModeChange(val: AiEditMode) {
 }
 
 const compactMenuItems = computed(() => {
-  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, onSelect: () => void }>> = []
+  const groups: Array<Array<{ label: string, icon?: string, disabled?: boolean, type?: 'label', onSelect?: () => void }>> = []
 
   if (props.isOwner) {
     groups.push([
@@ -79,13 +82,14 @@ const compactMenuItems = computed(() => {
   }
 
   if (props.isOwner && isActive.value && props.session.projectId) {
-    groups.push(
-      aiEditModeOptions.map(opt => ({
+    groups.push([
+      { label: 'AI edit permission', type: 'label' as const },
+      ...aiEditModeOptions.map(opt => ({
         label: opt.label,
         icon: props.session.aiEditMode === opt.value ? 'i-lucide-check' : undefined,
         onSelect: () => emit('editMode', opt.value)
       }))
-    )
+    ])
   }
 
   if (props.session.isShared && props.session.projectId && !props.isOwner) {
@@ -201,13 +205,17 @@ defineExpose({ compactMenuItems })
       @click="emit('toggleFind')"
     />
 
-    <!-- AI edit mode picker — owner, active, project chats -->
+    <!-- AI edit mode picker — owner, active, project chats. Plain-language
+         labels + a tooltip (see aiEditModeOptions) so this doesn't read as an
+         unexplained raw enum name floating next to the Close button. -->
     <USelect
       v-if="!compact && isOwner && isActive && session.projectId"
+      data-testid="ai-edit-mode-select"
       :model-value="session.aiEditMode"
       :items="aiEditModeOptions"
+      :title="AI_EDIT_MODE_TOOLTIP"
       size="xs"
-      class="w-32 shrink-0"
+      class="w-44 shrink-0"
       @update:model-value="handleEditModeChange"
     />
 

@@ -80,7 +80,7 @@ public class ChatFolderServiceTests
                 ChatSessionStatusFilter.Closed => query.Where(s =>
                     s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
                 ),
-                _ => query.Where(s => s.ArchivedAt == null)
+                _ => query.Where(s => s.ArchivedAt == null),
             };
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
@@ -109,7 +109,7 @@ public class ChatFolderServiceTests
                 ChatSessionStatusFilter.Closed => query.Where(s =>
                     s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
                 ),
-                _ => query.Where(s => s.ArchivedAt == null)
+                _ => query.Where(s => s.ArchivedAt == null),
             };
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);

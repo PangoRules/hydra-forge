@@ -508,6 +508,138 @@ public class ChatReplyGeneratorTests
     }
 
     [Fact]
+    public async Task GenerateAsync_NoExplicitPreference_FallsBackToSessionPreferredModel()
+    {
+        // ChatSession.PreferredModelConfigId is persisted per-session (set the first time a
+        // user picks a model) but was previously never read here — a request that omits the
+        // per-message override (any caller other than the web UI's "just changed it" path)
+        // silently ignored the session's own saved preference.
+        var preferredModelId = Guid.NewGuid();
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+            PreferredModelConfigId = preferredModelId,
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<ChatMessage>)new List<ChatMessage>());
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>(),
+                Arg.Any<Guid?>()
+            )
+            .Returns(Result<RouteDecision>.Failure(new Error("TEST_STOP", "stop here")));
+
+        // Request omits the preference (null) — must fall back to session.PreferredModelConfigId.
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        await _modelRouter
+            .Received(1)
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>(),
+                preferredModelId
+            );
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ExplicitPreference_OverridesSessionPreferredModel()
+    {
+        var sessionDefaultModelId = Guid.NewGuid();
+        var explicitModelId = Guid.NewGuid();
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+            PreferredModelConfigId = sessionDefaultModelId,
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<ChatMessage>)new List<ChatMessage>());
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>(),
+                Arg.Any<Guid?>()
+            )
+            .Returns(Result<RouteDecision>.Failure(new Error("TEST_STOP", "stop here")));
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, explicitModelId);
+
+        await _modelRouter
+            .Received(1)
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>(),
+                explicitModelId
+            );
+    }
+
+    [Fact]
     public async Task GenerateAsync_FirstRealMessageAfterIdentitySystemMessage_StillGeneratesTitle()
     {
         var session = new ChatSession

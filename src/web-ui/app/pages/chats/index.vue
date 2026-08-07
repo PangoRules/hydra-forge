@@ -33,6 +33,18 @@ watch(statusFilter, () => {
   refresh()
 })
 
+// ChatSessionView defaults to 'PersonalChat' when no feature prop is given — this page
+// never passed one, so a project/card chat opened from here routed (and priced/allowlisted)
+// as ProjectChat server-side while showing the PersonalChat model picker. ChatDock.vue
+// already derives this correctly from its own known project scope; mirror that here from
+// the loaded sidebar list. Falls back to 'PersonalChat' if the active session isn't in the
+// currently-loaded list (e.g. resumed via localStorage under a different filter) — same
+// default as before, not a regression.
+const activeSessionFeature = computed(() => {
+  const active = sessions.value.find(s => s.id === activeSessionId.value)
+  return active?.projectId ? 'ProjectChat' : 'PersonalChat'
+})
+
 onMounted(() => {
   // A fresh navigation straight to /chats?compose=1 (e.g. the top-nav "New Chat"
   // link, clicked from the mini dock or anywhere else) must land on a blank
@@ -285,6 +297,7 @@ async function reopenSession(id: string) {
       v-if="activeSessionId"
       :key="activeSessionId"
       :session-id="activeSessionId"
+      :feature="activeSessionFeature"
       :initial-message="pendingMessage?.content ?? null"
       :auto-send-initial="!!pendingMessage"
       :initial-preset-id="pendingMessage?.presetId ?? null"

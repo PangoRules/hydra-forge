@@ -408,6 +408,124 @@ public class ModelRouterTests
     }
 
     [Fact]
+    public async Task ResolveAsync_NoAllowlist_HonorsPreferredModel()
+    {
+        // Tier-automatic routing (no admin allowlist) must still honor an explicit
+        // user model preference, same as the allowlist branch does — otherwise the
+        // model picker in tier-auto features (e.g. ProjectChat) is non-functional.
+        var providerAId = Guid.NewGuid();
+        var providerBId = Guid.NewGuid();
+        var preferredModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.ProjectChat, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerAId, "AProvider", ModelTier.Standard);
+        provider.AddModel(
+            Guid.NewGuid(),
+            providerAId,
+            "a-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+        provider.AddEnabledProvider(providerBId, "BProvider", ModelTier.Standard);
+        provider.AddModel(
+            preferredModelId,
+            providerBId,
+            "b-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+
+        var router = CreateRouter(provider);
+
+        // "a-model" would win by default (alphabetically-first provider) —
+        // explicitly preferring "b-model" must override that.
+        var result = await router.ResolveAsync(
+            AiFeature.ProjectChat,
+            Guid.NewGuid(),
+            null,
+            1000,
+            preferredProviderModelConfigId: preferredModelId
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("b-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_NoAllowlist_PreferredModelDoesNotFitContext_FallsBackToDefault()
+    {
+        var providerAId = Guid.NewGuid();
+        var providerBId = Guid.NewGuid();
+        var preferredModelId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.ProjectChat, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerAId, "AProvider", ModelTier.Standard);
+        provider.AddModel(
+            Guid.NewGuid(),
+            providerAId,
+            "a-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+        provider.AddEnabledProvider(providerBId, "BProvider", ModelTier.Standard);
+        provider.AddModel(
+            preferredModelId,
+            providerBId,
+            "b-model",
+            ModelTier.Standard,
+            maxTokens: 100
+        );
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(
+            AiFeature.ProjectChat,
+            Guid.NewGuid(),
+            null,
+            1000,
+            preferredProviderModelConfigId: preferredModelId
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("a-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_NoAllowlist_TiedProviderName_TieBreaksDeterministicallyByModelName()
+    {
+        // Regression: two models on the same provider tie on the provider-name sort key.
+        // Without a secondary sort key, LINQ's stable sort just returns insertion order —
+        // which reflects arbitrary DB/insert order, not a deliberate choice. Must be
+        // deterministic (alphabetical by model name) regardless of insertion order.
+        var providerId = Guid.NewGuid();
+        var provider = new FakeRoutingConfigProvider();
+        provider.AddRouting(AiFeature.ProjectChat, ModelTier.Standard, null);
+        provider.AddEnabledProvider(providerId, "SoloProvider", ModelTier.Standard);
+        // Inserted out of alphabetical order on purpose.
+        provider.AddModel(
+            Guid.NewGuid(),
+            providerId,
+            "z-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+        provider.AddModel(
+            Guid.NewGuid(),
+            providerId,
+            "a-model",
+            ModelTier.Standard,
+            maxTokens: 8192
+        );
+
+        var router = CreateRouter(provider);
+
+        var result = await router.ResolveAsync(AiFeature.ProjectChat, Guid.NewGuid(), null, 1000);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("a-model", result.Value.Primary.ModelId);
+    }
+
+    [Fact]
     public async Task ResolveAsync_AllowlistConfigured_IgnoresTierAndUsesPriorityOrder()
     {
         var providerId = Guid.NewGuid();

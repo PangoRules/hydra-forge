@@ -57,7 +57,10 @@ public class ChatSessionServiceTests
             CancellationToken ct = default
         )
         {
-            var query = ApplyStatusFilter(Sessions.AsQueryable().Where(s => s.OwnerId == ownerId), statusFilter);
+            var query = ApplyStatusFilter(
+                Sessions.AsQueryable().Where(s => s.OwnerId == ownerId),
+                statusFilter
+            );
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
@@ -78,7 +81,10 @@ public class ChatSessionServiceTests
             CancellationToken ct = default
         )
         {
-            var query = ApplyStatusFilter(Sessions.AsQueryable().Where(s => s.OwnerId == ownerId), statusFilter);
+            var query = ApplyStatusFilter(
+                Sessions.AsQueryable().Where(s => s.OwnerId == ownerId),
+                statusFilter
+            );
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
@@ -92,12 +98,13 @@ public class ChatSessionServiceTests
         ) =>
             statusFilter switch
             {
-                ChatSessionStatusFilter.Active =>
-                    query.Where(s => s.ArchivedAt == null && s.Status == ChatSessionStatus.Active),
-                ChatSessionStatusFilter.Closed =>
-                    query.Where(s => s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed),
-                ChatSessionStatusFilter.Archived =>
-                    query.Where(s => s.ArchivedAt != null),
+                ChatSessionStatusFilter.Active => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Active
+                ),
+                ChatSessionStatusFilter.Closed => query.Where(s =>
+                    s.ArchivedAt == null && s.Status == ChatSessionStatus.Closed
+                ),
+                ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
                 _ => query.Where(s => s.ArchivedAt == null),
             };
 

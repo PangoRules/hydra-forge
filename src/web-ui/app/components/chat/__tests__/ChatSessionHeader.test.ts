@@ -294,3 +294,49 @@ describe('ChatSessionHeader — dock chrome (back/new-chat/full-height)', () => 
     expect(wrapper.emitted('toggleFullHeight')).toBeTruthy()
   })
 })
+
+describe('ChatSessionHeader — AI edit mode picker uses plain-language copy', () => {
+  it('non-compact select offers plain-language options, not raw enum-style labels', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true }
+    })
+    await flushPromises()
+    const vm = wrapper.vm as unknown as { aiEditModeOptions: Array<{ label: string }> }
+    const labels = vm.aiEditModeOptions.map(o => o.label)
+    expect(labels).toContain('Confirm each edit')
+    expect(labels).toContain('Auto-approve edits')
+    expect(labels).not.toContain('Per mutation')
+    expect(labels).not.toContain('Blanket')
+  })
+
+  it('non-compact select has a title tooltip explaining what it controls', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true }
+    })
+    await flushPromises()
+    const select = wrapper.find('[data-testid="ai-edit-mode-select"]')
+    expect(select.exists()).toBe(true)
+    expect(select.attributes('title')).toBe('AI board-edit permission for this chat: confirm each edit, or auto-approve for the session')
+  })
+
+  it('compact kebab menu groups the AI edit mode options under a heading, with plain-language labels', async () => {
+    const wrapper = await mountSuspended(ChatSessionHeader, {
+      props: { session: makeSession({ projectId: 'p1' }), isOwner: true, compact: true }
+    })
+    await flushPromises()
+    const items = (wrapper.vm as unknown as {
+      compactMenuItems: Array<Array<{ label: string, type?: string }>>
+    }).compactMenuItems
+    const flat = items.flat()
+    const headingIndex = flat.findIndex(i => i.label === 'AI edit permission' && i.type === 'label')
+    expect(headingIndex).toBeGreaterThanOrEqual(0)
+    const labels = flat.map(i => i.label)
+    expect(labels).toContain('Confirm each edit')
+    expect(labels).toContain('Auto-approve edits')
+    expect(labels).not.toContain('Per mutation')
+    expect(labels).not.toContain('Blanket')
+    // Heading must come immediately before its two options.
+    expect(flat[headingIndex + 1]?.label).toBe('Confirm each edit')
+    expect(flat[headingIndex + 2]?.label).toBe('Auto-approve edits')
+  })
+})
