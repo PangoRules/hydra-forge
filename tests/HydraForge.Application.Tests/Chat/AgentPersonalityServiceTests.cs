@@ -552,11 +552,11 @@ public class AgentPersonalityServiceTests
 
         Assert.True(results[0].IsSuccess);
         Assert.True(results[1].IsSuccess);
-        Assert.Equal(6, repo.Personalities.Count(p => p.UserId == userId));
+        Assert.Equal(DefaultAgentPersonalities.All.Count, repo.Personalities.Count(p => p.UserId == userId));
     }
 
     [Fact]
-    public async Task ListAsync_ZeroPersonalitiesEver_SeedsSixDefaults()
+    public async Task ListAsync_ZeroPersonalitiesEver_SeedsDefaults()
     {
         var repo = new FakePersonalityRepo();
         var service = new AgentPersonalityService(repo);
@@ -565,14 +565,19 @@ public class AgentPersonalityServiceTests
         var result = await service.ListAsync(userId);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(6, result.Value.Count);
-        Assert.Equal(6, repo.Personalities.Count(p => p.UserId == userId));
-        Assert.Contains(result.Value, p => p.Name == "well");
+        Assert.Equal(DefaultAgentPersonalities.All.Count, result.Value.Count);
+        Assert.Equal(DefaultAgentPersonalities.All.Count, repo.Personalities.Count(p => p.UserId == userId));
+        Assert.Contains(result.Value, p => p.Name == "The Well");
         Assert.Contains(result.Value, p => p.Name == "Carter");
         Assert.Contains(result.Value, p => p.Name == "Commander Erwin");
+        Assert.Contains(result.Value, p => p.Name == "Sokka");
         Assert.Contains(result.Value, p => p.Name == "Captain Levi");
         Assert.Contains(result.Value, p => p.Name == "Fire_Keeper");
         Assert.Contains(result.Value, p => p.Name == "Tarnished");
+        Assert.Contains(result.Value, p => p.Name == "Uncle Iroh");
+        Assert.Contains(result.Value, p => p.Name == "Hosea Matthews");
+        Assert.Contains(result.Value, p => p.Name == "Strelok");
+        Assert.Contains(result.Value, p => p.Name == "Mikasa Ackerman");
     }
 
     [Fact]
@@ -636,7 +641,7 @@ public class AgentPersonalityServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_TwoDifferentUsers_EachGetsTheirOwnSeededSix()
+    public async Task ListAsync_TwoDifferentUsers_EachGetsTheirOwnSeededDefaults()
     {
         var repo = new FakePersonalityRepo();
         var service = new AgentPersonalityService(repo);
@@ -646,8 +651,8 @@ public class AgentPersonalityServiceTests
         var resultA = await service.ListAsync(userA);
         var resultB = await service.ListAsync(userB);
 
-        Assert.Equal(6, resultA.Value.Count);
-        Assert.Equal(6, resultB.Value.Count);
-        Assert.Equal(12, repo.Personalities.Count);
+        Assert.Equal(DefaultAgentPersonalities.All.Count, resultA.Value.Count);
+        Assert.Equal(DefaultAgentPersonalities.All.Count, resultB.Value.Count);
+        Assert.Equal(DefaultAgentPersonalities.All.Count * 2, repo.Personalities.Count);
     }
 }
