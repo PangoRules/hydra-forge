@@ -10,7 +10,7 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
   const sessions = ref<ChatSessionDto[]>([])
   const loading = ref(false)
   const hasMore = ref(true)
-  // 'ActiveAndClosed' is deliberately NOT offered here — it stays in the
+  // 'NonArchived' is deliberately NOT offered here — it stays in the
   // backend enum for internal use (folder cascade-archive), but the UI only
   // presents the linear lifecycle: Active (default) → Closed → Archived.
   const statusFilter = ref<'Active' | 'Closed' | 'Archived'>('Active')

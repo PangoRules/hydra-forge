@@ -29,7 +29,7 @@ public class ChatSearchServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
@@ -37,7 +37,7 @@ public class ChatSearchServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult(0);
 

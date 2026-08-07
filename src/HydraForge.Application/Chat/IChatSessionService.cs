@@ -21,7 +21,7 @@ public interface IChatSessionService
         DateTime? before,
         Guid? beforeId,
         int limit,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     );
     Task<Result<ChatSessionDto>> UpdateAsync(

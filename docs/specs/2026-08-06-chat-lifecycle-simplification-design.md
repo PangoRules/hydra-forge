@@ -48,9 +48,9 @@ Computed in the frontend from `projectId` + `openCardId`:
 **Before:** `Active & Closed` (default), `Active`, `Closed`, `Archived`
 **After:** `Active` (default), `Closed`, `Archived`
 
-The `ActiveAndClosed` enum value remains in `ChatSessionStatusFilter` for backend internal use (e.g. `ChatArchiveService.ArchiveFolderAsync` lists all non-archived sessions to cascade-archive them). It is removed from the UI filter dropdown only.
+The `NonArchived` enum value remains in `ChatSessionStatusFilter` for backend internal use (e.g. `ChatArchiveService.ArchiveFolderAsync` lists all non-archived sessions to cascade-archive them). It is removed from the UI filter dropdown only.
 
-Default filter changes from `ActiveAndClosed` to `Active` so the list stays focused on ongoing work.
+Default filter changes from `NonArchived` to `Active` so the list stays focused on ongoing work.
 
 ### Type badge
 
@@ -99,7 +99,7 @@ Both the ChatDock (compact popup) and the full `/chats` page must handle lifecyc
 
 Minimal — the backend already supports everything:
 
-1. **`ChatSessionStatusFilter` enum** — no change. `ActiveAndClosed` stays for internal use; UI just stops offering it.
+1. **`ChatSessionStatusFilter` enum** — no change. `NonArchived` stays for internal use; UI just stops offering it.
 2. **`ChatSessionService.ArchiveAsync`** — no change. Already just sets `ArchivedAt`.
 3. **`ChatSessionService.CloseAsync`** — no change. Already generates summary + card link for card chats.
 4. **`ChatSession.Close()`** — no change. Already sets Status/ClosedAt/Summary/RevokeAiEdit.
@@ -153,9 +153,9 @@ export const CHAT_TYPE_BADGE: Record<ChatType, { label: string; color: 'neutral'
 
 ### `app/pages/chats/index.vue`
 
-1. **Filter dropdown** — remove `ActiveAndClosed` option. Three options: `Active` (default), `Closed`, `Archived`.
+1. **Filter dropdown** — remove `NonArchived` option. Three options: `Active` (default), `Closed`, `Archived`.
 
-2. **Default filter** — change `statusFilter` initial value from `'ActiveAndClosed'` to `'Active'`.
+2. **Default filter** — change `statusFilter` initial value from `'NonArchived'` to `'Active'`.
 
 3. **Type badge in sidebar list** — show the type badge on each chat list item.
 
@@ -163,9 +163,9 @@ export const CHAT_TYPE_BADGE: Record<ChatType, { label: string; color: 'neutral'
 
 ### `app/composables/useChatSessionList.ts`
 
-1. **Default filter** — change `statusFilter` ref default from `'ActiveAndClosed'` to `'Active'`.
+1. **Default filter** — change `statusFilter` ref default from `'NonArchived'` to `'Active'`.
 
-2. **Type** — update the `statusFilter` type to remove `'ActiveAndClosed'` (or keep it but never default to it).
+2. **Type** — update the `statusFilter` type to remove `'NonArchived'` (or keep it but never default to it).
 
 ### `app/components/chat/ChatDockHistory.vue` (or equivalent history list)
 
@@ -190,6 +190,6 @@ This is a follow-up task — the Web UI changes come first, TUI parity second.
 
 - Schema changes (none needed — `Status` and `ArchivedAt` stay as-is)
 - Backend service logic changes (none needed — `CloseAsync`, `ArchiveAsync`, `ReopenAsync` all work correctly already)
-- Removing `ActiveAndClosed` from the backend enum (kept for internal use)
+- Removing `NonArchived` from the backend enum (kept for internal use)
 - Changing the housekeeping retention logic (stays as-is)
 - Changing F6 auto-close behavior (stays as-is — auto-closes old card chat when opening a new one)

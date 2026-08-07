@@ -1867,8 +1867,8 @@ namespace HydraForge.Tui.Generated
     public enum ChatSessionStatusFilter
     {
 
-        [System.Runtime.Serialization.EnumMember(Value = @"ActiveAndClosed")]
-        ActiveAndClosed = 0,
+        [System.Runtime.Serialization.EnumMember(Value = @"NonArchived")]
+        NonArchived = 0,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Active")]
         Active = 1,

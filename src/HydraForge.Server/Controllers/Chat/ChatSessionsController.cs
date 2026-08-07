@@ -34,7 +34,7 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
         [FromQuery] DateTime? before = null,
         [FromQuery] Guid? beforeId = null,
         [FromQuery] int limit = 20,
-        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.ActiveAndClosed
+        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.NonArchived
     )
     {
         var userId = User.GetRequiredUserId();

@@ -1687,9 +1687,9 @@ git commit -m "refactor(chat): replace dead ChatSession.Open with Reopen + add U
 - Test: `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs` (update `FakeChatSessionRepository`, append new `[Fact]`s)
 
 **Interfaces:**
-- Produces: `ChatSessionStatusFilter` enum — `ActiveAndClosed` (default, matches today's behavior), `Active`, `Closed`, `Archived`.
+- Produces: `ChatSessionStatusFilter` enum — `NonArchived` (default, matches today's behavior), `Active`, `Closed`, `Archived`.
 - Produces: `IChatSessionService.ReopenAsync(Guid sessionId, Guid actorId, CancellationToken ct = default) : Task<Result<ChatSessionDto>>`.
-- Modifies: `IChatSessionRepository.ListAsync`/`CountAsync` — both gain a new **trailing** optional parameter `ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed`, placed *after* the existing `ct` parameter so every existing positional call site (tests included) keeps compiling unchanged.
+- Modifies: `IChatSessionRepository.ListAsync`/`CountAsync` — both gain a new **trailing** optional parameter `ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived`, placed *after* the existing `ct` parameter so every existing positional call site (tests included) keeps compiling unchanged.
 - Modifies: `ChatSessionService.ListAsync` — same trailing optional param, forwarded to the repository.
 
 - [ ] **Step 1: Add the `ChatSessionStatusFilter` enum**
@@ -1699,7 +1699,7 @@ In `src/HydraForge.Application/Chat/ChatDtos.cs`, add near the top (after the `u
 ```csharp
 public enum ChatSessionStatusFilter
 {
-    ActiveAndClosed,
+    NonArchived,
     Active,
     Closed,
     Archived
@@ -1719,7 +1719,7 @@ Append to `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs` (
             Guid? beforeId,
             int limit,
             CancellationToken ct = default,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
         )
         {
             var query = Sessions.Where(s => s.OwnerId == ownerId);
@@ -1751,7 +1751,7 @@ Append to `tests/HydraForge.Application.Tests/Chat/ChatSessionServiceTests.cs` (
             Guid? folderId,
             Guid? projectId,
             CancellationToken ct = default,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
         )
         {
             var query = Sessions.Where(s => s.OwnerId == ownerId);
@@ -1903,7 +1903,7 @@ In `src/HydraForge.Application/Chat/IChatSessionRepository.cs`, update both sign
         Guid? beforeId,
         int limit,
         CancellationToken ct = default,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
     );
 
     Task<int> CountAsync(
@@ -1911,7 +1911,7 @@ In `src/HydraForge.Application/Chat/IChatSessionRepository.cs`, update both sign
         Guid? folderId,
         Guid? projectId,
         CancellationToken ct = default,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
     );
 ```
 
@@ -1928,7 +1928,7 @@ In `src/HydraForge.Application/Chat/ChatSessionService.cs`, update `ListAsync`'s
         Guid? beforeId,
         int limit,
         CancellationToken ct = default,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
     )
     {
         var sessions = await _sessionRepo.ListAsync(
@@ -1998,7 +1998,7 @@ Add the matching signature to `IChatSessionService` (wherever `CloseAsync`/`Arch
 - [ ] **Step 6: Run tests to verify they pass**
 
 Run: `dotnet test --filter "FullyQualifiedName~ChatSessionServiceTests"`
-Expected: all PASS, including every pre-existing `ListAsync_*` test (unchanged behavior when `statusFilter` is omitted — defaults to `ActiveAndClosed`, identical to today's hardcoded `ArchivedAt == null`).
+Expected: all PASS, including every pre-existing `ListAsync_*` test (unchanged behavior when `statusFilter` is omitted — defaults to `NonArchived`, identical to today's hardcoded `ArchivedAt == null`).
 
 - [ ] **Step 7: Format and commit**
 
@@ -2071,7 +2071,7 @@ In `src/HydraForge.Infrastructure/Chat/EfChatSessionRepository.cs`, update `List
         Guid? beforeId,
         int limit,
         CancellationToken ct = default,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
     )
     {
         var query = ApplyStatusFilter(context.ChatSessions.Where(s => s.OwnerId == ownerId), statusFilter);
@@ -2097,7 +2097,7 @@ In `src/HydraForge.Infrastructure/Chat/EfChatSessionRepository.cs`, update `List
         Guid? folderId,
         Guid? projectId,
         CancellationToken ct = default,
-        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed
+        ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived
     )
     {
         var query = ApplyStatusFilter(context.ChatSessions.Where(s => s.OwnerId == ownerId), statusFilter);
@@ -2147,7 +2147,7 @@ In `src/HydraForge.Server/Controllers/Chat/ChatSessionsController.cs`, update `L
         [FromQuery] DateTime? before = null,
         [FromQuery] Guid? beforeId = null,
         [FromQuery] int limit = 20,
-        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.ActiveAndClosed
+        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.NonArchived
     )
     {
         var userId = User.GetRequiredUserId();
@@ -2229,7 +2229,7 @@ In `src/web-ui/app/composables/useChatSessionList.ts`, find where `ApiRoutes.Cha
 
 ```ts
 export function useChatSessionList(options?: { folderId?: string, projectId?: string }) {
-  const statusFilter = ref<'ActiveAndClosed' | 'Active' | 'Closed' | 'Archived'>('ActiveAndClosed')
+  const statusFilter = ref<'NonArchived' | 'Active' | 'Closed' | 'Archived'>('NonArchived')
   // ...existing refs (sessions, loading, hasMore, cursor state)...
 
   async function loadMore() {
@@ -2260,7 +2260,7 @@ In `src/web-ui/app/pages/chats/index.vue`, destructure `statusFilter` from `useC
 const { sessions, loading, hasMore, loadMore, patchSession, prependSession, removeSession, statusFilter } = useChatSessionList()
 
 const statusFilterItems = [
-  { label: 'Active + Closed', value: 'ActiveAndClosed' },
+  { label: 'Active + Closed', value: 'NonArchived' },
   { label: 'Active only', value: 'Active' },
   { label: 'Closed only', value: 'Closed' },
   { label: 'Archived', value: 'Archived' }

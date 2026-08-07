@@ -35,7 +35,7 @@ public record MoveChatSessionRequest(Guid? FolderId);
 
 public enum ChatSessionStatusFilter
 {
-    ActiveAndClosed,
+    NonArchived,
     Active,
     Closed,
     Archived,

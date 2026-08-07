@@ -66,7 +66,7 @@ public class ChatFolderServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         )
         {
@@ -95,7 +95,7 @@ public class ChatFolderServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
-            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.ActiveAndClosed,
+            ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         )
         {

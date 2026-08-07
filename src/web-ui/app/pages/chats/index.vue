@@ -21,7 +21,7 @@ const { sessions, loading, hasMore, statusFilter, loadMore, refresh, patchSessio
 const starting = ref(false)
 const activeSessionId = ref<string | null>(null)
 
-// Linear lifecycle only — 'ActiveAndClosed' stays in the backend enum for
+// Linear lifecycle only — 'NonArchived' stays in the backend enum for
 // internal use but is not offered as a UI filter (see spec).
 const statusFilterItems = [
   { label: 'Active', value: 'Active' },

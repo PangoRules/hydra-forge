@@ -4,7 +4,7 @@
 
 **Goal:** Simplify the chat session lifecycle UI to a linear Active → Closed → Archived model: three-option filter (default Active), chat-type badges, close-button gating for project/card chats only, archive confirmation with deletion warning, and dock/full-view event symmetry.
 
-**Architecture:** Frontend-only (Nuxt 4 web UI). Backend unchanged — `ChatSessionStatusFilter.ActiveAndClosed` stays for internal use. New shared lib `app/lib/chat-type.ts` computes chat type from `projectId`/`openCardId`. TUI parity is a follow-up (own plan), per the spec's deferral.
+**Architecture:** Frontend-only (Nuxt 4 web UI). Backend unchanged — `ChatSessionStatusFilter.NonArchived` stays for internal use. New shared lib `app/lib/chat-type.ts` computes chat type from `projectId`/`openCardId`. TUI parity is a follow-up (own plan), per the spec's deferral.
 
 **Tech Stack:** Nuxt 4, Vue 3, Nuxt UI v4, Pinia, Vitest + `@nuxt/test-utils/runtime` (`mountSuspended`).
 
@@ -107,7 +107,7 @@ git commit -m "feat(chat): add chat-type util — getChatType + badge metadata"
 
 ---
 
-### Task 2: `useChatSessionList` — default filter `Active`, drop `ActiveAndClosed`
+### Task 2: `useChatSessionList` — default filter `Active`, drop `NonArchived`
 
 **Files:**
 - Modify: `src/web-ui/app/composables/useChatSessionList.ts:13,28-31`
@@ -135,20 +135,20 @@ Append to `src/web-ui/app/composables/__tests__/useChatSessionList.test.ts`, ins
 - [x] **Step 2: Run test to verify it fails**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
-Expected: FAIL — `statusFilter.value` is `'ActiveAndClosed'` and the URL has no `status=` param
+Expected: FAIL — `statusFilter.value` is `'NonArchived'` and the URL has no `status=` param
 
 - [x] **Step 3: Update the composable**
 
 In `src/web-ui/app/composables/useChatSessionList.ts`, replace line 13:
 
 ```typescript
-  const statusFilter = ref<'ActiveAndClosed' | 'Active' | 'Closed' | 'Archived'>('ActiveAndClosed')
+  const statusFilter = ref<'NonArchived' | 'Active' | 'Closed' | 'Archived'>('NonArchived')
 ```
 
 with:
 
 ```typescript
-  // 'ActiveAndClosed' is deliberately NOT offered here — it stays in the
+  // 'NonArchived' is deliberately NOT offered here — it stays in the
   // backend enum for internal use (folder cascade-archive), but the UI only
   // presents the linear lifecycle: Active (default) → Closed → Archived.
   const statusFilter = ref<'Active' | 'Closed' | 'Archived'>('Active')
@@ -157,7 +157,7 @@ with:
 Then replace the URL-building block (lines 28-31):
 
 ```typescript
-      const statusParam = statusFilter.value !== 'ActiveAndClosed'
+      const statusParam = statusFilter.value !== 'NonArchived'
         ? `&status=${statusFilter.value}`
         : ''
       const url = `${base}${statusParam}`
@@ -178,7 +178,7 @@ Expected: PASS (6 tests — 5 existing + 1 new)
 
 ```bash
 git add src/web-ui/app/composables/useChatSessionList.ts src/web-ui/app/composables/__tests__/useChatSessionList.test.ts
-git commit -m "feat(chat): default session list filter to Active, drop ActiveAndClosed from UI type"
+git commit -m "feat(chat): default session list filter to Active, drop NonArchived from UI type"
 ```
 
 ---
@@ -196,7 +196,7 @@ In `src/web-ui/app/pages/chats/index.vue`, replace the `statusFilterItems` decla
 
 ```typescript
 const statusFilterItems = [
-  { label: 'Active & Closed', value: 'ActiveAndClosed' },
+  { label: 'Active & Closed', value: 'NonArchived' },
   { label: 'Active', value: 'Active' },
   { label: 'Closed', value: 'Closed' },
   { label: 'Archived', value: 'Archived' }
@@ -206,7 +206,7 @@ const statusFilterItems = [
 with:
 
 ```typescript
-// Linear lifecycle only — 'ActiveAndClosed' stays in the backend enum for
+// Linear lifecycle only — 'NonArchived' stays in the backend enum for
 // internal use but is not offered as a UI filter (see spec).
 const statusFilterItems = [
   { label: 'Active', value: 'Active' },
@@ -712,7 +712,7 @@ Per the spec ("Web UI changes come first, TUI parity second"), the TUI work is d
 
 ## Spec coverage map
 
-- Three-state model + filter changes (Active default, drop ActiveAndClosed) → Tasks 2, 3
+- Three-state model + filter changes (Active default, drop NonArchived) → Tasks 2, 3
 - Chat types + Close gating (projectId check, both modes) → Task 4 (Close button is in the shared `ChatSessionHeader`, so both page and dock inherit the gating)
 - Type badge (`/chats` sidebar, dock history, header) → Tasks 1, 3, 4, 5
 - Summary subtitle (sidebar) → Task 3; dock history already had it
