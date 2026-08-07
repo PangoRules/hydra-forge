@@ -1,5 +1,5 @@
 # Plan 20: Web UI — Card Popup Chat Tab + Project Chats Tab + Context-Aware ChatDock + CardChatLinkList + Card Linking
-**Branch:** `task/web-card-popup-chat-project-chats`
+**Branch:** `task/card-popup-refactor`
 **Parent branch:** `feat/phase-7-chat`
 **Parent spec:** `2026-08-02-phase-7-chat-design.md` — Task 20
 

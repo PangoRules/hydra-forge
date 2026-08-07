@@ -1,5 +1,5 @@
 # Plan 19b: Web UI — Card Popup Infrastructure (multi-popup shell + shared z-index + Escape LIFO)
-**Branch:** `task/card-popup-infra`
+**Branch:** `task/card-popup-refactor`
 **Parent branch:** `feat/phase-7-chat`
 **Parent spec:** `2026-08-02-phase-7-chat-design.md` — Task 19b
 
