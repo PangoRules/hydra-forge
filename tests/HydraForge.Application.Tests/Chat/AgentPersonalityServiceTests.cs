@@ -552,7 +552,10 @@ public class AgentPersonalityServiceTests
 
         Assert.True(results[0].IsSuccess);
         Assert.True(results[1].IsSuccess);
-        Assert.Equal(DefaultAgentPersonalities.All.Count, repo.Personalities.Count(p => p.UserId == userId));
+        Assert.Equal(
+            DefaultAgentPersonalities.All.Count,
+            repo.Personalities.Count(p => p.UserId == userId)
+        );
     }
 
     [Fact]
@@ -566,7 +569,10 @@ public class AgentPersonalityServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(DefaultAgentPersonalities.All.Count, result.Value.Count);
-        Assert.Equal(DefaultAgentPersonalities.All.Count, repo.Personalities.Count(p => p.UserId == userId));
+        Assert.Equal(
+            DefaultAgentPersonalities.All.Count,
+            repo.Personalities.Count(p => p.UserId == userId)
+        );
         Assert.Contains(result.Value, p => p.Name == "The Well");
         Assert.Contains(result.Value, p => p.Name == "Carter");
         Assert.Contains(result.Value, p => p.Name == "Commander Erwin");
