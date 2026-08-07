@@ -132,10 +132,11 @@ All routes are versioned under `/api`. Auth required. Controllers live under `sr
 | Method | Route | Body / Query | Returns | Notes |
 |---|---|---|---|---|
 | `POST` | `/api/chat/sessions` | `{ title?, folderId?, projectId?, openCardId?, personalityId?, searchAllMyDocs?, aiEditMode? }` | `201 ChatSessionDto` | Creates `Active` session and returns it immediately. If `projectId` set, membership guard (admin bypass). If `openCardId` set, card must belong to `projectId`. **F6 (async)**: if the panel already has an `Active` session for the same `(projectId, openCardId, ownerId)` tuple, the server enqueues a background job to close that old session (summary + CardChatLink, one LLM call, AI edit permission revoked) and returns the new session's `201` without waiting for it. The old session remains `Active` for the brief window until the background job completes — this is fine, its AI-edit permission is revoked the moment the job finishes, and nothing else reads its state in that window. |
-| `GET` | `/api/chat/sessions` | `?folderId=&projectId=&includeArchived=&before=&limit=` | `ChatSessionPageDto` | Lists owner's sessions. Filter by folder/project. Paginated cursor (`before` = `UpdatedAt` of last item). |
+| `GET` | `/api/chat/sessions` | `?folderId=&projectId=&includeArchived=&before=&limit=` | `ChatSessionPageDto` | Lists sessions the caller **participated in** — sessions they own **or** project chats where they are a `ProjectMember` (admin bypass). Filter by folder/project. Paginated cursor (`before` = `UpdatedAt` of last item). **Reconciled 2026-08-06 (Task 20):** was "owner's sessions"; broadened to participated-in via an in-place query upgrade (no data migration, no `AiFeature` flip — existing personal/project sessions keep their `OwnerId`/`ProjectId`; only the candidate query changes). |
 | `GET` | `/api/chat/sessions/{sessionId}` | — | `ChatSessionDetailDto` (session + last N messages) | Owner or project member (for shared project chats). |
 | `PATCH` | `/api/chat/sessions/{sessionId}` | `{ title?, personalityId?, searchAllMyDocs?, aiEditMode? }` | `ChatSessionDto` | Only while `Status=Active`. |
 | `POST` | `/api/chat/sessions/{sessionId}/close` | `{ }` | `ChatSessionDto` | **F3 explicit close.** Generates summary (one LLM call), creates `CardChatLink` if `OpenCardId+ProjectId` set, sets `Status=Closed`, revokes AI edit permission. Idempotent. |
+| `POST` | `/api/chat/sessions/{sessionId}/link-card` | `{ cardId }` | `ChatSessionDto` | **Task 20 MVP card linking.** Sets `ChatSession.OpenCardId = cardId` on an `Active`, project-scoped session. Membership guard (owner OR project member, admin bypass); `CHAT_CARD_NOT_IN_PROJECT` if `cardId` not in `session.ProjectId`. Idempotent. The manual MVP for linking a chat to a card; `@mention`-based auto-linking is V2 (§5.4/§11). |
 | `DELETE` | `/api/chat/sessions/{sessionId}` | — | `204` | Soft-archive (`ArchivedAt=now`). |
 | `POST` | `/api/chat/sessions/{sessionId}/documents` | `{ documentId }` | `201 ChatSessionDocumentDto` | **F1** attach. Validates `Document.UserId == owner`. |
 | `GET` | `/api/chat/sessions/{sessionId}/documents` | — | `ChatSessionDocumentDto[]` | Lists attached docs. |
@@ -309,6 +310,8 @@ Nuxt 4 source layout (`src/web-ui/app/`). All API paths via `ApiRoutes.Chat.*` i
 - `pages/chat/personalities.vue` — `PersonalityManager`.
 - `pages/documents.vue` — personal documents list + upload.
 
+> **Reconciled 2026-08-06 (Task 19b/20).** Plan 17 already shipped `pages/chats/index.vue` (plural — single-page session list + inline `ChatSessionView`); the `pages/chat/index.vue` + `pages/chat/[sessionId].vue` routes above are superseded by that page (kept here for history). New in Task 20: a **"Chats" tab in the project board page** (`pages/projects/[projectId]/index.vue`) listing chats the user participated in for that project, with an All / Project / Card filter. The card-detail surface moves from a single `CardModal` to a multi-popup `CardPopup` (Task 19b shell, Task 20 adoption) — see §5.2.
+
 ### 5.2 Components (`components/chat/`)
 
 | Component | Props | Emits | Notes |
@@ -320,8 +323,10 @@ Nuxt 4 source layout (`src/web-ui/app/`). All API paths via `ApiRoutes.Chat.*` i
 | `ChatSessionHeader.vue` | `session` | `close`, `toggleScope`, `editPersonality`, `editMode` | Title, scope toggle, personality picker, AI-edit-mode picker, close button. |
 | `ChatDocAttach.vue` | `sessionId` | `attached` | Lists attached docs, add/remove via `ChatDocAttachPicker`. |
 | `ChatDocAttachPicker.vue` | `sessionId` | `picked` | Modal listing owner's documents. |
-| `ChatPanel.vue` | `projectId`, `cardId?` | — | **Project board side panel.** Collapsible (drawer on mobile, side rail on desktop). Hosts a `ChatSessionView`. On open: creates a new session (F6 implicit close of prior). Shows the "Card #N [title] opened — what are we doing?" auto-prompt as the first user message (sent automatically, or pre-filled for user to edit — **decision: pre-filled, user edits then sends**). |
-| `CardChatLinkList.vue` | `cardId` | — | Collapsible summary table in the card modal. Owner-clickable row → opens the session read-only (or full if owner). |
+| `ChatPanel.vue` | `projectId`, `cardId?` | — | **Project board side panel.** Collapsible (drawer on mobile, side rail on desktop). Hosts a `ChatSessionView`. On open: creates a new session (F6 implicit close of prior). Shows the "Card #N [title] opened — what are we doing?" auto-prompt as the first user message (sent automatically, or pre-filled for user to edit — **decision: pre-filled, user edits then sends**). **Reconciled 2026-08-06:** shipped as `ChatDock.vue` + `stores/chatDock.ts` (draggable popup in `layouts/default.vue`, not a board rail). Task 20 makes it context-aware (`currentProjectId` + `currentCardId` by open origin: board / project-chats tab / card-popup Chat tab) and adds the `ChatLinkCardButton`. |
+| `CardChatLinkList.vue` | `cardId` | — | Collapsible summary table of chats linked to a card. Owner-clickable row → opens the session read-only (or full if owner). **Reconciled 2026-08-06 (Task 20):** hosted in the **card popup "Chat" tab** (the migrated `CardModal` body inside `CardPopup.vue`), not the old single `CardModal`. Any project member can interact (open linked session, send) — same auth as the session itself. |
+| `CardPopup.vue` | `cardId` | — | **Task 19b.** Draggable multi-popup wrapper for card detail. Reuses `useDraggable` (same shape as `ChatDock`). Z-index + Escape-LIFO from the shared `usePopupZIndex` composable (also used by `ChatDock`). Max 3 open simultaneously (4th rejected with a toast). Default slot holds the migrated `CardModal` body (Task 20). |
+| `ChatLinkCardButton.vue` | — | `linked` | **Task 20 MVP.** Shown in `ChatDock` session-mode header when `currentCardId` is set and the active session is project-scoped + not already linked to that card. Calls `POST /api/chat/sessions/{sessionId}/link-card`. `@mention`-based auto-linking is V2 (§11). |
 | `PromptPresetManager.vue` | — | — | CRUD for groups + presets. Drag-to-reorder within a group (native HTML5 DnD — `vue-draggable-plus` is removed per repo convention). |
 | `PersonalityManager.vue` | — | — | CRUD for personalities. "Set default" button. |
 | `DocumentUploader.vue` | — | `uploaded` | Drag-drop or file picker. Shows chunking/embedding progress. |
@@ -335,6 +340,8 @@ Nuxt 4 source layout (`src/web-ui/app/`). All API paths via `ApiRoutes.Chat.*` i
 
 - `pages/projects/[projectId]/index.vue` (board view) gains a collapsible `ChatPanel` rail. Toggle button in the board header. When a card is open (card modal), `ChatPanel` is opened with `cardId` set; the panel's session is project-scoped + card-scoped.
 - Collapsing the panel does **not** close the session — the session stays `Active` (resumable) and AI edit permission stays granted. Only the explicit "End session" button inside the panel fires `POST /api/chat/sessions/{sessionId}/close` (F3). Tab close / navigate-away does **not** close the session either — matches F2=C, which deliberately limits revocation triggers to explicit End + new-session creation (F6) and rejects any auto-revoke-on-navigate-away path (permission silently dropping while the user still thinks it's active is the exact failure mode F2 ruled out). The session is simply left `Active`; it's resumable next time the panel or tab reopens.
+
+> **Reconciled 2026-08-06 (Task 19b/20).** The "card modal" above is now the `CardPopup` multi-popup shell (Task 19b). Card open from the board calls `cardPopup.openCard(cardId)` (Task 20); up to 3 card popups coexist with the `ChatDock`, sharing one z-index stack and Escape-LIFO order. The board also gains a **"Chats" tab** (Task 20) listing chats the user participated in for this project (All / Project / Card filter). The `ChatDock` is context-aware: opening it from the board header, the project "Chats" tab, or a card popup's "Chat" tab sets `currentProjectId` (+ `currentCardId` for the card-popup origin) accordingly. A manual "link this card to the current session" button (`ChatLinkCardButton`) covers MVP card linking; `@mention`-based auto-linking is deferred to V2 (§11).
 
 ---
 
@@ -448,7 +455,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - **Infrastructure EF model tests**: `AssertProperties` for new entities (`ChatSessionDocument`, `PromptPresetGroup`, `PromptPreset`) and modified `ChatSession`/`ChatMessage`. Unique index on `ChatSessionDocument`. FK `OnDelete` behaviors.
 - **Server integration tests**: endpoint auth (owner vs project member vs non-member), close idempotency, F6 implicit close, `CHAT_STREAM_IN_PROGRESS`, `CHAT_SESSION_CLOSED` on send-after-close.
 - **SignalR tests**: `ChatHub` join/leave/send/cancel; one-active-stream invariant; `StreamError` on closed session.
-- **Web UI**: `ChatSessionView` mount/stream/cancel; `ChatPanel` open/close; `CardChatLinkList` render; `useApi()` try/catch audit per D-40.
+- **Web UI**: `ChatSessionView` mount/stream/cancel; `ChatPanel` open/close; `CardChatLinkList` render; `useApi()` try/catch audit per D-40. **Task 19b/20:** `CardPopup` multi-popup shell (max 3, LIFO Escape, shared z-index with `ChatDock`); project "Chats" tab; context-aware dock; `ChatLinkCardButton`; list-visibility (participated-in) backend tests.
 - **TUI**: `ChatSessionScreen` render + stream; `ProjectChatScreen` F6 implicit close.
 - **Manual validation matrix**: per-task E2E steps consolidated into `docs/archive/manual-validation/` at phase close (per repo convention).
 
@@ -463,6 +470,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - Memory extraction from chat (`AiFeature.MemoryExtraction` — Phase 9).
 - PDF text extraction (Phase 7 restricts document upload to text/markdown/code/csv/html; PDF deferred unless a lib is chosen at implementation time).
 - TUI image attach (Web-UI-only in Phase 7).
+- `@mention`-based card auto-linking in chat messages (parsing `#card-123` / `@card` mentions to set `OpenCardId` or create `CardChatLink`). Phase 7 ships the manual `ChatLinkCardButton` MVP only; mention-driven linking is V2.
 
 ---
 
@@ -487,7 +495,8 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 17: Web UI — `useChatStream` composable + `ChatSessionView` + `ChatMessageList`/`ChatMessageBubble`/`ChatInput` + streaming
 - [x] Task 18: Web UI — `ChatPanel` (project board rail) + F6 implicit close + auto-prompt pre-fill
 - [x] Task 19: Web UI — `ChatSessionHeader` (scope toggle, personality, AI-edit mode, close) + `ChatDocAttach`
-- [ ] Task 20: Web UI — `CardChatLinkList` in card modal + `pages/chat/index.vue` + `pages/chat/[sessionId].vue`
+- [ ] Task 19b: Web UI — Card popup infrastructure (multi-popup shell `stores/cardPopup.ts` + `CardPopup.vue` + shared `usePopupZIndex` z-index/Escape-LIFO composable; `ChatDock` re-pointed at shared z-index; max 3 cards) — see `docs/plans/2026-08-02-phase-7-chat-plan-19b-card-popup-infra.md`
+- [ ] Task 20: Web UI — Card popup Chat tab (`CardChatLinkList`) + project "Chats" tab (All/Project/Card) + context-aware `ChatDock` (`currentProjectId`+`currentCardId` by origin) + manual card-linking button + list-visibility upgrade to "sessions participated in" (owner OR project member, in-place) — see `docs/plans/2026-08-02-phase-7-chat-plan-20-web-card-popup-chat-project-chats.md`
 - [ ] Task 21: Web UI — `PromptPresetManager` + `PersonalityManager` + `DocumentUploader` + `pages/documents.vue`
 - [ ] Task 22: TUI — `ChatListScreen` + `ChatSessionScreen` (streaming, cancel, close) + `ChatHubConnection` service
 - [ ] Task 23: TUI — `ProjectChatScreen` (F6 implicit close) + `PromptPresetScreen` + `PersonalityScreen` + `DocumentListScreen`
