@@ -495,7 +495,7 @@ No pgvector changes. Verify with `dotnet ef migrations has-pending-model-changes
 - [x] Task 17: Web UI — `useChatStream` composable + `ChatSessionView` + `ChatMessageList`/`ChatMessageBubble`/`ChatInput` + streaming
 - [x] Task 18: Web UI — `ChatPanel` (project board rail) + F6 implicit close + auto-prompt pre-fill
 - [x] Task 19: Web UI — `ChatSessionHeader` (scope toggle, personality, AI-edit mode, close) + `ChatDocAttach`
-- [ ] Task 19b: Web UI — Card popup infrastructure (multi-popup shell `stores/cardPopup.ts` + `CardPopup.vue` + shared `usePopupZIndex` z-index/Escape-LIFO composable; `ChatDock` re-pointed at shared z-index; max 3 cards) — see `docs/plans/2026-08-02-phase-7-chat-plan-19b-card-popup-infra.md`
+- [x] Task 19b: Web UI — Card popup infrastructure (multi-popup shell `stores/cardPopup.ts` + `CardPopup.vue` + shared `usePopupZIndex` z-index/Escape-LIFO composable; `ChatDock` re-pointed at shared z-index; max 3 cards) — see `docs/plans/2026-08-02-phase-7-chat-plan-19b-card-popup-infra.md`
 - [ ] Task 20: Web UI — Card popup Chat tab (`CardChatLinkList`) + project "Chats" tab (All/Project/Card) + context-aware `ChatDock` (`currentProjectId`+`currentCardId` by origin) + manual card-linking button + list-visibility upgrade to "sessions participated in" (owner OR project member, in-place) — see `docs/plans/2026-08-02-phase-7-chat-plan-20-web-card-popup-chat-project-chats.md`
 - [ ] Task 21: Web UI — `PromptPresetManager` + `PersonalityManager` + `DocumentUploader` + `pages/documents.vue`
 - [ ] Task 22: TUI — `ChatListScreen` + `ChatSessionScreen` (streaming, cancel, close) + `ChatHubConnection` service
