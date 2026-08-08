@@ -85,6 +85,20 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
     popupZ.closeTopmost()
   }
 
+  // Closes every open card popup without going through the dock's Escape
+  // stack — used when navigating away from the project board that owns
+  // them (a different project, or off the board entirely). Unlike
+  // closeCard, this doesn't reassign activeCardId per-removal since
+  // everything is going away.
+  function closeAll() {
+    for (const cardId of openCardIds.value) {
+      popupZ.unregisterPopup(cardId)
+    }
+    openCardIds.value = []
+    positions.value = {}
+    activeCardId.value = null
+  }
+
   function setActive(cardId: string) {
     activeCardId.value = cardId
   }
@@ -105,6 +119,6 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
 
   return {
     openCardIds, activeCardId, positions, canOpen,
-    openCard, closeCard, closeTopmost, setActive, bringToFront
+    openCard, closeCard, closeAll, closeTopmost, setActive, bringToFront
   }
 })

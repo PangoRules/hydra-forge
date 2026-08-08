@@ -123,6 +123,28 @@ describe('cardPopup store', () => {
     expect(store.positions['card-1']).toBeUndefined()
   })
 
+  it('closeAll clears every open card and unregisters them from the z-index stack', () => {
+    const store = useCardPopupStore()
+    const { stack } = usePopupZIndex()
+    store.openCard('card-1')
+    store.openCard('card-2')
+    store.openCard('card-3')
+    expect(stack.value.length).toBe(3)
+
+    store.closeAll()
+
+    expect(store.openCardIds).toEqual([])
+    expect(store.positions).toEqual({})
+    expect(store.activeCardId).toBe(null)
+    expect(stack.value.length).toBe(0)
+  })
+
+  it('closeAll on an empty store is a no-op', () => {
+    const store = useCardPopupStore()
+    expect(() => store.closeAll()).not.toThrow()
+    expect(store.openCardIds).toEqual([])
+  })
+
   it('localStorage persistence', async () => {
     const store1 = useCardPopupStore()
     store1.openCard('card-1')
