@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { setActivePinia, createPinia } from 'pinia'
+import { nextTick } from 'vue'
 import { usePopupZIndex } from '~/composables/usePopupZIndex'
 
 const mockToastError = vi.fn()
@@ -122,10 +123,13 @@ describe('cardPopup store', () => {
     expect(store.positions['card-1']).toBeUndefined()
   })
 
-  it('localStorage persistence', () => {
+  it('localStorage persistence', async () => {
     const store1 = useCardPopupStore()
     store1.openCard('card-1')
     store1.openCard('card-2')
+    // Persistence watcher batches to the next tick (no longer flush: 'sync') —
+    // let it run before simulating the reload.
+    await nextTick()
 
     // Simulate hard reload by creating a new store instance
     setActivePinia(createPinia())

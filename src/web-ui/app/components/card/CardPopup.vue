@@ -17,9 +17,22 @@ const POPUP_MIN_HEIGHT_PX = 300
 // Falls back to a sensible default if the position isn't set (shouldn't happen).
 const initialPos = cardPopup.positions[props.cardId] ?? { x: 48, y: 48 }
 
+// Clamp against the current viewport — a position saved via localStorage on a
+// larger window/monitor would otherwise mount off-screen with no way to drag
+// it back (onMove only clamps live drags, not the initial mount position).
+function clampToViewport(pos: { x: number, y: number }): { x: number, y: number } {
+  if (typeof window === 'undefined') return pos
+  const maxX = Math.max(0, window.innerWidth - POPUP_WIDTH_PX)
+  const maxY = Math.max(0, window.innerHeight - 48)
+  return {
+    x: Math.max(0, Math.min(pos.x, maxX)),
+    y: Math.max(0, Math.min(pos.y, maxY))
+  }
+}
+
 const { x, y } = useDraggable(popupRef, {
   handle: dragHandle,
-  initialValue: () => ({ ...initialPos }),
+  initialValue: () => clampToViewport(initialPos),
   preventDefault: true,
   // Constrain within viewport — don't let the user drag it fully off-screen.
   onMove(position) {

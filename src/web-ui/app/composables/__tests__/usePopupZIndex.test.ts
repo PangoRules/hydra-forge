@@ -103,6 +103,23 @@ describe('usePopupZIndex', () => {
     expect(closeFn).toHaveBeenCalledTimes(1)
   })
 
+  it('closeTopmost does not unregister a dock-kind entry — stays in the stack for repeated Escape', async () => {
+    const { stack, registerPopup, closeTopmost } = usePopupZIndex()
+    const dockClose = vi.fn()
+    registerPopup('chat-dock', 'dock', dockClose)
+
+    closeTopmost()
+    expect(dockClose).toHaveBeenCalledTimes(1)
+    expect(stack.value.length).toBe(1)
+    expect(stack.value[0]!.id).toBe('chat-dock')
+
+    // The dock never unmounts/re-registers after closing — it must still be
+    // reachable by a later Escape once it's reopened.
+    closeTopmost()
+    expect(dockClose).toHaveBeenCalledTimes(2)
+    expect(stack.value.length).toBe(1)
+  })
+
   it('listener lifecycle — Escape has no effect after stack is emptied (listener removed)', async () => {
     const { stack, registerPopup, unregisterPopup } = usePopupZIndex()
     const closeFn = vi.fn()

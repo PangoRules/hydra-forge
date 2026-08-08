@@ -101,7 +101,7 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
   // but a hard reload resets it, localStorage bridges the gap).
   watch([openCardIds, positions], () => {
     saveState(openCardIds.value, positions.value)
-  }, { deep: true, flush: 'sync' })
+  }, { deep: true })
 
   return {
     openCardIds, activeCardId, positions, canOpen,

@@ -34,6 +34,13 @@ function closeTopmost() {
   const top = stack.value[stack.value.length - 1]
   if (top) {
     top.close()
+    // Belt-and-suspenders removal for entries whose closeFn doesn't unregister
+    // itself (e.g. card popups, which call unregisterPopup from closeCard).
+    // The dock is excluded: it stays mounted for the page's lifetime and only
+    // ever registers once (onMounted), so dropping it here would strand it
+    // outside the stack permanently — closeDock() just flips isOpen, it never
+    // re-registers.
+    if (top.kind === 'dock') return
     setTimeout(() => {
       if (stack.value.length && stack.value[stack.value.length - 1]?.id === top.id) {
         unregisterPopup(top.id)
