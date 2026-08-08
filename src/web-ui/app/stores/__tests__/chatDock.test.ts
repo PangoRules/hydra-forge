@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { setActivePinia, createPinia } from 'pinia'
+import { useChatDockStore } from '~/stores/chatDock'
+import { usePopupZIndex } from '~/composables/usePopupZIndex'
 
 const mockPOST = vi.fn()
 
@@ -163,6 +165,19 @@ describe('chatDock store', () => {
     await nextTick()
     expect(localStorage.getItem('hydraforge:chat:activeSessionId')).toBe(null)
   })
-})
 
-import { useChatDockStore } from '~/stores/chatDock'
+  it('dock registers with popup z-index stack and returns correct z-index', async () => {
+    const popupZ = usePopupZIndex()
+    const { stack } = popupZ
+    stack.value = [] // reset
+
+    // Register dock
+    popupZ.registerPopup('chat-dock', 'dock', vi.fn())
+    expect(popupZ.zIndexFor('chat-dock')).toBe(50)
+
+    // Register a card popup — dock stays at 50, card gets 51
+    popupZ.registerPopup('card-1', 'card', vi.fn())
+    expect(popupZ.zIndexFor('chat-dock')).toBe(50)
+    expect(popupZ.zIndexFor('card-1')).toBe(51)
+  })
+})

@@ -14,7 +14,7 @@
 
 > **Reconciled 2026-08-04:** "main menu" below now refers to the real `MainMenuScreen` added in Plan 22 (Login → `MainMenuScreen` → Projects/Chat), not an assumed-but-never-built concept.
 >
-> Web's `CardChatLinkList` (Plan 20 — a per-card table of past chat summaries in the card modal) has no TUI equivalent planned here. `ProjectChatScreen`'s board-focused-card `c` binding below covers *opening* a project chat scoped to a card (the TUI analog of the web's `ChatPanel`), but not *browsing prior linked chats* from `CardDetailScreen`. Deferred rather than silently dropped — worth a follow-up plan if wanted, not blocking this one.
+> Web's `CardChatLinkList` (Plan 20 — a per-card table of past chat summaries, now hosted in the card popup's "Chat" tab per the 2026-08-06 rewrite) has no TUI equivalent planned here. `ProjectChatScreen`'s board-focused-card `c` binding below covers *opening* a project chat scoped to a card (the TUI analog of the web's `ChatPanel`/`ChatDock`), but not *browsing prior linked chats* from `CardDetailScreen`. Deferred rather than silently dropped — worth a follow-up plan if wanted, not blocking this one. (The web multi-popup `CardPopup` shell from Plan 19b is also web-only; the TUI keeps its single `CardDetailScreen`.)
 
 **Steps:**
 

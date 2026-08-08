@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useDraggable } from '@vueuse/core'
 import { useChatDockStore } from '~/stores/chatDock'
+import { usePopupZIndex } from '~/composables/usePopupZIndex'
 import ChatSessionView from '~/components/chat/ChatSessionView.vue'
 import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
 import ChatInput from '~/components/chat/ChatInput.vue'
 
 const dock = useChatDockStore()
+const popupZ = usePopupZIndex()
 const route = useRoute()
 
 const isHidden = computed(() => route.path.startsWith('/chats'))
@@ -62,18 +64,11 @@ function handleToggleFullHeight() {
   }
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && dock.isOpen) {
-    dock.closeDock()
-  }
-}
-
-const isClient = import.meta.client
 onMounted(() => {
-  if (isClient) window.addEventListener('keydown', onKeydown)
+  popupZ.registerPopup('chat-dock', 'dock', () => dock.closeDock())
 })
 onUnmounted(() => {
-  if (isClient) window.removeEventListener('keydown', onKeydown)
+  popupZ.unregisterPopup('chat-dock')
 })
 
 async function sendDraftMessage(
@@ -116,12 +111,13 @@ function onArchiveFromSession() {
       <div
         v-if="dock.isOpen"
         ref="popupRef"
-        class="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
+        class="fixed max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
         :class="dock.isFullHeight ? 'h-[calc(100vh-2rem)]' : 'h-[50vh]'"
         :style="{
           width: `${DOCK_WIDTH_PX}px`,
           left: `${x}px`,
-          top: dock.isFullHeight ? '1rem' : `${y}px`
+          top: dock.isFullHeight ? '1rem' : `${y}px`,
+          zIndex: popupZ.zIndexFor('chat-dock')
         }"
       >
         <!-- Header — single row, drag handle wraps whichever header is showing.
