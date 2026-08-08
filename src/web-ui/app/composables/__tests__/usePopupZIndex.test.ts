@@ -93,11 +93,29 @@ describe('usePopupZIndex', () => {
   })
 
   it('listener lifecycle — Escape calls closeTopmost when stack non-empty', async () => {
-    const { stack, registerPopup, closeTopmost } = usePopupZIndex()
+    const { stack, registerPopup } = usePopupZIndex()
     const closeFn = vi.fn()
     registerPopup('card-1', 'card', closeFn)
 
     // Simulate Escape keydown event
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await new Promise(r => setTimeout(r, 0))
+    expect(closeFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('listener lifecycle — Escape has no effect after stack is emptied (listener removed)', async () => {
+    const { stack, registerPopup, unregisterPopup } = usePopupZIndex()
+    const closeFn = vi.fn()
+    registerPopup('card-1', 'card', closeFn)
+
+    // First Escape: closeFn called, popup unregistered, stack emptied, listener removed
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await new Promise(r => setTimeout(r, 0))
+    expect(closeFn).toHaveBeenCalledTimes(1)
+    expect(stack.value.length).toBe(0)
+    unregisterPopup('card-1')
+
+    // Second Escape: listener already removed, closeFn must not be called again
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     await new Promise(r => setTimeout(r, 0))
     expect(closeFn).toHaveBeenCalledTimes(1)

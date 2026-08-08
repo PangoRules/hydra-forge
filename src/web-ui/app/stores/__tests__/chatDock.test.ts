@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { setActivePinia, createPinia } from 'pinia'
+import { useChatDockStore } from '~/stores/chatDock'
+import { usePopupZIndex } from '~/composables/usePopupZIndex'
 
 const mockPOST = vi.fn()
 
@@ -179,6 +181,3 @@ describe('chatDock store', () => {
     expect(popupZ.zIndexFor('card-1')).toBe(51)
   })
 })
-
-import { useChatDockStore } from '~/stores/chatDock'
-import { usePopupZIndex } from '~/composables/usePopupZIndex'
