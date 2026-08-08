@@ -3,6 +3,7 @@ import SessionExpiryModal from '~/components/shared/SessionExpiryModal.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppTopbar from '~/components/layout/AppTopbar.vue'
 import ChatDock from '~/components/chat/ChatDock.vue'
+import CardPopupLayer from '~/components/card/CardPopupLayer.vue'
 
 const { logout, isAuthenticated, checkAuth, listenForAuthChanges } = useAuth()
 const { fetchUnreadCount } = useNotifications()
@@ -78,6 +79,7 @@ function handleSessionLogout() {
       />
     </ClientOnly>
 
+    <CardPopupLayer />
     <ChatDock />
   </UApp>
 </template>
