@@ -61,8 +61,9 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
       return
     }
 
+    const pos = nextPosition()
     openCardIds.value = [...openCardIds.value, cardId]
-    positions.value[cardId] = nextPosition()
+    positions.value[cardId] = pos
     activeCardId.value = cardId
 
     popupZ.registerPopup(cardId, 'card', () => closeCard(cardId))
@@ -100,7 +101,7 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
   // but a hard reload resets it, localStorage bridges the gap).
   watch([openCardIds, positions], () => {
     saveState(openCardIds.value, positions.value)
-  }, { deep: true })
+  }, { deep: true, flush: 'sync' })
 
   return {
     openCardIds, activeCardId, positions, canOpen,

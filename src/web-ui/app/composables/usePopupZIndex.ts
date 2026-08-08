@@ -27,6 +27,7 @@ function removeListener() {
 
 function unregisterPopup(id: string) {
   stack.value = stack.value.filter(e => e.id !== id)
+  if (stack.value.length === 0) removeListener()
 }
 
 function closeTopmost() {
@@ -67,6 +68,7 @@ export function usePopupZIndex() {
       return
     }
     stack.value.push({ id, kind, close: closeFn })
+    ensureListener()
   }
 
   function bringToFront(id: string) {
