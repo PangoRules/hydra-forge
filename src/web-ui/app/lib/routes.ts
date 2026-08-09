@@ -218,6 +218,7 @@ export const ApiRoutes = {
       detachDocument: (sessionId: string, documentId: string) =>
         `/api/chat/sessions/${sessionId}/documents/${documentId}`,
       permission: (sessionId: string) => `/api/chat/sessions/${sessionId}/permission`,
+      linkCard: (sessionId: string) => `/api/chat/sessions/${sessionId}/link-card`,
       messages: (sessionId: string, before?: string, beforeId?: string, limit = 50) =>
         `/api/chat/sessions/${sessionId}/messages?${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}limit=${limit}`,
       sendMessage: (sessionId: string) => `/api/chat/sessions/${sessionId}/messages`,

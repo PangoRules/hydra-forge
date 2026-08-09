@@ -146,12 +146,14 @@ describe('cardPopup store', () => {
   })
 
   it('localStorage persistence', async () => {
+    vi.useFakeTimers()
     const store1 = useCardPopupStore()
-    store1.openCard('card-1')
-    store1.openCard('card-2')
-    // Persistence watcher batches to the next tick (no longer flush: 'sync') —
-    // let it run before simulating the reload.
-    await nextTick()
+    store1.openCard('card-1', 'proj-1')
+    store1.openCard('card-2', 'proj-1')
+    // Persistence watcher is debounced (250ms) so a drag/resize doesn't hit
+    // localStorage on every pixel — advance past it before simulating reload.
+    await vi.advanceTimersByTimeAsync(250)
+    vi.useRealTimers()
 
     // Simulate hard reload by creating a new store instance
     setActivePinia(createPinia())
@@ -159,5 +161,66 @@ describe('cardPopup store', () => {
     expect(store2.openCardIds).toEqual(['card-1', 'card-2'])
     expect(store2.positions['card-1']).toEqual({ x: 48, y: 48 })
     expect(store2.positions['card-2']).toEqual({ x: 72, y: 72 })
+    expect(store2.getProjectId('card-1')).toEqual('proj-1')
+    expect(store2.getProjectId('card-2')).toEqual('proj-1')
+  })
+
+  it('getSize defaults to a desktop-sized popup', () => {
+    const store = useCardPopupStore()
+    store.openCard('card-1')
+    expect(store.getSize('card-1')).toEqual({ width: 680, height: 640 })
+  })
+
+  it('resizeCard updates size for an open card', () => {
+    const store = useCardPopupStore()
+    store.openCard('card-1')
+    store.resizeCard('card-1', { width: 800, height: 700 })
+    expect(store.getSize('card-1')).toEqual({ width: 800, height: 700 })
+  })
+
+  it('resizeCard is a no-op for a card that is not open', () => {
+    const store = useCardPopupStore()
+    store.resizeCard('never-opened', { width: 800, height: 700 })
+    expect(store.sizes['never-opened']).toBeUndefined()
+  })
+
+  it('closeCard clears the size entry', () => {
+    const store = useCardPopupStore()
+    store.openCard('card-1')
+    store.resizeCard('card-1', { width: 800, height: 700 })
+    store.closeCard('card-1')
+    expect(store.sizes['card-1']).toBeUndefined()
+  })
+
+  it('size persists across reload alongside position', async () => {
+    vi.useFakeTimers()
+    const store1 = useCardPopupStore()
+    store1.openCard('card-1', 'proj-1')
+    store1.resizeCard('card-1', { width: 900, height: 750 })
+    await vi.advanceTimersByTimeAsync(250)
+    vi.useRealTimers()
+
+    setActivePinia(createPinia())
+    const store2 = useCardPopupStore()
+    expect(store2.getSize('card-1')).toEqual({ width: 900, height: 750 })
+  })
+
+  it('bringToFront no-ops when the card is already topmost', () => {
+    const store = useCardPopupStore()
+    const { stack } = usePopupZIndex()
+    store.openCard('card-1')
+    store.openCard('card-2')
+    const stackBefore = [...stack.value]
+    store.bringToFront('card-2')
+    expect(store.openCardIds).toEqual(['card-1', 'card-2'])
+    expect(stack.value).toEqual(stackBefore)
+  })
+
+  it('setActive no-ops when the card is already active', () => {
+    const store = useCardPopupStore()
+    store.openCard('card-1')
+    expect(store.activeCardId).toBe('card-1')
+    store.setActive('card-1')
+    expect(store.activeCardId).toBe('card-1')
   })
 })

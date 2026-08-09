@@ -9,7 +9,7 @@ definePageMeta({ middleware: ['auth'] })
 
 const route = useRoute()
 const projectId = route.params.id as string
-const activeTab = ref<'board' | 'docs'>('board')
+const activeTab = ref<'board' | 'docs' | 'chats'>('board')
 
 const api = useApi()
 const toast = useAppToast()
@@ -211,6 +211,17 @@ watch(activeTab, (tab) => {
         />
         Docs
       </UButton>
+      <UButton
+        :variant="activeTab === 'chats' ? 'solid' : 'ghost'"
+        size="sm"
+        @click="activeTab = 'chats'"
+      >
+        <UIcon
+          name="i-lucide-messages-square"
+          class="size-4 mr-1"
+        />
+        Chats
+      </UButton>
     </div>
 
     <!-- Tab content -->
@@ -223,6 +234,10 @@ watch(activeTab, (tab) => {
     />
     <ProjectDocuments
       v-else-if="activeTab === 'docs'"
+      :project-id="projectId"
+    />
+    <ProjectChatsTab
+      v-else-if="activeTab === 'chats'"
       :project-id="projectId"
     />
 

@@ -23,18 +23,13 @@ type CardResponse = components['schemas']['CardResponse']
 const boardStore = useBoardStore()
 const api = useApi()
 const toast = useAppToast()
+const cardPopup = useCardPopupStore()
 
 // Header (back button, title, members, narrative, presence) lives in the parent
 // page (projects/[id]/index.vue) so it survives switching to the Docs tab —
 // projectArchived/presence are owned there and passed down as props.
 const projectArchived = computed(() => props.projectArchived)
 
-const showCardModal = ref(false)
-const selectedCard = ref<CardResponse | null>(null)
-const selectedCardId = computed({
-  get: () => boardStore.openCardId,
-  set: val => boardStore.setOpenCardId(val)
-})
 const showCreateModal = ref(false)
 const createColumnId = ref<string | null>(null)
 const bulkTargetColumnId = ref<string | null>(null)
@@ -44,8 +39,7 @@ const showArchiveConfirm = ref(false)
 const archiveTargetCard = ref<CardResponse | null>(null)
 
 const anyModalOpen = computed(() =>
-  !!selectedCardId.value
-  || showCreateModal.value
+  showCreateModal.value
   || showArchiveConfirm.value
   || showShortcutOverlay.value
   || props.externalModalOpen
@@ -85,9 +79,8 @@ function findCard(cardId: string): CardResponse | undefined {
 }
 
 function openCardModal(card: CardResponse) {
-  selectedCard.value = card
-  selectedCardId.value = card.id
-  showCardModal.value = true
+  cardPopup.openCard(card.id, props.projectId)
+  boardStore.setOpenCardId(card.id)
 }
 
 function requestArchive(card: CardResponse) {
@@ -108,12 +101,6 @@ const nav = useBoardKeyboardNav({
 function handleCardClick(card: CardResponse) {
   openCardModal(card)
   nav.syncToCard(card)
-}
-
-function handleCardModalClose() {
-  selectedCardId.value = null
-  selectedCard.value = null
-  boardStore.fetchBoard(props.projectId)
 }
 
 async function handleBulkMove() {
@@ -195,6 +182,24 @@ watch(
   }
 )
 
+// Watch cardPopup.openCardIds — when a card popup is closed, refresh the board
+// to pick up any changes made in the popup (description edits, metadata, etc.)
+// and update open-card presence tracking: only clear openCardId if the closed
+// card was the tracked one; otherwise update to the remaining activeCardId.
+watch(
+  () => [...cardPopup.openCardIds],
+  (newIds, oldIds) => {
+    const removed = oldIds.filter(id => !newIds.includes(id))
+    if (removed.length === 0) return
+    if (boardStore.openCardId !== null && removed.includes(boardStore.openCardId)) {
+      boardStore.setOpenCardId(cardPopup.activeCardId)
+    }
+    boardStore.fetchBoard(props.projectId)
+  }
+)
+
+// Track the currently open card for presence
+const selectedCardId = computed(() => boardStore.openCardId)
 watch(selectedCardId, (cardId) => {
   if (cardId) {
     props.presence.focusCard(props.projectId, cardId)
@@ -297,15 +302,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <CardModal
-      v-if="selectedCardId"
-      :card-id="selectedCardId"
-      :project-id="props.projectId"
-      :readonly="projectArchived"
-      @close="handleCardModalClose"
-      @archived="boardStore.fetchBoard(props.projectId)"
-      @restored="boardStore.fetchBoard(props.projectId)"
-    />
     <CardCreateModal
       v-if="showCreateModal"
       :project-id="props.projectId"
