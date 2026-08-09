@@ -332,15 +332,28 @@ public sealed class ChatReplyGenerator(
                 return;
             }
 
+            var replyInputTokens = lastChunk?.Usage?.InputTokens ?? 0;
+            var replyOutputTokens = lastChunk?.Usage?.OutputTokens ?? 0;
+            var replyCachedTokens = lastChunk?.Usage?.CachedTokens ?? 0;
+
+            // Same formula as EfUsageRecorder.ToRecord (the TokenUsageRecord written
+            // below) — cached tokens are cheaper/free on most providers, so they're
+            // excluded from the chargeable count. Null (not 0) when the model has no
+            // configured price: "unknown" and "free" are different things.
+            var replyCost = route.Primary.PricePerToken is { } pricePerToken
+                ? (replyInputTokens + replyOutputTokens - replyCachedTokens) * pricePerToken
+                : (decimal?)null;
+
             var assistantMessage = new Domain.Entities.Chat.ChatMessage
             {
                 Id = assistantMessageId,
                 SessionId = sessionId,
                 Role = MessageRole.Assistant,
                 Content = content,
-                InputTokens = lastChunk?.Usage?.InputTokens ?? 0,
-                OutputTokens = lastChunk?.Usage?.OutputTokens ?? 0,
-                CachedTokens = lastChunk?.Usage?.CachedTokens ?? 0,
+                InputTokens = replyInputTokens,
+                OutputTokens = replyOutputTokens,
+                CachedTokens = replyCachedTokens,
+                Cost = replyCost,
                 ModelName = route.Primary.Name,
                 CreatedAt = DateTime.UtcNow,
             };
@@ -385,16 +398,16 @@ public sealed class ChatReplyGenerator(
                 ProviderId: route.Provider!.Id,
                 ModelId: route.Primary.ModelId,
                 ModelName: route.Primary.Name,
-                InputTokens: lastChunk?.Usage?.InputTokens ?? 0,
-                OutputTokens: lastChunk?.Usage?.OutputTokens ?? 0,
-                CachedTokens: lastChunk?.Usage?.CachedTokens ?? 0,
+                InputTokens: replyInputTokens,
+                OutputTokens: replyOutputTokens,
+                CachedTokens: replyCachedTokens,
                 PipelineRunId: null,
                 Cost: 0
             );
             await usageRecorder.RecordTokenAsync(recordInput, cts.Token);
             await usageRecorder.AccrueTokenUsageAsync(
                 userId,
-                (lastChunk?.Usage?.InputTokens ?? 0) + (lastChunk?.Usage?.OutputTokens ?? 0),
+                replyInputTokens + replyOutputTokens,
                 cts.Token
             );
 

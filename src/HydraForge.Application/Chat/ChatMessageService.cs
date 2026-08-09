@@ -155,6 +155,7 @@ public class ChatMessageService(
             message.InputTokens,
             message.OutputTokens,
             message.CachedTokens,
+            message.Cost,
             message.ModelName,
             message.ImagesJson,
             message.CreatedAt

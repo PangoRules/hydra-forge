@@ -96,6 +96,7 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             3,
+            false,
             ChatSessionStatusFilter.NonArchived,
             CancellationToken.None
         );
@@ -110,6 +111,7 @@ public class EfChatSessionRepositoryTests
             sameTime,
             secondItemId,
             2,
+            false,
             ChatSessionStatusFilter.NonArchived,
             CancellationToken.None
         );
@@ -165,6 +167,7 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             10,
+            false,
             ChatSessionStatusFilter.NonArchived,
             CancellationToken.None
         );
@@ -229,11 +232,91 @@ public class EfChatSessionRepositoryTests
             DateTime.MaxValue,
             null,
             10,
+            false,
             ChatSessionStatusFilter.NonArchived,
             CancellationToken.None
         );
 
         Assert.Single(results);
         Assert.Equal(mySession.Id, results[0].Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_WhereParticipatedIn_IncludesProjectMemberSessions()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfChatSessionRepository(context);
+
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var nonMemberId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var projectSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Title = "Project Session",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+        var personalSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = null,
+            Title = "Personal Session",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+
+        var projectMember = new HydraForge.Domain.Entities.ProjectSpace.ProjectMember
+        {
+            ProjectId = projectId,
+            UserId = memberId,
+            Role = HydraForge.Domain.Enums.MemberRole.Member,
+        };
+
+        context.ChatSessions.AddRange(projectSession, personalSession);
+        context.ProjectMembers.Add(projectMember);
+        await context.SaveChangesAsync();
+
+        // Member should see the project session (via ProjectMember participation)
+        var memberResults = await repo.ListAsync(
+            memberId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            false,
+            ChatSessionStatusFilter.NonArchived,
+            CancellationToken.None
+        );
+        Assert.Contains(memberResults, s => s.Id == projectSession.Id);
+
+        // Non-member should NOT see the project session
+        var nonMemberResults = await repo.ListAsync(
+            nonMemberId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            false,
+            ChatSessionStatusFilter.NonArchived,
+            CancellationToken.None
+        );
+        Assert.DoesNotContain(nonMemberResults, s => s.Id == projectSession.Id);
     }
 }

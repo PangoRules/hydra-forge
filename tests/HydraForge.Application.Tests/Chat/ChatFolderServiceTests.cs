@@ -66,11 +66,14 @@ public class ChatFolderServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            var query = isAdmin
+                ? Sessions.AsEnumerable()
+                : Sessions.Where(s => s.OwnerId == ownerId);
             query = statusFilter switch
             {
                 ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
@@ -95,11 +98,14 @@ public class ChatFolderServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            var query = isAdmin
+                ? Sessions.AsEnumerable()
+                : Sessions.Where(s => s.OwnerId == ownerId);
             query = statusFilter switch
             {
                 ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
@@ -132,6 +138,7 @@ public class ChatFolderServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 

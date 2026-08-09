@@ -29,6 +29,7 @@ public class ChatSearchServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
@@ -37,6 +38,7 @@ public class ChatSearchServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult(0);
@@ -46,6 +48,7 @@ public class ChatSearchServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
             CancellationToken ct = default
         )
         {
@@ -54,7 +57,7 @@ public class ChatSearchServiceTests
 
             var results = Sessions
                 .Where(s =>
-                    s.OwnerId == ownerId
+                    (isAdmin || s.OwnerId == ownerId)
                     && s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
                     && s.ArchivedAt == null
                     && (!projectId.HasValue || s.ProjectId == projectId)

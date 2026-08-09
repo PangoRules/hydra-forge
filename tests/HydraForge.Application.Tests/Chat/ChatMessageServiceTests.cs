@@ -39,6 +39,7 @@ public class ChatMessageServiceTests
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
@@ -47,6 +48,7 @@ public class ChatMessageServiceTests
             Guid ownerId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
             CancellationToken ct = default
         ) => Task.FromResult(0);
@@ -65,6 +67,7 @@ public class ChatMessageServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 

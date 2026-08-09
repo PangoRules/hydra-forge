@@ -17,12 +17,13 @@ public class ChatArchiveService(
         await folderRepo.UpdateAsync(folder, ct);
 
         var sessions = await sessionRepo.ListAsync(
-            ownerId: folder.OwnerId,
+            actorId: folder.OwnerId,
             folderId: folder.Id,
             projectId: null,
             before: null,
             beforeId: null,
             limit: int.MaxValue,
+            isAdmin: false,
             statusFilter: ChatSessionStatusFilter.NonArchived,
             ct
         );

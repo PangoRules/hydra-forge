@@ -67,4 +67,10 @@ public interface IChatSessionService
         Guid actorId,
         CancellationToken ct = default
     );
+    Task<Result<ChatSessionDto>> LinkCardAsync(
+        Guid sessionId,
+        Guid cardId,
+        Guid actorId,
+        CancellationToken ct = default
+    );
 }

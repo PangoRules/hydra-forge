@@ -101,6 +101,7 @@ public record ChatMessageDto(
     int InputTokens,
     int OutputTokens,
     int CachedTokens,
+    decimal? Cost,
     string? ModelName,
     string? ImagesJson,
     DateTime CreatedAt

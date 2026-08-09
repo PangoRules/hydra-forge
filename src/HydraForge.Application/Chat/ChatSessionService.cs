@@ -295,6 +295,9 @@ public class ChatSessionService(
         CancellationToken ct = default
     )
     {
+        var user = await _userRepo.FindByIdAsync(actorId, ct);
+        var isAdmin = user?.IsAdmin == true;
+
         var sessions = await _sessionRepo.ListAsync(
             actorId,
             folderId,
@@ -302,6 +305,7 @@ public class ChatSessionService(
             before,
             beforeId,
             limit,
+            isAdmin,
             statusFilter,
             ct
         );
@@ -318,6 +322,7 @@ public class ChatSessionService(
             actorId,
             folderId,
             projectId,
+            isAdmin,
             statusFilter,
             ct
         );
@@ -625,6 +630,72 @@ public class ChatSessionService(
         return Result<IReadOnlyList<ChatSessionDocumentDto>>.Success(result);
     }
 
+    public async Task<Result<ChatSessionDto>> LinkCardAsync(
+        Guid sessionId,
+        Guid cardId,
+        Guid actorId,
+        CancellationToken ct = default
+    )
+    {
+        var session = await _sessionRepo.GetByIdAsync(sessionId, ct);
+        if (session == null)
+            return Result<ChatSessionDto>.Failure(
+                new Error(DomainErrorCodes.Chat.SessionNotFound, "Session not found.")
+            );
+
+        if (session.Status != ChatSessionStatus.Active)
+            return Result<ChatSessionDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Chat.SessionClosed,
+                    "Cannot link card to a closed session."
+                )
+            );
+
+        if (!session.ProjectId.HasValue)
+            return Result<ChatSessionDto>.Failure(
+                new Error(
+                    DomainErrorCodes.Chat.CardNotInProject,
+                    "Cannot link card to a personal session."
+                )
+            );
+
+        // Membership guard: owner OR project member (admin bypass via MembershipGuard)
+        if (session.OwnerId != actorId)
+        {
+            if (
+                !await MembershipGuard.HasAccessAsync(
+                    _userRepo,
+                    _memberRepo,
+                    session.ProjectId.Value,
+                    actorId,
+                    ct
+                )
+            )
+                return Result<ChatSessionDto>.Failure(
+                    new Error(DomainErrorCodes.Projects.MembershipDenied, "Access denied.")
+                );
+        }
+
+        var card = await _cardRepo.GetByIdAsync(cardId, ct);
+        if (card == null)
+            return Result<ChatSessionDto>.Failure(
+                new Error(DomainErrorCodes.Cards.NotFound, "Card not found.")
+            );
+        if (card.ProjectId != session.ProjectId.Value)
+            return Result<ChatSessionDto>.Failure(
+                new Error(DomainErrorCodes.Chat.CardNotInProject, "Card is in a different project.")
+            );
+
+        // Idempotent: already linked to this card
+        if (session.OpenCardId == cardId)
+            return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+
+        session.SetOpenCard(cardId);
+        await _sessionRepo.UpdateAsync(session, ct);
+
+        return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────────
 
     private async Task<bool> CanReadSessionAsync(
@@ -688,6 +759,7 @@ public class ChatSessionService(
             message.InputTokens,
             message.OutputTokens,
             message.CachedTokens,
+            message.Cost,
             message.ModelName,
             message.ImagesJson,
             message.CreatedAt

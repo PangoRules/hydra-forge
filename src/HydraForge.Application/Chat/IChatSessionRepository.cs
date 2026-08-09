@@ -12,12 +12,13 @@ public interface IChatSessionRepository
         CancellationToken ct = default
     );
     Task<IReadOnlyList<ChatSession>> ListAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
         Guid? beforeId,
         int limit,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     );
@@ -29,17 +30,19 @@ public interface IChatSessionRepository
     // page size, which is always <= limit and tells the client nothing about
     // what's beyond the cursor.
     Task<int> CountAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     );
     Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-        Guid ownerId,
+        Guid actorId,
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
         CancellationToken ct = default
     );
     Task AddAsync(ChatSession session, CancellationToken ct = default);

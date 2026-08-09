@@ -31,18 +31,19 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<IReadOnlyList<ChatSession>> ListAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
         Guid? beforeId,
         int limit,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
             statusFilter
         );
 
@@ -63,15 +64,16 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<int> CountAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
             statusFilter
         );
 
@@ -82,6 +84,18 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
 
         return await query.CountAsync(ct);
     }
+
+    // Participated-in = owner OR project member (for project-scoped sessions)
+    private IQueryable<ChatSession> WhereParticipatedIn(IQueryable<ChatSession> q, Guid actorId) =>
+        q.Where(s =>
+            s.OwnerId == actorId
+            || (
+                s.ProjectId != null
+                && context.ProjectMembers.Any(m =>
+                    m.ProjectId == s.ProjectId && m.UserId == actorId
+                )
+            )
+        );
 
     private static IQueryable<ChatSession> ApplyStatusFilter(
         IQueryable<ChatSession> query,
@@ -112,18 +126,21 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-        Guid ownerId,
+        Guid actorId,
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
         CancellationToken ct = default
     )
     {
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var q = context
-            .ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null)
+        var q = ApplyStatusFilter(
+                isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
+                ChatSessionStatusFilter.NonArchived
+            )
             .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"));
 
         if (projectId.HasValue)
