@@ -57,7 +57,10 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
       await createModal.locator('input[type="date"]').fill(opts.dueDate)
     }
     if (opts.parent) {
-      await createModal.locator('select').filter({ has: page.locator('option', { hasText: opts.parent }) }).selectOption({ label: opts.parent })
+      // Parent field uses USelectMenu — click the trigger to open, then
+      // find the option inside the last listbox (the parent USelectMenu's Popover).
+      await createModal.getByText('Search cards...').click()
+      await page.locator('[role="listbox"]').last().locator('[role="option"]', { hasText: opts.parent }).click()
     }
     await createModal.getByRole('button', { name: 'Create', exact: true }).click()
     await expect(page.getByText('Card created', { exact: true }).first()).toBeVisible()
