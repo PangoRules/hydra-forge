@@ -402,7 +402,12 @@ public sealed class ChatReplyGenerator(
                 OutputTokens: replyOutputTokens,
                 CachedTokens: replyCachedTokens,
                 PipelineRunId: null,
-                Cost: 0
+                // TokenUsageRecordInput.Cost is non-nullable — replyCost above is the
+                // same formula this record's Cost should carry (EfUsageRecorder.ToRecord
+                // overrides it when it can look up a DB-configured price, but falls back
+                // to this value verbatim when it can't, so 0 here would silently record
+                // a "free" turn instead of using the price this call already computed).
+                Cost: replyCost ?? 0
             );
             await usageRecorder.RecordTokenAsync(recordInput, cts.Token);
             await usageRecorder.AccrueTokenUsageAsync(
