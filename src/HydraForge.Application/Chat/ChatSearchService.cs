@@ -1,17 +1,25 @@
+using HydraForge.Application.Auth;
+
 namespace HydraForge.Application.Chat;
 
 public class ChatSearchService : IChatSearchService
 {
     private readonly IChatSessionRepository _sessionRepo;
     private readonly IChatMessageRepository _messageRepo;
+    private readonly IUserRepository _userRepo;
 
     private const int SnippetLength = 200;
     private const int MaxResults = 20;
 
-    public ChatSearchService(IChatSessionRepository sessionRepo, IChatMessageRepository messageRepo)
+    public ChatSearchService(
+        IChatSessionRepository sessionRepo,
+        IChatMessageRepository messageRepo,
+        IUserRepository userRepo
+    )
     {
         _sessionRepo = sessionRepo;
         _messageRepo = messageRepo;
+        _userRepo = userRepo;
     }
 
     public async Task<IReadOnlyList<ChatSearchResultDto>> SearchAsync(
@@ -22,12 +30,18 @@ public class ChatSearchService : IChatSearchService
         CancellationToken ct = default
     )
     {
+        // Mirrors ChatSessionService.ListAsync's admin-bypass computation — without it,
+        // an admin's scope=Participated search silently omits non-member project
+        // sessions that GET /chat/sessions (same admin, same scope) would include.
+        var user = await _userRepo.FindByIdAsync(userId, ct);
+        var isAdmin = user?.IsAdmin == true;
+
         var titleResults = await _sessionRepo.SearchByTitleAsync(
             userId,
             query,
             projectId,
             MaxResults,
-            isAdmin: false,
+            isAdmin,
             scope,
             ct
         );
@@ -36,6 +50,7 @@ public class ChatSearchService : IChatSearchService
             query,
             projectId,
             MaxResults,
+            isAdmin,
             scope,
             ct
         );
