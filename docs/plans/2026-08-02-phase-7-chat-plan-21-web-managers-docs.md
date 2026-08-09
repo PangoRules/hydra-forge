@@ -41,10 +41,9 @@
   }
   ```
 
-- [ ] Add `UiRoutes` entries to `src/web-ui/app/lib/routes.ts` under `UiRoutes`:
+- [x] Add `UiRoutes` entries to `src/web-ui/app/lib/routes.ts` under `UiRoutes`:
   ```ts
   Chat: {
-    // ... existing entries ...
     Presets: '/chat/presets',
     Personalities: '/chat/personalities'
   },
@@ -52,7 +51,7 @@
   ```
   Integrate into existing `UiRoutes` object — `Chat` already has `ChatSessions`; add `Presets` and `Personalities` alongside it. `Documents` is a top-level key.
 
-- [ ] `PromptPresetManager.vue` — page-level component. Two-column layout on desktop (groups left, presets right), stacked on mobile. Groups panel: list of groups with create/rename/archive buttons. Archive a group → `DELETE /api/chat/preset-groups/{groupId}` (server nulls presets' `GroupId`, presets kept ungrouped per spec §1.10). Presets panel: list of presets in selected group (or ungrouped). Create/edit/archive preset. Drag-to-reorder within a group via native HTML5 DnD (no `vue-draggable-plus` — removed per repo convention). Reorder: track `position` locally, PATCH preset with new `groupId`/position on drop. Preset form: name + content (textarea). Uses `useApi()`, `useAppToast()`, `ApiRoutes.Chat.presets.*` and `ApiRoutes.Chat.presetGroups.*`. All API calls wrapped in try/catch (D-40).
+- [x] `PromptPresetManager.vue` — page-level component. Two-column layout on desktop (groups left, presets right), stacked on mobile. Groups panel: list of groups with create/rename/archive buttons. Archive a group → `DELETE /api/chat/preset-groups/{groupId}` (server nulls presets' `GroupId`, presets kept ungrouped per spec §1.10). Presets panel: list of presets in selected group (or ungrouped). Create/edit/archive preset. Drag-to-reorder within a group via native HTML5 DnD (no `vue-draggable-plus` — removed per repo convention). Reorder: track `position` locally, PATCH preset with new `groupId`/position on drop. Preset form: name + content (textarea). Uses `useApi()`, `useAppToast()`, `ApiRoutes.Chat.presets.*` and `ApiRoutes.Chat.presetGroups.*`. All API calls wrapped in try/catch (D-40).
 
 - [ ] `PersonalityManager.vue` — page-level component. Full-page list of personalities with create/edit/archive/set-default. Reuses the same CRUD pattern as `PersonalityManageModal.vue` but as a standalone page (not a modal). List view: each personality shows name, description, system prompt preview, "Default" badge if `isDefault`, and action buttons (edit, set default, archive). Create/edit form: name input, description input, system prompt textarea. "Set default" button calls `POST /api/chat/personalities/{personalityId}/default`. Uses `useApi()`, `useAppToast()`, `ApiRoutes.Chat.personalities.*`. All API calls wrapped in try/catch (D-40).
 
