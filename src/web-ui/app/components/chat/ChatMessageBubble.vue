@@ -3,6 +3,7 @@ import type { ChatMessageDto } from '~/types/chat'
 import { getInitials, getModelIcon } from '~/lib/chat-avatar'
 import { renderMarkdown } from '~/lib/markdown'
 import { highlightHtml } from '~/lib/highlight-html'
+import { formatCost } from '~/lib/money'
 
 const props = withDefaults(
   defineProps<{
@@ -51,6 +52,18 @@ const displayedContent = computed(() =>
 )
 
 const isUser = computed(() => props.message.role === 'User')
+
+// Assistant replies only — user messages never carry usage (see the optimistic
+// message in ChatSessionView.handleSend, which sends zeros/null since usage is
+// only known once the reply comes back).
+const totalTokens = computed(() =>
+  props.message.inputTokens + props.message.outputTokens + props.message.cachedTokens
+)
+const usageLabel = computed(() => {
+  if (isUser.value || totalTokens.value === 0) return null
+  const tokens = `${totalTokens.value.toLocaleString()} tok`
+  return props.message.cost != null ? `${tokens} · ${formatCost(props.message.cost)}` : tokens
+})
 
 function getImageSrc(img: ParsedImage): string {
   if (img.base64) {
@@ -148,6 +161,9 @@ async function copyMessage() {
           {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
           <template v-if="!isUser && message.modelName">
             · {{ message.modelName }}
+          </template>
+          <template v-if="usageLabel">
+            · {{ usageLabel }}
           </template>
         </span>
         <UButton

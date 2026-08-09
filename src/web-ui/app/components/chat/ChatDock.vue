@@ -6,6 +6,7 @@ import ChatSessionView from '~/components/chat/ChatSessionView.vue'
 import ChatSessionHeader from '~/components/chat/ChatSessionHeader.vue'
 import ChatDockHistory from '~/components/chat/ChatDockHistory.vue'
 import ChatInput from '~/components/chat/ChatInput.vue'
+import ChatLinkCardButton from '~/components/chat/ChatLinkCardButton.vue'
 
 const dock = useChatDockStore()
 const popupZ = usePopupZIndex()
@@ -71,6 +72,20 @@ onUnmounted(() => {
   popupZ.unregisterPopup('chat-dock')
 })
 
+// Bring the dock to front on interaction — mirrors CardPopup's handlePointerDown.
+// Without this the dock's z-index is frozen at whatever position it held when
+// registerPopup ran once on mount (typically first/lowest, since the dock is
+// part of the persistent layout and mounts before any card popup opens), so it
+// would render behind every card popup forever regardless of clicks.
+// Listens for 'pointerdown', not 'mousedown': this div's header is
+// useDraggable's drag handle with preventDefault:true, and per the Pointer
+// Events spec a preventDefault()-ed pointerdown suppresses the synthesized
+// compatibility mousedown that would otherwise follow — so clicking the
+// header specifically would never fire a 'mousedown' listener here.
+function handlePointerDown() {
+  popupZ.bringToFront('chat-dock')
+}
+
 async function sendDraftMessage(
   content: string,
   presetId?: string | null,
@@ -102,10 +117,11 @@ function onArchiveFromSession() {
         size="lg"
         color="primary"
         rounded="full"
-        class="fixed bottom-4 right-4 z-40 shadow-lg"
+        class="fixed bottom-4 right-4 shadow-lg"
+        :style="{ zIndex: popupZ.aboveAllZ() }"
         title="Open chat"
         aria-label="Open chat"
-        @click="dock.openDock()"
+        @click="dock.openDock('board')"
       />
 
       <div
@@ -119,6 +135,8 @@ function onArchiveFromSession() {
           top: dock.isFullHeight ? '1rem' : `${y}px`,
           zIndex: popupZ.zIndexFor('chat-dock')
         }"
+        @pointerdown="handlePointerDown"
+        @focusin="handlePointerDown"
       >
         <!-- Header — single row, drag handle wraps whichever header is showing.
              Session mode drives the real ChatSessionHeader through a ref to the
@@ -195,6 +213,14 @@ function onArchiveFromSession() {
             </div>
           </div>
         </div>
+        <ChatLinkCardButton
+          v-if="dock.mode === 'session' && sessionViewRef?.session"
+          :session-id="dock.activeSessionId!"
+          :current-card-id="dock.currentCardId ?? ''"
+          :session-open-card-id="sessionViewRef.session.openCardId"
+          :is-project-session="!!sessionViewRef.session.projectId"
+          @linked="sessionViewRef.fetchSession()"
+        />
 
         <!-- Body -->
         <div class="flex-1 min-h-0 flex flex-col">

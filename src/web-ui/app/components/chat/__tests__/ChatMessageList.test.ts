@@ -23,6 +23,7 @@ function buildMessages(count: number): ChatMessageDto[] {
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    cost: null,
     modelName: null,
     imagesJson: null,
     createdAt: `2026-08-01T00:${String(i).padStart(2, '0')}:00Z`
