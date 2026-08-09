@@ -27,6 +27,8 @@ async function fetchLinks() {
   }
 }
 
+onMounted(() => fetchLinks())
+
 function handleOpenSession(sessionId: string) {
   emit('open-session', sessionId)
 }
@@ -36,9 +38,6 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 function handleToggle() {
-  if (!isExpanded.value) {
-    void fetchLinks()
-  }
   isExpanded.value = !isExpanded.value
 }
 
@@ -58,7 +57,7 @@ const columns: TableColumn<CardChatLinkDto>[] = [
       :icon="isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
       @click="handleToggle"
     >
-      Linked Chats ({{ links.length }})
+      Linked Chats ({{ loading ? '...' : links.length }})
     </UButton>
 
     <div v-if="isExpanded">
