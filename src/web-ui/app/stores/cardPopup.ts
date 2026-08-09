@@ -57,6 +57,20 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
   )
   const cardProjectIds = ref<Record<string, string>>(savedCardProjectIds)
 
+  // Keyed by projectId, not persisted — archived state is refetched on every
+  // page load (pages/projects/[id]/index.vue), so there's nothing to restore
+  // from localStorage and no stale-data risk the way cardProjectIds has.
+  const projectArchivedIds = ref<Record<string, boolean>>({})
+
+  function setProjectArchived(projectId: string, archived: boolean) {
+    projectArchivedIds.value[projectId] = archived
+  }
+
+  function isProjectArchived(cardId: string): boolean {
+    const projectId = cardProjectIds.value[cardId]
+    return projectId ? !!projectArchivedIds.value[projectId] : false
+  }
+
   const toast = useAppToast()
   const popupZ = usePopupZIndex()
 
@@ -88,7 +102,12 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
     return { x: lastPos.x + CASCADE_OFFSET, y: lastPos.y + CASCADE_OFFSET }
   }
 
-  function openCard(cardId: string, projectId?: string) {
+  // projectId is required, not optional — CardPopup only renders its body once
+  // cardProjectIds has an entry for the card (see CardPopup.vue's `v-if="projectId"`).
+  // A caller that couldn't supply one would open a popup stuck on "Loading…"
+  // forever with no retry path; the type system rules that out instead of a
+  // runtime guard for a call site that must never exist.
+  function openCard(cardId: string, projectId: string) {
     // Already open — activate and bring to front (no-op duplicate)
     if (openCardIds.value.includes(cardId)) {
       setActive(cardId)
@@ -107,7 +126,7 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
     positions.value[cardId] = pos
     sizes.value[cardId] = { ...DEFAULT_SIZE }
     activeCardId.value = cardId
-    if (projectId) cardProjectIds.value[cardId] = projectId
+    cardProjectIds.value[cardId] = projectId
 
     popupZ.registerPopup(cardId, 'card', () => closeCard(cardId))
     popupZ.bringToFront(cardId)
@@ -179,6 +198,6 @@ export const useCardPopupStore = defineStore('cardPopup', () => {
   return {
     openCardIds, activeCardId, positions, sizes, canOpen,
     openCard, closeCard, closeAll, closeTopmost, setActive, bringToFront,
-    getProjectId, getSize, resizeCard
+    getProjectId, getSize, resizeCard, setProjectArchived, isProjectArchived
   }
 })

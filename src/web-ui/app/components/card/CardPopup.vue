@@ -22,6 +22,7 @@ const VIEWPORT_MARGIN_PX = 16
 
 const cardTitle = ref('')
 const projectId = computed(() => cardPopup.getProjectId(props.cardId) ?? '')
+const readonly = computed(() => cardPopup.isProjectArchived(props.cardId))
 
 // Initial position/size from the store (position set by openCard's nextPosition()
 // cascade, size defaulted by openCard to DEFAULT_SIZE). Falls back to sensible
@@ -204,6 +205,7 @@ function handlePointerDown() {
           ref="bodyRef"
           :card-id="cardId"
           :project-id="projectId"
+          :readonly="readonly"
           @close="cardPopup.closeCard(cardId)"
           @archived="emit('archived')"
           @restored="emit('restored')"
