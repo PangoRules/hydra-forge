@@ -22,6 +22,8 @@ public interface IChatSessionService
         Guid? beforeId,
         int limit,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     );
     Task<Result<ChatSessionDto>> UpdateAsync(

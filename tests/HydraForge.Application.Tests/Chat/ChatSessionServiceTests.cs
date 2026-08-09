@@ -92,6 +92,13 @@ public class ChatSessionServiceTests
                     )
                     || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
                 );
+            if (scope == ChatSessionScope.Participated)
+            {
+                query = query.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
 
             return Task.FromResult<IReadOnlyList<ChatSession>>(
                 query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
@@ -135,6 +142,13 @@ public class ChatSessionServiceTests
                     )
                     || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
                 );
+            if (scope == ChatSessionScope.Participated)
+            {
+                query = query.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
 
             return Task.FromResult(query.Count());
         }
@@ -175,7 +189,40 @@ public class ChatSessionServiceTests
             bool isAdmin = false,
             ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+        )
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return Task.FromResult<IReadOnlyList<ChatSession>>([]);
+
+            // isAdmin bypass means return all sessions (subject to other filters)
+            // Participation = owner OR project member (mirrors EfChatSessionRepository.WhereParticipatedIn)
+            var baseQuery = isAdmin
+                ? Sessions.AsQueryable()
+                : Sessions
+                    .AsQueryable()
+                    .Where(s =>
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                    );
+
+            var queryResults = baseQuery.Where(s =>
+                s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                && s.ArchivedAt == null
+                && (!projectId.HasValue || s.ProjectId == projectId)
+            );
+
+            if (scope == ChatSessionScope.Participated)
+            {
+                queryResults = queryResults.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
+
+            return Task.FromResult<IReadOnlyList<ChatSession>>(
+                queryResults.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
+            );
+        }
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default)
         {

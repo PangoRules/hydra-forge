@@ -292,6 +292,8 @@ public class ChatSessionService(
         Guid? beforeId,
         int limit,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     )
     {
@@ -307,8 +309,8 @@ public class ChatSessionService(
             limit,
             isAdmin,
             statusFilter,
-            scope: ChatSessionScope.Mine,
-            types: null,
+            scope,
+            types,
             ct
         );
         var dtos = new List<ChatSessionDto>();
@@ -326,8 +328,8 @@ public class ChatSessionService(
             projectId,
             isAdmin,
             statusFilter,
-            scope: ChatSessionScope.Mine,
-            types: null,
+            scope,
+            types,
             ct
         );
 
