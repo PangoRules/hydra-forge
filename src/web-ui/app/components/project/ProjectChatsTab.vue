@@ -4,7 +4,8 @@ import type { ChatSessionDto, ChatSessionPageDto } from '~/types/chat'
 import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import { formatDateOnly } from '~/lib/date'
-import { getChatType } from '~/lib/chat-type'
+import { getChatType, CHAT_TYPE_BADGE } from '~/lib/chat-type'
+import ClientDataTable from '~/components/shared/ClientDataTable.vue'
 
 const props = defineProps<{ projectId: string }>()
 
@@ -57,6 +58,7 @@ onMounted(() => fetchSessions())
 const columns: TableColumn<ChatSessionDto>[] = [
   { accessorKey: 'title', header: 'Title' },
   { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'type', header: 'Type' },
   { accessorKey: 'updatedAt', header: 'Updated' }
 ]
 </script>
@@ -84,28 +86,14 @@ const columns: TableColumn<ChatSessionDto>[] = [
     </div>
 
     <!-- Session list -->
-    <div
-      v-if="loading"
-      class="flex-1 flex items-center justify-center"
-    >
-      <UIcon
-        name="i-lucide-loader-circle"
-        class="size-6 animate-spin"
-      />
-    </div>
-    <div
-      v-else-if="filteredSessions.length === 0"
-      class="flex-1 flex items-center justify-center"
-    >
-      <p class="text-sm text-muted">
-        No chats found.
-      </p>
-    </div>
-    <UTable
-      v-else
+    <ClientDataTable
       :data="filteredSessions"
       :columns="columns"
-      @select="(_e: unknown, row: { original: ChatSessionDto }) => handleOpenSession(row.original.id)"
+      :row-key="(s: ChatSessionDto) => s.id"
+      :loading="loading"
+      :fill-height="true"
+      :default-page-size="20"
+      @select="(s: ChatSessionDto) => handleOpenSession(s.id)"
     >
       <template #title-cell="{ row }">
         <span class="text-sm font-medium">{{ row.original.title || '(untitled)' }}</span>
@@ -119,9 +107,18 @@ const columns: TableColumn<ChatSessionDto>[] = [
           {{ row.original.status }}
         </UBadge>
       </template>
+      <template #type-cell="{ row }">
+        <UBadge
+          :color="CHAT_TYPE_BADGE[getChatType(row.original)].color"
+          variant="subtle"
+          size="xs"
+        >
+          {{ CHAT_TYPE_BADGE[getChatType(row.original)].label }}
+        </UBadge>
+      </template>
       <template #updatedAt-cell="{ row }">
         <span class="text-sm text-muted">{{ formatDate(row.original.updatedAt) }}</span>
       </template>
-    </UTable>
+    </ClientDataTable>
   </div>
 </template>
