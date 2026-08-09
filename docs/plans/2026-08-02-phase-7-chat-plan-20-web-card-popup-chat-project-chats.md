@@ -6,6 +6,8 @@
 
 > **Renamed 2026-08-06 (was "CardChatLinkList + Chat Pages").** Scope broadened per design session: the card-detail surface is now a multi-popup (`CardPopup`, infra landed in Plan 19b) rather than a single `CardModal`; chat visibility changes from owner-only to "sessions the user participated in" (owner OR project member); the project view gains a "Chats" tab; the card popup gains a "Chat" tab; and the `ChatDock` becomes context-aware (detects `currentProjectId` + `currentCardId` from where it was opened) with a manual card-linking button. `@mention` card linking is deferred to V2 (noted in spec §5.4).
 
+> **Status:** All steps complete (LGTM received).
+
 **Goal:** Adopt the Plan-19b popup shell for cards; add a "Chat" tab to the card popup showing linked chats (`CardChatLinkList`); add a "Chats" tab to the project view (All / Project / Card filter); make the `ChatDock` context-aware; add a manual "link this card to the current session" button inside the dock; broaden the chat-session list query to sessions the caller participated in (owner OR project member) via an in-place upgrade that preserves existing sessions.
 
 ## Decisions (from session)
