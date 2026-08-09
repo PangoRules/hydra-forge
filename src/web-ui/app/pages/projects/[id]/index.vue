@@ -4,6 +4,7 @@ import { ApiRoutes, UiRoutes } from '~/lib/routes'
 import MemberManagementPanel from '~/components/project/MemberManagementPanel.vue'
 import ProjectNarrativeModal from '~/components/project/ProjectNarrativeModal.vue'
 import { useBoardStore } from '~/stores/board'
+import { useCardPopupStore } from '~/stores/cardPopup'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -14,8 +15,14 @@ const activeTab = ref<'board' | 'docs' | 'chats'>('board')
 const api = useApi()
 const toast = useAppToast()
 const boardStore = useBoardStore()
+const cardPopup = useCardPopupStore()
 const projectName = ref('')
 const projectArchived = ref(false)
+
+// Card popups are rendered globally (CardPopupLayer, in layouts/default.vue) and
+// have no view of this page's projectArchived — sync it into the store so
+// CardPopup can gate editing without a prop chain through the layout.
+watch(projectArchived, archived => cardPopup.setProjectArchived(projectId, archived), { immediate: true })
 
 const showMembersPanel = ref(false)
 const showNarrativeModal = ref(false)

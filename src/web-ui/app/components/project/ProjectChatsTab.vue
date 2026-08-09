@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { ChatSessionDto, CardChatLinkDto, ChatSessionPageDto } from '~/types/chat'
+import type { ChatSessionDto, ChatSessionPageDto } from '~/types/chat'
 import { ApiRoutes } from '~/lib/routes'
 import { ApiError } from '~/lib/api-error'
 import { formatDateOnly } from '~/lib/date'
+import { getChatType } from '~/lib/chat-type'
 
 const props = defineProps<{ projectId: string }>()
 
@@ -14,8 +15,6 @@ const chatDock = useChatDockStore()
 const sessions = ref<ChatSessionDto[]>([])
 const loading = ref(true)
 const filter = ref<'all' | 'project' | 'card'>('all')
-// Set of session IDs that have at least one CardChatLink in this project.
-const cardLinkedSessionIds = ref<Set<string>>(new Set())
 
 async function fetchSessions() {
   loading.value = true
@@ -23,24 +22,6 @@ async function fetchSessions() {
     const url = ApiRoutes.Chat.sessions.list(undefined, props.projectId, undefined, undefined, 50, undefined, 'participated')
     const { data } = await api.GET<ChatSessionPageDto>(url)
     sessions.value = data?.items ?? []
-
-    // Build the set of sessions that have a CardChatLink by fetching links
-    // for every unique card referenced in openCardId (parallel, 1 req per card).
-    // Use allSettled so a single 404/5xx doesn't sink the whole batch.
-    const cardIds = [...new Set(sessions.value.map(s => s.openCardId).filter(Boolean))] as string[]
-    const linkResults = await Promise.allSettled(
-      cardIds.map(cardId => api.GET<CardChatLinkDto[]>(ApiRoutes.Chat.cardLinks.byCard(cardId)))
-    )
-    const linked = new Set<string>()
-    for (const result of linkResults) {
-      if (result.status !== 'fulfilled') continue
-      const payload = result.value.data
-      if (!payload) continue
-      for (const link of payload) {
-        linked.add(link.chatSessionId)
-      }
-    }
-    cardLinkedSessionIds.value = linked
   } catch (err) {
     toast.error(err instanceof ApiError ? err.message : 'Failed to load chats')
   } finally {
@@ -48,12 +29,15 @@ async function fetchSessions() {
   }
 }
 
+// Card vs Project is already fully determined by openCardId on the DTO — no
+// need to round-trip through CardChatLink (which also lags a manually-linked
+// session until its chat closes; see ChatSessionService.LinkCardAsync).
 const filteredSessions = computed(() => {
   switch (filter.value) {
     case 'project':
-      return sessions.value.filter((s: ChatSessionDto) => !cardLinkedSessionIds.value.has(s.id))
+      return sessions.value.filter((s: ChatSessionDto) => getChatType(s) !== 'card')
     case 'card':
-      return sessions.value.filter((s: ChatSessionDto) => cardLinkedSessionIds.value.has(s.id))
+      return sessions.value.filter((s: ChatSessionDto) => getChatType(s) === 'card')
     default:
       return sessions.value
   }
