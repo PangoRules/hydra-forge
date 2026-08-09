@@ -424,23 +424,41 @@ public class ChatSessionService(
         session.Close(summary);
         await _sessionRepo.UpdateAsync(session, ct);
 
-        // Create CardChatLink if panel session with messages — fallback text when the
-        // summary LLM call failed, per design spec ("Summary LLM call fails" row).
+        // Create or update the CardChatLink if panel session with messages — fallback
+        // text when the summary LLM call failed, per design spec ("Summary LLM call
+        // fails" row). LinkCardAsync may have already created this row eagerly (with
+        // a placeholder summary) — update it in place instead of inserting a duplicate.
         if (session.ProjectId.HasValue && session.OpenCardId.HasValue && messages.Count > 0)
         {
             var linkSummary = summaryFailed ? "Chat closed (summary unavailable)" : summary;
             if (!string.IsNullOrWhiteSpace(linkSummary))
             {
-                var link = new CardChatLink
+                var existingLink = await _sessionRepo.FindCardChatLinkAsync(
+                    session.OpenCardId.Value,
+                    session.Id,
+                    ct
+                );
+                if (existingLink != null)
                 {
-                    Id = Guid.NewGuid(),
-                    CardId = session.OpenCardId.Value,
-                    ChatSessionId = session.Id,
-                    OwnerId = actorId,
-                    Summary = linkSummary,
-                    CreatedAt = DateTime.UtcNow,
-                };
-                await _sessionRepo.AddCardChatLinkAsync(link, ct);
+                    await _sessionRepo.UpdateCardChatLinkSummaryAsync(
+                        existingLink.Id,
+                        linkSummary,
+                        ct
+                    );
+                }
+                else
+                {
+                    var link = new CardChatLink
+                    {
+                        Id = Guid.NewGuid(),
+                        CardId = session.OpenCardId.Value,
+                        ChatSessionId = session.Id,
+                        OwnerId = actorId,
+                        Summary = linkSummary,
+                        CreatedAt = DateTime.UtcNow,
+                    };
+                    await _sessionRepo.AddCardChatLinkAsync(link, ct);
+                }
             }
         }
 
@@ -698,6 +716,25 @@ public class ChatSessionService(
 
         session.SetOpenCard(cardId);
         await _sessionRepo.UpdateAsync(session, ct);
+
+        // Create the CardChatLink row now, not just on close — otherwise the card's
+        // Chat tab shows nothing for a manually-linked session until it's closed
+        // (GetByCardAsync only reads this table). CloseAsync fills in the real
+        // summary on this same row later instead of inserting a duplicate.
+        var existingLink = await _sessionRepo.FindCardChatLinkAsync(cardId, session.Id, ct);
+        if (existingLink == null)
+        {
+            var link = new CardChatLink
+            {
+                Id = Guid.NewGuid(),
+                CardId = cardId,
+                ChatSessionId = session.Id,
+                OwnerId = actorId,
+                Summary = "Chat linked — summary generated when the chat closes.",
+                CreatedAt = DateTime.UtcNow,
+            };
+            await _sessionRepo.AddCardChatLinkAsync(link, ct);
+        }
 
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
     }
