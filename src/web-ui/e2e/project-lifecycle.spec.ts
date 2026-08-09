@@ -89,25 +89,24 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   // ---- 4. Idea card: write a Concept spec ----
   await openCard(ideaTitle)
   await desktop.getByRole('tab', { name: 'Docs' }).click()
-  await desktop.getByPlaceholder('Spec title').fill('Dark mode concept')
-  await desktop.locator('.ProseMirror').click()
+  await desktop.getByPlaceholder('Concept title').first().fill('Dark mode concept')
+  await desktop.locator('.ProseMirror').first().click()
+  await page.waitForTimeout(200)
   await page.keyboard.type('Add a toggle in settings that flips a CSS class on <html>.')
+  await expect(desktop.getByRole('button', { name: 'Create', exact: true })).toBeVisible()
   await desktop.getByRole('button', { name: 'Create', exact: true }).click()
-  await expect(page.getByText('Spec saved', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Concept saved', { exact: true }).first()).toBeVisible()
 
-  // ---- 5. Flip Idea -> Task, confirm the Spec-hiding warning ----
+  // ---- 5. Flip Idea -> Task, confirm the Spec docType changes ----
   const typeSelect = desktop.getByRole('combobox').nth(0)
   await expect(typeSelect).toHaveText('Idea')
   await typeSelect.click()
   await page.getByRole('option', { name: 'Task', exact: true }).click()
-
-  await expect(page.getByRole('heading', { name: 'Change card type?' })).toBeVisible()
-  await expect(page.getByText(/This card has a Spec/)).toBeVisible()
-  await page.getByRole('button', { name: 'Change Type' }).click()
-
   await expect(typeSelect).toHaveText('Task')
+
+  // The SPEC section persists but its docType changes (Concept -> Validation Matrix).
   await desktop.getByRole('tab', { name: 'Docs' }).click()
-  await expect(desktop.getByPlaceholder('Spec title')).not.toBeVisible()
+  await expect(desktop.getByPlaceholder('Validation Matrix title').first()).toBeVisible()
   await closeCard()
 
   // ---- 6. "Write launch announcement email": checklist, attachments, dependency, column move ----
@@ -158,7 +157,8 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   // "Blocked by" so this card is the one that can't move until the target resolves.
   await desktop.getByRole('combobox', { name: 'Relationship type' }).click()
   await page.getByRole('option', { name: 'Blocked by', exact: true }).click()
-  await desktop.getByRole('button', { name: 'Link', exact: true }).click()
+  // Scope to the link-form div (bordered) to avoid matching the "Link card" trigger button.
+  await desktop.locator('.space-y-2.border').getByRole('button', { name: 'Link', exact: true }).click()
   await expect(desktop.getByText('Blocked by', { exact: true })).toBeVisible()
   await expect(desktop.getByText(new RegExp(heroTaskTitle))).toBeVisible()
 
@@ -175,13 +175,13 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   await openCard(heroTaskTitle)
   // Both the Parent chip and Children chips render as "{Type} #{cardNumber}" only
   // — no title. goalTitle is the first card created in this project, so it's #1.
-  await expect(desktop.getByText('Goal #1', { exact: true })).toBeVisible()
+  await expect(desktop.getByText('Goal #1', { exact: true }).first()).toBeVisible()
   await closeCard()
 
   await openCard(goalTitle)
   // One child exists here, so matching the type+number is enough to prove the
   // link is live.
-  await expect(desktop.getByText(/Task #\d+/)).toBeVisible()
+  await expect(desktop.getByText(/Task #\d+/).first()).toBeVisible()
   await closeCard()
 
   // ---- 8. Archive with dependents, then restore ----
@@ -214,7 +214,7 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   await openCard(issueTitle)
   const saveButton = desktop.getByRole('button', { name: 'Save', exact: true })
   await expect(saveButton).toBeDisabled()
-  await desktop.locator('.ProseMirror').click()
+  await desktop.locator('.ProseMirror').first().click()
   await page.keyboard.type('Repro: Safari 17, checkout throws 500 after applying a discount code.')
   await expect(saveButton).toBeEnabled()
   await saveButton.click()
