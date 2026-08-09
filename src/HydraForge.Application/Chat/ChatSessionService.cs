@@ -129,6 +129,23 @@ public class ChatSessionService(
         await _sessionRepo.AddAsync(session, ct);
         await PersistIdentityMessageAsync(session, ct);
 
+        // Create the CardChatLink row now so the card's Chat tab immediately shows the
+        // session — matching the behaviour of manual LinkCardAsync (lines 724-736).
+        // CloseAsync later updates the summary on this same row; no duplicate is created.
+        if (request.OpenCardId.HasValue)
+        {
+            var link = new CardChatLink
+            {
+                Id = Guid.NewGuid(),
+                CardId = request.OpenCardId.Value,
+                ChatSessionId = session.Id,
+                OwnerId = actorId,
+                Summary = "Chat linked — summary generated when the chat closes.",
+                CreatedAt = DateTime.UtcNow,
+            };
+            await _sessionRepo.AddCardChatLinkAsync(link, ct);
+        }
+
         return Result<ChatSessionDto>.Success(await MapToDtoAsync(session, ct));
     }
 
