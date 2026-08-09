@@ -135,4 +135,47 @@ describe('useChatSessionList', () => {
     const calledUrl = mockGET.mock.calls[0]?.[0] as string
     expect(calledUrl).toContain('status=Active')
   })
+
+  it('defaults to mine scope and does not send a types param when all three are selected', async () => {
+    mockGET.mockResolvedValue({
+      data: { items: [], totalCount: 0 },
+      error: undefined
+    })
+    const { useChatSessionList } = await import('~/composables/useChatSessionList')
+    const { scope, types } = useChatSessionList()
+    await flushMicrotasks()
+    expect(scope.value).toBe('mine')
+    expect(types.value.size).toBe(3)
+    const calledUrl = mockGET.mock.calls[0]?.[0] as string
+    expect(calledUrl).toContain('scope=mine')
+    expect(calledUrl).not.toContain('types=')
+  })
+
+  it('sends types param when a subset of types is selected', async () => {
+    mockGET.mockResolvedValue({
+      data: { items: [], totalCount: 0 },
+      error: undefined
+    })
+    const { useChatSessionList } = await import('~/composables/useChatSessionList')
+    const { types, refresh } = useChatSessionList()
+    await flushMicrotasks()
+    types.value = new Set(['project', 'card'])
+    await refresh()
+    const calledUrl = mockGET.mock.calls.at(-1)?.[0] as string
+    expect(calledUrl).toContain('types=project,card')
+  })
+
+  it('refetches when scope changes to participated', async () => {
+    mockGET.mockResolvedValue({
+      data: { items: [], totalCount: 0 },
+      error: undefined
+    })
+    const { useChatSessionList } = await import('~/composables/useChatSessionList')
+    const { scope, refresh } = useChatSessionList()
+    await flushMicrotasks()
+    scope.value = 'participated'
+    await refresh()
+    const calledUrl = mockGET.mock.calls.at(-1)?.[0] as string
+    expect(calledUrl).toContain('scope=participated')
+  })
 })
