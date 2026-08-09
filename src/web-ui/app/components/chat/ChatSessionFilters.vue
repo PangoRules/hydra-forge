@@ -28,15 +28,17 @@ const typeItems = (Object.keys(CHAT_TYPE_BADGE) as ChatType[]).map(value => ({
 }))
 
 // Local state synced with prop — USelectMenu with multiple uses value array
-const localSelectedTypes = ref<ChatType[]>([...props.types])
+const localSelectedTypes = ref<{ label: string, value: ChatType }[]>(
+  [...props.types].map(v => ({ label: CHAT_TYPE_BADGE[v].label, value: v }))
+)
 
 watch(localSelectedTypes, (vals) => {
   if (vals.length === 0) return
-  emit('update:types', new Set(vals))
+  emit('update:types', new Set(vals.map(v => v.value)))
 })
 
 watch(() => props.types, (newTypes) => {
-  localSelectedTypes.value = [...newTypes]
+  localSelectedTypes.value = [...newTypes].map(v => ({ label: CHAT_TYPE_BADGE[v].label, value: v }))
 }, { deep: true })
 
 const typeLabel = computed(() => {
