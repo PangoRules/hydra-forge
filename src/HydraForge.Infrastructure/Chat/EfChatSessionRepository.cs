@@ -91,20 +91,12 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         return await query.CountAsync(ct);
     }
 
-    // scope == Mine: strictly the caller's own sessions, regardless of admin status —
-    // a personal history view is personal even for an admin. scope == Participated
-    // preserves Plan 20's existing behavior unchanged, admin bypass included.
     private IQueryable<ChatSession> ApplyScope(
         IQueryable<ChatSession> q,
         Guid actorId,
         bool isAdmin,
         ChatSessionScope scope
-    ) =>
-        scope switch
-        {
-            ChatSessionScope.Participated => isAdmin ? q : WhereParticipatedIn(q, actorId),
-            _ => q.Where(s => s.OwnerId == actorId),
-        };
+    ) => ChatScopeQueries.ApplyScope(context, q, actorId, isAdmin, scope);
 
     // Mirrors web-ui's lib/chat-type.ts getChatType() exactly: card implies project,
     // project means projectId set with no card, normal means no projectId at all.
@@ -126,18 +118,6 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
             || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
         );
     }
-
-    // Participated-in = owner OR project member (for project-scoped sessions)
-    private IQueryable<ChatSession> WhereParticipatedIn(IQueryable<ChatSession> q, Guid actorId) =>
-        q.Where(s =>
-            s.OwnerId == actorId
-            || (
-                s.ProjectId != null
-                && context.ProjectMembers.Any(m =>
-                    m.ProjectId == s.ProjectId && m.UserId == actorId
-                )
-            )
-        );
 
     private static IQueryable<ChatSession> ApplyStatusFilter(
         IQueryable<ChatSession> query,
@@ -196,5 +176,31 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     {
         context.CardChatLinks.Add(link);
         await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<CardChatLink?> FindCardChatLinkAsync(
+        Guid cardId,
+        Guid chatSessionId,
+        CancellationToken ct = default
+    )
+    {
+        return await context.CardChatLinks.FirstOrDefaultAsync(
+            l => l.CardId == cardId && l.ChatSessionId == chatSessionId,
+            ct
+        );
+    }
+
+    public async Task UpdateCardChatLinkSummaryAsync(
+        Guid linkId,
+        string summary,
+        CancellationToken ct = default
+    )
+    {
+        var link = await context.CardChatLinks.FirstOrDefaultAsync(l => l.Id == linkId, ct);
+        if (link != null)
+        {
+            link.Summary = summary;
+            await context.SaveChangesAsync(ct);
+        }
     }
 }

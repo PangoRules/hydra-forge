@@ -53,4 +53,20 @@ public interface IChatSessionRepository
     Task AddAsync(ChatSession session, CancellationToken ct = default);
     Task UpdateAsync(ChatSession session, CancellationToken ct = default);
     Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default);
+
+    // Looks up an existing link for a (card, session) pair so LinkCardAsync and
+    // CloseAsync can share one row per session instead of each inserting its own —
+    // LinkCardAsync creates it eagerly with a placeholder summary so the card's
+    // chat-link list shows the session immediately; CloseAsync then fills in the
+    // real summary on the same row rather than inserting a duplicate.
+    Task<CardChatLink?> FindCardChatLinkAsync(
+        Guid cardId,
+        Guid chatSessionId,
+        CancellationToken ct = default
+    );
+    Task UpdateCardChatLinkSummaryAsync(
+        Guid linkId,
+        string summary,
+        CancellationToken ct = default
+    );
 }
