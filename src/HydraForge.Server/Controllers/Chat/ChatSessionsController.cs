@@ -34,10 +34,13 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
         [FromQuery] DateTime? before = null,
         [FromQuery] Guid? beforeId = null,
         [FromQuery] int limit = 20,
-        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.NonArchived
+        [FromQuery] ChatSessionStatusFilter status = ChatSessionStatusFilter.NonArchived,
+        [FromQuery] ChatSessionScope scope = ChatSessionScope.Mine,
+        [FromQuery] string? types = null
     )
     {
         var userId = User.GetRequiredUserId();
+        var typeSet = ParseTypes(types);
         var result = await sessionService.ListAsync(
             userId,
             folderId,
@@ -45,13 +48,35 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
             before,
             beforeId,
             limit,
-            statusFilter: status
+            statusFilter: status,
+            scope: scope,
+            types: typeSet
         );
 
         if (result.IsFailure)
             return this.ToProblemResult(result.Error);
 
         return Ok(result.Value);
+    }
+
+    private static IReadOnlySet<ChatSessionKind>? ParseTypes(string? types)
+    {
+        if (string.IsNullOrWhiteSpace(types))
+            return null;
+
+        var set = new HashSet<ChatSessionKind>();
+        foreach (
+            var part in types.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
+        {
+            if (Enum.TryParse<ChatSessionKind>(part, ignoreCase: true, out var kind))
+                set.Add(kind);
+        }
+
+        return set.Count > 0 ? set : null;
     }
 
     [HttpGet("{sessionId:guid}")]

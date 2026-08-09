@@ -239,6 +239,81 @@ public class ChatSessionsControllerLinkCardTests
     }
 }
 
+public class ChatSessionsControllerListTests
+{
+    [Fact]
+    public async Task List_NoScopeQueryParam_DefaultsToMineWhenCallingTheService()
+    {
+        var factory = new ChatSessionsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var callerId = Guid.NewGuid();
+        var token = ChatSessionsTestWebApplicationFactory.IssueToken(callerId, "caller");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/chat/sessions");
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(ChatSessionScope.Mine, factory.SessionRepository.LastScope);
+        Assert.Null(factory.SessionRepository.LastTypes);
+    }
+
+    [Fact]
+    public async Task List_ScopeParticipatedQueryParam_ForwardsToTheService()
+    {
+        var factory = new ChatSessionsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var callerId = Guid.NewGuid();
+        var token = ChatSessionsTestWebApplicationFactory.IssueToken(callerId, "caller");
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/api/chat/sessions?scope=participated"
+        );
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(ChatSessionScope.Participated, factory.SessionRepository.LastScope);
+    }
+
+    [Fact]
+    public async Task List_TypesQueryParam_ParsesCommaSeparatedValues()
+    {
+        var factory = new ChatSessionsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+        var callerId = Guid.NewGuid();
+        var token = ChatSessionsTestWebApplicationFactory.IssueToken(callerId, "caller");
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/api/chat/sessions?types=project,card"
+        );
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(factory.SessionRepository.LastTypes);
+        Assert.Equal(2, factory.SessionRepository.LastTypes!.Count);
+        Assert.Contains(ChatSessionKind.Project, factory.SessionRepository.LastTypes);
+        Assert.Contains(ChatSessionKind.Card, factory.SessionRepository.LastTypes);
+    }
+
+    [Fact]
+    public async Task List_NoAuth_Returns401()
+    {
+        var factory = new ChatSessionsTestWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/chat/sessions");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+}
+
 internal class ChatSessionsTestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly List<Project> _projects = [];
@@ -246,6 +321,12 @@ internal class ChatSessionsTestWebApplicationFactory : WebApplicationFactory<Pro
     private readonly List<ChatSession> _sessions = [];
     private readonly List<Card> _cards = [];
     private readonly List<User> _users = [];
+    public TestChatSessionRepository SessionRepository { get; }
+
+    public ChatSessionsTestWebApplicationFactory()
+    {
+        SessionRepository = new TestChatSessionRepository(_sessions);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -285,9 +366,7 @@ internal class ChatSessionsTestWebApplicationFactory : WebApplicationFactory<Pro
                 services.Remove(descriptor);
             }
 
-            services.AddScoped<IChatSessionRepository>(_ => new TestChatSessionRepository(
-                _sessions
-            ));
+            services.AddScoped<IChatSessionRepository>(_ => SessionRepository);
             services.AddScoped<IChatMessageRepository>(_ => new TestChatMessageRepository());
             services.AddScoped<IChatSessionDocumentRepository>(
                 _ => new TestChatSessionDocumentRepository()
@@ -368,6 +447,9 @@ internal class ChatSessionsTestWebApplicationFactory : WebApplicationFactory<Pro
 
 internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSessionRepository
 {
+    public ChatSessionScope? LastScope { get; private set; }
+    public IReadOnlySet<ChatSessionKind>? LastTypes { get; private set; }
+
     public Task<ChatSession?> GetByIdAsync(Guid sessionId, CancellationToken ct = default) =>
         Task.FromResult(sessions.FirstOrDefault(s => s.Id == sessionId));
 
@@ -390,7 +472,12 @@ internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSess
         ChatSessionScope scope = ChatSessionScope.Mine,
         IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
-    ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+    )
+    {
+        LastScope = scope;
+        LastTypes = types;
+        return Task.FromResult<IReadOnlyList<ChatSession>>([]);
+    }
 
     public Task<int> CountAsync(
         Guid actorId,
