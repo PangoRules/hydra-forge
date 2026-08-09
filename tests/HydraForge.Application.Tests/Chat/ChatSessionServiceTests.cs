@@ -867,7 +867,7 @@ public class ChatSessionServiceTests
     }
 
     [Fact]
-    public async Task CloseAsync_EmptySession_NoSummaryNoCardChatLink()
+    public async Task CloseAsync_EmptyNonPanelSession_NoSummaryNoLink()
     {
         var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
@@ -887,6 +887,39 @@ public class ChatSessionServiceTests
         Assert.Null(result.Value.Summary);
         Assert.Empty(sessionRepo.CapturedLinks);
         Assert.Empty(messageRepo.Messages);
+    }
+
+    [Fact]
+    public async Task CloseAsync_EmptyPanelSession_UpdatesPlaceholderLinkWithNoMessagesSummary()
+    {
+        // Panel session (ProjectId+OpenCardId) with no user messages — CloseAsync should
+        // create a CardChatLink with "Chat closed (no messages)" because there are no
+        // messages to summarise. CreateAsync is NOT called because it adds an identity
+        // message that would make messages.Count > 0 and skip the no-messages branch.
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Title = "Empty Panel Session",
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        // No messages added — messageRepo is empty
+
+        var result = await service.CloseAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ChatSessionStatus.Closed, result.Value.Status);
+        Assert.Null(result.Value.Summary);
+        Assert.Empty(messageRepo.Messages);
+        Assert.Single(sessionRepo.CapturedLinks);
+        Assert.Equal("Chat closed (no messages)", sessionRepo.CapturedLinks[0].Summary);
     }
 
     [Fact]
