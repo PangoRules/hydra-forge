@@ -169,6 +169,18 @@ public class ChatFolderServiceTests
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) => Task.FromResult<CardChatLink?>(null);
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
     }
 
     private sealed class FakeUserRepo : IUserRepository

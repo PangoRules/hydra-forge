@@ -516,6 +516,18 @@ internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSess
 
     public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
         Task.CompletedTask;
+
+    public Task<CardChatLink?> FindCardChatLinkAsync(
+        Guid cardId,
+        Guid chatSessionId,
+        CancellationToken ct = default
+    ) => Task.FromResult<CardChatLink?>(null);
+
+    public Task UpdateCardChatLinkSummaryAsync(
+        Guid linkId,
+        string summary,
+        CancellationToken ct = default
+    ) => Task.CompletedTask;
 }
 
 internal class TestChatMessageRepository : IChatMessageRepository
@@ -536,6 +548,7 @@ internal class TestChatMessageRepository : IChatMessageRepository
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
         ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);

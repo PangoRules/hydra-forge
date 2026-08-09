@@ -83,9 +83,69 @@ public class EfChatMessageRepositoryTests
             "widget",
             null,
             20,
-            ChatSessionScope.Participated
+            scope: ChatSessionScope.Participated
         );
         Assert.Single(participatedResults);
         Assert.Equal(message.Id, participatedResults[0].Id);
+    }
+
+    [Fact]
+    public async Task SearchByContentAsync_AdminScopeParticipated_IncludesNonMemberProjectMatch()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfChatMessageRepository(context);
+
+        var ownerId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        // adminId is NOT a project member — only the isAdmin bypass should surface this.
+        var session = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Title = "Project chat",
+            Status = ChatSessionStatus.Active,
+        };
+        var message = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            Role = MessageRole.User,
+            Content = "Let's discuss the gizmo rollout.",
+        };
+
+        context.ChatSessions.Add(session);
+        context.ChatMessages.Add(message);
+        await context.SaveChangesAsync();
+
+        var nonAdminResults = await repo.SearchByContentAsync(
+            adminId,
+            "gizmo",
+            null,
+            20,
+            isAdmin: false,
+            scope: ChatSessionScope.Participated
+        );
+        Assert.Empty(nonAdminResults);
+
+        var adminResults = await repo.SearchByContentAsync(
+            adminId,
+            "gizmo",
+            null,
+            20,
+            isAdmin: true,
+            scope: ChatSessionScope.Participated
+        );
+        Assert.Single(adminResults);
+        Assert.Equal(message.Id, adminResults[0].Id);
     }
 }

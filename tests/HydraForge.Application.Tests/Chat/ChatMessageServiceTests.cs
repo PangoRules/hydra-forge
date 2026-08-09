@@ -78,6 +78,18 @@ public class ChatMessageServiceTests
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) => Task.FromResult<CardChatLink?>(null);
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
     }
 
     private sealed class FakeMessageRepo : IChatMessageRepository
@@ -124,6 +136,7 @@ public class ChatMessageServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
             ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);

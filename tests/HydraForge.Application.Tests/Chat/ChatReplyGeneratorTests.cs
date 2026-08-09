@@ -858,6 +858,110 @@ public class ChatReplyGeneratorTests
     }
 
     [Fact]
+    public async Task GenerateAsync_PriceConfigured_RecordsComputedCostNotHardcodedZero()
+    {
+        // Regression: TokenUsageRecordInput.Cost was hardcoded to 0 even though this
+        // method already computes the real cost (replyCost) for ChatMessage.Cost right
+        // above it. EfUsageRecorder.ToRecord only overrides Cost when it can look up a
+        // DB-configured price for ProviderModelConfigId — that lookup is not exercised
+        // by this in-memory fake, so whatever RecordTokenAsync receives here is exactly
+        // what a real "no DB price row" scenario would persist.
+        var session = new ChatSession
+        {
+            Id = SessionId,
+            OwnerId = UserId,
+            Status = ChatSessionStatus.Active,
+        };
+        var userMessage = new ChatMessage
+        {
+            Id = MessageId,
+            SessionId = SessionId,
+            Role = MessageRole.User,
+            Content = "hello",
+        };
+        _sessionRepo.GetByIdAsync(SessionId, Arg.Any<CancellationToken>()).Returns(session);
+        _messageRepo.GetByIdAsync(MessageId, Arg.Any<CancellationToken>()).Returns(userMessage);
+        _ragRetriever
+            .RetrieveAsync(
+                SessionId,
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<CacheBlock>)new List<CacheBlock>());
+        _messageRepo
+            .GetBySessionAsync(
+                SessionId,
+                Arg.Any<DateTime?>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns((IReadOnlyList<ChatMessage>)new List<ChatMessage>());
+
+        var provider = new LlmProvider
+        {
+            Id = Guid.NewGuid(),
+            Name = "openai",
+            AdapterType = AdapterType.OpenAiCompatible,
+        };
+        const decimal pricePerToken = 0.00002m;
+        var routeDecision = new RouteDecision(
+            new ProviderModelConfigDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "gpt-4",
+                "GPT-4",
+                "standard",
+                pricePerToken,
+                null,
+                true
+            ),
+            new ProviderDto(
+                Guid.NewGuid(),
+                "openai",
+                "https://api.openai.com",
+                "openai-compatible",
+                "cloud",
+                "standard",
+                null,
+                true,
+                default,
+                default
+            ),
+            [],
+            provider
+        );
+        _modelRouter
+            .ResolveAsync(
+                Arg.Any<AiFeature>(),
+                UserId,
+                Arg.Any<Guid?>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Returns(Result<RouteDecision>.Success(routeDecision));
+
+        var mockClient = Substitute.For<ILlmClient>();
+        mockClient.AdapterType.Returns(AdapterType.OpenAiCompatible);
+        mockClient
+            .StreamChatAsync(Arg.Any<ChatRequest>(), Arg.Any<CancellationToken>())
+            .Returns(MakeUsageEnumerable(inputTokens: 100, outputTokens: 50, cachedTokens: 0));
+        _llmClientFactory.For(Arg.Any<LlmProvider>()).Returns(mockClient);
+
+        await _generator.GenerateAsync(SessionId, MessageId, UserId, null, null);
+
+        var expectedCost = (100 + 50 - 0) * pricePerToken;
+        await _usageRecorder
+            .Received(1)
+            .RecordTokenAsync(
+                Arg.Is<TokenUsageRecordInput>(i => i.Cost == expectedCost),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     public async Task GenerateAsync_ReasoningEffort_PassedThroughToChatRequest()
     {
         var session = new ChatSession
@@ -971,6 +1075,21 @@ public class ChatReplyGeneratorTests
     private static async IAsyncEnumerable<ChatChunk> MakeImmediateEnumerable()
     {
         yield return new ChatChunk("Hello", null, null);
+        await Task.CompletedTask;
+    }
+
+    private static async IAsyncEnumerable<ChatChunk> MakeUsageEnumerable(
+        int inputTokens,
+        int outputTokens,
+        int cachedTokens
+    )
+    {
+        yield return new ChatChunk("Hello", null, null);
+        yield return new ChatChunk(
+            null,
+            ChatChunkFinishReason.Stop,
+            new UsageSnapshot(inputTokens, outputTokens, cachedTokens)
+        );
         await Task.CompletedTask;
     }
 

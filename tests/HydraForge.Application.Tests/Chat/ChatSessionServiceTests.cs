@@ -229,6 +229,29 @@ public class ChatSessionServiceTests
             CapturedLinks.Add(link);
             return Task.CompletedTask;
         }
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                CapturedLinks.FirstOrDefault(l =>
+                    l.CardId == cardId && l.ChatSessionId == chatSessionId
+                )
+            );
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        )
+        {
+            var link = CapturedLinks.FirstOrDefault(l => l.Id == linkId);
+            if (link != null)
+                link.Summary = summary;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeMessageRepo : IChatMessageRepository
@@ -260,6 +283,7 @@ public class ChatSessionServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
             ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
@@ -2029,6 +2053,74 @@ public class ChatSessionServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(cardId, result.Value.OpenCardId);
         Assert.Equal(0, sessionRepo.UpdateCallCount);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_CreatesCardChatLinkImmediately_SoCardChatTabIsNotEmptyBeforeClose()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(sessionRepo.CapturedLinks);
+        var link = sessionRepo.CapturedLinks[0];
+        Assert.Equal(cardId, link.CardId);
+        Assert.Equal(session.Id, link.ChatSessionId);
+        Assert.Equal(ownerId, link.OwnerId);
+    }
+
+    [Fact]
+    public async Task CloseAsync_UpdatesLinkCreatedByLinkCardAsync_InsteadOfInsertingDuplicate()
+    {
+        var (service, sessionRepo, messageRepo, cardRepo, _, _, _, _, summaryGenerator, _, _, _) =
+            CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        await service.LinkCardAsync(session.Id, cardId, ownerId);
+        Assert.Single(sessionRepo.CapturedLinks);
+
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
+        summaryGenerator.GenerateSummaryImpl = (_, _) =>
+            Task.FromResult(Result<string>.Success("Real summary"));
+
+        var result = await service.CloseAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        // Still exactly one link for this card/session — updated, not duplicated.
+        Assert.Single(sessionRepo.CapturedLinks);
+        Assert.Equal("Real summary", sessionRepo.CapturedLinks[0].Summary);
     }
 
     [Fact]
