@@ -63,7 +63,15 @@ public class ChatSearchServiceTests
 
             var results = Sessions
                 .Where(s =>
-                    (isAdmin || s.OwnerId == ownerId)
+                    (
+                        scope == ChatSessionScope.Participated
+                            ? s.OwnerId == ownerId
+                                || (
+                                    s.ProjectId.HasValue
+                                    && Memberships.Contains((s.ProjectId.Value, ownerId))
+                                )
+                            : s.OwnerId == ownerId
+                    )
                     && s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
                     && s.ArchivedAt == null
                     && (!projectId.HasValue || s.ProjectId == projectId)
@@ -318,5 +326,59 @@ public class ChatSearchServiceTests
         var results = await service.SearchAsync(userId, "nonexistent");
 
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DefaultScope_ExcludesParticipatedOnlyTitleMatch()
+    {
+        var (service, sessionRepo, _) = CreateSut();
+        var ownerId = NewId();
+        var memberId = NewId();
+        var projectId = NewId();
+
+        sessionRepo.Sessions.Add(
+            new ChatSession
+            {
+                Id = NewId(),
+                OwnerId = ownerId,
+                ProjectId = projectId,
+                Title = "Widget rollout plan",
+                Status = ChatSessionStatus.Active,
+            }
+        );
+        sessionRepo.Memberships.Add((projectId, memberId));
+
+        var results = await service.SearchAsync(memberId, "Widget");
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ScopeParticipated_IncludesProjectMemberTitleMatch()
+    {
+        var (service, sessionRepo, _) = CreateSut();
+        var ownerId = NewId();
+        var memberId = NewId();
+        var projectId = NewId();
+
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Title = "Widget rollout plan",
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        sessionRepo.Memberships.Add((projectId, memberId));
+
+        var results = await service.SearchAsync(
+            memberId,
+            "Widget",
+            scope: ChatSessionScope.Participated
+        );
+
+        Assert.Single(results);
+        Assert.Equal(session.Id, results[0].SessionId);
     }
 }

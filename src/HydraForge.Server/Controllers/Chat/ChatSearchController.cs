@@ -16,11 +16,12 @@ public class ChatSearchController(IChatSearchService searchService) : Controller
     [ProducesResponseType(typeof(IReadOnlyList<ChatSearchResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
         [FromQuery] string q,
-        [FromQuery] Guid? projectId = null
+        [FromQuery] Guid? projectId = null,
+        [FromQuery] ChatSessionScope scope = ChatSessionScope.Mine
     )
     {
         var userId = User.GetRequiredUserId();
-        var results = await searchService.SearchAsync(userId, q, projectId);
+        var results = await searchService.SearchAsync(userId, q, projectId, scope);
         return Ok(results);
     }
 }

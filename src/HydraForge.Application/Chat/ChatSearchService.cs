@@ -18,6 +18,7 @@ public class ChatSearchService : IChatSearchService
         Guid userId,
         string query,
         Guid? projectId = null,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     )
     {
@@ -27,7 +28,7 @@ public class ChatSearchService : IChatSearchService
             projectId,
             MaxResults,
             isAdmin: false,
-            scope: ChatSessionScope.Mine,
+            scope,
             ct
         );
         var contentResults = await _messageRepo.SearchByContentAsync(
@@ -35,7 +36,7 @@ public class ChatSearchService : IChatSearchService
             query,
             projectId,
             MaxResults,
-            scope: ChatSessionScope.Mine,
+            scope,
             ct
         );
 
