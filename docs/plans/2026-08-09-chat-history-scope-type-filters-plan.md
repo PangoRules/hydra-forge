@@ -204,14 +204,14 @@ private static IQueryable<ChatSession> ApplyTypes(
 }
 ```
 
-- [ ] **Step 1: Make the changes above to `ChatDtos.cs`, `IChatSessionRepository.cs`, `EfChatSessionRepository.cs`.**
+- [x] **Step 1: Make the changes above to `ChatDtos.cs`, `IChatSessionRepository.cs`, `EfChatSessionRepository.cs`.**
 
-- [ ] **Step 2: Confirm the solution does not yet build** (expected — every fake `IChatSessionRepository` in the test suite is now missing the two new optional params... actually they aren't missing anything since the new params have defaults, so add-only signature changes to an *interface* don't break implementers with fewer optional params in C#. Verify this assumption directly:)
+- [x] **Step 2: Confirm the solution does not yet build** (expected — every fake `IChatSessionRepository` in the test suite is now missing the two new optional params... actually they aren't missing anything since the new params have defaults, so add-only signature changes to an *interface* don't break implementers with fewer optional params in C#. Verify this assumption directly:)
 
 Run: `dotnet build HydraForge.slnx -nologo -v q`
 Expected: **Build fails** — C# requires an explicit interface implementation to match the interface member's signature exactly (including optional parameters use the *implementation's* defaults, but the parameter list itself — types, count, order — must match). Every existing fake with a 6-parameter `ListAsync`/`CountAsync` (missing `scope`/`types`) and 5-parameter `SearchByTitleAsync` (missing `scope`) will fail to satisfy the interface. This is expected and fixed in Task 2.
 
-- [ ] **Step 3: Add EF-level tests to `EfChatSessionRepositoryTests.cs`.** These follow the exact existing pattern in that file (gated on `HYDRAFORGE_TEST_CONNECTION_STRING`, no-op/return early if unset — see `ListAsync_WhereParticipatedIn_IncludesProjectMemberSessions` for the pattern to copy). Add after that method, before the closing `}` of the class:
+- [x] **Step 3: Add EF-level tests to `EfChatSessionRepositoryTests.cs`.** These follow the exact existing pattern in that file (gated on `HYDRAFORGE_TEST_CONNECTION_STRING`, no-op/return early if unset — see `ListAsync_WhereParticipatedIn_IncludesProjectMemberSessions` for the pattern to copy). Add after that method, before the closing `}` of the class:
 
 ```csharp
 [Fact]
@@ -372,12 +372,12 @@ public async Task ListAsync_TypesFilter_ReturnsOnlyMatchingKinds()
 }
 ```
 
-- [ ] **Step 4: Run the new tests** (they no-op without a real Postgres connection string — that's expected and matches every other test in this file):
+- [x] **Step 4: Run the new tests** (they no-op without a real Postgres connection string — that's expected and matches every other test in this file):
 
 Run: `dotnet test tests/HydraForge.Infrastructure.Tests/HydraForge.Infrastructure.Tests.csproj --filter "FullyQualifiedName~EfChatSessionRepositoryTests"`
 Expected: PASS (tests either run against real Postgres if `HYDRAFORGE_TEST_CONNECTION_STRING` is set, or short-circuit and pass trivially if not — do not skip this step assuming it's a no-op, confirm it actually reports PASS)
 
-- [ ] **Step 5: Do not commit yet** — the solution doesn't build until Task 2 fixes every fake. Proceed directly to Task 2 in the same working session (these two tasks land in one commit).
+- [x] **Step 5: Do not commit yet** — the solution doesn't build until Task 2 fixes every fake. Proceed directly to Task 2 in the same working session (these two tasks land in one commit).
 
 ---
 
@@ -521,19 +521,19 @@ public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
 
 **2d. `ChatSessionsControllerTests.cs`** — `TestChatSessionRepository`'s `ListAsync`/`CountAsync`/`SearchByTitleAsync` are also pure stubs (`Task.FromResult<IReadOnlyList<ChatSession>>([])` / `Task.FromResult(0)`). Apply the same three signatures verbatim as 2b (this class is `internal`, not `private sealed`, but the method bodies are identical stubs — only the signatures change).
 
-- [ ] **Step 1: Apply 2a–2d exactly as shown.**
+- [x] **Step 1: Apply 2a–2d exactly as shown.**
 
-- [ ] **Step 2: Build the whole solution.**
+- [x] **Step 2: Build the whole solution.**
 
 Run: `dotnet build HydraForge.slnx -nologo -v q`
 Expected: `Build succeeded. 0 Warning(s) 0 Error(s)`
 
-- [ ] **Step 3: Run the full test suite (Tasks 1+2 combined change nothing behaviorally for these four files — this just confirms nothing broke).**
+- [x] **Step 3: Run the full test suite (Tasks 1+2 combined change nothing behaviorally for these four files — this just confirms nothing broke).**
 
 Run: `dotnet test HydraForge.slnx -nologo -v q`
 Expected: All test projects report `Passed!` — same counts as before this plan started (verify none of the counts dropped, which would mean a test silently stopped compiling/running).
 
-- [ ] **Step 4: Format and commit.**
+- [x] **Step 4: Format and commit.**
 
 ```bash
 dotnet csharpier format .
@@ -728,7 +728,7 @@ public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
 
 **3d. Add new tests to `ChatSessionServiceTests.cs`**, in the `// ── Participation-aware ListAsync tests ──` region, after the existing `ListAsync_AdminSeesAll` test:
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
 
 ```csharp
 [Fact]
@@ -861,19 +861,19 @@ public async Task ListAsync_TypesFilter_ReturnsOnlyRequestedKinds()
 }
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail before 3a/3b are applied** (if you're implementing 3a–3d in one pass rather than strict TDD ping-pong, instead just confirm they fail against the *old* `ChatSessionService.ListAsync` signature by temporarily checking out `HEAD` for `ChatSessionService.cs`/`IChatSessionService.cs` — or, simpler: apply 3a/3b first, then write+run these tests, since 3c's fake update is a prerequisite for the tests to even compile).
+- [x] **Step 2: Run the new tests to verify they fail before 3a/3b are applied** (if you're implementing 3a–3d in one pass rather than strict TDD ping-pong, instead just confirm they fail against the *old* `ChatSessionService.ListAsync` signature by temporarily checking out `HEAD` for `ChatSessionService.cs`/`IChatSessionService.cs` — or, simpler: apply 3a/3b first, then write+run these tests, since 3c's fake update is a prerequisite for the tests to even compile).
 
 Practical order: apply 3a, 3b, 3c first (all three are needed just to compile), *then* add the 3d tests, run once, confirm PASS.
 
 Run: `dotnet test tests/HydraForge.Application.Tests/HydraForge.Application.Tests.csproj --filter "FullyQualifiedName~ChatSessionServiceTests"`
 Expected: All tests PASS, including the 4 new ones.
 
-- [ ] **Step 3: Run the full backend test suite.**
+- [x] **Step 3: Run the full backend test suite.**
 
 Run: `dotnet test HydraForge.slnx -nologo -v q`
 Expected: All projects `Passed!`.
 
-- [ ] **Step 4: Format and commit.**
+- [x] **Step 4: Format and commit.**
 
 ```bash
 dotnet csharpier format .
@@ -981,7 +981,7 @@ public Task<IReadOnlyList<ChatSession>> ListAsync(
 
 (`CountAsync`/`SearchByTitleAsync` keep the plain stub bodies from Task 2d — only `ListAsync` needs the spy, since that's the only method this task's tests exercise.)
 
-- [ ] **Step 1: Write the failing tests** — add to `ChatSessionsControllerTests.cs`, in a new test class alongside the existing `ChatSessionsControllerLinkCardTests` (same file, same `ChatSessionsTestWebApplicationFactory` infra already in that file). This needs a way to reach into the factory's `TestChatSessionRepository` instance after the request completes — add a public accessor to `ChatSessionsTestWebApplicationFactory` alongside its existing `AddProject`/`AddChatSession`/etc. methods:
+- [x] **Step 1: Write the failing tests** — add to `ChatSessionsControllerTests.cs`, in a new test class alongside the existing `ChatSessionsControllerLinkCardTests` (same file, same `ChatSessionsTestWebApplicationFactory` infra already in that file). This needs a way to reach into the factory's `TestChatSessionRepository` instance after the request completes — add a public accessor to `ChatSessionsTestWebApplicationFactory` alongside its existing `AddProject`/`AddChatSession`/etc. methods:
 
 ```csharp
 public TestChatSessionRepository SessionRepository { get; } = new([]);
@@ -1060,22 +1060,22 @@ public class ChatSessionsControllerListTests
 }
 ```
 
-- [ ] **Step 2: Run to verify they fail** (before 4a/4b are applied, `factory.SessionRepository` and `LastScope`/`LastTypes` don't exist yet):
+- [x] **Step 2: Run to verify they fail** (before 4a/4b are applied, `factory.SessionRepository` and `LastScope`/`LastTypes` don't exist yet):
 
 Run: `dotnet build HydraForge.slnx -nologo -v q`
 Expected: build FAILS — the new tests reference members that don't exist yet.
 
-- [ ] **Step 3: Apply 4a and 4b, then run the new tests.**
+- [x] **Step 3: Apply 4a and 4b, then run the new tests.**
 
 Run: `dotnet test tests/HydraForge.Server.Tests/HydraForge.Server.Tests.csproj --filter "FullyQualifiedName~ChatSessionsControllerListTests"`
 Expected: PASS — all 4 tests, including confirming `LastScope == ChatSessionScope.Mine` with no query param at all (proving the default is wired correctly, not just accepted).
 
-- [ ] **Step 4: Run the full test suite.**
+- [x] **Step 4: Run the full test suite.**
 
 Run: `dotnet test HydraForge.slnx -nologo -v q`
 Expected: All projects `Passed!`.
 
-- [ ] **Step 5: Format and commit.**
+- [x] **Step 5: Format and commit.**
 
 ```bash
 dotnet csharpier format .
@@ -1168,13 +1168,13 @@ public Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
 
 (parameter name `ownerId` vs `actorId` doesn't matter for interface satisfaction — keep whatever each file already uses to minimize the diff.)
 
-- [ ] **Step 1: Check whether `tests/HydraForge.Infrastructure.Tests/Chat/EfChatMessageRepositoryTests.cs` already exists.**
+- [x] **Step 1: Check whether `tests/HydraForge.Infrastructure.Tests/Chat/EfChatMessageRepositoryTests.cs` already exists.**
 
 Run: `find tests/HydraForge.Infrastructure.Tests/Chat -iname "EfChatMessageRepositoryTests.cs"`
 
 If it exists, read it fully and follow its existing test/gating pattern for the new test below. If it doesn't exist, create it following the exact same shape as `EfChatSessionRepositoryTests.cs` (`CreateOptions` helper, `HYDRAFORGE_TEST_CONNECTION_STRING` gate, `Implements_I...Repository` smoke test).
 
-- [ ] **Step 2: Add (or create-and-add) this test:**
+- [x] **Step 2: Add (or create-and-add) this test:**
 
 ```csharp
 [Fact]
@@ -1236,17 +1236,17 @@ public async Task SearchByContentAsync_ScopeParticipated_IncludesProjectMemberSe
 }
 ```
 
-- [ ] **Step 3: Run it.**
+- [x] **Step 3: Run it.**
 
 Run: `dotnet test tests/HydraForge.Infrastructure.Tests/HydraForge.Infrastructure.Tests.csproj --filter "FullyQualifiedName~SearchByContentAsync"`
 Expected: PASS (trivially, if no real Postgres connection string is set — same caveat as Task 1's EF tests)
 
-- [ ] **Step 4: Build and run the full suite.**
+- [x] **Step 4: Build and run the full suite.**
 
 Run: `dotnet build HydraForge.slnx -nologo -v q && dotnet test HydraForge.slnx -nologo -v q`
 Expected: Build succeeds, all projects `Passed!`.
 
-- [ ] **Step 5: Format and commit.**
+- [x] **Step 5: Format and commit.**
 
 ```bash
 dotnet csharpier format .
@@ -1331,7 +1331,7 @@ public async Task<IActionResult> Search(
 }
 ```
 
-- [ ] **Step 1: Write the failing tests.** Add to `ChatSearchServiceTests.cs`, after `SearchAsync_NoResults_ReturnsEmptyList`. These require `FakeSessionRepo`/`FakeMessageRepo` in this file to become scope-aware first (Step 2 below) — write both together since the test won't compile otherwise:
+- [x] **Step 1: Write the failing tests.** Add to `ChatSearchServiceTests.cs`, after `SearchAsync_NoResults_ReturnsEmptyList`. These require `FakeSessionRepo`/`FakeMessageRepo` in this file to become scope-aware first (Step 2 below) — write both together since the test won't compile otherwise:
 
 ```csharp
 [Fact]
@@ -1383,7 +1383,7 @@ public async Task SearchAsync_ScopeParticipated_IncludesProjectMemberTitleMatch(
 }
 ```
 
-- [ ] **Step 2: Make `FakeSessionRepo`/`FakeMessageRepo` in `ChatSearchServiceTests.cs` scope-aware.** Add a `Memberships` list to `FakeSessionRepo` and update `SearchByTitleAsync`'s signature/body:
+- [x] **Step 2: Make `FakeSessionRepo`/`FakeMessageRepo` in `ChatSearchServiceTests.cs` scope-aware.** Add a `Memberships` list to `FakeSessionRepo` and update `SearchByTitleAsync`'s signature/body:
 
 ```csharp
 private sealed class FakeSessionRepo : IChatSessionRepository
@@ -1490,17 +1490,17 @@ public Task<IReadOnlyList<ChatMessage>> SearchByContentAsync(
 }
 ```
 
-- [ ] **Step 3: Apply 6a and 6b, then run the new tests.**
+- [x] **Step 3: Apply 6a and 6b, then run the new tests.**
 
 Run: `dotnet test tests/HydraForge.Application.Tests/HydraForge.Application.Tests.csproj --filter "FullyQualifiedName~ChatSearchServiceTests"`
 Expected: All tests PASS, including the 2 new ones.
 
-- [ ] **Step 4: Apply 6c. Build and run the full suite.**
+- [x] **Step 4: Apply 6c. Build and run the full suite.**
 
 Run: `dotnet build HydraForge.slnx -nologo -v q && dotnet test HydraForge.slnx -nologo -v q`
 Expected: Build succeeds, all projects `Passed!`.
 
-- [ ] **Step 5: Format and commit.**
+- [x] **Step 5: Format and commit.**
 
 ```bash
 dotnet csharpier format .
@@ -1543,19 +1543,19 @@ const url = ApiRoutes.Chat.sessions.list(undefined, props.projectId, undefined, 
 
 This is the **only** change to this file in this task — without it, `ProjectChatsTab.vue` would silently start showing only the caller's own chats once Task 3/4 ship, which is a regression of already-working behavior. (No other task touches this file.)
 
-- [ ] **Step 1: Apply 7a, 7b, 7c.**
+- [x] **Step 1: Apply 7a, 7b, 7c.**
 
-- [ ] **Step 2: Typecheck and lint.**
+- [x] **Step 2: Typecheck and lint.**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint`
 Expected: Both clean, no errors.
 
-- [ ] **Step 3: Run the full frontend test suite** (no behavior changed yet for anything other than `ProjectChatsTab`'s URL — confirm nothing broke):
+- [x] **Step 3: Run the full frontend test suite** (no behavior changed yet for anything other than `ProjectChatsTab`'s URL — confirm nothing broke):
 
 Run: `cd src/web-ui && pnpm test`
 Expected: All test files pass, same counts as before this task.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 cd src/web-ui
@@ -1684,7 +1684,7 @@ Key behavior notes for whoever reviews this:
 - `typesParam` is only sent when fewer than all 3 types are selected — omitting it entirely when everything's checked matches the backend's "empty/omitted = no filtering" contract from Task 1/4, and keeps the common case's URL shorter.
 - The old hand-appended `` `${base}&status=${statusFilter.value}` `` string is gone — `status` now goes through `ApiRoutes.Chat.sessions.list`'s own param, matching how `scope`/`types` are passed. This is the D4 bug fix from the spec.
 
-- [ ] **Step 1: Write the failing tests.** Add to `useChatSessionList.test.ts`, after the existing `'defaults to the Active filter and sends it as a query param'` test:
+- [x] **Step 1: Write the failing tests.** Add to `useChatSessionList.test.ts`, after the existing `'defaults to the Active filter and sends it as a query param'` test:
 
 ```typescript
 it('defaults to mine scope and does not send a types param when all three are selected', async () => {
@@ -1731,24 +1731,24 @@ it('refetches when scope changes to participated', async () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail** (the composable doesn't export `scope`/`types` yet):
+- [x] **Step 2: Run to verify they fail** (the composable doesn't export `scope`/`types` yet):
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: FAIL — `scope`/`types` are `undefined` on the returned object.
 
-- [ ] **Step 3: Apply the full file replacement above.**
+- [x] **Step 3: Apply the full file replacement above.**
 
-- [ ] **Step 4: Run again.**
+- [x] **Step 4: Run again.**
 
 Run: `cd src/web-ui && pnpm test -- useChatSessionList`
 Expected: All tests PASS, including the 3 new ones and all 7 pre-existing ones.
 
-- [ ] **Step 5: Typecheck, lint, full test suite.**
+- [x] **Step 5: Typecheck, lint, full test suite.**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm test`
 Expected: All clean/passing.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 cd src/web-ui
@@ -1870,7 +1870,7 @@ const typeLabel = computed(() => {
 </template>
 ```
 
-- [ ] **Step 1: Write the failing test.** Create `ChatSessionFilters.test.ts`:
+- [x] **Step 1: Write the failing test.** Create `ChatSessionFilters.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest'
@@ -1921,24 +1921,24 @@ describe('ChatSessionFilters', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail** (component doesn't exist yet):
+- [x] **Step 2: Run to verify they fail** (component doesn't exist yet):
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionFilters`
 Expected: FAIL — cannot resolve `~/components/chat/ChatSessionFilters.vue`.
 
-- [ ] **Step 3: Create the component as shown above.**
+- [x] **Step 3: Create the component as shown above.**
 
-- [ ] **Step 4: Run again.**
+- [x] **Step 4: Run again.**
 
 Run: `cd src/web-ui && pnpm test -- ChatSessionFilters`
 Expected: PASS. If the `USelect`/`USelectMenu` component-name lookup in the last test doesn't resolve the way this plan assumes (Nuxt UI internals sometimes name components differently than their public tag), adjust the test to target `wrapper.find('select')` or whatever DOM element `pnpm test`'s failure output points at — the assertion's *intent* (status change emits `update:status`) is what matters, not the exact selector.
 
-- [ ] **Step 5: Typecheck, lint, full test suite.**
+- [x] **Step 5: Typecheck, lint, full test suite.**
 
 Run: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm test`
 Expected: All clean/passing.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 cd src/web-ui
