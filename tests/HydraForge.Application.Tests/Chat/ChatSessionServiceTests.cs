@@ -51,7 +51,7 @@ public class ChatSessionServiceTests
             );
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
@@ -59,6 +59,8 @@ public class ChatSessionServiceTests
             int limit,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
@@ -69,8 +71,8 @@ public class ChatSessionServiceTests
                 : Sessions
                     .AsQueryable()
                     .Where(s =>
-                        s.OwnerId == ownerId
-                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, ownerId))
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
                     );
 
             var query = ApplyStatusFilter(baseQuery, statusFilter);
@@ -80,6 +82,16 @@ public class ChatSessionServiceTests
                 query = query.Where(s => s.ProjectId == projectId.Value);
             if (before.HasValue)
                 query = query.Where(s => s.CreatedAt < before.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
 
             return Task.FromResult<IReadOnlyList<ChatSession>>(
                 query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
@@ -87,21 +99,25 @@ public class ChatSessionServiceTests
         }
 
         public Task<int> CountAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
+            // isAdmin bypass means return all sessions (subject to other filters)
+            // Participation = owner OR project member (mirrors EfChatSessionRepository.WhereParticipatedIn)
             var baseQuery = isAdmin
                 ? Sessions.AsQueryable()
                 : Sessions
                     .AsQueryable()
                     .Where(s =>
-                        s.OwnerId == ownerId
-                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, ownerId))
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
                     );
 
             var query = ApplyStatusFilter(baseQuery, statusFilter);
@@ -109,6 +125,17 @@ public class ChatSessionServiceTests
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
+
             return Task.FromResult(query.Count());
         }
 
@@ -141,11 +168,12 @@ public class ChatSessionServiceTests
         }
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId,
+            Guid actorId,
             string query,
             Guid? projectId,
             int limit,
             bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 

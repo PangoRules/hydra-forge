@@ -20,6 +20,8 @@ public interface IChatSessionRepository
         int limit,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     );
 
@@ -35,6 +37,8 @@ public interface IChatSessionRepository
         Guid? projectId,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     );
     Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
@@ -43,6 +47,7 @@ public interface IChatSessionRepository
         Guid? projectId,
         int limit,
         bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     );
     Task AddAsync(ChatSession session, CancellationToken ct = default);

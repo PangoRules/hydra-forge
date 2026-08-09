@@ -387,6 +387,8 @@ internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSess
         int limit,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
@@ -396,6 +398,8 @@ internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSess
         Guid? projectId,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     ) => Task.FromResult(0);
 
@@ -405,6 +409,7 @@ internal class TestChatSessionRepository(List<ChatSession> sessions) : IChatSess
         Guid? projectId,
         int limit,
         bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 

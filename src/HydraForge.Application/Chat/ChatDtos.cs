@@ -33,6 +33,19 @@ public record MoveChatSessionRequest(Guid? FolderId);
 
 // ── Enums ───────────────────────────────────────────────────────
 
+public enum ChatSessionScope
+{
+    Mine,
+    Participated,
+}
+
+public enum ChatSessionKind
+{
+    Normal,
+    Project,
+    Card,
+}
+
 public enum ChatSessionStatusFilter
 {
     NonArchived,

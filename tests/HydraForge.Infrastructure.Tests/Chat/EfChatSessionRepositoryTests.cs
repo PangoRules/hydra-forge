@@ -98,6 +98,8 @@ public class EfChatSessionRepositoryTests
             3,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            null,
             CancellationToken.None
         );
         Assert.Equal(3, page1.Count);
@@ -113,6 +115,8 @@ public class EfChatSessionRepositoryTests
             2,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            null,
             CancellationToken.None
         );
         // Should get exactly 1 remaining item (session1 — the oldest by UpdatedAt==sameTime, Id smallest)
@@ -169,6 +173,8 @@ public class EfChatSessionRepositoryTests
             10,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            null,
             CancellationToken.None
         );
 
@@ -234,6 +240,8 @@ public class EfChatSessionRepositoryTests
             10,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            null,
             CancellationToken.None
         );
 
@@ -301,6 +309,8 @@ public class EfChatSessionRepositoryTests
             10,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Participated,
+            null,
             CancellationToken.None
         );
         Assert.Contains(memberResults, s => s.Id == projectSession.Id);
@@ -315,8 +325,167 @@ public class EfChatSessionRepositoryTests
             10,
             false,
             ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Participated,
+            null,
             CancellationToken.None
         );
         Assert.DoesNotContain(nonMemberResults, s => s.Id == projectSession.Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_ScopeMine_ExcludesParticipatedOnlySessions()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfChatSessionRepository(context);
+
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var projectSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Title = "Project Session",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+
+        var projectMember = new HydraForge.Domain.Entities.ProjectSpace.ProjectMember
+        {
+            ProjectId = projectId,
+            UserId = memberId,
+            Role = HydraForge.Domain.Enums.MemberRole.Member,
+        };
+
+        context.ChatSessions.Add(projectSession);
+        context.ProjectMembers.Add(projectMember);
+        await context.SaveChangesAsync();
+
+        // Member is not the owner. Default scope (Mine) must exclude this session
+        // even though scope=Participated (the pre-existing behavior) would include it.
+        var mineResults = await repo.ListAsync(
+            memberId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            isAdmin: false,
+            ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            null,
+            CancellationToken.None
+        );
+        Assert.DoesNotContain(mineResults, s => s.Id == projectSession.Id);
+
+        var participatedResults = await repo.ListAsync(
+            memberId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            isAdmin: false,
+            ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Participated,
+            null,
+            CancellationToken.None
+        );
+        Assert.Contains(participatedResults, s => s.Id == projectSession.Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_TypesFilter_ReturnsOnlyMatchingKinds()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable(
+            "HYDRAFORGE_TEST_CONNECTION_STRING"
+        );
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return;
+
+        var options = CreateOptions(connectionString);
+        using var context = new HydraForgeDbContext(options);
+        var repo = new EfChatSessionRepository(context);
+
+        var ownerId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+
+        var normalSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = null,
+            Title = "Personal",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+        var projectSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = null,
+            Title = "Project",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+        var cardSession = new ChatSession
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Title = "Card",
+            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Status = ChatSessionStatus.Active,
+        };
+        context.ChatSessions.AddRange(normalSession, projectSession, cardSession);
+        await context.SaveChangesAsync();
+
+        var cardOnly = await repo.ListAsync(
+            ownerId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            isAdmin: false,
+            ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            new HashSet<ChatSessionKind> { ChatSessionKind.Card },
+            CancellationToken.None
+        );
+        Assert.Single(cardOnly);
+        Assert.Equal(cardSession.Id, cardOnly[0].Id);
+
+        var normalAndProject = await repo.ListAsync(
+            ownerId,
+            null,
+            null,
+            DateTime.MaxValue,
+            null,
+            10,
+            isAdmin: false,
+            ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope.Mine,
+            new HashSet<ChatSessionKind> { ChatSessionKind.Normal, ChatSessionKind.Project },
+            CancellationToken.None
+        );
+        Assert.Equal(2, normalAndProject.Count);
+        Assert.DoesNotContain(normalAndProject, s => s.Id == cardSession.Id);
     }
 }

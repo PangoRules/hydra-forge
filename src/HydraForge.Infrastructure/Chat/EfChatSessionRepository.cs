@@ -39,13 +39,16 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         int limit,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
+            ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
             statusFilter
         );
+        query = ApplyTypes(query, types);
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -69,13 +72,16 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         Guid? projectId,
         bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
+            ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
             statusFilter
         );
+        query = ApplyTypes(query, types);
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -83,6 +89,42 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
             query = query.Where(s => s.ProjectId == projectId.Value);
 
         return await query.CountAsync(ct);
+    }
+
+    // scope == Mine: strictly the caller's own sessions, regardless of admin status —
+    // a personal history view is personal even for an admin. scope == Participated
+    // preserves Plan 20's existing behavior unchanged, admin bypass included.
+    private IQueryable<ChatSession> ApplyScope(
+        IQueryable<ChatSession> q,
+        Guid actorId,
+        bool isAdmin,
+        ChatSessionScope scope
+    ) =>
+        scope switch
+        {
+            ChatSessionScope.Participated => isAdmin ? q : WhereParticipatedIn(q, actorId),
+            _ => q.Where(s => s.OwnerId == actorId),
+        };
+
+    // Mirrors web-ui's lib/chat-type.ts getChatType() exactly: card implies project,
+    // project means projectId set with no card, normal means no projectId at all.
+    private static IQueryable<ChatSession> ApplyTypes(
+        IQueryable<ChatSession> q,
+        IReadOnlySet<ChatSessionKind>? types
+    )
+    {
+        if (types == null || types.Count == 0)
+            return q;
+
+        return q.Where(s =>
+            (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+            || (
+                types.Contains(ChatSessionKind.Project)
+                && s.ProjectId != null
+                && s.OpenCardId == null
+            )
+            || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+        );
     }
 
     // Participated-in = owner OR project member (for project-scoped sessions)
@@ -131,6 +173,7 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
         Guid? projectId,
         int limit,
         bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     )
     {
@@ -138,7 +181,7 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
             return [];
 
         var q = ApplyStatusFilter(
-                isAdmin ? context.ChatSessions : WhereParticipatedIn(context.ChatSessions, actorId),
+                ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
                 ChatSessionStatusFilter.NonArchived
             )
             .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"));

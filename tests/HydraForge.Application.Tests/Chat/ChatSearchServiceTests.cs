@@ -31,6 +31,8 @@ public class ChatSearchServiceTests
             int limit,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
@@ -40,6 +42,8 @@ public class ChatSearchServiceTests
             Guid? projectId,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult(0);
 
@@ -49,6 +53,7 @@ public class ChatSearchServiceTests
             Guid? projectId,
             int limit,
             bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         )
         {

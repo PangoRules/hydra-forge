@@ -25,6 +25,8 @@ public class ChatArchiveService(
             limit: int.MaxValue,
             isAdmin: false,
             statusFilter: ChatSessionStatusFilter.NonArchived,
+            scope: ChatSessionScope.Participated,
+            types: null,
             ct
         );
         foreach (var session in sessions)

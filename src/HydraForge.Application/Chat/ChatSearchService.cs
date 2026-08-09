@@ -27,6 +27,7 @@ public class ChatSearchService : IChatSearchService
             projectId,
             MaxResults,
             isAdmin: false,
+            scope: ChatSessionScope.Mine,
             ct
         );
         var contentResults = await _messageRepo.SearchByContentAsync(

@@ -31,7 +31,7 @@ public class LlmChatSummaryGeneratorTests
         ) => Task.FromResult<ChatSession?>(null);
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
@@ -39,15 +39,19 @@ public class LlmChatSummaryGeneratorTests
             int limit,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task<int> CountAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult(0);
 
@@ -61,11 +65,12 @@ public class LlmChatSummaryGeneratorTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId,
+            Guid actorId,
             string query,
             Guid? projectId,
             int limit,
             bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 

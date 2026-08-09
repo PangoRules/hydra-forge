@@ -307,6 +307,8 @@ public class ChatSessionService(
             limit,
             isAdmin,
             statusFilter,
+            scope: ChatSessionScope.Mine,
+            types: null,
             ct
         );
         var dtos = new List<ChatSessionDto>();
@@ -324,6 +326,8 @@ public class ChatSessionService(
             projectId,
             isAdmin,
             statusFilter,
+            scope: ChatSessionScope.Mine,
+            types: null,
             ct
         );
 
