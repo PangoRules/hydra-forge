@@ -57,13 +57,17 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
       await createModal.locator('input[type="date"]').fill(opts.dueDate)
     }
     if (opts.parent) {
-      // Parent field uses USelectMenu — click the trigger to open, then
-      // find the option inside the last listbox (the parent USelectMenu's Popover).
+      // Parent field uses USelectMenu — its Popover renders at body level,
+      // outside the modal DOM. Filter by the option text to scope to the
+      // parent USelectMenu's listbox rather than relying on .last().
       await createModal.getByText('Search cards...').click()
-      await page.locator('[role="listbox"]').last().locator('[role="option"]', { hasText: opts.parent }).click()
+      await page.locator('[role="listbox"]').locator('[role="option"]', { hasText: opts.parent }).click()
     }
     await createModal.getByRole('button', { name: 'Create', exact: true }).click()
     await expect(page.getByText('Card created', { exact: true }).first()).toBeVisible()
+    // Wait for the @created fetchBoard() to resolve before asserting on the
+    // heading, avoiding a race with boardStore.fetchBoard() fired via @created.
+    await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { name: opts.title, exact: true })).toBeVisible()
   }
 
@@ -91,7 +95,7 @@ test('Website Revamp: full project lifecycle smoke flow', async ({ page }) => {
   await desktop.getByRole('tab', { name: 'Docs' }).click()
   await desktop.getByPlaceholder('Concept title').first().fill('Dark mode concept')
   await desktop.locator('.ProseMirror').first().click()
-  await page.waitForTimeout(200)
+  await expect(desktop.locator('.ProseMirror').first()).toBeFocused()
   await page.keyboard.type('Add a toggle in settings that flips a CSS class on <html>.')
   await expect(desktop.getByRole('button', { name: 'Create', exact: true })).toBeVisible()
   await desktop.getByRole('button', { name: 'Create', exact: true }).click()
