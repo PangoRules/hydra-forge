@@ -37,7 +37,6 @@ export const UiRoutes = {
     Usage: '/account/usage'
   },
   Chat: {
-    // ... existing entries ...
     Presets: '/chat/presets',
     Personalities: '/chat/personalities'
   },
