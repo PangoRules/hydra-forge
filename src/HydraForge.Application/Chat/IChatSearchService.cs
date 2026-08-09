@@ -6,6 +6,7 @@ public interface IChatSearchService
         Guid userId,
         string query,
         Guid? projectId = null,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     );
 }

@@ -17,6 +17,8 @@ public interface IChatMessageRepository
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     );
     Task AddAsync(ChatMessage message, CancellationToken ct = default);

@@ -27,6 +27,10 @@ public class ChatSessionServiceTests
     {
         public List<ChatSession> Sessions { get; } = [];
         public List<CardChatLink> CapturedLinks { get; } = [];
+        public int UpdateCallCount { get; private set; }
+        private readonly FakeMemberRepo _memberRepo;
+
+        public FakeSessionRepo(FakeMemberRepo memberRepo) => _memberRepo = memberRepo;
 
         public Task<ChatSession?> GetByIdAsync(Guid sessionId, CancellationToken ct = default) =>
             Task.FromResult(Sessions.FirstOrDefault(s => s.Id == sessionId));
@@ -47,26 +51,54 @@ public class ChatSessionServiceTests
             );
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
-            var query = ApplyStatusFilter(
-                Sessions.AsQueryable().Where(s => s.OwnerId == ownerId),
-                statusFilter
-            );
+            // isAdmin bypass means return all sessions (subject to other filters)
+            // Participation = owner OR project member (mirrors EfChatSessionRepository.WhereParticipatedIn)
+            var baseQuery = isAdmin
+                ? Sessions.AsQueryable()
+                : Sessions
+                    .AsQueryable()
+                    .Where(s =>
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                    );
+
+            var query = ApplyStatusFilter(baseQuery, statusFilter);
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
             if (before.HasValue)
                 query = query.Where(s => s.CreatedAt < before.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
+            if (scope == ChatSessionScope.Participated && !isAdmin)
+            {
+                query = query.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
 
             return Task.FromResult<IReadOnlyList<ChatSession>>(
                 query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
@@ -74,21 +106,50 @@ public class ChatSessionServiceTests
         }
 
         public Task<int> CountAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
-            var query = ApplyStatusFilter(
-                Sessions.AsQueryable().Where(s => s.OwnerId == ownerId),
-                statusFilter
-            );
+            // isAdmin bypass means return all sessions (subject to other filters)
+            // Participation = owner OR project member (mirrors EfChatSessionRepository.WhereParticipatedIn)
+            var baseQuery = isAdmin
+                ? Sessions.AsQueryable()
+                : Sessions
+                    .AsQueryable()
+                    .Where(s =>
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                    );
+
+            var query = ApplyStatusFilter(baseQuery, statusFilter);
             if (folderId.HasValue)
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
+            if (scope == ChatSessionScope.Participated && !isAdmin)
+            {
+                query = query.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
+
             return Task.FromResult(query.Count());
         }
 
@@ -114,20 +175,81 @@ public class ChatSessionServiceTests
             return Task.CompletedTask;
         }
 
-        public Task UpdateAsync(ChatSession session, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public Task UpdateAsync(ChatSession session, CancellationToken ct = default)
+        {
+            UpdateCallCount++;
+            return Task.CompletedTask;
+        }
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId,
+            Guid actorId,
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
-        ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
+        )
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return Task.FromResult<IReadOnlyList<ChatSession>>([]);
+
+            // isAdmin bypass means return all sessions (subject to other filters)
+            // Participation = owner OR project member (mirrors EfChatSessionRepository.WhereParticipatedIn)
+            var baseQuery = isAdmin
+                ? Sessions.AsQueryable()
+                : Sessions
+                    .AsQueryable()
+                    .Where(s =>
+                        s.OwnerId == actorId
+                        || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                    );
+
+            var queryResults = baseQuery.Where(s =>
+                s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                && s.ArchivedAt == null
+                && (!projectId.HasValue || s.ProjectId == projectId)
+            );
+
+            if (scope == ChatSessionScope.Participated && !isAdmin)
+            {
+                queryResults = queryResults.Where(s =>
+                    s.OwnerId == actorId
+                    || (s.ProjectId != null && _memberRepo.IsMember(s.ProjectId.Value, actorId))
+                );
+            }
+
+            return Task.FromResult<IReadOnlyList<ChatSession>>(
+                queryResults.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
+            );
+        }
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default)
         {
             CapturedLinks.Add(link);
+            return Task.CompletedTask;
+        }
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) =>
+            Task.FromResult(
+                CapturedLinks.FirstOrDefault(l =>
+                    l.CardId == cardId && l.ChatSessionId == chatSessionId
+                )
+            );
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        )
+        {
+            var link = CapturedLinks.FirstOrDefault(l => l.Id == linkId);
+            if (link != null)
+                link.Summary = summary;
             return Task.CompletedTask;
         }
     }
@@ -161,6 +283,8 @@ public class ChatSessionServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
 
@@ -266,8 +390,10 @@ public class ChatSessionServiceTests
 
     private sealed class FakeUserRepo : IUserRepository
     {
+        public Dictionary<Guid, User> Users { get; } = [];
+
         public Task<User?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult<User?>(null);
+            Task.FromResult(Users.TryGetValue(id, out var u) ? u : null);
 
         public Task<IReadOnlyDictionary<Guid, User>> FindByIdsAsync(
             IReadOnlyList<Guid> ids,
@@ -288,7 +414,7 @@ public class ChatSessionServiceTests
         public Task<bool> AnyAdminExistsAsync() => Task.FromResult(false);
 
         public Task<bool> IsAdminAsync(Guid userId, CancellationToken ct = default) =>
-            Task.FromResult(false);
+            Task.FromResult(Users.TryGetValue(userId, out var u) && u.IsAdmin);
 
         public Task CreateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
 
@@ -309,6 +435,22 @@ public class ChatSessionServiceTests
     {
         public bool DenyAccess { get; set; }
 
+        // (projectId, userId) -> membership — mirrors real DB state.
+        // Instance field, not static: each test gets its own FakeMemberRepo via
+        // CreateSut(), so this must not leak membership state across tests.
+        private readonly Dictionary<(Guid projectId, Guid userId), ProjectMember> _memberships = [];
+
+        public void AddMembership(Guid projectId, Guid userId, MemberRole role)
+        {
+            _memberships[(projectId, userId)] = new ProjectMember
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                UserId = userId,
+                Role = role,
+            };
+        }
+
         public Task<ProjectMember?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             Task.FromResult<ProjectMember?>(null);
 
@@ -316,18 +458,25 @@ public class ChatSessionServiceTests
             Guid projectId,
             Guid userId,
             CancellationToken ct = default
-        ) =>
-            Task.FromResult<ProjectMember?>(
-                DenyAccess
-                    ? null
-                    : new ProjectMember
-                    {
-                        Id = Guid.NewGuid(),
-                        ProjectId = projectId,
-                        UserId = userId,
-                        Role = MemberRole.Owner,
-                    }
+        )
+        {
+            if (DenyAccess)
+                return Task.FromResult<ProjectMember?>(null);
+            if (_memberships.TryGetValue((projectId, userId), out var member))
+                return Task.FromResult<ProjectMember?>(member);
+            return Task.FromResult<ProjectMember?>(
+                new ProjectMember
+                {
+                    Id = Guid.NewGuid(),
+                    ProjectId = projectId,
+                    UserId = userId,
+                    Role = MemberRole.Member,
+                }
             );
+        }
+
+        public bool IsMember(Guid projectId, Guid userId) =>
+            _memberships.ContainsKey((projectId, userId));
 
         public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(
             Guid projectId,
@@ -497,12 +646,12 @@ public class ChatSessionServiceTests
         FakeSettingsProvider settingsProvider
     ) CreateSut()
     {
-        var sessionRepo = new FakeSessionRepo();
+        var memberRepo = new FakeMemberRepo();
+        var sessionRepo = new FakeSessionRepo(memberRepo);
         var messageRepo = new FakeMessageRepo();
         var sessionDocRepo = new FakeSessionDocRepo();
         var cardRepo = new FakeCardRepo();
         var userRepo = new FakeUserRepo();
-        var memberRepo = new FakeMemberRepo();
         var personalityRepo = new FakePersonalityRepo();
         var documentRepo = new FakeDocumentRepo();
         var summaryGenerator = new FakeSummaryGenerator();
@@ -718,7 +867,7 @@ public class ChatSessionServiceTests
     }
 
     [Fact]
-    public async Task CloseAsync_EmptySession_NoSummaryNoCardChatLink()
+    public async Task CloseAsync_EmptyNonPanelSession_NoSummaryNoLink()
     {
         var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
         var ownerId = NewId();
@@ -738,6 +887,39 @@ public class ChatSessionServiceTests
         Assert.Null(result.Value.Summary);
         Assert.Empty(sessionRepo.CapturedLinks);
         Assert.Empty(messageRepo.Messages);
+    }
+
+    [Fact]
+    public async Task CloseAsync_EmptyPanelSession_UpdatesPlaceholderLinkWithNoMessagesSummary()
+    {
+        // Panel session (ProjectId+OpenCardId) with no user messages — CloseAsync should
+        // create a CardChatLink with "Chat closed (no messages)" because there are no
+        // messages to summarise. CreateAsync is NOT called because it adds an identity
+        // message that would make messages.Count > 0 and skip the no-messages branch.
+        var (service, sessionRepo, messageRepo, _, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Title = "Empty Panel Session",
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        // No messages added — messageRepo is empty
+
+        var result = await service.CloseAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ChatSessionStatus.Closed, result.Value.Status);
+        Assert.Null(result.Value.Summary);
+        Assert.Empty(messageRepo.Messages);
+        Assert.Single(sessionRepo.CapturedLinks);
+        Assert.Equal("Chat closed (no messages)", sessionRepo.CapturedLinks[0].Summary);
     }
 
     [Fact]
@@ -1600,5 +1782,439 @@ public class ChatSessionServiceTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(DomainErrorCodes.Chat.SessionNotFound, result.Error.Code);
+    }
+
+    // ── Participation-aware ListAsync tests ─────────────────────────────────────
+
+    [Fact]
+    public async Task ListAsync_ParticipationIn_ProjectSessionVisibleToMember()
+    {
+        var (service, sessionRepo, _, _, userRepo, memberRepo, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var memberId = NewId();
+        var projectId = NewId();
+
+        userRepo.Users[ownerId] = User.Create(
+            "owner",
+            "Owner",
+            "User",
+            "owner@test.com",
+            "hash",
+            isAdmin: false,
+            id: ownerId
+        );
+        userRepo.Users[memberId] = User.Create(
+            "member",
+            "Member",
+            "User",
+            "member@test.com",
+            "hash",
+            isAdmin: false,
+            id: memberId
+        );
+        memberRepo.AddMembership(projectId, memberId, MemberRole.Member);
+
+        var projectSession = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(projectSession);
+
+        var result = await service.ListAsync(
+            memberId,
+            folderId: null,
+            projectId: projectId,
+            before: null,
+            beforeId: null,
+            limit: 50,
+            scope: ChatSessionScope.Participated
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value.TotalCount);
+        Assert.Equal(projectSession.Id, result.Value.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_NonMemberExcluded()
+    {
+        var (service, sessionRepo, _, _, userRepo, memberRepo, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var nonMemberId = NewId();
+        var projectId = NewId();
+
+        userRepo.Users[ownerId] = User.Create(
+            "owner",
+            "Owner",
+            "User",
+            "owner@test.com",
+            "hash",
+            isAdmin: false,
+            id: ownerId
+        );
+        userRepo.Users[nonMemberId] = User.Create(
+            "nonmember",
+            "Non",
+            "Member",
+            "nonmember@test.com",
+            "hash",
+            isAdmin: false,
+            id: nonMemberId
+        );
+        // DenyAccess = false (default) so MembershipGuard returns false for non-member
+
+        var projectSession = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(projectSession);
+
+        var result = await service.ListAsync(
+            nonMemberId,
+            folderId: null,
+            projectId: projectId,
+            before: null,
+            beforeId: null,
+            limit: 50,
+            scope: ChatSessionScope.Participated
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task ListAsync_AdminSeesAll()
+    {
+        var (service, sessionRepo, _, _, userRepo, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var adminId = NewId();
+        var projectId = NewId();
+
+        userRepo.Users[ownerId] = User.Create(
+            "owner",
+            "Owner",
+            "User",
+            "owner@test.com",
+            "hash",
+            isAdmin: false,
+            id: ownerId
+        );
+        userRepo.Users[adminId] = User.Create(
+            "admin",
+            "Admin",
+            "User",
+            "admin@test.com",
+            "hash",
+            isAdmin: true,
+            id: adminId
+        );
+
+        var ownSession = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            Status = ChatSessionStatus.Active,
+        };
+        var projectSession = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(ownSession);
+        sessionRepo.Sessions.Add(projectSession);
+
+        var result = await service.ListAsync(
+            adminId,
+            folderId: null,
+            projectId: null,
+            before: null,
+            beforeId: null,
+            limit: 50,
+            scope: ChatSessionScope.Participated
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.TotalCount);
+    }
+
+    // ── LinkCardAsync tests ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task LinkCardAsync_ActiveProjectSession_LinksSuccessfully()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(cardId, result.Value.OpenCardId);
+        Assert.Equal(session.Id, result.Value.Id);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_ClosedSession_ReturnsSessionClosedError()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Closed,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.SessionClosed, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_PersonalSession_ReturnsCardNotInProjectError()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = null,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = NewId() };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.CardNotInProject, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_CardDifferentProject_ReturnsCardNotInProjectError()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var otherProjectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = otherProjectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Chat.CardNotInProject, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_NonMemberDenied()
+    {
+        var (service, sessionRepo, _, cardRepo, _, memberRepo, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var nonMemberId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+        memberRepo.DenyAccess = true;
+
+        var result = await service.LinkCardAsync(session.Id, cardId, nonMemberId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(DomainErrorCodes.Projects.MembershipDenied, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_Idempotent_ReturnsSuccessWithoutUpdate()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            OpenCardId = cardId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(cardId, result.Value.OpenCardId);
+        Assert.Equal(0, sessionRepo.UpdateCallCount);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OpenCardId_CreatesCardChatLinkImmediately_SoCardChatTabIsNotEmptyBeforeClose()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Panel Chat",
+                FolderId: null,
+                ProjectId: projectId,
+                OpenCardId: cardId,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
+            ),
+            ownerId
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(sessionRepo.CapturedLinks);
+        var link = sessionRepo.CapturedLinks[0];
+        Assert.Equal(cardId, link.CardId);
+        Assert.Equal(result.Value.Id, link.ChatSessionId);
+        Assert.Equal(ownerId, link.OwnerId);
+        Assert.Equal("Chat linked — summary generated when the chat closes.", link.Summary);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_CreatesCardChatLinkImmediately_SoCardChatTabIsNotEmptyBeforeClose()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.LinkCardAsync(session.Id, cardId, ownerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(sessionRepo.CapturedLinks);
+        var link = sessionRepo.CapturedLinks[0];
+        Assert.Equal(cardId, link.CardId);
+        Assert.Equal(session.Id, link.ChatSessionId);
+        Assert.Equal(ownerId, link.OwnerId);
+    }
+
+    [Fact]
+    public async Task CloseAsync_UpdatesLinkCreatedByLinkCardAsync_InsteadOfInsertingDuplicate()
+    {
+        var (service, sessionRepo, messageRepo, cardRepo, _, _, _, _, summaryGenerator, _, _, _) =
+            CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        await service.LinkCardAsync(session.Id, cardId, ownerId);
+        Assert.Single(sessionRepo.CapturedLinks);
+
+        messageRepo.Messages.Add(
+            new ChatMessage
+            {
+                Id = NewId(),
+                SessionId = session.Id,
+                Role = MessageRole.User,
+                Content = "Hello",
+            }
+        );
+        summaryGenerator.GenerateSummaryImpl = (_, _) =>
+            Task.FromResult(Result<string>.Success("Real summary"));
+
+        var result = await service.CloseAsync(session.Id, ownerId);
+
+        Assert.True(result.IsSuccess);
+        // Still exactly one link for this card/session — updated, not duplicated.
+        Assert.Single(sessionRepo.CapturedLinks);
+        Assert.Equal("Real summary", sessionRepo.CapturedLinks[0].Summary);
+    }
+
+    [Fact]
+    public async Task LinkCardAsync_MemberCanLink()
+    {
+        var (service, sessionRepo, _, cardRepo, _, memberRepo, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var memberId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        var session = new ChatSession
+        {
+            Id = NewId(),
+            OwnerId = ownerId,
+            ProjectId = projectId,
+            Status = ChatSessionStatus.Active,
+        };
+        sessionRepo.Sessions.Add(session);
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+        memberRepo.DenyAccess = false;
+
+        var result = await service.LinkCardAsync(session.Id, cardId, memberId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(cardId, result.Value.OpenCardId);
     }
 }

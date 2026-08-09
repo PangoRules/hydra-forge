@@ -1,5 +1,6 @@
 import { ApiRoutes } from '~/lib/routes'
 import type { ChatSessionDto } from '~/types/chat'
+import type { ChatType } from '~/lib/chat-type'
 
 interface ChatSessionPageDto {
   items: ChatSessionDto[]
@@ -14,6 +15,13 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
   // backend enum for internal use (folder cascade-archive), but the UI only
   // presents the linear lifecycle: Active (default) → Closed → Archived.
   const statusFilter = ref<'Active' | 'Closed' | 'Archived'>('Active')
+  // Personal history defaults to the caller's own chats — 'participated' is
+  // an explicit opt-in to also see project chats owned by other members
+  // (see docs/specs/2026-08-09-chat-history-scope-type-filters-design.md).
+  const scope = ref<'mine' | 'participated'>('mine')
+  // All three types selected by default (no filtering). A Set so
+  // ChatSessionFilters.vue can toggle membership directly.
+  const types = ref<Set<ChatType>>(new Set(['normal', 'project', 'card']))
   const api = useApi()
 
   async function loadMore() {
@@ -21,14 +29,17 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     loading.value = true
     try {
       const last = sessions.value[sessions.value.length - 1]
-      const base = ApiRoutes.Chat.sessions.list(
+      const typesParam = types.value.size < 3 ? [...types.value].join(',') : undefined
+      const url = ApiRoutes.Chat.sessions.list(
         options?.folderId,
         options?.projectId,
         last?.updatedAt,
         last?.id,
-        20
+        20,
+        statusFilter.value,
+        scope.value,
+        typesParam
       )
-      const url = `${base}&status=${statusFilter.value}`
       const { data } = await api.GET<ChatSessionPageDto>(url)
       if (data) {
         sessions.value.push(...data.items)
@@ -78,6 +89,8 @@ export function useChatSessionList(options?: { folderId?: string, projectId?: st
     loading: readonly(loading),
     hasMore: readonly(hasMore),
     statusFilter,
+    scope,
+    types,
     loadMore,
     refresh,
     patchSession,

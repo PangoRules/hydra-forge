@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
-import { h } from 'vue'
-import CardModal from '~/components/card/CardModal.vue'
-import ConfirmDialog from '~/components/shared/ConfirmDialog.vue'
+import CardPopupBody from '~/components/card/CardPopupBody.vue'
 import { ApiError } from '~/lib/api-error'
 import type { components } from '~/types/api'
 
@@ -26,6 +24,36 @@ mockNuxtImport('useToast', () => () => ({ add: mockToastAdd }))
 mockNuxtImport('useAuthStore', () => () => ({
   user: { userId: 'me', username: 'me', isAdmin: false }
 }))
+
+mockNuxtImport('useBoardStore', () => () => ({
+  cardContentEvent: null
+}))
+
+mockNuxtImport('usePresenceStore', () => () => ({
+  onlineUsers: new Map(),
+  focusedCards: new Map()
+}))
+
+mockNuxtImport('useChatDockStore', () => () => ({
+  loadSession: vi.fn(),
+  openDock: vi.fn()
+}))
+
+const globalStubs = {
+  CardDescription: true,
+  CardMetadata: true,
+  CardChecklist: true,
+  CardComments: true,
+  CardAttachments: true,
+  CardDependencies: true,
+  CardSpec: true,
+  CardChatLinkList: true,
+  CardPlan: {
+    name: 'CardPlan',
+    template: '<card-plan-stub />',
+    methods: { loadAndExpandFirst() {} }
+  }
+}
 
 function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
   return {
@@ -54,61 +82,37 @@ function makeCard(overrides: Partial<CardResponse> = {}): CardResponse {
   }
 }
 
-async function mountLoadedModal() {
-  mockGET.mockResolvedValue({ data: makeCard(), error: undefined })
-  const wrapper = await mountSuspended(CardModal, {
-    props: { cardId: 'c1', projectId: 'p1' },
-    global: {
-      stubs: {
-        AppModal: {
-          render() {
-            return h('div', { 'data-testid': 'app-modal' }, this.$slots.default?.())
-          }
-        },
-        CardDescription: true,
-        CardMetadata: true
-      }
-    }
+async function mountBody(props: { cardId?: string, projectId?: string, readonly?: boolean } = {}) {
+  const wrapper = await mountSuspended(CardPopupBody, {
+    props: { cardId: 'c1', projectId: 'p1', ...props },
+    global: { stubs: globalStubs }
   })
   await flushPromises()
   return wrapper
 }
 
-describe('CardModal', () => {
+describe('CardPopupBody', () => {
   beforeEach(() => {
     mockGET.mockReset()
     mockPOST.mockReset()
     mockDELETE.mockReset()
     mockToastAdd.mockReset()
+    mockGET.mockResolvedValue({ data: makeCard(), error: undefined })
   })
 
   it('mounts without error', async () => {
-    const wrapper = await mountLoadedModal()
+    const wrapper = await mountBody()
     expect(wrapper.vm).toBeTruthy()
   })
 
-  it('passes the fetch error through to AppModal when the card fails to load', async () => {
+  it('surfaces the fetch error when the card fails to load', async () => {
     mockGET.mockRejectedValue(new ApiError(404, 'CARD_NOT_FOUND', 'Not Found', 'Card does not exist', 'about:blank', 'corr-1'))
-    const wrapper = await mountSuspended(CardModal, {
-      props: { cardId: 'missing', projectId: 'p1' },
-      global: {
-        stubs: {
-          AppModal: {
-            render() {
-              return h('div', { 'data-testid': 'app-modal' }, this.$slots.default?.())
-            }
-          },
-          CardDescription: true,
-          CardMetadata: true
-        }
-      }
-    })
-    await flushPromises()
+    const wrapper = await mountBody({ cardId: 'missing' })
     expect((wrapper.vm as any).error).toBeTruthy()
   })
 
   it('watches the card via POST when not already watching', async () => {
-    const wrapper = await mountLoadedModal()
+    const wrapper = await mountBody()
     mockPOST.mockResolvedValue({
       data: makeCard({ watchers: [{ userId: 'me', username: 'me', addedAt: '2024-01-01T00:00:00Z' }] }),
       error: undefined
@@ -127,21 +131,7 @@ describe('CardModal', () => {
       data: makeCard({ watchers: [{ userId: 'me', username: 'me', addedAt: '2024-01-01T00:00:00Z' }] }),
       error: undefined
     })
-    const wrapper = await mountSuspended(CardModal, {
-      props: { cardId: 'c1', projectId: 'p1' },
-      global: {
-        stubs: {
-          AppModal: {
-            render() {
-              return h('div', { 'data-testid': 'app-modal' }, this.$slots.default?.())
-            }
-          },
-          CardDescription: true,
-          CardMetadata: true
-        }
-      }
-    })
-    await flushPromises()
+    const wrapper = await mountBody()
     mockDELETE.mockResolvedValue({ data: makeCard({ watchers: [] }), error: undefined })
 
     expect((wrapper.vm as any).isWatching).toBe(true)
@@ -153,7 +143,7 @@ describe('CardModal', () => {
   })
 
   it('shows an error toast when toggling watch fails', async () => {
-    const wrapper = await mountLoadedModal()
+    const wrapper = await mountBody()
     mockPOST.mockRejectedValue(new ApiError(500, 'UNKNOWN', 'Server error', null, 'about:blank', 'corr-3'))
 
     await (wrapper.vm as any).toggleWatch()
@@ -164,10 +154,8 @@ describe('CardModal', () => {
 
   it('archives the card and emits archived on confirm', async () => {
     mockPOST.mockResolvedValue({ data: undefined, error: undefined })
-    const wrapper = await mountLoadedModal()
-    await flushPromises()
+    const wrapper = await mountBody()
 
-    // Open confirm dialog and confirm
     ;(wrapper.vm as any).showArchiveConfirm = true
     await flushPromises()
     await (wrapper.vm as any).confirmArchive()
@@ -182,8 +170,7 @@ describe('CardModal', () => {
 
   it('shows an error toast and does not emit archived when the archive call fails', async () => {
     mockPOST.mockRejectedValue(new ApiError(409, 'CARD_CONCURRENCY_MISMATCH', 'Conflict', 'stale version', 'about:blank', 'corr-2'))
-    const wrapper = await mountLoadedModal()
-    await flushPromises()
+    const wrapper = await mountBody()
 
     ;(wrapper.vm as any).showArchiveConfirm = true
     await flushPromises()
@@ -198,8 +185,7 @@ describe('CardModal', () => {
     // "Blocked by" links reverse which side is Source — this card can be the
     // relationship's target (see CardDependencies.vue's `reverse` flag).
     // Archiving must warn regardless of which side this card is on.
-    const wrapper = await mountLoadedModal()
-    await flushPromises()
+    const wrapper = await mountBody()
 
     mockGET.mockResolvedValueOnce({
       data: {
@@ -230,26 +216,34 @@ describe('CardModal', () => {
   it('shows an error toast when restore fails', async () => {
     mockPOST.mockRejectedValue(new ApiError(500, 'UNKNOWN', 'Server Error', null, 'about:blank', 'corr-3'))
     mockGET.mockResolvedValue({ data: makeCard({ archivedAt: '2024-02-01T00:00:00Z' }), error: undefined })
-    const wrapper = await mountSuspended(CardModal, {
-      props: { cardId: 'c1', projectId: 'p1' },
-      global: {
-        stubs: {
-          AppModal: {
-            render() {
-              return h('div', { 'data-testid': 'app-modal' }, this.$slots.default?.())
-            }
-          },
-          CardDescription: true,
-          CardMetadata: true
-        }
-      }
-    })
-    await flushPromises()
+    const wrapper = await mountBody()
 
     await (wrapper.vm as any).handleRestore()
     await flushPromises()
 
     expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Failed to restore card', color: 'error' }))
     expect(wrapper.emitted('restored')).toBeFalsy()
+  })
+
+  // Regression coverage for the readonly prop being silently dropped when
+  // CardModal.vue was replaced by CardPopup/CardPopupBody — an archived
+  // project must still lock editing even though the card itself isn't archived.
+  describe('readonly prop (project-archived gate)', () => {
+    it('isReadonly is false by default for a non-archived card with no readonly prop', async () => {
+      const wrapper = await mountBody({ readonly: false })
+      expect((wrapper.vm as any).isReadonly).toBe(false)
+    })
+
+    it('isReadonly is true when readonly=true even though the card itself is not archived (CardPopup passing projectArchived down)', async () => {
+      const wrapper = await mountBody({ readonly: true })
+      expect((wrapper.vm as any).isArchived).toBe(false)
+      expect((wrapper.vm as any).isReadonly).toBe(true)
+    })
+
+    it('isReadonly is true when the card is archived, regardless of the readonly prop', async () => {
+      mockGET.mockResolvedValue({ data: makeCard({ archivedAt: '2024-02-01T00:00:00Z' }), error: undefined })
+      const wrapper = await mountBody({ readonly: false })
+      expect((wrapper.vm as any).isReadonly).toBe(true)
+    })
   })
 })

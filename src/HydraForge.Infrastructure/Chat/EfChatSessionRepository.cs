@@ -31,20 +31,24 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<IReadOnlyList<ChatSession>> ListAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
         DateTime? before,
         Guid? beforeId,
         int limit,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
             statusFilter
         );
+        query = ApplyTypes(query, types);
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -63,17 +67,21 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<int> CountAsync(
-        Guid ownerId,
+        Guid actorId,
         Guid? folderId,
         Guid? projectId,
+        bool isAdmin = false,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     )
     {
         var query = ApplyStatusFilter(
-            context.ChatSessions.Where(s => s.OwnerId == ownerId),
+            ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
             statusFilter
         );
+        query = ApplyTypes(query, types);
 
         if (folderId.HasValue)
             query = query.Where(s => s.FolderId == folderId.Value);
@@ -81,6 +89,34 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
             query = query.Where(s => s.ProjectId == projectId.Value);
 
         return await query.CountAsync(ct);
+    }
+
+    private IQueryable<ChatSession> ApplyScope(
+        IQueryable<ChatSession> q,
+        Guid actorId,
+        bool isAdmin,
+        ChatSessionScope scope
+    ) => ChatScopeQueries.ApplyScope(context, q, actorId, isAdmin, scope);
+
+    // Mirrors web-ui's lib/chat-type.ts getChatType() exactly: card implies project,
+    // project means projectId set with no card, normal means no projectId at all.
+    private static IQueryable<ChatSession> ApplyTypes(
+        IQueryable<ChatSession> q,
+        IReadOnlySet<ChatSessionKind>? types
+    )
+    {
+        if (types == null || types.Count == 0)
+            return q;
+
+        return q.Where(s =>
+            (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+            || (
+                types.Contains(ChatSessionKind.Project)
+                && s.ProjectId != null
+                && s.OpenCardId == null
+            )
+            || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+        );
     }
 
     private static IQueryable<ChatSession> ApplyStatusFilter(
@@ -112,18 +148,22 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     }
 
     public async Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-        Guid ownerId,
+        Guid actorId,
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     )
     {
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var q = context
-            .ChatSessions.Where(s => s.OwnerId == ownerId && s.ArchivedAt == null)
+        var q = ApplyStatusFilter(
+                ApplyScope(context.ChatSessions, actorId, isAdmin, scope),
+                ChatSessionStatusFilter.NonArchived
+            )
             .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"));
 
         if (projectId.HasValue)
@@ -136,5 +176,31 @@ public sealed class EfChatSessionRepository(HydraForgeDbContext context) : IChat
     {
         context.CardChatLinks.Add(link);
         await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<CardChatLink?> FindCardChatLinkAsync(
+        Guid cardId,
+        Guid chatSessionId,
+        CancellationToken ct = default
+    )
+    {
+        return await context.CardChatLinks.FirstOrDefaultAsync(
+            l => l.CardId == cardId && l.ChatSessionId == chatSessionId,
+            ct
+        );
+    }
+
+    public async Task UpdateCardChatLinkSummaryAsync(
+        Guid linkId,
+        string summary,
+        CancellationToken ct = default
+    )
+    {
+        var link = await context.CardChatLinks.FirstOrDefaultAsync(l => l.Id == linkId, ct);
+        if (link != null)
+        {
+            link.Summary = summary;
+            await context.SaveChangesAsync(ct);
+        }
     }
 }

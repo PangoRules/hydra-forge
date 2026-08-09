@@ -1,6 +1,7 @@
 <!-- src/web-ui/app/components/card/CardPopupLayer.vue -->
 <script setup lang="ts">
 const cardPopup = useCardPopupStore()
+const boardStore = useBoardStore()
 const route = useRoute()
 
 // Card popups only make sense while viewing the project board that owns
@@ -24,6 +25,14 @@ onMounted(() => {
     cardPopup.closeAll()
   }
 })
+
+function handleArchived() {
+  if (currentProjectId.value) boardStore.fetchBoard(currentProjectId.value)
+}
+
+function handleRestored() {
+  if (currentProjectId.value) boardStore.fetchBoard(currentProjectId.value)
+}
 </script>
 
 <template>
@@ -32,8 +41,8 @@ onMounted(() => {
       v-for="cardId in cardPopup.openCardIds"
       :key="cardId"
       :card-id="cardId"
-    >
-      <!-- Slot intentionally empty — Plan 20 fills this with the migrated CardModal body -->
-    </CardPopup>
+      @archived="handleArchived"
+      @restored="handleRestored"
+    />
   </ClientOnly>
 </template>

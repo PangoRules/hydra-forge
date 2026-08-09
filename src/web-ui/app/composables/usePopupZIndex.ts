@@ -91,5 +91,13 @@ export function usePopupZIndex() {
     return baseZ + idx
   }
 
-  return { stack, registerPopup, unregisterPopup, bringToFront, closeTopmost, zIndexFor }
+  // One above whatever the topmost popup currently is — for chrome that must
+  // never be covered by a popup (e.g. the closed-dock FAB) but isn't itself
+  // part of the focus-order stack. A plain function, not a computed ref:
+  // usePopupZIndex() returns a plain object (not reactive()-wrapped), so a
+  // ref accessed via property (popupZ.aboveAllZ) would never auto-unwrap in
+  // a template — same reason zIndexFor above is a function, not a computed.
+  const aboveAllZ = (): number => baseZ + stack.value.length
+
+  return { stack, registerPopup, unregisterPopup, bringToFront, closeTopmost, zIndexFor, aboveAllZ }
 }

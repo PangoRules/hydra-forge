@@ -15,14 +15,17 @@ test('a stale save from a second tab is rejected, not silently merged', async ({
 
   // Tab A saves first and succeeds.
   const descA = pageA.getByTestId('card-modal-desktop')
-  await descA.locator('.ProseMirror').click()
+  // Wait for card data to load before interacting with the editor.
+  await expect(descA.locator('.ProseMirror').first()).toBeVisible()
+  await descA.locator('.ProseMirror').first().click()
   await pageA.keyboard.type('Saved from tab A')
   await descA.getByRole('button', { name: 'Save' }).click()
   await expect(descA.getByRole('button', { name: 'Save' })).toBeDisabled({ timeout: 10000 })
 
   // Tab B still holds the version it loaded with — its save must fail, not overwrite tab A's change.
   const descB = pageB.getByTestId('card-modal-desktop')
-  await descB.locator('.ProseMirror').click()
+  await expect(descB.locator('.ProseMirror').first()).toBeVisible()
+  await descB.locator('.ProseMirror').first().click()
   await pageB.keyboard.type('Saved from tab B (stale)')
   await descB.getByRole('button', { name: 'Save' }).click()
 

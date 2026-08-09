@@ -79,6 +79,16 @@ describe('usePopupZIndex', () => {
     expect(zIndexFor('nonexistent')).toBe(50)
   })
 
+  it('aboveAllZ is one above the current topmost entry, even with an empty stack', () => {
+    const { registerPopup, aboveAllZ } = usePopupZIndex()
+    expect(aboveAllZ()).toBe(50)
+    registerPopup('card-1', 'card', vi.fn())
+    registerPopup('card-2', 'card', vi.fn())
+    // zIndexFor('card-2') is 51 — aboveAllZ must exceed it so chrome like the
+    // closed-dock FAB is never covered by the topmost registered popup.
+    expect(aboveAllZ()).toBe(52)
+  })
+
   it('dock + card popups share one stack', () => {
     const { stack, registerPopup, closeTopmost } = usePopupZIndex()
     const dockClose = vi.fn()

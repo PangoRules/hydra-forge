@@ -24,6 +24,7 @@ export interface ChatMessageDto {
   inputTokens: number
   outputTokens: number
   cachedTokens: number
+  cost: number | null
   modelName: string | null
   imagesJson: string | null
   createdAt: string
@@ -98,4 +99,15 @@ export interface CreateChatSessionRequest {
   aiEditMode?: AiEditMode | null
   searchAllMyDocs?: boolean
   forkedFromSessionId?: string | null
+}
+
+export interface CardChatLinkDto {
+  id: string
+  cardId: string
+  chatSessionId: string
+  ownerId: string
+  ownerUsername: string
+  summary: string | null
+  createdAt: string
+  archivedAt: string | null
 }

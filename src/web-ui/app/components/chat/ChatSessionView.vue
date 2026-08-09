@@ -269,6 +269,7 @@ async function handleSend(
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    cost: null,
     modelName: null,
     imagesJson: null,
     createdAt: new Date().toISOString()
@@ -574,7 +575,8 @@ defineExpose({
   handleFork,
   startEditTitle,
   exportChat,
-  toggleFind
+  toggleFind,
+  fetchSession
 })
 </script>
 

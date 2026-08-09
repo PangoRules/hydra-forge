@@ -111,4 +111,15 @@ public class ChatSession
         ArchivedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void SetOpenCard(Guid cardId)
+    {
+        if (Status != ChatSessionStatus.Active)
+            throw new InvalidOperationException("Cannot set open card on a non-active session.");
+        if (ProjectId == null)
+            throw new InvalidOperationException("Cannot set open card on a non-project session.");
+
+        OpenCardId = cardId;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

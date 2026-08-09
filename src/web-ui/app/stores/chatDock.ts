@@ -39,11 +39,30 @@ export const useChatDockStore = defineStore('chatDock', () => {
     return null
   })
 
+  // openOrigin tracks which UI surface opened the dock — drives context for new sessions
+  const openOrigin = ref<'board' | 'project-chats' | 'card-popup' | null>(null)
+
+  // currentCardId: the card context for the dock — whichever card popup is
+  // currently open/active on this project, regardless of how the dock itself
+  // was opened. Originally gated on openOrigin === 'card-popup' (only set when
+  // the dock was opened FROM that card's Chat tab), but that meant opening
+  // chat from the general FAB and separately having a card open showed no
+  // card context at all — no ChatLinkCardButton, no openCardId on new
+  // sessions — even though a card was right there on screen. Card popups
+  // auto-close on project navigation (CardPopupLayer.vue), so activeCardId
+  // here always belongs to currentProjectId's project when set.
+  const currentCardId = computed(() => {
+    if (!currentProjectId.value) return null
+    const cardPopup = useCardPopupStore()
+    return cardPopup.activeCardId
+  })
+
   function toggleDock() {
     isOpen.value = !isOpen.value
   }
 
-  function openDock() {
+  function openDock(origin?: 'board' | 'project-chats' | 'card-popup') {
+    openOrigin.value = origin ?? null
     isOpen.value = true
     // Resume last active session from localStorage — only if we don't already
     // have one in memory (Pinia store survives client-side navigation, so this
@@ -122,7 +141,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
       // useBoardStore() always succeeds once Pinia is active (lazily creates
       // the store on first call) — no try/catch needed here. On a page with
       // no board mounted, openCardId is simply the store's untouched default (null).
-      const openCardId = currentProjectId.value ? useBoardStore().openCardId : null
+      const openCardId = currentProjectId.value ? currentCardId.value : null
       const body: Record<string, unknown> = { title: content ? deriveTitle(content) : '' }
       if (currentProjectId.value) body.projectId = currentProjectId.value
       if (openCardId) body.openCardId = openCardId
@@ -151,6 +170,7 @@ export const useChatDockStore = defineStore('chatDock', () => {
 
   return {
     isOpen, mode, activeSessionId, isCreating, position, currentProjectId, pendingMessage, isFullHeight,
+    openOrigin, currentCardId,
     toggleDock, openDock, closeDock, loadSession, newChat, showHistory, hideHistory, startNewChat, clearPendingMessage, toggleFullHeight
   }
 })

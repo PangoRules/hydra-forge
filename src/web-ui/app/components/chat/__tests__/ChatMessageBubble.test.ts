@@ -18,6 +18,7 @@ const baseMessage = {
   inputTokens: 0,
   outputTokens: 0,
   cachedTokens: 0,
+  cost: null,
   modelName: null,
   imagesJson: null,
   createdAt: '2026-08-01T00:00:00Z'
@@ -95,5 +96,49 @@ describe('ChatMessageBubble — findQuery highlight', () => {
       }
     })
     expect(wrapper.html()).not.toContain('<mark')
+  })
+})
+
+describe('ChatMessageBubble — token/cost usage label', () => {
+  it('shows tokens + cost for an assistant reply with both known', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: {
+        message: { ...baseMessage, inputTokens: 120, outputTokens: 340, cachedTokens: 0, cost: 0.00123 }
+      }
+    })
+    expect(wrapper.text()).toContain('460 tok')
+    expect(wrapper.text()).toContain('$0.00123')
+  })
+
+  it('shows tokens only when cost is unknown (no PricePerToken configured)', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: {
+        message: { ...baseMessage, inputTokens: 50, outputTokens: 50, cachedTokens: 0, cost: null }
+      }
+    })
+    expect(wrapper.text()).toContain('100 tok')
+    expect(wrapper.text()).not.toContain('$')
+  })
+
+  it('shows nothing for a zero-token message', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: { message: baseMessage }
+    })
+    expect(wrapper.text()).not.toContain('tok')
+  })
+
+  it('never shows a usage label on user messages, even with token fields set', async () => {
+    const wrapper = await mountSuspended(ChatMessageBubble, {
+      props: {
+        message: {
+          ...baseMessage,
+          role: MessageRole.User,
+          inputTokens: 10,
+          outputTokens: 20,
+          cost: 0.01
+        }
+      }
+    })
+    expect(wrapper.text()).not.toContain('tok')
   })
 })

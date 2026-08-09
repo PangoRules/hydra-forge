@@ -60,17 +60,22 @@ public class ChatFolderServiceTests
         ) => Task.FromResult<ChatSession?>(null);
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            var query = isAdmin
+                ? Sessions.AsEnumerable()
+                : Sessions.Where(s => s.OwnerId == actorId);
             query = statusFilter switch
             {
                 ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
@@ -86,20 +91,35 @@ public class ChatFolderServiceTests
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
             return Task.FromResult<IReadOnlyList<ChatSession>>(
                 query.OrderByDescending(s => s.UpdatedAt).Take(limit).ToList()
             );
         }
 
         public Task<int> CountAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         )
         {
-            var query = Sessions.Where(s => s.OwnerId == ownerId);
+            var query = isAdmin
+                ? Sessions.AsEnumerable()
+                : Sessions.Where(s => s.OwnerId == actorId);
             query = statusFilter switch
             {
                 ChatSessionStatusFilter.Archived => query.Where(s => s.ArchivedAt != null),
@@ -115,6 +135,16 @@ public class ChatFolderServiceTests
                 query = query.Where(s => s.FolderId == folderId.Value);
             if (projectId.HasValue)
                 query = query.Where(s => s.ProjectId == projectId.Value);
+            if (types != null && types.Count > 0)
+                query = query.Where(s =>
+                    (types.Contains(ChatSessionKind.Normal) && s.ProjectId == null)
+                    || (
+                        types.Contains(ChatSessionKind.Project)
+                        && s.ProjectId != null
+                        && s.OpenCardId == null
+                    )
+                    || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
+                );
             return Task.FromResult(query.Count());
         }
 
@@ -128,15 +158,29 @@ public class ChatFolderServiceTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId,
+            Guid actorId,
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) => Task.FromResult<CardChatLink?>(null);
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
     }
 
     private sealed class FakeUserRepo : IUserRepository

@@ -22,6 +22,8 @@ public interface IChatSessionService
         Guid? beforeId,
         int limit,
         ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+        ChatSessionScope scope = ChatSessionScope.Mine,
+        IReadOnlySet<ChatSessionKind>? types = null,
         CancellationToken ct = default
     );
     Task<Result<ChatSessionDto>> UpdateAsync(
@@ -64,6 +66,12 @@ public interface IChatSessionService
     );
     Task<Result<IReadOnlyList<ChatSessionDocumentDto>>> ListDocumentsAsync(
         Guid sessionId,
+        Guid actorId,
+        CancellationToken ct = default
+    );
+    Task<Result<ChatSessionDto>> LinkCardAsync(
+        Guid sessionId,
+        Guid cardId,
         Guid actorId,
         CancellationToken ct = default
     );

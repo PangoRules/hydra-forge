@@ -74,15 +74,22 @@ public sealed class EfChatMessageRepository(HydraForgeDbContext context) : IChat
         string query,
         Guid? projectId,
         int limit,
+        bool isAdmin = false,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     )
     {
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var sessionIds = context
-            .ChatSessions.Where(s => s.OwnerId == ownerId)
-            .Where(s => s.ArchivedAt == null)
+        var sessionIds = ChatScopeQueries
+            .ApplyScope(
+                context,
+                context.ChatSessions.Where(s => s.ArchivedAt == null),
+                ownerId,
+                isAdmin,
+                scope
+            )
             .Where(s => !projectId.HasValue || s.ProjectId == projectId.Value)
             .Select(s => s.Id);
 

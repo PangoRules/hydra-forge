@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
-import { h } from 'vue'
-import CardModal from '~/components/card/CardModal.vue'
+import CardPopupBody from '~/components/card/CardPopupBody.vue'
 import type { components } from '~/types/api'
 
 type CardResponse = components['schemas']['CardResponse']
@@ -18,9 +17,28 @@ mockNuxtImport('useApi', () => () => ({
 
 mockNuxtImport('useToast', () => () => ({ add: vi.fn() }))
 
+mockNuxtImport('useAuthStore', () => () => ({
+  user: { userId: 'me', username: 'me', isAdmin: false }
+}))
+
+mockNuxtImport('useBoardStore', () => () => ({
+  cardContentEvent: null
+}))
+
+mockNuxtImport('usePresenceStore', () => () => ({
+  onlineUsers: new Map(),
+  focusedCards: new Map()
+}))
+
+mockNuxtImport('useChatDockStore', () => () => ({
+  loadSession: vi.fn(),
+  openDock: vi.fn()
+}))
+
 // API sends CardType as a string (JsonStringEnumConverter) — the generated
 // CardResponse['type'] is typed as number, but the real runtime value is one
-// of 'Task' | 'Issue' | 'Idea' | 'Goal'. Cast through unknown like CardModal.vue does.
+// of 'Task' | 'Issue' | 'Idea' | 'Goal' | 'Security'. Cast through unknown
+// like CardPopupBody.vue does.
 function makeCard(type: string): CardResponse {
   return {
     id: 'c1',
@@ -49,15 +67,10 @@ function makeCard(type: string): CardResponse {
 
 async function mountForType(type: string) {
   mockGET.mockResolvedValue({ data: makeCard(type), error: undefined })
-  const wrapper = await mountSuspended(CardModal, {
+  const wrapper = await mountSuspended(CardPopupBody, {
     props: { cardId: 'c1', projectId: 'p1' },
     global: {
       stubs: {
-        AppModal: {
-          render() {
-            return h('div', { 'data-testid': 'app-modal' }, this.$slots.body?.())
-          }
-        },
         CardDescription: true,
         CardMetadata: true,
         CardChecklist: true,
@@ -65,7 +78,8 @@ async function mountForType(type: string) {
         CardAttachments: true,
         CardDependencies: true,
         CardSpec: true,
-        // Not the `true` shorthand — CardModal calls cardPlanRef.value.loadAndExpandFirst()
+        CardChatLinkList: true,
+        // Not the `true` shorthand — CardPopupBody calls cardPlanRef.value.loadAndExpandFirst()
         // via a template ref, which an auto-stub doesn't expose (caused an unhandled
         // rejection on every mount with a Plan tab). Custom stub keeps the same
         // `card-plan-stub` tag the auto-stub would produce, plus a no-op for that method.
@@ -83,7 +97,7 @@ async function mountForType(type: string) {
   return wrapper
 }
 
-describe('CardModal Docs tab visibility (real component, not duplicated constants)', () => {
+describe('CardPopupBody Docs tab visibility (real component, not duplicated constants)', () => {
   beforeEach(() => {
     mockGET.mockReset()
   })

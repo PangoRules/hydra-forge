@@ -488,7 +488,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ChatSearchResultDto>> Search2Async(string? q = null, System.Guid? projectId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ChatSearchResultDto>> Search2Async(string? q = null, System.Guid? projectId = null, ChatSessionScope? scope = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
@@ -498,7 +498,7 @@ namespace HydraForge.Tui.Generated
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, ChatSessionStatusFilter? status = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<ChatSessionPageDto> SessionsGETAsync(System.Guid? folderId = null, System.Guid? projectId = null, System.DateTimeOffset? before = null, System.Guid? beforeId = null, int? limit = null, ChatSessionStatusFilter? status = null, ChatSessionScope? scope = null, string? types = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -544,6 +544,11 @@ namespace HydraForge.Tui.Generated
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ChatPermissionDto> PermissionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ChatSessionDto> LinkCardAsync(System.Guid sessionId, LinkCardRequest body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Created</returns>
@@ -1550,6 +1555,9 @@ namespace HydraForge.Tui.Generated
         [Newtonsoft.Json.JsonProperty("cachedTokens", Required = Newtonsoft.Json.Required.Always)]
         public int CachedTokens { get; set; } = default!;
 
+        [Newtonsoft.Json.JsonProperty("cost", Required = Newtonsoft.Json.Required.AllowNull)]
+        public double? Cost { get; set; } = default!;
+
         [Newtonsoft.Json.JsonProperty("modelName", Required = Newtonsoft.Json.Required.AllowNull)]
         public string? ModelName { get; set; } = default!;
 
@@ -1848,6 +1856,18 @@ namespace HydraForge.Tui.Generated
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ChatSessionScope
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Mine")]
+        Mine = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Participated")]
+        Participated = 1,
 
     }
 
@@ -2763,6 +2783,24 @@ namespace HydraForge.Tui.Generated
 
         [Newtonsoft.Json.JsonProperty("totalCost", Required = Newtonsoft.Json.Required.Always)]
         public double TotalCost { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LinkCardRequest
+    {
+
+        [Newtonsoft.Json.JsonProperty("cardId", Required = Newtonsoft.Json.Required.Always)]
+        public System.Guid CardId { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

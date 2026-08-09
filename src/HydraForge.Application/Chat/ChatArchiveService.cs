@@ -16,14 +16,20 @@ public class ChatArchiveService(
         folder.Archive();
         await folderRepo.UpdateAsync(folder, ct);
 
+        // Folders are strictly owner-scoped (see CLAUDE.md's scope-default lesson) —
+        // Participated would admit "session I merely participate in as a project
+        // member" into what must be an owner-only maintenance cascade.
         var sessions = await sessionRepo.ListAsync(
-            ownerId: folder.OwnerId,
+            actorId: folder.OwnerId,
             folderId: folder.Id,
             projectId: null,
             before: null,
             beforeId: null,
             limit: int.MaxValue,
+            isAdmin: false,
             statusFilter: ChatSessionStatusFilter.NonArchived,
+            scope: ChatSessionScope.Mine,
+            types: null,
             ct
         );
         foreach (var session in sessions)

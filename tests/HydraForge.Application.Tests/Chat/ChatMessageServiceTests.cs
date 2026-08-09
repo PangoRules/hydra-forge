@@ -33,21 +33,27 @@ public class ChatMessageServiceTests
         ) => Task.FromResult<ChatSession?>(null);
 
         public Task<IReadOnlyList<ChatSession>> ListAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
             DateTime? before,
             Guid? beforeId,
             int limit,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task<int> CountAsync(
-            Guid ownerId,
+            Guid actorId,
             Guid? folderId,
             Guid? projectId,
+            bool isAdmin = false,
             ChatSessionStatusFilter statusFilter = ChatSessionStatusFilter.NonArchived,
+            ChatSessionScope scope = ChatSessionScope.Mine,
+            IReadOnlySet<ChatSessionKind>? types = null,
             CancellationToken ct = default
         ) => Task.FromResult(0);
 
@@ -61,15 +67,29 @@ public class ChatMessageServiceTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<ChatSession>> SearchByTitleAsync(
-            Guid ownerId,
+            Guid actorId,
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatSession>>([]);
 
         public Task AddCardChatLinkAsync(CardChatLink link, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<CardChatLink?> FindCardChatLinkAsync(
+            Guid cardId,
+            Guid chatSessionId,
+            CancellationToken ct = default
+        ) => Task.FromResult<CardChatLink?>(null);
+
+        public Task UpdateCardChatLinkSummaryAsync(
+            Guid linkId,
+            string summary,
+            CancellationToken ct = default
+        ) => Task.CompletedTask;
     }
 
     private sealed class FakeMessageRepo : IChatMessageRepository
@@ -116,6 +136,8 @@ public class ChatMessageServiceTests
             string query,
             Guid? projectId,
             int limit,
+            bool isAdmin = false,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
 
