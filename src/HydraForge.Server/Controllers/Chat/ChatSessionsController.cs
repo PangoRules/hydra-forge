@@ -190,6 +190,23 @@ public class ChatSessionsController(IChatSessionService sessionService) : Contro
 
         return Ok(result.Value);
     }
+
+    [HttpPost("{sessionId:guid}/link-card")]
+    [ProducesResponseType(typeof(ChatSessionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> LinkCard(Guid sessionId, [FromBody] LinkCardRequest request)
+    {
+        var userId = User.GetRequiredUserId();
+        var result = await sessionService.LinkCardAsync(sessionId, request.CardId, userId);
+
+        if (result.IsFailure)
+            return this.ToProblemResult(result.Error);
+
+        return Ok(result.Value);
+    }
 }
 
 public record AttachDocumentRequest(Guid DocumentId);
+
+public record LinkCardRequest(Guid CardId);

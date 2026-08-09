@@ -111,6 +111,9 @@ public static class ProblemDetailsMapper
             ),
             DomainErrorCodes.Llm.RoutingNotFound => (404, "Routing config not found"),
             DomainErrorCodes.Llm.InvalidFeature => (400, "Invalid feature"),
+            DomainErrorCodes.Chat.SessionNotFound => (404, "Session not found"),
+            DomainErrorCodes.Chat.SessionClosed => (409, "Session not active"),
+            DomainErrorCodes.Chat.CardNotInProject => (409, "Card is in a different project"),
             _ => (400, "Bad request"),
         };
 
