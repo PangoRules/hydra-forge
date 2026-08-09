@@ -141,6 +141,7 @@ function handlePointerDown() {
     <div
       ref="popupRef"
       class="fixed bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl flex flex-col overflow-hidden"
+      data-testid="card-modal-desktop"
       :style="{
         width: `${size.width}px`,
         height: `${size.height}px`,
