@@ -205,8 +205,8 @@ export const ApiRoutes = {
 
   Chat: {
     sessions: {
-      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20, status?: string) =>
-        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}${status ? `status=${status}&` : ''}limit=${limit}`,
+      list: (folderId?: string, projectId?: string, before?: string, beforeId?: string, limit = 20, status?: string, scope?: string, types?: string) =>
+        `/api/chat/sessions?${folderId ? `folderId=${folderId}&` : ''}${projectId ? `projectId=${projectId}&` : ''}${before ? `before=${before}&` : ''}${beforeId ? `beforeId=${beforeId}&` : ''}${status ? `status=${status}&` : ''}${scope ? `scope=${scope}&` : ''}${types ? `types=${types}&` : ''}limit=${limit}`,
       create: () => '/api/chat/sessions',
       detail: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
       update: (sessionId: string) => `/api/chat/sessions/${sessionId}`,
@@ -266,8 +266,8 @@ export const ApiRoutes = {
       detail: (documentId: string) => `/api/Documents/${documentId}`,
       archive: (documentId: string) => `/api/Documents/${documentId}`
     },
-    search: (q: string, projectId?: string) =>
-      `/api/chat/search?q=${encodeURIComponent(q)}${projectId ? `&projectId=${projectId}` : ''}`
+    search: (q: string, projectId?: string, scope?: string) =>
+      `/api/chat/search?q=${encodeURIComponent(q)}${projectId ? `&projectId=${projectId}` : ''}${scope ? `&scope=${scope}` : ''}`
   },
 
   Llm: {

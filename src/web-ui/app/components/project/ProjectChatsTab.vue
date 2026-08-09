@@ -20,7 +20,7 @@ const cardLinkedSessionIds = ref<Set<string>>(new Set())
 async function fetchSessions() {
   loading.value = true
   try {
-    const url = ApiRoutes.Chat.sessions.list(undefined, props.projectId, undefined, undefined, 50)
+    const url = ApiRoutes.Chat.sessions.list(undefined, props.projectId, undefined, undefined, 50, undefined, 'participated')
     const { data } = await api.GET<ChatSessionPageDto>(url)
     sessions.value = data?.items ?? []
 
