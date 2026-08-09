@@ -2056,6 +2056,40 @@ public class ChatSessionServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_OpenCardId_CreatesCardChatLinkImmediately_SoCardChatTabIsNotEmptyBeforeClose()
+    {
+        var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
+        var ownerId = NewId();
+        var projectId = NewId();
+        var cardId = NewId();
+        cardRepo.Cards[cardId] = new Card { Id = cardId, ProjectId = projectId };
+
+        var result = await service.CreateAsync(
+            new CreateChatSessionRequest(
+                Title: "Panel Chat",
+                FolderId: null,
+                ProjectId: projectId,
+                OpenCardId: cardId,
+                PersonalityId: null,
+                AiEditMode: null,
+                SearchAllMyDocs: false,
+                ForkedFromSessionId: null,
+                PreferredModelConfigId: null,
+                PreferredEffort: null
+            ),
+            ownerId
+        );
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(sessionRepo.CapturedLinks);
+        var link = sessionRepo.CapturedLinks[0];
+        Assert.Equal(cardId, link.CardId);
+        Assert.Equal(result.Value.Id, link.ChatSessionId);
+        Assert.Equal(ownerId, link.OwnerId);
+        Assert.Equal("Chat linked — summary generated when the chat closes.", link.Summary);
+    }
+
+    [Fact]
     public async Task LinkCardAsync_CreatesCardChatLinkImmediately_SoCardChatTabIsNotEmptyBeforeClose()
     {
         var (service, sessionRepo, _, cardRepo, _, _, _, _, _, _, _, _) = CreateSut();
