@@ -536,6 +536,7 @@ internal class TestChatMessageRepository : IChatMessageRepository
         string query,
         Guid? projectId,
         int limit,
+        ChatSessionScope scope = ChatSessionScope.Mine,
         CancellationToken ct = default
     ) => Task.FromResult<IReadOnlyList<ChatMessage>>([]);
 

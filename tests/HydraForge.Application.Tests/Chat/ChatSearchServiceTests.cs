@@ -11,6 +11,7 @@ public class ChatSearchServiceTests
     private sealed class FakeSessionRepo : IChatSessionRepository
     {
         public List<ChatSession> Sessions { get; } = [];
+        public List<(Guid ProjectId, Guid UserId)> Memberships { get; } = [];
 
         public Task<ChatSession?> GetByIdAsync(Guid sessionId, CancellationToken ct = default) =>
             Task.FromResult(Sessions.FirstOrDefault(s => s.Id == sessionId));
@@ -112,6 +113,7 @@ public class ChatSearchServiceTests
             string query,
             Guid? projectId,
             int limit,
+            ChatSessionScope scope = ChatSessionScope.Mine,
             CancellationToken ct = default
         )
         {
@@ -120,7 +122,17 @@ public class ChatSearchServiceTests
 
             var sessionIds = _sessionRepo
                 .Sessions.Where(s =>
-                    s.OwnerId == ownerId
+                    (
+                        scope == ChatSessionScope.Participated
+                            ? s.OwnerId == ownerId
+                                || (
+                                    s.ProjectId.HasValue
+                                    && _sessionRepo.Memberships.Contains(
+                                        (s.ProjectId.Value, ownerId)
+                                    )
+                                )
+                            : s.OwnerId == ownerId
+                    )
                     && s.ArchivedAt == null
                     && (!projectId.HasValue || s.ProjectId == projectId)
                 )

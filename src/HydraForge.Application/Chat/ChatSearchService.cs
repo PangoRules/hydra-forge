@@ -35,6 +35,7 @@ public class ChatSearchService : IChatSearchService
             query,
             projectId,
             MaxResults,
+            scope: ChatSessionScope.Mine,
             ct
         );
 
