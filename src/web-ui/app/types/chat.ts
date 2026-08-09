@@ -111,3 +111,23 @@ export interface CardChatLinkDto {
   createdAt: string
   archivedAt: string | null
 }
+
+export interface PromptPresetGroupDto {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+  presets: PromptPresetDto[]
+}
+
+export interface DocumentDto {
+  id: string
+  title: string
+  contentType: string
+  language: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+}
