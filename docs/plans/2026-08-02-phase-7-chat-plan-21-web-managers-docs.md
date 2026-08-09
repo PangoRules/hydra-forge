@@ -18,7 +18,7 @@
 
 **Steps:**
 
-- [ ] Add missing TypeScript types to `src/web-ui/app/types/chat.ts`:
+- [x] Add missing TypeScript types to `src/web-ui/app/types/chat.ts`:
   ```ts
   export interface PromptPresetGroupDto {
     id: string

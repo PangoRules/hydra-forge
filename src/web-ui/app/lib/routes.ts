@@ -35,7 +35,13 @@ export const UiRoutes = {
   },
   Account: {
     Usage: '/account/usage'
-  }
+  },
+  Chat: {
+    // ... existing entries ...
+    Presets: '/chat/presets',
+    Personalities: '/chat/personalities'
+  },
+  Documents: '/documents'
 } as const
 
 export const ApiRoutes = {
