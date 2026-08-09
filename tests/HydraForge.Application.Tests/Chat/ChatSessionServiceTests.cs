@@ -92,7 +92,7 @@ public class ChatSessionServiceTests
                     )
                     || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
                 );
-            if (scope == ChatSessionScope.Participated)
+            if (scope == ChatSessionScope.Participated && !isAdmin)
             {
                 query = query.Where(s =>
                     s.OwnerId == actorId
@@ -142,7 +142,7 @@ public class ChatSessionServiceTests
                     )
                     || (types.Contains(ChatSessionKind.Card) && s.OpenCardId != null)
                 );
-            if (scope == ChatSessionScope.Participated)
+            if (scope == ChatSessionScope.Participated && !isAdmin)
             {
                 query = query.Where(s =>
                     s.OwnerId == actorId
@@ -211,7 +211,7 @@ public class ChatSessionServiceTests
                 && (!projectId.HasValue || s.ProjectId == projectId)
             );
 
-            if (scope == ChatSessionScope.Participated)
+            if (scope == ChatSessionScope.Participated && !isAdmin)
             {
                 queryResults = queryResults.Where(s =>
                     s.OwnerId == actorId
@@ -1829,7 +1829,8 @@ public class ChatSessionServiceTests
             projectId: projectId,
             before: null,
             beforeId: null,
-            limit: 50
+            limit: 50,
+            scope: ChatSessionScope.Participated
         );
 
         Assert.True(result.IsSuccess);
@@ -1880,7 +1881,8 @@ public class ChatSessionServiceTests
             projectId: projectId,
             before: null,
             beforeId: null,
-            limit: 50
+            limit: 50,
+            scope: ChatSessionScope.Participated
         );
 
         Assert.True(result.IsSuccess);
@@ -1936,7 +1938,8 @@ public class ChatSessionServiceTests
             projectId: null,
             before: null,
             beforeId: null,
-            limit: 50
+            limit: 50,
+            scope: ChatSessionScope.Participated
         );
 
         Assert.True(result.IsSuccess);
