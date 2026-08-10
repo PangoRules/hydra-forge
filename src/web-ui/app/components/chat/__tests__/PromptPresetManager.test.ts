@@ -34,8 +34,8 @@ const groups = [
 ]
 
 const presets = [
-  { id: 'p1', groupId: 'g1', name: 'Code Review', content: 'Review this code', createdAt: '', updatedAt: '', archivedAt: null },
-  { id: 'p2', groupId: 'g1', name: 'Bug Report', content: 'Write a bug report', createdAt: '', updatedAt: '', archivedAt: null }
+  { id: 'p1', groupId: 'g1', name: 'Code Review', content: 'Review this code', createdAt: '', updatedAt: '', archivedAt: null, position: 0 },
+  { id: 'p2', groupId: 'g1', name: 'Bug Report', content: 'Write a bug report', createdAt: '', updatedAt: '', archivedAt: null, position: 0 }
 ]
 
 describe('PromptPresetManager', () => {
@@ -108,7 +108,7 @@ describe('PromptPresetManager', () => {
   })
 
   it('creates a new preset', async () => {
-    mockPOST.mockResolvedValue({ data: { id: 'p3', groupId: 'g1', name: 'New Preset', content: 'Content', createdAt: '', updatedAt: '', archivedAt: null }, error: undefined })
+    mockPOST.mockResolvedValue({ data: { id: 'p3', groupId: 'g1', name: 'New Preset', content: 'Content', createdAt: '', updatedAt: '', archivedAt: null, position: 0 }, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
     })
@@ -142,6 +142,8 @@ describe('PromptPresetManager', () => {
   })
 
   it('archives a preset', async () => {
+    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
+    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     mockDELETE.mockResolvedValue({ data: undefined, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
@@ -155,7 +157,9 @@ describe('PromptPresetManager', () => {
   })
 
   it('edits an existing preset', async () => {
-    mockPATCH.mockResolvedValue({ data: { id: 'p1', groupId: 'g1', name: 'Code Review (edited)', content: 'Review this code', createdAt: '', updatedAt: '', archivedAt: null }, error: undefined })
+    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
+    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
+    mockPATCH.mockResolvedValue({ data: { id: 'p1', groupId: 'g1', name: 'Code Review (edited)', content: 'Review this code', createdAt: '', updatedAt: '', archivedAt: null, position: 0 }, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
     })
@@ -170,6 +174,8 @@ describe('PromptPresetManager', () => {
   })
 
   it('shows an error toast when preset edit fails', async () => {
+    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
+    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     mockPATCH.mockRejectedValue(new Error('Update failed'))
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }

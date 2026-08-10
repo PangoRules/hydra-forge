@@ -79,7 +79,7 @@ async function createGroup() {
   }
 }
 
-async function updateGroup(_groupId: string) {
+async function updateGroup() {
   if (!formName.value.trim()) {
     toast.error('Group name is required')
     return
@@ -151,7 +151,7 @@ async function createPreset() {
   }
 }
 
-async function updatePreset(_presetId: string) {
+async function updatePreset() {
   if (!formName.value.trim()) {
     toast.error('Preset name is required')
     return
@@ -288,7 +288,7 @@ onMounted(() => {
 
 watch(selectedGroup, () => {
   void fetchPresets()
-}, { immediate: true })
+})
 </script>
 
 <template>
@@ -362,7 +362,7 @@ watch(selectedGroup, () => {
             label="Save"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
-            @click="updateGroup(editingGroupId!)"
+            @click="updateGroup()"
           />
           <UButton
             label="Cancel"
@@ -525,7 +525,7 @@ watch(selectedGroup, () => {
             label="Save"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
-            @click="updatePreset(editingPresetId!)"
+            @click="updatePreset()"
           />
           <UButton
             label="Cancel"
