@@ -505,6 +505,7 @@ watch(selectedGroup, () => {
           id="preset-name-input-edit"
           v-model="formName"
           placeholder="Preset name"
+          data-testid="preset-name-input"
           class="mb-2"
           :aria-busy="saving"
         />
@@ -516,6 +517,7 @@ watch(selectedGroup, () => {
           id="preset-content-input-edit"
           v-model="formContent"
           placeholder="Preset content"
+          data-testid="preset-content-input"
           class="mb-2"
           :rows="4"
           :aria-busy="saving"
@@ -523,6 +525,7 @@ watch(selectedGroup, () => {
         <div class="flex gap-2">
           <UButton
             label="Save"
+            data-testid="save-preset"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
             @click="updatePreset()"

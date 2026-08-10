@@ -45,7 +45,18 @@ describe('PromptPresetManager', () => {
     mockPATCH.mockReset()
     mockDELETE.mockReset()
     mockToastAdd.mockReset()
-    mockGET.mockResolvedValue({ data: groups, error: undefined })
+    // Route by URL instead of call order — call order depends on component internals
+    // (watchers, re-fetches after mutations) and drifts easily, silently misassigning
+    // groups data to presets.value or vice versa.
+    mockGET.mockImplementation((url: string) => {
+      if (url.startsWith('/api/chat/preset-groups')) {
+        return Promise.resolve({ data: groups, error: undefined })
+      }
+      if (url.startsWith('/api/chat/presets')) {
+        return Promise.resolve({ data: presets, error: undefined })
+      }
+      return Promise.resolve({ data: undefined, error: undefined })
+    })
   })
 
   it('loads groups on mount', async () => {
@@ -57,8 +68,6 @@ describe('PromptPresetManager', () => {
   })
 
   it('loads presets when a group is selected', async () => {
-    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
-    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
     })
@@ -142,8 +151,6 @@ describe('PromptPresetManager', () => {
   })
 
   it('archives a preset', async () => {
-    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
-    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     mockDELETE.mockResolvedValue({ data: undefined, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
@@ -157,8 +164,6 @@ describe('PromptPresetManager', () => {
   })
 
   it('edits an existing preset', async () => {
-    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
-    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     mockPATCH.mockResolvedValue({ data: { id: 'p1', groupId: 'g1', name: 'Code Review (edited)', content: 'Review this code', createdAt: '', updatedAt: '', archivedAt: null, position: 0 }, error: undefined })
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
@@ -174,8 +179,6 @@ describe('PromptPresetManager', () => {
   })
 
   it('shows an error toast when preset edit fails', async () => {
-    mockGET.mockResolvedValueOnce({ data: groups, error: undefined })
-    mockGET.mockResolvedValueOnce({ data: presets, error: undefined })
     mockPATCH.mockRejectedValue(new Error('Update failed'))
     const wrapper = await mountSuspended(PromptPresetManager, {
       global: { stubs: { AppModal: appModalStub } }
