@@ -10,7 +10,7 @@ const config = useRuntimeConfig()
 const toast = useAppToast()
 const { getToken } = useAuthToken()
 
-type UploadState = 'idle' | 'uploading' | 'processing' | 'done'
+type UploadState = 'idle' | 'uploading' | 'done'
 
 const uploadState = ref<UploadState>('idle')
 const isDragging = ref(false)
@@ -20,8 +20,7 @@ const ACCEPTED_TYPES = [
   'text/plain',
   'text/markdown',
   'text/csv',
-  'text/html',
-  'application/pdf'
+  'text/html'
 ]
 const ACCEPTED_EXTENSIONS = '.txt,.md,.markdown,.csv,.ts,.js,.py,.rs,.go,.java,.c,.cpp,.h,.sh,.bash,.html,.htm'
 
@@ -36,8 +35,8 @@ function validateFile(file: File): string | null {
     return 'Unsupported file type. Please upload a text, markdown, code, CSV, or HTML file.'
   }
 
-  // 50 MB max (server-side limit; reasonable client-side guard)
-  const MAX_SIZE = 50 * 1024 * 1024
+  // 10 MB max (matches server-side RequestSizeLimit)
+  const MAX_SIZE = 10 * 1024 * 1024
   if (file.size > MAX_SIZE) {
     const mb = (MAX_SIZE / 1024 / 1024).toFixed(0)
     return `File too large. Maximum size is ${mb} MB.`
@@ -70,24 +69,18 @@ async function uploadFile(file: File) {
     if (!res.ok) {
       let msg = `Upload failed (${res.status})`
       try {
-        const body = await res.json()
-        msg = (body as Record<string, unknown>).detail as string || msg
+        const body = await res.json() as Record<string, unknown>
+        msg = (body.title as string | undefined) ?? (body.detail as string | undefined) ?? msg
       } catch { /* ignore parse failure */ }
       throw new Error(msg)
     }
 
-    uploadState.value = 'processing'
-
     const doc = await res.json() as DocumentDto
-
-    // Give the user a moment to see "Chunking & embedding…"
-    await new Promise(resolve => setTimeout(resolve, 800))
 
     uploadState.value = 'done'
     toast.success(`"${doc.title}" uploaded`)
     emit('uploaded', doc)
 
-    await new Promise(resolve => setTimeout(resolve, 1500))
     uploadState.value = 'idle'
   } catch (err: unknown) {
     uploadState.value = 'idle'
@@ -142,7 +135,7 @@ function onKeyDown(e: KeyboardEvent) {
       ref="fileInput"
       type="file"
       class="sr-only"
-      :accept="ACCEPTED_EXTENSIONS + ',.pdf'"
+      :accept="ACCEPTED_EXTENSIONS"
       tabindex="-1"
       @change="handleFileSelect"
     >
@@ -175,7 +168,7 @@ function onKeyDown(e: KeyboardEvent) {
             Drop a file here, or <span class="text-primary">browse</span>
           </p>
           <p class="text-xs text-muted mt-0.5">
-            {{ ACCEPTED_LABEL }} — max 50 MB
+            {{ ACCEPTED_LABEL }} — max 10 MB
           </p>
         </div>
       </template>
@@ -188,17 +181,6 @@ function onKeyDown(e: KeyboardEvent) {
         />
         <p class="text-sm font-medium text-foreground">
           Uploading…
-        </p>
-      </template>
-
-      <!-- Processing state -->
-      <template v-else-if="uploadState === 'processing'">
-        <UIcon
-          name="i-lucide-loader-circle"
-          class="size-8 animate-spin text-primary"
-        />
-        <p class="text-sm font-medium text-foreground">
-          Chunking & embedding…
         </p>
       </template>
 
