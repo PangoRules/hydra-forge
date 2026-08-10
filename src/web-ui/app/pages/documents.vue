@@ -3,6 +3,7 @@ import { UiRoutes, ApiRoutes } from '~/lib/routes'
 import type { DocumentDto } from '~/types/chat'
 import type { TableColumn } from '@nuxt/ui'
 import DocumentUploader from '~/components/chat/DocumentUploader.vue'
+import { formatDateOnly } from '~/lib/date'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -11,39 +12,31 @@ const toast = useAppToast()
 
 const documents = ref<DocumentDto[]>([])
 const loading = ref(false)
+const archiving = ref(new Set<string>())
 
 async function loadDocuments() {
   loading.value = true
   try {
-    const { data, error } = await api.GET<DocumentDto[]>(ApiRoutes.Chat.documents.list())
-    if (error) {
-      toast.error(error.title)
-      return
-    }
+    const { data } = await api.GET<DocumentDto[]>(ApiRoutes.Chat.documents.list())
     documents.value = data ?? []
-  } catch {
-    toast.error('Failed to load documents')
+  } catch (err) {
+    toast.showApiError(err as Error)
   } finally {
     loading.value = false
   }
 }
 
 async function archiveDocument(doc: DocumentDto) {
+  archiving.value.add(doc.id)
   try {
-    const { error } = await api.DELETE(ApiRoutes.Chat.documents.archive(doc.id))
-    if (error) {
-      toast.error(error.title)
-      return
-    }
+    await api.DELETE(ApiRoutes.Chat.documents.archive(doc.id))
     toast.success(`"${doc.title}" archived`)
     await loadDocuments()
-  } catch {
-    toast.error('Failed to archive document')
+  } catch (err) {
+    toast.showApiError(err as Error)
+  } finally {
+    archiving.value.delete(doc.id)
   }
-}
-
-function onUploaded(_doc: DocumentDto) {
-  void loadDocuments()
 }
 
 const columns: TableColumn<DocumentDto>[] = [
@@ -61,7 +54,8 @@ const columns: TableColumn<DocumentDto>[] = [
   },
   {
     accessorKey: 'updatedAt',
-    header: 'Last Modified'
+    header: 'Last Modified',
+    cell: ({ row }) => formatDateOnly(row.original.updatedAt)
   },
   {
     id: 'actions',
@@ -70,13 +64,12 @@ const columns: TableColumn<DocumentDto>[] = [
       return h('button', {
         type: 'button',
         class: 'text-red-500 hover:text-red-700 text-sm',
+        disabled: archiving.value.has(row.original.id),
         onClick: () => archiveDocument(row.original)
       }, 'Archive')
     }
   }
 ]
-
-const MOBILE_BREAKPOINT = 'md'
 
 // Load on mount
 onMounted(() => {
@@ -93,7 +86,7 @@ onMounted(() => {
         variant="ghost"
         color="neutral"
         size="sm"
-        aria-label="Back to documents"
+        aria-label="Back to chats"
         :to="UiRoutes.Chats"
       />
       <h1 class="text-lg font-bold">
@@ -108,7 +101,7 @@ onMounted(() => {
         <h2 class="text-sm font-semibold text-muted mb-2 uppercase tracking-wide">
           Upload
         </h2>
-        <DocumentUploader @uploaded="onUploaded" />
+        <DocumentUploader @uploaded="loadDocuments" />
       </section>
 
       <!-- Document list -->
@@ -148,8 +141,7 @@ onMounted(() => {
         <!-- Mobile: card grid -->
         <div
           v-else
-          class="grid gap-3"
-          :class="`grid-cols-1 ${MOBILE_BREAKPOINT}:hidden`"
+          :class="`grid gap-3 grid-cols-1 md:hidden`"
         >
           <div
             v-for="doc in documents"
@@ -178,6 +170,7 @@ onMounted(() => {
             <button
               type="button"
               class="text-red-500 hover:text-red-700 text-sm"
+              :disabled="archiving.has(doc.id)"
               @click="archiveDocument(doc)"
             >
               Archive
@@ -188,8 +181,7 @@ onMounted(() => {
         <!-- Desktop: table -->
         <div
           v-if="!loading && documents.length > 0"
-          class="hidden"
-          :class="`${MOBILE_BREAKPOINT}:block`"
+          :class="`hidden md:block`"
         >
           <UTable
             :data="documents"
