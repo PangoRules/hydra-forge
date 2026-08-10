@@ -147,4 +147,41 @@ describe('DocumentUploader', () => {
       })
     )
   })
+
+  it('opens file picker when drop zone is clicked', async () => {
+    const wrapper = await mountSuspended(DocumentUploader)
+    const clickSpy = vi.fn()
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'click', { value: clickSpy, configurable: true })
+    await wrapper.find('[role="button"]').trigger('click')
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('clears isDragging on dragleave', async () => {
+    const wrapper = await mountSuspended(DocumentUploader)
+    const dropZone = wrapper.find('[role="button"]')
+    await dropZone.trigger('dragover')
+    await dropZone.trigger('dragleave')
+    // isDragging should be false after dragleave
+    const vm = wrapper.vm as unknown as Record<string, unknown>
+    expect(vm.isDragging).toBe(false)
+  })
+
+  it('opens file picker on Enter keydown', async () => {
+    const wrapper = await mountSuspended(DocumentUploader)
+    const clickSpy = vi.fn()
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'click', { value: clickSpy, configurable: true })
+    await wrapper.find('[role="button"]').trigger('keydown', { key: 'Enter' })
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('opens file picker on Space keydown', async () => {
+    const wrapper = await mountSuspended(DocumentUploader)
+    const clickSpy = vi.fn()
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'click', { value: clickSpy, configurable: true })
+    await wrapper.find('[role="button"]').trigger('keydown', { key: ' ' })
+    expect(clickSpy).toHaveBeenCalled()
+  })
 })

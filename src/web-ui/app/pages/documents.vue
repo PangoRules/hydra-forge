@@ -13,7 +13,7 @@ const toast = useAppToast()
 
 const documents = ref<DocumentDto[]>([])
 const loading = ref(false)
-const archiving = ref(new Set<string>())
+const archiving = reactive(new Map<string, true>())
 
 async function loadDocuments() {
   loading.value = true
@@ -28,7 +28,7 @@ async function loadDocuments() {
 }
 
 async function archiveDocument(doc: DocumentDto) {
-  archiving.value.add(doc.id)
+  archiving.set(doc.id, true)
   try {
     await api.DELETE(ApiRoutes.Chat.documents.archive(doc.id))
     toast.success(`"${doc.title}" archived`)
@@ -36,7 +36,7 @@ async function archiveDocument(doc: DocumentDto) {
   } catch (err) {
     toast.showApiError(err as Error)
   } finally {
-    archiving.value.delete(doc.id)
+    archiving.delete(doc.id)
   }
 }
 
@@ -65,7 +65,7 @@ const columns: TableColumn<DocumentDto>[] = [
       return h('button', {
         type: 'button',
         class: 'text-red-500 hover:text-red-700 text-sm min-h-8',
-        disabled: archiving.value.has(row.original.id),
+        disabled: !!archiving.get(row.original.id),
         onClick: () => archiveDocument(row.original)
       }, 'Archive')
     }

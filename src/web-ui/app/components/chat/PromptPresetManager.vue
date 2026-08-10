@@ -273,20 +273,21 @@ async function movePreset(index: number, direction: 'up' | 'down') {
     )
   } catch (err) {
     toast.showApiError(err as Error)
+    await fetchPresets()
   }
 }
 
-async function handlePresetDrop(dragIndex: number, event: DragEvent) {
+async function handlePresetDrop(destIndex: number, event: DragEvent) {
   if (!event.dataTransfer) return
 
-  const dropIndex = parseInt(event.dataTransfer.getData('text/plain') || '0', 10)
-  if (dragIndex === dropIndex) return
+  const sourceIndex = parseInt(event.dataTransfer.getData('text/plain') || '0', 10)
+  if (sourceIndex === destIndex) return
 
-  const draggedPreset = presets.value[dragIndex]
+  const draggedPreset = presets.value[sourceIndex]
   if (!draggedPreset) return
 
-  presets.value.splice(dragIndex, 1)
-  presets.value.splice(dropIndex, 0, draggedPreset)
+  presets.value.splice(sourceIndex, 1)
+  presets.value.splice(destIndex, 0, draggedPreset)
 
   // Update local positions
   for (let i = 0; i < presets.value.length; i++) {
@@ -305,6 +306,7 @@ async function handlePresetDrop(dragIndex: number, event: DragEvent) {
     )
   } catch (err) {
     toast.showApiError(err as Error)
+    await fetchPresets()
   }
 }
 
@@ -383,12 +385,14 @@ watch(selectedGroup, () => {
           placeholder="Group name"
           class="mb-2"
           :aria-busy="saving"
+          data-testid="group-name-input-edit"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
+            data-testid="save-group-edit"
             @click="updateGroup()"
           />
           <UButton
@@ -423,6 +427,7 @@ watch(selectedGroup, () => {
           </div>
           <div class="flex gap-2">
             <UButton
+              :data-testid="`edit-group-${group.id}`"
               icon="i-heroicons-pencil"
               variant="ghost"
               size="sm"

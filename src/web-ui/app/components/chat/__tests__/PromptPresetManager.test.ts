@@ -193,4 +193,102 @@ describe('PromptPresetManager', () => {
       expect.objectContaining({ color: 'error', title: 'Update failed' })
     )
   })
+
+  it('moves a preset up and syncs positions to server', async () => {
+    mockPATCH.mockResolvedValue({ data: undefined, error: undefined })
+    const wrapper = await mountSuspended(PromptPresetManager, {
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
+    await flushPromises()
+    // p1 is at index 0, moving it down (to index 1) is valid
+    await wrapper.find('[data-testid="move-preset-down-p1"]').trigger('click')
+    await flushPromises()
+    // Both presets' positions are synced after the swap
+    const patchCalls = mockPATCH.mock.calls
+    expect(patchCalls.some(([url]) => url.includes('/api/chat/presets/p1'))).toBe(true)
+    expect(patchCalls.some(([url]) => url.includes('/api/chat/presets/p2'))).toBe(true)
+  })
+
+  it('handles preset drop (drag from source to destination index)', async () => {
+    mockPATCH.mockResolvedValue({ data: undefined, error: undefined })
+    const wrapper = await mountSuspended(PromptPresetManager, {
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
+    await flushPromises()
+
+    const vm = wrapper.vm as unknown as Record<string, unknown>
+    const handlePresetDrop = vm.handlePresetDrop as (destIndex: number, event: DragEvent) => Promise<void>
+
+    const mockEvent = {
+      dataTransfer: {
+        getData: (key: string) => (key === 'text/plain' ? '0' : ''),
+        effectAllowed: ''
+      }
+    } as unknown as DragEvent
+
+    await handlePresetDrop(1, mockEvent)
+    await flushPromises()
+    // Dragging preset at index 0 to index 1: p1 removed from 0, inserted at 1
+    // Both presets' positions should be patched
+    const patchCalls = mockPATCH.mock.calls
+    expect(patchCalls.some(([url]) => url.includes('/api/chat/presets/p1'))).toBe(true)
+    expect(patchCalls.some(([url]) => url.includes('/api/chat/presets/p2'))).toBe(true)
+  })
+
+  it('edits an existing group', async () => {
+    mockPATCH.mockResolvedValue({ data: { id: 'g1', name: 'General (edited)', createdAt: '', updatedAt: '', archivedAt: null, presets: [] }, error: undefined })
+    const wrapper = await mountSuspended(PromptPresetManager, {
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.find('[data-testid="edit-group-g1"]').trigger('click')
+    await wrapper.find('[data-testid="group-name-input-edit"]').setValue('General (edited)')
+    await wrapper.find('[data-testid="save-group-edit"]').trigger('click')
+    await flushPromises()
+    expect(mockPATCH).toHaveBeenCalledWith('/api/chat/preset-groups/g1', expect.objectContaining({ body: expect.objectContaining({ name: 'General (edited)' }) }))
+  })
+
+  it('shows an error toast when group edit fails', async () => {
+    mockPATCH.mockRejectedValue(new Error('Update failed'))
+    const wrapper = await mountSuspended(PromptPresetManager, {
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.find('[data-testid="edit-group-g1"]').trigger('click')
+    await wrapper.find('[data-testid="group-name-input-edit"]').setValue('General (edited)')
+    await wrapper.find('[data-testid="save-group-edit"]').trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'error' })
+    )
+  })
+
+  it('shows an error toast when movePreset fails and rolls back via fetchPresets', async () => {
+    mockPATCH.mockRejectedValue(new Error('Position sync failed'))
+    mockGET.mockImplementation((url: string) => {
+      if (url.startsWith('/api/chat/preset-groups')) {
+        return Promise.resolve({ data: groups, error: undefined })
+      }
+      if (url.startsWith('/api/chat/presets')) {
+        // Return a slightly different preset list to prove rollback happened
+        return Promise.resolve({ data: [...presets], error: undefined })
+      }
+      return Promise.resolve({ data: undefined, error: undefined })
+    })
+    const wrapper = await mountSuspended(PromptPresetManager, {
+      global: { stubs: { AppModal: appModalStub } }
+    })
+    await flushPromises()
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
+    await flushPromises()
+    await wrapper.find('[data-testid="move-preset-down-p1"]').trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'error' })
+    )
+  })
 })

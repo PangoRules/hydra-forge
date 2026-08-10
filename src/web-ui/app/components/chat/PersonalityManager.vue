@@ -192,7 +192,7 @@ async function setDefault(p: AgentPersonalityDto) {
               />
               <UButton
                 :data-testid="`archive-${p.id}`"
-                icon="i-lucide-trash"
+                icon="i-lucide-archive"
                 variant="ghost"
                 color="error"
                 size="sm"
