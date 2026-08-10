@@ -14,7 +14,7 @@ definePageMeta({ middleware: ['auth'] })
         color="neutral"
         size="sm"
         aria-label="Back to chats"
-        :to="UiRoutes.Chat.ChatSessions"
+        :to="UiRoutes.Chats"
       />
       <h1 class="text-lg font-bold">
         Personalities
