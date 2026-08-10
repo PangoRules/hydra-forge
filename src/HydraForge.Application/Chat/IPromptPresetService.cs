@@ -4,7 +4,7 @@ namespace HydraForge.Application.Chat;
 
 public record CreatePromptPresetRequest(string Name, string Content, Guid? GroupId);
 
-public record UpdatePromptPresetRequest(string Name, string Content, Guid? GroupId);
+public record UpdatePromptPresetRequest(string Name, string Content, Guid? GroupId, int? Position);
 
 public record CreatePromptPresetGroupRequest(string Name);
 

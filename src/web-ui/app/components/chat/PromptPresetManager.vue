@@ -22,6 +22,8 @@ const formName = ref('')
 const formContent = ref('')
 const formGroupId = ref<string | null>(null)
 const saving = ref(false)
+const abortController = ref<AbortController | null>(null)
+const presetFetchCounter = ref(0)
 
 async function fetchGroups() {
   loading.value.groups = true
@@ -36,12 +38,20 @@ async function fetchGroups() {
 }
 
 async function fetchPresets() {
+  const currentCounter = ++presetFetchCounter.value
   loading.value.presets = true
+  abortController.value?.abort()
+  abortController.value = new AbortController()
+
   try {
     const { data } = await api.GET<PromptPresetDto[]>(
-      ApiRoutes.Chat.presets.list(selectedGroup.value?.id || undefined)
+      ApiRoutes.Chat.presets.list(selectedGroup.value?.id || undefined),
+      { signal: abortController.value.signal }
     )
-    presets.value = data ?? []
+    // Discard stale responses
+    if (currentCounter === presetFetchCounter.value) {
+      presets.value = data ?? []
+    }
   } catch (err) {
     toast.showApiError(err as Error)
   } finally {
@@ -64,6 +74,7 @@ async function createGroup() {
     toast.success('Group created')
     formName.value = ''
     groupFormMode.value = null
+    presetFormMode.value = null
     await fetchGroups()
   } catch (err) {
     toast.showApiError(err as Error)
@@ -87,6 +98,7 @@ async function updateGroup(_groupId: string) {
     toast.success('Group updated')
     formName.value = ''
     groupFormMode.value = null
+    presetFormMode.value = null
     await fetchGroups()
   } catch (err) {
     toast.showApiError(err as Error)
@@ -133,6 +145,8 @@ async function createPreset() {
     formContent.value = ''
     formGroupId.value = null
     presetFormMode.value = null
+    groupFormMode.value = null
+    await fetchGroups()
     await fetchPresets()
   } catch (err) {
     toast.showApiError(err as Error)
@@ -164,6 +178,8 @@ async function updatePreset(_presetId: string) {
     formContent.value = ''
     formGroupId.value = null
     presetFormMode.value = null
+    groupFormMode.value = null
+    await fetchGroups()
     await fetchPresets()
   } catch (err) {
     toast.showApiError(err as Error)
@@ -187,14 +203,16 @@ function startCreateGroup() {
   formName.value = ''
   formContent.value = ''
   formGroupId.value = null
+  presetFormMode.value = null
 }
 
 function startEditGroup(group: PromptPresetGroupDto) {
-  groupFormMode.value = group.id
+  groupFormMode.value = 'edit'
   formName.value = group.name
   formContent.value = ''
   formGroupId.value = null
   editingGroupId.value = group.id
+  presetFormMode.value = null
 }
 
 function startCreatePreset() {
@@ -202,14 +220,16 @@ function startCreatePreset() {
   formName.value = ''
   formContent.value = ''
   formGroupId.value = selectedGroup.value?.id || null
+  groupFormMode.value = null
 }
 
 function startEditPreset(preset: PromptPresetDto) {
-  presetFormMode.value = preset.id
+  presetFormMode.value = 'edit'
   formName.value = preset.name
   formContent.value = preset.content
   formGroupId.value = preset.groupId
   editingPresetId.value = preset.id
+  groupFormMode.value = null
 }
 
 function cancelGroupForm() {
@@ -217,6 +237,7 @@ function cancelGroupForm() {
   formName.value = ''
   formContent.value = ''
   formGroupId.value = null
+  presetFormMode.value = null
 }
 
 function cancelPresetForm() {
@@ -224,15 +245,48 @@ function cancelPresetForm() {
   formName.value = ''
   formContent.value = ''
   formGroupId.value = null
+  groupFormMode.value = null
+}
+
+function handlePresetDragStart(index: number, event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
+  }
+}
+
+async function handlePresetDrop(dragIndex: number, event: DragEvent) {
+  if (!event.dataTransfer) return
+
+  const dropIndex = parseInt(event.dataTransfer.getData('text/plain') || '0', 10)
+  if (dragIndex === dropIndex) return
+
+  const [draggedPreset] = presets.value.splice(dragIndex, 1)
+  presets.value.splice(dropIndex, 0, draggedPreset)
+
+  // Update positions
+  for (let i = 0; i < presets.value.length; i++) {
+    presets.value[i].position = i
+  }
+
+  // Send PATCH to update positions
+  try {
+    await api.PATCH(ApiRoutes.Chat.presets.update(presets.value[dropIndex].id), {
+      body: { position: dropIndex }
+    })
+  } catch (err) {
+    toast.showApiError(err as Error)
+  }
 }
 
 onMounted(() => {
   void fetchGroups()
+  void fetchPresets()
 })
 
 watch(selectedGroup, () => {
   void fetchPresets()
-})
+}, { immediate: true })
 </script>
 
 <template>
@@ -244,9 +298,10 @@ watch(selectedGroup, () => {
           Prompt Preset Groups
         </h2>
         <UButton
-          v-if="groupFormMode !== 'create'"
+          v-if="groupFormMode !== 'create' && presetFormMode !== 'create'"
           icon="i-heroicons-plus-circle"
           label="New Group"
+          :disabled="loading.groups || loading.presets"
           @click="startCreateGroup"
         />
       </div>
@@ -255,20 +310,25 @@ watch(selectedGroup, () => {
         v-if="groupFormMode === 'create'"
         class="mb-4"
       >
+        <label for="group-name-input" class="block text-sm font-medium text-gray-700 mb-1">Group name</label>
         <UInput
+          id="group-name-input"
           v-model="formName"
           placeholder="Group name"
           class="mb-2"
+          :aria-busy="saving"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
             :loading="saving"
+            :disabled="loading.groups || loading.presets"
             @click="createGroup"
           />
           <UButton
             label="Cancel"
             variant="ghost"
+            :disabled="loading.groups || loading.presets"
             @click="cancelGroupForm"
           />
         </div>
@@ -278,20 +338,25 @@ watch(selectedGroup, () => {
         v-else-if="groupFormMode === 'edit'"
         class="mb-4"
       >
+        <label for="group-name-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Group name</label>
         <UInput
+          id="group-name-input-edit"
           v-model="formName"
           placeholder="Group name"
           class="mb-2"
+          :aria-busy="saving"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
             :loading="saving"
+            :disabled="loading.groups || loading.presets"
             @click="updateGroup(editingGroupId!)"
           />
           <UButton
             label="Cancel"
             variant="ghost"
+            :disabled="loading.groups || loading.presets"
             @click="cancelGroupForm"
           />
         </div>
@@ -301,8 +366,14 @@ watch(selectedGroup, () => {
         <div
           v-for="group in groups"
           :key="group.id"
-          class="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50"
+          role="button"
+          tabindex="0"
+          class="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+          :class="{ 'bg-blue-50': selectedGroup?.id === group.id }"
+          :data-testid="`group-row-${group.id}`"
           @click="selectedGroup = group"
+          @keydown.enter="selectedGroup = group"
+          @keydown.space="selectedGroup = group"
         >
           <div class="flex-1">
             <h3 class="font-medium">
@@ -317,13 +388,15 @@ watch(selectedGroup, () => {
               icon="i-heroicons-pencil"
               variant="ghost"
               size="sm"
-              @click="startEditGroup(group)"
+              :aria-label="`Edit ${group.name}`"
+              @click.stop="startEditGroup(group)"
             />
             <UButton
               icon="i-heroicons-trash"
               variant="ghost"
               size="sm"
-              @click="archiveGroup(group)"
+              :aria-label="`Archive ${group.name}`"
+              @click.stop="archiveGroup(group)"
             />
           </div>
         </div>
@@ -345,9 +418,10 @@ watch(selectedGroup, () => {
         </h2>
         <div>
           <UButton
-            v-if="presetFormMode !== 'create'"
+            v-if="presetFormMode !== 'create' && groupFormMode !== 'create'"
             icon="i-heroicons-plus-circle"
             label="New Preset"
+            :disabled="loading.groups || loading.presets"
             @click="startCreatePreset"
           />
           <UButton
@@ -364,26 +438,34 @@ watch(selectedGroup, () => {
         v-if="presetFormMode === 'create'"
         class="mb-4"
       >
+        <label for="preset-name-input" class="block text-sm font-medium text-gray-700 mb-1">Preset name</label>
         <UInput
+          id="preset-name-input"
           v-model="formName"
           placeholder="Preset name"
           class="mb-2"
+          :aria-busy="saving"
         />
+        <label for="preset-content-input" class="block text-sm font-medium text-gray-700 mb-1">Preset content</label>
         <UTextarea
+          id="preset-content-input"
           v-model="formContent"
           placeholder="Preset content"
           class="mb-2"
           :rows="4"
+          :aria-busy="saving"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
             :loading="saving"
+            :disabled="loading.groups || loading.presets"
             @click="createPreset"
           />
           <UButton
             label="Cancel"
             variant="ghost"
+            :disabled="loading.groups || loading.presets"
             @click="cancelPresetForm"
           />
         </div>
@@ -393,26 +475,34 @@ watch(selectedGroup, () => {
         v-else-if="presetFormMode === 'edit'"
         class="mb-4"
       >
+        <label for="preset-name-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Preset name</label>
         <UInput
+          id="preset-name-input-edit"
           v-model="formName"
           placeholder="Preset name"
           class="mb-2"
+          :aria-busy="saving"
         />
+        <label for="preset-content-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Preset content</label>
         <UTextarea
+          id="preset-content-input-edit"
           v-model="formContent"
           placeholder="Preset content"
           class="mb-2"
           :rows="4"
+          :aria-busy="saving"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
             :loading="saving"
+            :disabled="loading.groups || loading.presets"
             @click="updatePreset(editingPresetId!)"
           />
           <UButton
             label="Cancel"
             variant="ghost"
+            :disabled="loading.groups || loading.presets"
             @click="cancelPresetForm"
           />
         </div>
@@ -420,9 +510,13 @@ watch(selectedGroup, () => {
 
       <div class="space-y-2">
         <div
-          v-for="preset in presets"
+          v-for="(preset, index) in presets"
           :key="preset.id"
           class="flex justify-between items-start p-3 border rounded-lg"
+          draggable="true"
+          @dragstart="handlePresetDragStart(index, $event)"
+          @dragover.prevent
+          @drop="handlePresetDrop(index, $event)"
         >
           <div class="flex-1">
             <h3 class="font-medium">
@@ -437,13 +531,15 @@ watch(selectedGroup, () => {
               icon="i-heroicons-pencil"
               variant="ghost"
               size="sm"
-              @click="startEditPreset(preset)"
+              :aria-label="`Edit ${preset.name}`"
+              @click.stop="startEditPreset(preset)"
             />
             <UButton
               icon="i-heroicons-trash"
               variant="ghost"
               size="sm"
-              @click="archivePreset(preset)"
+              :aria-label="`Archive ${preset.name}`"
+              @click.stop="archivePreset(preset)"
             />
           </div>
         </div>
