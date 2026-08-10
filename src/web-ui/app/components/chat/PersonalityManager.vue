@@ -74,6 +74,9 @@ async function saveForm() {
       toast.success('Personality updated')
     }
     formMode.value = null
+    formName.value = ''
+    formDescription.value = ''
+    formSystemPrompt.value = ''
     await fetchList()
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Failed to save personality')

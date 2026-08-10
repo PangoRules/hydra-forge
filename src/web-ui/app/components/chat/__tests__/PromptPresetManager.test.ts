@@ -63,7 +63,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     expect(mockGET).toHaveBeenCalledWith('/api/chat/presets?groupId=g1')
   })
@@ -113,7 +113,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     await wrapper.find('[data-testid="new-preset"]').trigger('click')
     await wrapper.find('[data-testid="preset-name-input"]').setValue('New Preset')
@@ -129,7 +129,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     await wrapper.find('[data-testid="new-preset"]').trigger('click')
     await wrapper.find('[data-testid="preset-name-input"]').setValue('X')
@@ -147,7 +147,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     await wrapper.find('[data-testid="archive-preset-p1"]').trigger('click')
     await flushPromises()
@@ -160,7 +160,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     await wrapper.find('[data-testid="edit-preset-p1"]').trigger('click')
     await wrapper.find('[data-testid="preset-name-input"]').setValue('Code Review (edited)')
@@ -175,7 +175,7 @@ describe('PromptPresetManager', () => {
       global: { stubs: { AppModal: appModalStub } }
     })
     await flushPromises()
-    await wrapper.findAll('[data-testid="group-row"]').at(0)?.trigger('click')
+    await wrapper.findAll('[data-testid^="group-row-"]').at(0)?.trigger('click')
     await flushPromises()
     await wrapper.find('[data-testid="edit-preset-p1"]').trigger('click')
     await wrapper.find('[data-testid="save-preset"]').trigger('click')
