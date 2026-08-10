@@ -74,6 +74,7 @@ export interface PromptPresetDto {
   groupId: string | null
   name: string
   content: string
+  position?: number
   createdAt: string
   updatedAt: string
   archivedAt: string | null

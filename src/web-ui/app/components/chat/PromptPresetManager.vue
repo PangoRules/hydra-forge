@@ -22,7 +22,6 @@ const formName = ref('')
 const formContent = ref('')
 const formGroupId = ref<string | null>(null)
 const saving = ref(false)
-const abortController = ref<AbortController | null>(null)
 const presetFetchCounter = ref(0)
 
 async function fetchGroups() {
@@ -40,13 +39,10 @@ async function fetchGroups() {
 async function fetchPresets() {
   const currentCounter = ++presetFetchCounter.value
   loading.value.presets = true
-  abortController.value?.abort()
-  abortController.value = new AbortController()
 
   try {
     const { data } = await api.GET<PromptPresetDto[]>(
-      ApiRoutes.Chat.presets.list(selectedGroup.value?.id || undefined),
-      { signal: abortController.value.signal }
+      ApiRoutes.Chat.presets.list(selectedGroup.value?.id || undefined)
     )
     // Discard stale responses
     if (currentCounter === presetFetchCounter.value) {
@@ -261,17 +257,23 @@ async function handlePresetDrop(dragIndex: number, event: DragEvent) {
   const dropIndex = parseInt(event.dataTransfer.getData('text/plain') || '0', 10)
   if (dragIndex === dropIndex) return
 
-  const [draggedPreset] = presets.value.splice(dragIndex, 1)
-  presets.value.splice(dropIndex, 0, draggedPreset)
+  const draggedPreset = presets.value[dragIndex]
+  if (!draggedPreset) return
+
+  const [removed] = presets.value.splice(dragIndex, 1)
+  presets.value.splice(dropIndex, 0, removed ?? draggedPreset)
 
   // Update positions
   for (let i = 0; i < presets.value.length; i++) {
-    presets.value[i].position = i
+    presets.value[i]!.position = i
   }
 
   // Send PATCH to update positions
+  const movedPreset = presets.value[dropIndex]
+  if (!movedPreset) return
+
   try {
-    await api.PATCH(ApiRoutes.Chat.presets.update(presets.value[dropIndex].id), {
+    await api.PATCH(ApiRoutes.Chat.presets.update(movedPreset.id), {
       body: { position: dropIndex }
     })
   } catch (err) {
