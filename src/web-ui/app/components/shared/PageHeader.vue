@@ -2,9 +2,12 @@
 interface Props {
   title: string
   backTo?: string
+  ariaLabel?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  ariaLabel: 'Go back'
+})
 </script>
 
 <template>
@@ -14,7 +17,7 @@ const props = defineProps<Props>()
       variant="ghost"
       color="neutral"
       size="sm"
-      aria-label="Back to chats"
+      :aria-label="props.ariaLabel"
       :to="props.backTo"
     />
     <h1 class="text-lg font-bold">

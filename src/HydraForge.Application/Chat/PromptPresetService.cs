@@ -296,7 +296,7 @@ public class PromptPresetService(
     }
 
     private static PromptPresetDto MapToDto(PromptPreset p) =>
-        new(p.Id, p.GroupId, p.Name, p.Content, p.Position, p.CreatedAt, p.UpdatedAt, p.ArchivedAt);
+        new(p.Id, p.GroupId, p.Name, p.Content, p.CreatedAt, p.UpdatedAt, p.ArchivedAt, p.Position);
 
     private static PromptPresetGroupDto MapGroupToDto(
         PromptPresetGroup g,

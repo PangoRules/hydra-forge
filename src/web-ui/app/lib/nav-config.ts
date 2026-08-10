@@ -43,7 +43,9 @@ export function getNavGroups(isAdmin: boolean, currentPath: string = ''): Naviga
       { label: 'Brain / Memory', icon: 'i-lucide-brain', disabled: true },
       { label: 'Tasks', icon: 'i-lucide-check-square', disabled: true },
       { label: 'Calendar', icon: 'i-lucide-calendar', disabled: true },
-      { label: 'Documents / Library', icon: 'i-lucide-folder', disabled: true },
+      { label: 'Documents / Library', icon: 'i-lucide-folder', to: UiRoutes.Documents },
+      { label: 'Prompt Presets', icon: 'i-lucide-list-ordered', to: UiRoutes.Chat.Presets },
+      { label: 'Personalities', icon: 'i-lucide-bot', to: UiRoutes.Chat.Personalities },
       { label: 'Theme', icon: 'i-lucide-palette', disabled: true },
       { label: 'Voice Notes', icon: 'i-lucide-mic', disabled: true }
     ]

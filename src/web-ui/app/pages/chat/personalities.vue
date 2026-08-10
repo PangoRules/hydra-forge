@@ -11,6 +11,7 @@ definePageMeta({ middleware: ['auth'] })
     <PageHeader
       title="Personalities"
       :back-to="UiRoutes.Chats"
+      aria-label="Back to chats"
     />
     <div class="flex-1 min-h-0 overflow-y-auto">
       <PersonalityManager />

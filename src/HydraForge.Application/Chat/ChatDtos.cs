@@ -136,10 +136,10 @@ public record PromptPresetDto(
     Guid? GroupId,
     string Name,
     string Content,
-    int Position,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DateTime? ArchivedAt
+    DateTime? ArchivedAt,
+    int Position = 0
 );
 
 public record PromptPresetGroupDto(

@@ -83,6 +83,7 @@ onMounted(() => {
     <PageHeader
       title="My Documents"
       :back-to="UiRoutes.Chats"
+      aria-label="Back to chats"
     />
 
     <!-- Scrollable content -->
