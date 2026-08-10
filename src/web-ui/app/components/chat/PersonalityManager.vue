@@ -179,7 +179,7 @@ async function setDefault(p: AgentPersonalityDto) {
                 icon="i-lucide-star"
                 variant="ghost"
                 size="sm"
-                title="Set as default"
+                :aria-label="`Set ${p.name} as default`"
                 @click.stop="setDefault(p)"
               />
               <UButton
@@ -187,7 +187,7 @@ async function setDefault(p: AgentPersonalityDto) {
                 icon="i-lucide-pencil"
                 variant="ghost"
                 size="sm"
-                title="Edit"
+                :aria-label="`Edit ${p.name}`"
                 @click.stop="startEdit(p)"
               />
               <UButton
@@ -196,7 +196,7 @@ async function setDefault(p: AgentPersonalityDto) {
                 variant="ghost"
                 color="error"
                 size="sm"
-                title="Archive"
+                :aria-label="`Archive ${p.name}`"
                 @click.stop="archive(p)"
               />
             </div>

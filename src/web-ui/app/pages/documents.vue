@@ -3,6 +3,7 @@ import { UiRoutes, ApiRoutes } from '~/lib/routes'
 import type { DocumentDto } from '~/types/chat'
 import type { TableColumn } from '@nuxt/ui'
 import DocumentUploader from '~/components/chat/DocumentUploader.vue'
+import PageHeader from '~/components/shared/PageHeader.vue'
 import { formatDateOnly } from '~/lib/date'
 
 definePageMeta({ middleware: ['auth'] })
@@ -63,7 +64,7 @@ const columns: TableColumn<DocumentDto>[] = [
     cell: ({ row }) => {
       return h('button', {
         type: 'button',
-        class: 'text-red-500 hover:text-red-700 text-sm',
+        class: 'text-red-500 hover:text-red-700 text-sm min-h-8',
         disabled: archiving.value.has(row.original.id),
         onClick: () => archiveDocument(row.original)
       }, 'Archive')
@@ -79,20 +80,10 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col h-full">
-    <!-- Header -->
-    <div class="shrink-0 flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
-      <UButton
-        icon="i-lucide-arrow-left"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        aria-label="Back to chats"
-        :to="UiRoutes.Chats"
-      />
-      <h1 class="text-lg font-bold">
-        My Documents
-      </h1>
-    </div>
+    <PageHeader
+      title="My Documents"
+      :back-to="UiRoutes.Chats"
+    />
 
     <!-- Scrollable content -->
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">

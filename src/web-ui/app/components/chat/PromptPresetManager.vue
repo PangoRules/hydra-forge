@@ -251,6 +251,31 @@ function handlePresetDragStart(index: number, event: DragEvent) {
   }
 }
 
+async function movePreset(index: number, direction: 'up' | 'down') {
+  const targetIndex = direction === 'up' ? index - 1 : index + 1
+  if (targetIndex < 0 || targetIndex >= presets.value.length) return
+
+  const moved = presets.value[index]!
+  presets.value.splice(index, 1)
+  presets.value.splice(targetIndex, 0, moved)
+
+  for (let i = 0; i < presets.value.length; i++) {
+    presets.value[i]!.position = i
+  }
+
+  try {
+    await Promise.all(
+      presets.value.map(p =>
+        api.PATCH(ApiRoutes.Chat.presets.update(p.id), {
+          body: { position: p.position }
+        })
+      )
+    )
+  } catch (err) {
+    toast.showApiError(err as Error)
+  }
+}
+
 async function handlePresetDrop(dragIndex: number, event: DragEvent) {
   if (!event.dataTransfer) return
 
@@ -260,22 +285,24 @@ async function handlePresetDrop(dragIndex: number, event: DragEvent) {
   const draggedPreset = presets.value[dragIndex]
   if (!draggedPreset) return
 
-  const [removed] = presets.value.splice(dragIndex, 1)
-  presets.value.splice(dropIndex, 0, removed ?? draggedPreset)
+  presets.value.splice(dragIndex, 1)
+  presets.value.splice(dropIndex, 0, draggedPreset)
 
-  // Update positions
+  // Update local positions
   for (let i = 0; i < presets.value.length; i++) {
     presets.value[i]!.position = i
   }
 
-  // Send PATCH to update positions
-  const movedPreset = presets.value[dropIndex]
-  if (!movedPreset) return
-
+  // Sync all positions to the server — not just the dropped item,
+  // because splice shifts every preset's index in the group.
   try {
-    await api.PATCH(ApiRoutes.Chat.presets.update(movedPreset.id), {
-      body: { position: dropIndex }
-    })
+    await Promise.all(
+      presets.value.map(p =>
+        api.PATCH(ApiRoutes.Chat.presets.update(p.id), {
+          body: { position: p.position }
+        })
+      )
+    )
   } catch (err) {
     toast.showApiError(err as Error)
   }
@@ -543,13 +570,24 @@ watch(selectedGroup, () => {
         <div
           v-for="(preset, index) in presets"
           :key="preset.id"
-          class="flex justify-between items-start p-3 border rounded-lg"
-          draggable="true"
-          @dragstart="handlePresetDragStart(index, $event)"
-          @dragover.prevent
-          @drop="handlePresetDrop(index, $event)"
+          class="flex items-start gap-2 p-3 border rounded-lg"
         >
-          <div class="flex-1">
+          <!-- Drag handle -->
+          <button
+            type="button"
+            class="mt-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+            :aria-label="`Drag to reorder ${preset.name}`"
+            draggable="true"
+            @dragstart="handlePresetDragStart(index, $event)"
+            @dragover.prevent
+            @drop="handlePresetDrop(index, $event)"
+          >
+            <UIcon
+              name="i-heroicons-bars-3"
+              class="size-4"
+            />
+          </button>
+          <div class="flex-1 min-w-0">
             <h3 class="font-medium">
               {{ preset.name }}
             </h3>
@@ -557,7 +595,25 @@ watch(selectedGroup, () => {
               {{ preset.content }}
             </p>
           </div>
-          <div class="flex gap-2 ml-2">
+          <div class="flex items-center gap-1 shrink-0">
+            <UButton
+              icon="i-heroicons-chevron-up"
+              variant="ghost"
+              size="sm"
+              :data-testid="`move-preset-up-${preset.id}`"
+              :aria-label="`Move ${preset.name} up`"
+              :disabled="index === 0"
+              @click.stop="movePreset(index, 'up')"
+            />
+            <UButton
+              icon="i-heroicons-chevron-down"
+              variant="ghost"
+              size="sm"
+              :data-testid="`move-preset-down-${preset.id}`"
+              :aria-label="`Move ${preset.name} down`"
+              :disabled="index === presets.length - 1"
+              @click.stop="movePreset(index, 'down')"
+            />
             <UButton
               icon="i-heroicons-pencil"
               variant="ghost"
