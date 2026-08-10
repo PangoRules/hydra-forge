@@ -59,7 +59,7 @@
    - **Note:** uses raw `fetch()` instead of `useApi()` because the NSwag-generated `api.d.ts` has no Documents paths yet (controller post-dates last client regen). `Authorization` header is set manually via `getToken()`.
    - **Review fixes applied:** dropped `application/pdf` from ACCEPTED_TYPES and `.pdf` from accept attr; lowered MAX_SIZE to 10 MB to match server `RequestSizeLimit`; error extraction uses `body.title ?? body.detail`; removed fake setTimeout/`processing` state — server does ingestion synchronously so state is now idle → uploading → done. Unit tests added.
 
-- [ ] `pages/chat/presets.vue` — thin page wrapper. `definePageMeta({ middleware: ['auth'] })`. Hosts `<PromptPresetManager />`. Page title "Prompt Presets" with a back link to `/chats`.
+- [x] `pages/chat/presets.vue` — thin page wrapper. `definePageMeta({ middleware: ['auth'] })`. Hosts `<PromptPresetManager />`. Page title "Prompt Presets" with a back link to `/chats`.
 
 - [ ] `pages/chat/personalities.vue` — thin page wrapper. `definePageMeta({ middleware: ['auth'] })`. Hosts `<PersonalityManager />`. Page title "Personalities" with a back link to `/chats`.
 
