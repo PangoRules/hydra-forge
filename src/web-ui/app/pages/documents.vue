@@ -164,12 +164,12 @@ onMounted(() => {
                 size="sm"
               />
               <span class="text-xs text-muted">
-                {{ new Date(doc.updatedAt).toLocaleDateString() }}
+                {{ formatDateOnly(doc.updatedAt) }}
               </span>
             </div>
             <button
               type="button"
-              class="text-red-500 hover:text-red-700 text-sm"
+              class="text-red-500 hover:text-red-700 text-sm min-h-8"
               :disabled="archiving.has(doc.id)"
               @click="archiveDocument(doc)"
             >

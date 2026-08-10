@@ -65,7 +65,7 @@
 
 - [ ] `pages/documents.vue` — personal documents page. `definePageMeta({ middleware: ['auth'] })`. Two sections: (1) document list — fetches `GET /api/documents`, renders as a table or card grid with title, content type, version, date, archive button. (2) upload area — hosts `<DocumentUploader />` at top, refreshes list on `@uploaded`. Archive calls `DELETE /api/documents/{documentId}`. Uses `useApi()`, `useAppToast()`, `ApiRoutes.Chat.documents.*`. All API calls wrapped in try/catch (D-40).
 
-- [ ] Verify: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
+- [x] Verify: `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
 
 **Acceptance:**
 - `cd src/web-ui && pnpm typecheck && pnpm lint && pnpm build`
