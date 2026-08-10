@@ -10,7 +10,7 @@ const config = useRuntimeConfig()
 const toast = useAppToast()
 const { getToken } = useAuthToken()
 
-type UploadState = 'idle' | 'uploading' | 'done'
+type UploadState = 'idle' | 'uploading'
 
 const uploadState = ref<UploadState>('idle')
 const isDragging = ref(false)
@@ -23,13 +23,13 @@ const ACCEPTED_TYPES = [
   'text/html'
 ]
 const ACCEPTED_EXTENSIONS = '.txt,.md,.markdown,.csv,.ts,.js,.py,.rs,.go,.java,.c,.cpp,.h,.sh,.bash,.html,.htm'
-
 const ACCEPTED_LABEL = 'Text, Markdown, Code, CSV, HTML'
+const ACCEPTED_EXT_REGEX = new RegExp('\\.(' + ACCEPTED_EXTENSIONS.split(',').map(e => e.slice(1)).join('|') + ')$', 'i')
 
 function validateFile(file: File): string | null {
   const typeAccepted = ACCEPTED_TYPES.includes(file.type)
     || file.type.startsWith('text/')
-    || file.name.match(/\.(txt|md|markdown|csv|ts|js|py|rs|go|java|c|cpp|h|sh|bash|html|htm)$/i)
+    || ACCEPTED_EXT_REGEX.test(file.name)
 
   if (!typeAccepted) {
     return 'Unsupported file type. Please upload a text, markdown, code, CSV, or HTML file.'
@@ -77,10 +77,8 @@ async function uploadFile(file: File) {
 
     const doc = await res.json() as DocumentDto
 
-    uploadState.value = 'done'
     toast.success(`"${doc.title}" uploaded`)
     emit('uploaded', doc)
-
     uploadState.value = 'idle'
   } catch (err: unknown) {
     uploadState.value = 'idle'
@@ -150,7 +148,7 @@ function onKeyDown(e: KeyboardEvent) {
       }"
       role="button"
       tabindex="0"
-      :aria-label="`Upload document — accepts ${ACCEPTED_LABEL}`"
+      :aria-label="`Upload document — accepts ${ACCEPTED_LABEL} — max 10 MB`"
       @click="openPicker"
       @keydown="onKeyDown"
       @dragover="onDragOver"
@@ -181,17 +179,6 @@ function onKeyDown(e: KeyboardEvent) {
         />
         <p class="text-sm font-medium text-foreground">
           Uploading…
-        </p>
-      </template>
-
-      <!-- Done state -->
-      <template v-else-if="uploadState === 'done'">
-        <UIcon
-          name="i-lucide-check-circle"
-          class="size-8 text-success"
-        />
-        <p class="text-sm font-medium text-foreground">
-          Done
         </p>
       </template>
     </div>

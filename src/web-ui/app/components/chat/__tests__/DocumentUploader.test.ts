@@ -3,13 +3,12 @@ import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import DocumentUploader from '~/components/chat/DocumentUploader.vue'
 
-const mockToastAdd = vi.fn()
-const mockGetToken = vi.fn(() => Promise.resolve('test-token'))
-const mockConfig = { public: { apiBaseUrl: 'http://localhost:5000' } }
+const mockSuccess = vi.fn()
+const mockError = vi.fn()
+const mockGetToken = vi.fn(() => 'test-token')
 
-mockNuxtImport('useToast', () => () => ({ add: mockToastAdd }))
+mockNuxtImport('useAppToast', () => () => ({ success: mockSuccess, error: mockError }))
 mockNuxtImport('useAuthToken', () => () => ({ getToken: mockGetToken }))
-mockNuxtImport('useRuntimeConfig', () => () => mockConfig)
 
 // Spy on fetch globally
 const fetchSpy = vi.fn()
@@ -28,8 +27,10 @@ const doc = {
 
 describe('DocumentUploader', () => {
   beforeEach(() => {
-    mockToastAdd.mockReset()
-    mockGetToken.mockResolvedValue('test-token')
+    mockSuccess.mockReset()
+    mockError.mockReset()
+    mockGetToken.mockReset()
+    mockGetToken.mockReturnValue('test-token')
     fetchSpy.mockReset()
   })
 
@@ -91,9 +92,7 @@ describe('DocumentUploader', () => {
     })
     await input.trigger('change')
     await flushPromises()
-    expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'error' })
-    )
+    expect(mockError).toHaveBeenCalled()
   })
 
   it('shows validation error for oversized file before upload', async () => {
@@ -106,8 +105,8 @@ describe('DocumentUploader', () => {
     })
     await input.trigger('change')
     await flushPromises()
-    expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'error', title: expect.stringContaining('10 MB') })
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('10 MB')
     )
     expect(fetchSpy).not.toHaveBeenCalled()
   })
@@ -121,9 +120,31 @@ describe('DocumentUploader', () => {
     })
     await input.trigger('change')
     await flushPromises()
-    expect(mockToastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'error', title: expect.stringContaining('Unsupported') })
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('Unsupported')
     )
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('sends Bearer token on drop', async () => {
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve(doc)
+    } as Response)
+    const wrapper = await mountSuspended(DocumentUploader)
+    const dropZone = wrapper.find('[role="button"]')
+    const file = new File(['hello'], 'test.txt', { type: 'text/plain' })
+    await dropZone.trigger('drop', {
+      dataTransfer: { files: [file] }
+    })
+    await flushPromises()
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' })
+      })
+    )
   })
 })
