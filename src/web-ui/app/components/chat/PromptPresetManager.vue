@@ -303,6 +303,7 @@ watch(selectedGroup, () => {
           v-if="groupFormMode !== 'create' && presetFormMode !== 'create'"
           icon="i-heroicons-plus-circle"
           label="New Group"
+          data-testid="new-group"
           :disabled="loading.groups || loading.presets"
           @click="startCreateGroup"
         />
@@ -312,17 +313,22 @@ watch(selectedGroup, () => {
         v-if="groupFormMode === 'create'"
         class="mb-4"
       >
-        <label for="group-name-input" class="block text-sm font-medium text-gray-700 mb-1">Group name</label>
+        <label
+          for="group-name-input"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Group name</label>
         <UInput
           id="group-name-input"
           v-model="formName"
           placeholder="Group name"
+          data-testid="group-name-input"
           class="mb-2"
           :aria-busy="saving"
         />
         <div class="flex gap-2">
           <UButton
             label="Save"
+            data-testid="save-group"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
             @click="createGroup"
@@ -340,7 +346,10 @@ watch(selectedGroup, () => {
         v-else-if="groupFormMode === 'edit'"
         class="mb-4"
       >
-        <label for="group-name-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Group name</label>
+        <label
+          for="group-name-input-edit"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Group name</label>
         <UInput
           id="group-name-input-edit"
           v-model="formName"
@@ -397,6 +406,7 @@ watch(selectedGroup, () => {
               icon="i-heroicons-trash"
               variant="ghost"
               size="sm"
+              :data-testid="`archive-group-${group.id}`"
               :aria-label="`Archive ${group.name}`"
               @click.stop="archiveGroup(group)"
             />
@@ -423,6 +433,7 @@ watch(selectedGroup, () => {
             v-if="presetFormMode !== 'create' && groupFormMode !== 'create'"
             icon="i-heroicons-plus-circle"
             label="New Preset"
+            data-testid="new-preset"
             :disabled="loading.groups || loading.presets"
             @click="startCreatePreset"
           />
@@ -440,19 +451,27 @@ watch(selectedGroup, () => {
         v-if="presetFormMode === 'create'"
         class="mb-4"
       >
-        <label for="preset-name-input" class="block text-sm font-medium text-gray-700 mb-1">Preset name</label>
+        <label
+          for="preset-name-input"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Preset name</label>
         <UInput
           id="preset-name-input"
           v-model="formName"
           placeholder="Preset name"
+          data-testid="preset-name-input"
           class="mb-2"
           :aria-busy="saving"
         />
-        <label for="preset-content-input" class="block text-sm font-medium text-gray-700 mb-1">Preset content</label>
+        <label
+          for="preset-content-input"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Preset content</label>
         <UTextarea
           id="preset-content-input"
           v-model="formContent"
           placeholder="Preset content"
+          data-testid="preset-content-input"
           class="mb-2"
           :rows="4"
           :aria-busy="saving"
@@ -460,6 +479,7 @@ watch(selectedGroup, () => {
         <div class="flex gap-2">
           <UButton
             label="Save"
+            data-testid="save-preset"
             :loading="saving"
             :disabled="loading.groups || loading.presets"
             @click="createPreset"
@@ -477,7 +497,10 @@ watch(selectedGroup, () => {
         v-else-if="presetFormMode === 'edit'"
         class="mb-4"
       >
-        <label for="preset-name-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Preset name</label>
+        <label
+          for="preset-name-input-edit"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Preset name</label>
         <UInput
           id="preset-name-input-edit"
           v-model="formName"
@@ -485,7 +508,10 @@ watch(selectedGroup, () => {
           class="mb-2"
           :aria-busy="saving"
         />
-        <label for="preset-content-input-edit" class="block text-sm font-medium text-gray-700 mb-1">Preset content</label>
+        <label
+          for="preset-content-input-edit"
+          class="block text-sm font-medium text-gray-700 mb-1"
+        >Preset content</label>
         <UTextarea
           id="preset-content-input-edit"
           v-model="formContent"
@@ -533,6 +559,7 @@ watch(selectedGroup, () => {
               icon="i-heroicons-pencil"
               variant="ghost"
               size="sm"
+              :data-testid="`edit-preset-${preset.id}`"
               :aria-label="`Edit ${preset.name}`"
               @click.stop="startEditPreset(preset)"
             />
@@ -540,6 +567,7 @@ watch(selectedGroup, () => {
               icon="i-heroicons-trash"
               variant="ghost"
               size="sm"
+              :data-testid="`archive-preset-${preset.id}`"
               :aria-label="`Archive ${preset.name}`"
               @click.stop="archivePreset(preset)"
             />

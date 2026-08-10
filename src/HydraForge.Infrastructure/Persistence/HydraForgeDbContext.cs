@@ -705,6 +705,7 @@ public class HydraForgeDbContext(DbContextOptions<HydraForgeDbContext> options) 
             b =>
             {
                 b.HasIndex(e => e.UserId);
+                b.Property(e => e.Position).HasDefaultValue(0);
                 b.HasOne<PromptPresetGroup>()
                     .WithMany()
                     .HasForeignKey(e => e.GroupId)

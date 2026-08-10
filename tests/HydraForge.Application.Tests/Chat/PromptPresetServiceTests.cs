@@ -392,7 +392,7 @@ public class PromptPresetServiceTests
 
         var result = await svc.UpdatePresetAsync(
             preset.Id,
-            new UpdatePromptPresetRequest("New", "NewC", null, position: 0),
+            new UpdatePromptPresetRequest("New", "NewC", null, Position: 0),
             actorId
         );
 
@@ -420,7 +420,7 @@ public class PromptPresetServiceTests
 
         var result = await svc.UpdatePresetAsync(
             preset.Id,
-            new UpdatePromptPresetRequest("New", "NewC", null, position: 0),
+            new UpdatePromptPresetRequest("New", "NewC", null, Position: 0),
             otherId
         );
 
@@ -435,7 +435,7 @@ public class PromptPresetServiceTests
 
         var result = await service.UpdatePresetAsync(
             NewId(),
-            new UpdatePromptPresetRequest("New", "NewC", null, position: 0),
+            new UpdatePromptPresetRequest("New", "NewC", null, Position: 0),
             NewId()
         );
 
@@ -471,7 +471,7 @@ public class PromptPresetServiceTests
 
         var result = await svc.UpdatePresetAsync(
             preset.Id,
-            new UpdatePromptPresetRequest("P", "C", groupId, position: 0),
+            new UpdatePromptPresetRequest("P", "C", groupId, Position: 0),
             actorId
         );
 

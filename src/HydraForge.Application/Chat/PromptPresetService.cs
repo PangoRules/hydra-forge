@@ -121,7 +121,7 @@ public class PromptPresetService(
                 );
         }
 
-        preset.Update(request.Name, request.Content, request.GroupId);
+        preset.Update(request.Name, request.Content, request.GroupId, request.Position);
 
         await _presetRepo.UpdateAsync(preset, ct);
         return Result<PromptPresetDto>.Success(MapToDto(preset));
@@ -296,7 +296,7 @@ public class PromptPresetService(
     }
 
     private static PromptPresetDto MapToDto(PromptPreset p) =>
-        new(p.Id, p.GroupId, p.Name, p.Content, p.CreatedAt, p.UpdatedAt, p.ArchivedAt);
+        new(p.Id, p.GroupId, p.Name, p.Content, p.Position, p.CreatedAt, p.UpdatedAt, p.ArchivedAt);
 
     private static PromptPresetGroupDto MapGroupToDto(
         PromptPresetGroup g,

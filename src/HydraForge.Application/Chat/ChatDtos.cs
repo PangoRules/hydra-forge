@@ -136,6 +136,7 @@ public record PromptPresetDto(
     Guid? GroupId,
     string Name,
     string Content,
+    int Position,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     DateTime? ArchivedAt

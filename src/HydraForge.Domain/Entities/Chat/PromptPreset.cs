@@ -7,15 +7,18 @@ public class PromptPreset
     public Guid? GroupId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
+    public int Position { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ArchivedAt { get; set; }
 
-    public void Update(string name, string content, Guid? groupId)
+    public void Update(string name, string content, Guid? groupId, int? position = null)
     {
         Name = name;
         Content = content;
         GroupId = groupId;
+        if (position.HasValue)
+            Position = position.Value;
         UpdatedAt = DateTime.UtcNow;
     }
 }
