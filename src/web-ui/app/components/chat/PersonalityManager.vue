@@ -22,7 +22,7 @@ async function fetchList() {
     const { data } = await api.GET<AgentPersonalityDto[]>(ApiRoutes.Chat.personalities.list())
     personalities.value = data ?? []
   } catch (err) {
-    toast.showApiError(err, 'Failed to load personalities')
+    toast.error(err instanceof Error ? err.message : 'Failed to load personalities')
   } finally {
     loading.value = false
   }
@@ -76,7 +76,7 @@ async function saveForm() {
     formMode.value = null
     await fetchList()
   } catch (err) {
-    toast.showApiError(err, 'Failed to save personality')
+    toast.error(err instanceof Error ? err.message : 'Failed to save personality')
   } finally {
     saving.value = false
   }
@@ -88,7 +88,7 @@ async function archive(p: AgentPersonalityDto) {
     toast.success(`"${p.name}" archived`)
     await fetchList()
   } catch (err) {
-    toast.showApiError(err, 'Failed to archive personality')
+    toast.error(err instanceof Error ? err.message : 'Failed to archive personality')
   }
 }
 
@@ -98,7 +98,7 @@ async function setDefault(p: AgentPersonalityDto) {
     toast.success(`"${p.name}" set as default`)
     await fetchList()
   } catch (err) {
-    toast.showApiError(err, 'Failed to set default personality')
+    toast.error(err instanceof Error ? err.message : 'Failed to set default personality')
   }
 }
 </script>
